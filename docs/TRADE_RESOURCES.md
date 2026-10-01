@@ -494,3 +494,32 @@ Resources packs are unchanged; the whole bridge lives in the Exchange (`docs/ZHA
   and all 749 regions take 0.064s.
 - **Rename a good, its effect key or the `res_derpy_` prefix** and the Exchange stops seeing it.
   Regenerate `EX.MR` (`check_more_resources()` in `gen_zharr_exchange.py` fails until you do).
+
+## 17. The AI builds the rare buildings, by script (2026-10-01)
+
+The campaign AI scores a building only through `cai_construction_system_building_values`
+(see the `wh3-ai-construction-needs-building-values-row` memory). A row there is one flat score
+per chain. The rare buildings fit any ordinary slot and make nothing outside their lore regions,
+so a score row would have the AI build them where they do nothing. The 27 chains therefore get
+**no** score row, and `script/campaign/mod/derpy_more_resources_ai.lua` builds them for AI
+factions instead.
+
+- **Which regions.** The script carries a list, per rare good, of the regions where
+  `rare_cond()` holds: 124 across Immortal Empires, the Realm of Chaos and IEE's own regions.
+  Some IEE deposits and races of origin can't be read offline. Those regions read as no, so any
+  mistake leaves a building unbuilt rather than built where it does nothing.
+- **When.** On `FactionTurnStart`, for AI factions only, each faction acts once every 5 turns
+  (`AI_PACE`), staggered by a hash of its name. Each time it takes one action:
+  1. it upgrades a rare building it owns, if the settlement tier allows the next level;
+  2. otherwise, it builds level 1 in a lore region of its own with a free slot.
+- **Price.** It pays CA's price per level (1,000, 2,000 and 3,000 gold, from the iron mine the
+  levels are cloned from). It acts only while it holds twice the price (`AI_RESERVE`).
+- **How it builds.** `cm:add_building_to_settlement` picks the slot itself. Upgrades use
+  `cm:instantly_upgrade_building_in_region`. The script then looks for the building, and charges
+  gold only if it is really there.
+- **Checked by.** `check_ai()` and `tools/_more_resources_ai_harness.lua`, which run the
+  generated script under Lua 5.1. Mutation-tested against four faults: charging without
+  verifying, ignoring the region list, skipping the tier check, and acting for a human.
+- **Not yet seen in game.** `cm:add_building_to_settlement` has no use anywhere in CA's scripts.
+  The script logs `derpy_mr_ai:` for every build, upgrade and failure, so the first AI turn in a
+  campaign shows whether it works.

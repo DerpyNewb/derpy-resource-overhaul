@@ -63,7 +63,9 @@ def manifest(root=ROOT):
         "check_lua_undeclared.py",          # imported by it
         "sync_guilds_repo.py",              # this file's copying
         "sync_more_resources_repo.py",
-    )] + ["Modding Files/reference/more_resources_building_audit.md"]
+        "_more_resources_ai_harness.lua",   # the AI builder's test, run by --selftest
+    )] + ["Modding Files/reference/more_resources_building_audit.md",
+          "Modding Files/pack/script/campaign/mod/derpy_more_resources_ai.lua"]
     out = [(p, p) for p in same]
     out += [("docs/TRADE_RESOURCES.md", "docs/TRADE_RESOURCES.md"),
             ("docs/sessions/HANDOFF_20261001_COMMODITY_ICONS_AND_RESOURCE_MAP.md",

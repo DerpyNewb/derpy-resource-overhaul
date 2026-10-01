@@ -1009,6 +1009,202 @@ def audit():
     print("wrote", AUDIT, sum(len(v) for v in by_pool.values()), "buildings")
 
 
+# THE AI BUILDS THE RARE BUILDINGS - BY SCRIPT, AND ONLY WHERE THEY WORK (user, 2026-10-01).
+# The campaign AI scores a building only through cai_construction_system_building_values, and a
+# row there is one flat score per chain: the AI would put Dragon Bone Digs in any settlement, and
+# outside the lore regions the building makes nothing. So the chains get NO score row (the AI
+# never picks them), and this script builds them instead, for AI factions, in the regions where
+# rare_cond() holds - the same condition the building's rows are gated by, evaluated here on
+# every region of IE, the Realm of Chaos and IEE's own. A region whose IEE deposit or origin is
+# unreadable offline reads as no, so the error runs towards not building, never towards a dead one.
+#
+# PLAYER-LIKE: CA's price per level (LEVEL_DONOR's create_cost), the settlement tier each level
+# needs, and a treasury reserve. cm:add_building_to_settlement picks the slot itself, and the
+# building is looked for afterwards: gold is charged only for a building that is really there.
+AI_LUA = os.path.join(PACK, "script", "campaign", "mod", "derpy_more_resources_ai.lua")
+AI_PACE = 5        # turns between one AI faction's actions, staggered per faction
+AI_RESERVE = 2     # it pays only while it holds this many times the price
+AI_HARNESS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_more_resources_ai_harness.lua")
+LUA_EXE = r"C:\Program Files (x86)\Lua\5.1\lua.exe"
+
+_AI_LOGIC = """
+local function say(s) if out then out("derpy_mr_ai: " .. s) end end
+
+-- Bounded, so float32 keeps it exact (the Exchange's EX.key_hash).
+function MR_AI.hash(s)
+    local h = 0
+    for i = 1, #s do h = (h * 31 + string.byte(s, i)) % 65536 end
+    return h
+end
+
+function MR_AI.due(fname, turn)
+    return (turn + MR_AI.hash(fname)) % MR_AI.PACE == 0
+end
+
+-- "<chain>_<n>" -> n, by prefix, no pattern: chain keys are plain and a pattern match would read
+-- "black_lotus" as the start of "black_lotus_def".
+function MR_AI.level_in(chain, bname)
+    local pre = chain .. "_"
+    if string.sub(bname, 1, #pre) ~= pre then return nil end
+    return tonumber(string.sub(bname, #pre + 1))
+end
+
+function MR_AI.tier(region)
+    local ok, t = pcall(function()
+        return region:settlement():primary_slot():building():building_level()
+    end)
+    return ok and t or 0
+end
+
+-- The slot holding this chain in the region, and its level.
+function MR_AI.find(region, chain)
+    local slots = region:slot_list()
+    for i = 0, slots:num_items() - 1 do
+        local s = slots:item_at(i)
+        if s:has_building() then
+            local n = MR_AI.level_in(chain, s:building():name())
+            if n then return s, n end
+        end
+    end
+    return nil, nil
+end
+
+-- What this faction may build: {good, chain, region} for every owned lore region.
+function MR_AI.options(faction)
+    local out_, culture = {}, faction:culture()
+    local regions = faction:region_list()
+    for _, good in ipairs(MR_AI.GOODS) do
+        local chain = (MR_AI.CHAIN[good] or {})[culture]
+        if chain then
+            for i = 0, regions:num_items() - 1 do
+                local r = regions:item_at(i)
+                if MR_AI.REGIONS[good][r:name()] then out_[#out_ + 1] = { good, chain, r } end
+            end
+        end
+    end
+    return out_
+end
+
+-- ONE ACTION, OR NONE. An upgrade first - a building the faction already owns, whose next level
+-- the settlement's tier allows - then a new building. Returns what it did, for the log and the
+-- harness.
+function MR_AI.act(faction)
+    local fname = faction:name()
+    local opts = MR_AI.options(faction)
+    if #opts == 0 then return nil end
+    local function afford(cost) return faction:treasury() >= cost * MR_AI.RESERVE end
+    for _, o in ipairs(opts) do
+        local slot, n = MR_AI.find(o[3], o[2])
+        if slot and n < 3 and MR_AI.tier(o[3]) >= MR_AI.REQ[n + 1] and afford(MR_AI.COST[n + 1]) then
+            local want = o[2] .. "_" .. (n + 1)
+            cm:instantly_upgrade_building_in_region(slot, want)
+            local got = MR_AI.find(o[3], o[2])
+            if got and got:building():name() == want then
+                cm:treasury_mod(fname, -MR_AI.COST[n + 1])
+                say(fname .. " upgraded " .. want .. " in " .. o[3]:name())
+                return "upgrade " .. want .. " " .. o[3]:name()
+            end
+            say(fname .. " could not upgrade to " .. want .. " in " .. o[3]:name())
+        end
+    end
+    for _, o in ipairs(opts) do
+        if not MR_AI.find(o[3], o[2]) and MR_AI.tier(o[3]) >= MR_AI.REQ[1] and afford(MR_AI.COST[1]) then
+            local want = o[2] .. "_1"
+            cm:add_building_to_settlement(o[3]:name(), want)
+            if MR_AI.find(o[3], o[2]) then
+                cm:treasury_mod(fname, -MR_AI.COST[1])
+                say(fname .. " built " .. want .. " in " .. o[3]:name())
+                return "build " .. want .. " " .. o[3]:name()
+            end
+            -- no free slot that takes it: try the next region, and say so once in the log
+            say(fname .. " found no slot for " .. want .. " in " .. o[3]:name())
+        end
+    end
+    return nil
+end
+
+function MR_AI.turn(faction)
+    if faction:is_human() or faction:is_dead() then return nil end
+    if not MR_AI.due(faction:name(), cm:model():turn_number()) then return nil end
+    local ok, did = pcall(MR_AI.act, faction)
+    if not ok then say("error for " .. faction:name() .. ": " .. tostring(did)) return nil end
+    return did
+end
+
+if core then
+    core:add_listener("derpy_mr_ai", "FactionTurnStart", true,
+        function(context) MR_AI.turn(context:faction()) end, true)
+end
+"""
+
+
+def ai_regions():
+    """good -> sorted region keys where its building works, over IE, RoC and every SUBMODS map."""
+    sig = list(_signals().values())
+    for name in SUBMODS:
+        if os.path.isfile(SUBMODS[name]["pack"]):
+            sig += list(submod_signals(name).values())
+    return {good: sorted({g["region"] for g in sig if evaluate(rare_cond(good), g)}) for good in RARE}
+
+
+def ai_script():
+    lvl = sorted((r for r in db("building_levels_tables")[1] if r["chain"] == LEVEL_DONOR),
+                 key=lambda r: r["level"])[:3]
+    regions = ai_regions()
+    lines = ["-- Derpy More Resources: the AI builds the rare goods' buildings, only where they work.",
+             "-- GENERATED by tools/gen_more_resources.py (ai_script). Edit the generator, not this file.",
+             "MR_AI = {}",
+             "MR_AI.PACE = %d" % AI_PACE,
+             "MR_AI.RESERVE = %d" % AI_RESERVE,
+             "MR_AI.COST = { %s }" % ", ".join(str(int(r["create_cost"])) for r in lvl),
+             "MR_AI.REQ = { %s }   -- the settlement tier each level needs" % ", ".join(
+                 str(int(r["primary_slot_building_building_level_requirement"])) for r in lvl),
+             "MR_AI.GOODS = { %s }" % ", ".join('"%s"' % g for g in sorted(RARE)),
+             "MR_AI.CHAIN = {"]
+    for good in sorted(RARE):
+        lines.append("    %s = { %s }," % (good, ", ".join(
+            '%s = "%s"' % (CULTURES[race_], ch) for race_, ch in rare_chains(good))))
+    lines.append("}")
+    lines.append("MR_AI.REGIONS = {")
+    for good in sorted(RARE):
+        lines.append("    %s = {" % good)
+        for k in regions[good]:
+            lines.append('        ["%s"] = true,' % k)
+        lines.append("    },")
+    lines.append("}")
+    return "\n".join(lines) + "\n" + _AI_LOGIC
+
+
+def check_ai(text):
+    """The script must agree with build(): every chain and level it names is one build() mints,
+    every culture is one its chain is rostered for, and every good has somewhere to build."""
+    import subprocess, tempfile
+    t, _loc = build()
+    levels = {r["level_name"] for r in t["building_levels_tables"][2]}
+    for good in RARE:
+        for race_, ch in rare_chains(good):
+            assert '%s = "%s"' % (CULTURES[race_], ch) in text, (good, race_)
+            assert all(l in levels for l in bld_levels(ch)), ch
+    regions = ai_regions()
+    assert all(regions[g] for g in RARE), [g for g in RARE if not regions[g]]
+    if not os.path.isfile(LUA_EXE):
+        return
+    with tempfile.NamedTemporaryFile("w", suffix=".lua", delete=False, encoding="utf-8") as fh:
+        fh.write(text)
+        script = fh.name
+    try:
+        harness = io.open(AI_HARNESS, encoding="utf-8").read().replace("__SCRIPT__", script.replace("\\", "/"))
+        with tempfile.NamedTemporaryFile("w", suffix=".lua", delete=False, encoding="utf-8") as fh:
+            fh.write(harness)
+            hpath = fh.name
+        got = subprocess.run([LUA_EXE, hpath], capture_output=True, text=True)
+        os.unlink(hpath)
+    finally:
+        os.unlink(script)
+    assert got.returncode == 0 and "harness ok" in got.stdout, got.stdout + got.stderr
+    return got.stdout
+
+
 def reach_table():
     """good -> {campaign: regions it can be made in}, from the region signals."""
     out = {}
@@ -1274,6 +1470,8 @@ def write(t, loc, frag=FRAG):
     for good in GOODS:
         shutil.copyfile(os.path.join(ICONS, "small", good + ".png"), os.path.join(dst, icon(good) + ".png"))
         shutil.copyfile(os.path.join(ICONS, "large", good + ".png"), os.path.join(dst, icon(good) + "_large.png"))
+    with io.open(AI_LUA, "w", encoding="utf-8", newline="\n") as fh:
+        fh.write(ai_script())
     out = label_patch(label_vanilla())
     label_verify(out)
     with io.open(os.path.join(PACK, *LABEL.split("/")), "w", encoding="utf-8", newline="") as fh:
@@ -1291,6 +1489,7 @@ def _fmt(v):
 def selftest():
     t, loc = build()
     check(t, loc)
+    print(check_ai(ai_script()).strip().splitlines()[-1])
     # a bad row must be caught, or the check proves nothing
     for breakit in (lambda t: t["building_effects_junction_tables"][2].append(
                         dict(t["building_effects_junction_tables"][2][0], building="wh3_main_dae_port_1")),
@@ -1399,6 +1598,10 @@ def pack(t, frag=FRAG):
     if main:   # the label on disk must be what label_patch() builds from CA's CURRENT file
         with io.open(os.path.join(PACK, *LABEL.split("/")), encoding="utf-8", newline="") as fh:
             assert fh.read() == label_patch(label_vanilla()), "stale %s - run without --pack first" % LABEL
+    if main:   # the AI script on disk must be what ai_script() builds
+        with io.open(AI_LUA, encoding="utf-8") as fh:
+            assert fh.read() == ai_script(), "stale %s - run without --pack first" % AI_LUA
+        icons.append("script/campaign/mod/" + os.path.basename(AI_LUA))
     for rel in icons:
         call("add_packed_files", {"pack_key": key, "source_paths": [os.path.join(PACK, *rel.split("/"))],
                                   "destination_paths": json.dumps([{"File": rel}])})
@@ -1426,6 +1629,7 @@ def main():
         return selftest()
     t, loc = build()
     gone = check(t, loc)
+    print(check_ai(ai_script()).strip().splitlines()[-1])
     subs = {}
     for name in SUBMODS:
         n = check_submod(name)
