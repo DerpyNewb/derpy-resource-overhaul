@@ -1,0 +1,10 @@
+# Changelog
+
+## 2026-10-01
+
+- First public source.
+- 37 goods, made on existing buildings under lore conditions.
+- 8 rare goods with their own three-level buildings, one chain per race (27).
+- Immortal Empires Expanded submod.
+- Map label icon per good.
+- Trades on Derpy's Grand Trade Exchange when both are installed.

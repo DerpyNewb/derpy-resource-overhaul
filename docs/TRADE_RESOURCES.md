@@ -1,0 +1,496 @@
+# Trade resources: how they are placed on the map and produced
+
+Measured 2026-10-01 against the 9.0 `db.pack` and the Assembly Kit's raw start-position data.
+Re-run the survey after a patch: `py tools/survey_resource_map.py` (RPFM can stay shut).
+
+The Zharr Exchange's side of this - how the market reads production and prices it - is in
+`sessions/HANDOFF_20260905_EXCHANGE_OWNERSHIP_STATS.md` §24-§25 and
+`sessions/HANDOFF_20260909_EXCHANGE_TRADE_RESOURCES_AND_INTRO.md`. This doc is the game's side.
+
+## 1. The chain, one table per link
+
+```
+start_pos_region_slot_templates     campaign + region + slot_type  -> slot_template
+slot_templates.resource             slot_template                  -> the deposit (blank on 416 of 671)
+slot_template_permitted_building_chains   slot_template -> chain | super_chain | chain_set (+ remove)
+building_chain_sets.parent_set  +  building_chain_set_items        chain_set -> chains / superchains
+building_chains.building_superchain       superchain -> every culture's chain in it
+building_levels.chain                     chain -> its level keys
+building_effects_junction                 level -> wh_main_effect_region_resource_<stem>_production
+effect_bonus_value_resource_junction      that effect -> the resource it produces ("production")
+resources_tables                          the resource: unit, trade_value, icon
+resources_to_campaign_junctions           which campaigns the resource exists in
+```
+
+**The first link is not in `db.pack`.** `start_pos_region_slot_templates` has 0 rows there; it
+is compiled into the start position. The readable copy is the Assembly Kit's
+`assembly_kit/raw_data/db/start_pos_region_slot_templates.xml`. Changing it means rebuilding
+the startpos, which no mod can do without shipping a whole map.
+
+## 2. How a region gets a deposit
+
+A deposit is **not a separate slot**. Each region's slots (primary, secondary, port) get a
+template, and a resource region's secondary slot simply uses a resource variant of the normal
+one: `wh_main_human_minor_secondary` becomes `wh_main_human_minor_secondary_iron`, and that
+template's `resource` column is `res_rom_iron`. That is what `region:resource_exists()` reads.
+
+Landmark regions use their own template (`wh_main_special_nuln_secondary_iron`, ...), which may
+or may not carry a resource. 255 of 671 templates carry one.
+
+Deposit regions per resource:
+
+| Resource | Shown as | Immortal Empires (572 regions) | Realm of Chaos (242) | Own deposit? |
+|---|---|---|---|---|
+| `res_rom_iron` | Iron | 25 | 8 | yes |
+| `res_rom_timber` | Timber | 25 | 8 | yes |
+| `res_rom_marble` | Marble | 18 | 10 | yes |
+| `res_animals` | Exotic Animals | 13 | 4 | yes |
+| `res_gems` | Gemstones | 13 | 5 | yes |
+| `res_rom_furs` | Furs | 13 | 4 | yes |
+| `res_rom_textiles` | Pottery | 13 | 3 | yes |
+| `res_dyes` | Dyes | 12 | 5 | yes |
+| `res_rom_lead` | Salt | 12 | 3 | yes |
+| `res_obsidian` | Carved Obsidian | 11 | 4 | yes |
+| `res_rom_wine` | Wine | 11 | 1 | yes |
+| `res_spices` | Spices | 11 | 4 | yes |
+| `res_medicine` | Medicinal Plants | 10 | 3 | yes |
+| `res_ivory` | Tusks | 6 | 5 | yes |
+| `res_gold_idols` | Golden Idols | - | - | **no** - see §4 |
+| `res_rom_glass` | Dwarf Beer | - | - | **no** |
+| `res_trinkets` | Elven Trinkets | - | - | **no** |
+
+**Per region:** `py tools/survey_resource_map.py --regions` writes
+`Modding Files/reference/region_resources.csv` - every region in every campaign with its
+deposit, every trade good some culture can produce there, and which of those need no deposit.
+IE: 231 of 572 regions can produce a trade good, 50 of them something they have no deposit
+for; RoC 78 of 242. The ordinary buildings of §4b are left out of the rows (they would put
+Animals, Furs, Beer and Trinkets on nearly every region). Deposits differ between campaigns:
+Nuln has iron in Realm of Chaos and nothing in Immortal Empires.
+
+The prologue has 15 regions and no deposits. All 17 tradeable resources are listed in
+`resources_to_campaign_junctions` for both `wh3_main_combi` and `wh3_main_chaos`.
+
+**Deposits that are not trade goods** (`trade_value` 0): `res_gold` 15/7, the four troll
+deposits, `res_savage`, `res_fortress`, `res_empire_fort`, `res_bastion`, `res_location_colony`,
+and **`res_rom_oil` - which is the PASTURES deposit**, not oil: a Rome II key CA reused, icon
+`resource_grain.png`, 22 IE regions, and every culture's pasture chain is what it permits. It is
+not a free key for a new commodity.
+
+## 3. What can be built on a deposit
+
+A resource template permits a **superchain**, and the superchain holds one chain per culture.
+Which one the owner sees depends on `building_chain_availability_sets` for its culture. So an
+iron deposit is one slot, and the building in it is the Empire mine, the Dwarf mine, the Chaos
+Dwarf mine, and so on.
+
+Every deposit template permits at least one producer of its own resource. But **some cultures'
+chains on a deposit produce none of it**, so whether a deposit produces depends on who owns it:
+
+- **Daemons** (`dae`, `kho`, `nur`, `tze`) and **Nagash** (`dlc29_nag`): no output on any deposit.
+  Their chains use the deposit for other effects.
+- **Chaos Dwarfs**: gems, iron, timber, marble and obsidian produce nothing in vanilla (they feed
+  armaments and raw materials instead). `CHD_TRADE_GRANT` in `gen_zharr_exchange.py` adds
+  production rows for exactly those five. Chaos Dwarf gold and pastures also produce nothing.
+- **Greenskins**: animals and gems produce nothing.
+- **The WH1 `_military` chains** (`wh_main_EMPIRE_resource_iron_military`, timber and pastures
+  variants for Empire, Bretonnia, Greenskins, Vampires, Dwarfs): alternative chains on the same
+  deposit that give military effects and no trade good.
+
+## 4. Three ways a region produces
+
+**a. A deposit and its resource building.** The ordinary case. Output by tier comes from the
+production effect, scope `building_to_building_own`; a standard culture chain tops out at 45 a
+turn, and the full range is 2 to 144.
+
+**b. An ordinary building, no deposit needed.** These are allowed in nearly every secondary slot:
+
+| Produces | Building | Culture |
+|---|---|---|
+| Exotic Animals | `wh2_main_def_beasts`, `wh2_main_lzd_beasts` | Dark Elves, Lizardmen |
+| Furs | `wh3_main_ksl_bears`, `wh3_dlc24_ksl_bears_mother_ostankya` | Kislev |
+| Dwarf Beer | `wh_main_DWARFS_tavern` | Dwarfs |
+| Elven Trinkets | `wh2_main_hef_industry`, `wh3_dlc27_hef_colony_economy_income` | High Elves |
+
+This is why Beer and Trinkets have no deposit at all, and why
+`resource_exists` is false in regions that produce them.
+
+**c. A special template or landmark.** A region's own template permits a producer without
+carrying the deposit:
+
+- **Golden Idols come from GOLD deposits.** Tomb Kings, Lizardmen, Dwarfs and Slaanesh
+  (`*_resource_gold`, plus `wh_main_special_brightstone_mine`) build on `res_gold` and produce
+  Golden Idols. Nobody else's gold mine does.
+- **The Wood Elf forests** (Laurelorn, Gryphon Wood, the Witchwood, Kings' Glade and ten more)
+  produce Furs, Timber, Wine, Pottery and Trinkets from their own chains.
+- **One-off landmarks**, by resource: Wine at Wurtbad, Pfeildorf, Skeggi, the Moot; Salt at
+  Al Haikk and Dok Karaz; Iron and Marble at Hag Graef; Iron, Dyes, Spices and Pottery at
+  Erengrad; Gems at the Star Tower, Dragon Fang Mount, the Bone Gulch and Darkhold; Obsidian at
+  Iron Rock and the Star Tower; Medicine at Itza and Laurelorn; Beer at Karak Azorn, Karag Dromar
+  and Sartosa. `wh2_main_special_peg_street_pawnshop` (Sartosa) makes five goods at once.
+
+The survey prints the full region list for each.
+
+## 5. Production modifiers and oddities
+
+- **One building can produce several goods.** 27 do. Hag Graef's mines make iron and marble.
+- **Some buildings consume.** The Underdeep drinking halls carry -2 to -10, scoped
+  `foreign_building_to_region_own` (other regions). Only `building_to_building_own` means
+  "produces here": 820 of the 833 production rows in 9.0 (it was 810 of 823 before).
+- **Province-wide percentage boosts:** `wh2_main_effect_region_tradable_resource_production`,
+  scope `building_to_region_provincewide`, on Kislev's `ksl_trade_order_4/5` (+30/+50, only
+  while the faction has trade) and Cathay's Tiger Court `yin_2/3` (+15/+30).
+- **Damage halves output, ruin zeroes it** - `value_damaged` / `value_ruined` on every row.
+- **9.0 added a "disable" effect per resource** (`wh3_dlc29_effect_region_disable_resource_*`,
+  bound as `bonus_value_id = disable`), used by Nagash.
+- **`wh_main_DWARFS_resource_water`** carries beer production but no slot template permits it:
+  dead content.
+- **No production effect exists for gold or pastures.** An older note claimed `res_gold` carried
+  one; the 9.0 tables have none.
+
+## 6. Reading it at runtime
+
+There is no `region:resource_production()`. Walk `region:slot_list()` -> `slot:has_building()`
+-> `slot:building():name()` and look the key up in a map baked from §1 (the Exchange's
+`EX_PRODUCTION`). Measured at 10ms for the whole IE map. `region:resource_exists(key)` answers
+only "is the deposit here" - see §4 for why that is not supply.
+
+## 7. What a new commodity would take
+
+Of the 26 new icons in `Modding Files/source/exchange_icons/new_commodities/`:
+
+1. **The resource row** - `resources_tables` (key, unit, `trade_value` > 0, icon path) and
+   `resources_to_campaign_junctions` for each campaign.
+2. **A production effect** - an `effects_tables` row, plus an `effect_bonus_value_resource_junction`
+   row binding it to the resource with `bonus_value_id = production`, plus its loc.
+3. **A source.** Two routes:
+   - **Placing new deposits on the map** needs `start_pos_region_slot_templates`, which only a
+     rebuilt startpos changes - incompatible with every other map mod. Not practical.
+   - **Attaching production to buildings that already exist** - `building_effects_junction`
+     rows on existing chains, the way `CHD_TRADE_GRANT` does it. No map edit, and the
+     deposit can be an existing one (Brimstone on obsidian, Coal on iron) or none at all, like
+     Beer and Trinkets.
+4. **The Exchange side** - `PRODUCTION_STEMS`, the 17-commodity asserts in
+   `gen_zharr_exchange.py`, its per-commodity text and bundles.
+
+Untested: whether the game's own trade screen and trade agreements accept a mod-added
+resource. Everything in this doc is read from data; none of it was tried in game.
+
+## 8. Does production need a resource building?
+
+Not a *resource* building - but in vanilla it always needs **something carrying the effect**,
+and that something is always a building. Every one of the 837 production rows in 9.0 is in
+`building_effects_junction`; **zero** are in effect bundles, technologies, skills, ancillaries
+or traits. The building does not have to be a resource building or even be in the region:
+
+| Scope | Rows | Meaning |
+|---|---|---|
+| `building_to_building_own` | 820 | a building produces in its own region (mines, but also taverns, beast pens, landmarks) |
+| `foreign_building_to_region_own` | 10 | the Underdeep: a building in one region changes another's output |
+| `force_to_region_own` | 3 | the Spirit of Grungni's beer hall - a **horde army's** building produces into whatever region the army stands in |
+| `building_to_region_provincewide` | 4 | +% to every resource in the province (Kislev Trade Order, Cathay Tiger Court) |
+
+So the two routes for a mod are: **production rows on chains that already exist** (proven -
+`CHD_TRADE_GRANT`), or **an effect bundle on the region**, `cm:apply_effect_bundle_to_region(
+bundle, region_key, 0)` with a production effect in a region scope. The call is documented;
+**CA never uses a bundle for production**, so whether the engine and the trade screen honour
+it is the first thing to test in game.
+
+## 9. Guessing where a new commodity belongs
+
+`py tools/guess_region_commodities.py` writes `Modding Files/reference/region_commodity_guesses.csv`:
+every region with its signals and the commodities its rules match. A design table only.
+Signals: coastal (a port slot; 134 IE regions), climate (`campaign_map_settlements`, 7 IE
+regions have none), CA's AI area groups, province, starting culture
+(`start_pos_regions.cultural_originator`), deposits and template keys. Each rule in `RULES`
+carries its lore line. IE: 399 of 572 regions get a guess.
+
+Found while writing them: **Ulthuan is `climate_island` throughout** (30 of 34 regions), never
+mountain, so a mountain test for Ithilmar matched nothing. **The Graves of the Dragons stand on
+the Plain of Bones** - The Bone Gulch in IE, Darkhold in Realm of Chaos. `check()` refuses a rule
+that matches no IE region or more than 30% of them, and a signal that loads empty.
+
+## 10. The Salted Fish test pack (Derpy More Resources)
+
+`tools/gen_more_resources.py` builds `Modding Files/Modpacks/derpy_more_resources.pack`, one good
+to prove a mod-added resource works before the other 25 are built. Deployed to `data/` 2026-10-01,
+**not yet tested in game.** Planned as its own mod; the Exchange will detect it rather than ship a
+compat pack.
+
+**What a tradeable good touches**, found by sweeping all 1,600 vanilla tables for `res_rom_lead`
+(Salt, the donor) rather than tracing outward - two of these were missing from §7:
+
+| Table | Rows | What it is |
+|---|---|---|
+| `resources_tables` | 1 | the good; `trade_value` 50 like every tradeable |
+| `resources_to_campaign_junctions_tables` | 2 | IE + Realm of Chaos |
+| `commodities_tables` | 1 | **the price list** - only the 17 tradeables have a row; 10 per unit |
+| `cai_personality_strategic_resource_values_tables` | 78 | **the AI's value of the good**, one per strategic component, cloned from Salt |
+| `effects_tables` + `effect_bonus_value_resource_junction_tables` | 1 + 1 | the production effect bound to the good |
+| `building_effects_junction_tables` | 120 | the source |
+| loc | 4 | name, description, long description (blank, as CA), effect text |
+
+Icons: `ui/campaign ui/effect_bundles/resource_derpy_salted_fish.png` (24px) and `_large.png`
+(54px), the same pair CA ships per good.
+
+**Source:** every chain the startpos lets into a port slot (63), minus the 16 owned by daemons, the
+undead (Tomb Kings, Nagash) and Beastmen. 6 / 8 / 12 per level, half when damaged - CA's own figures
+for a good made by an ordinary building (Dwarf tavern Beer, High Elf industry Trinkets). Reach: 134
+of 572 IE regions and 26 of 242 Realm of Chaos regions have a port slot. The guess tool's "no
+chaotic climate" condition cannot be expressed per building, so a Norscan or Chaos-Warriors port
+still fishes.
+
+**In game, check:** a port's tooltip lists "Salted Fish resource production"; the settlement
+info bar shows the icon; a trade agreement lists Salted Fish and raises trade income; the
+economy panel's trade tab names it. Any of those failing answers §7's open question.
+
+**Map mods (2026-10-01).** IEE (`cr_combi_expanded`) gets its own pack,
+`derpy_more_resources_iee.pack`, holding only the `resources_to_campaign_junctions` row. A row
+naming a campaign that is not loaded is an unresolvable foreign key and the game refuses the
+whole pack, so it cannot sit in the main one. IEE does the same for CA's 18 goods in its
+`!cr_vanilla` fragment. No production rows are needed for IEE: its 67 own port templates
+(`cr_port_*`) all permit only CA's `wh3_main_port_core_generic` set, which the 47 chains
+already cover, and `check_submod()` fails the build if a future IEE update adds a port chain we
+do not. The Old World (`cr_oldworld`) is one more `SUBMODS` entry once that mod is updated.
+
+**Live check, IEE turn 1 (2026-10-01), over the wh3 bridge.** Both packs load next to IEE, with no
+script errors from them. The `CcoResourceRecord` reads back whole (Salted Fish, barrels, price 10,
+trade value 50, icon, description). Built ports carry the effect and its text, "Salted Fish
+resource production: 6 barrels", formatted exactly like CA's "Elven Trinkets resource
+production: 6 chests" on High Elf industry. Checked on TEB, Kislev, Dark Elf, and a Skaven port
+in an IEE-only region (`cr_combi_region_kasar`); the Tzeentch port carries nothing, as excluded.
+**Still untested: the trade screen and a trade agreement.**
+
+Three calls that look like checks and are not:
+- `region:resource_exists(key)` and the settlement's CCO `ResourceList` report **map deposits
+  only** - both say no for Tor Achare's Trinkets, which its industry building produces.
+- `faction:trade_resource_exists(key)` returns **true for a made-up key**, and false for every
+  real good the faction lacks, so a true answer means nothing.
+- What works: `CcoCampaignSettlement` (settlement CQI) ->
+  `BuildingSlotList.At(i).BuildingContext.EffectList.JoinString(LocalisedText, " / ")`.
+
+**Map label (2026-10-01).** The settlement label's resource row (`resource_list` in CA's
+`ui/campaign ui/city_info_bar.twui.xml`) is filled by the engine from **map deposits only**: Bay
+of Blades' port makes Salted Fish and its label showed nothing (the user looked). So the main
+pack overrides that file, rebuilt from the live `ui3.pack` on every run by
+`gen_more_resources.py`: one 24px icon per good, inserted right after `resource_list` in
+`icon_holder` (a HorizontalList, so it flows beside the deposit icon), shown by
+`ContextVisibilitySetter` on `BuildingSlotList.Any(BuildingContext.EffectList.Any(EffectKey ==
+"<production effect>"))`. That expression was measured live first: true at Bay of Blades,
+Swamp Town and Dietershafen, false at the excluded Tzeentch port and at Tor Achare. Tooltip loc
+`uied_component_texts_localised_string_derpy_mr_<good>_Tooltip`. TWUI Studio's reader reports
+no issue on CA's file or ours. **The one compatibility cost of the mod**: any other mod that
+overrides `city_info_bar.twui.xml` wins or loses by load order (none of 68 loaded mods does
+today). Re-run after any patch that touches the label.
+
+**Trade confirmed in game (2026-10-01, IEE).** A diplomacy Trade Agreement lists Salted Fish
+(the fish icon) among the traded goods on both sides. So a mod-added resource is fully accepted
+by the engine: production, building tooltip, map label (our override) and trade agreements.
+§7's open question is answered - yes. The Zharr Exchange does not list it, by design: its
+commodity list is hardcoded and the detection hook is not built yet.
+
+## 11. All 37 goods (2026-10-01)
+
+Built and deployed; **not yet checked in game**. 37 goods (the first 26 plus carpets, kvas,
+rhinox hides, mead, glassware, wool, porcelain, pearls, starwood, feathers, wyvern scales),
+5,055 production rows, 41 lore conditions, 7 new units (`derpy_horses`, `_crates`, `_bolts`,
+`_flasks`, `_rolls`, `_hides`, `_bales`, each in `commodity_unit_names` plus singular/plural
+loc), 37 label icons. The first build (26 goods, all common goods on the main settlement) had
+11,861 rows; moving them to economy buildings cut that.
+
+**Where a good comes from = a building pool AND a lore condition on that building's region.**
+The condition is a `building_effect_context_expressions_tables` row (v2: expression, key,
+display_only_active_effects, always_show_display_text) named in the production row's
+`context_requirement`. CA gates 11 of its own production rows this way (`FactionHasTrade`,
+`RegionHasAdjacentDwarfFaction`). The vocabulary used, all CA-proven in that table except the
+one marked:
+- climate: `Region.IsEffectBundleActive("wh3_dlc20_climate_<state>_<climate>")` over the three
+  states, CA's own `MountainClimate` form (`Region.ClimateKey` exists but no CA row uses it);
+- `Region.HasResource`, `Region.IsOriginatingSubcultureOneOf`, `Region.RecordKeyIsOneOf`;
+- area: `Region.BelongsToRegionGroup("cai_region_hint_(sub_)area_<x>")` - **documented on
+  CcoCampaignModelRegion but CA only uses it on sea regions; unverified on land.** IEE puts 189
+  of its 236 regions in these groups and adds Ind, Nippon and Khuresh.
+
+| Pool | Chains | Per level | Goods |
+|---|---|---|---|
+| port | 47 port chains | 6/8/12 | salted fish, whale oil, sea dragon hide, rum, amber, pearls |
+| farm | 17 farm/growth chains (`KIND_CHAINS`) | 6/8/12 | grain, pipeweed, olive oil, tea, plumes, black lotus, incense, salted meat, kvas, rhinox hides, mead, wool, starwood |
+| industry | 19 industry/income chains | 6/8/12 | silk, jade, carpets, glassware, porcelain; the second source of coal, brimstone, brass, blackpowder |
+| stables | 5 stable chains | 6/8/12 | warhorses, feathers |
+| mine | the resource chains on the named deposits | 6/8/12 | coal (iron), silver, gromril, quicksilver, brimstone (obsidian), brass (Dark Lands iron), blackpowder (salt), ithilmar (Ulthuan ore) |
+| settlement | every main-settlement chain (ruins, prologue, dummies dropped) | 4/6/8/10/12 | books, dragon bone, wyvern scales, ithilmar's second source (Vaul's Anvil) |
+
+**Common goods sit on the green economy buildings, not the main settlement.** `KIND_CHAINS` is
+an explicit list because `chain_category` (money/military/happiness) is too coarse to tell a
+farm from a tavern. **No fallback, by the user's lore ruling:** a race with no building of a kind
+makes none of those goods and gets them by trade or raiding - Chaos Dwarfs make no farm goods,
+Norsca and Vampire Counts no farm or industry goods, and only Bretonnia, the Empire, High Elves,
+Kislev and Norsca breed warhorses and feathers. One deliberate exception: Norscan mead also comes
+from Norsca's main settlement (`("settlement", "nor")` pool - the jarl's hall is the mead hall).
+`check()` asserts no farm/industry chain of those races creeps back in, and that every listed
+chain is buildable in a secondary slot and carries a race tag.
+
+Rare goods (sea dragon hide, gromril, ithilmar, dragon bone, black lotus, starwood, feathers,
+wyvern scales) are scaled x0.5; the two single-place goods (pipeweed, books) x2. Daemons, the
+undead and Beastmen make nothing. The rare eight are meant to get their own buildings later;
+not built yet.
+
+**The rules table is the spec.** Each condition is a tuple tree that `render()` turns into the
+expression and `evaluate()` runs against `guess_region_commodities.signals()`. `check()` asserts
+that for every IE and Realm of Chaos region, each good reaches exactly the regions that tool's
+`RULES` name, so the lore table and what ships cannot drift. The selftest feeds it four wrong
+rules (loosened, a dropped condition, the wrong place, an area typo) and each one fails.
+IEE-only areas extend four rules (silk and tea to Ind and Nippon, black lotus to Khuresh,
+incense to Ind) without touching that parity. `check_submod()` now asserts IEE's own port,
+primary and deposit templates only permit chains our pools cover.
+
+**Open: the map label with conditioned effects.** The label shows a good when any building's
+`EffectList` holds its production effect. If `EffectList` also lists effects whose condition is
+false, a settlement would show e.g. a Grain icon outside the farmland. Check a non-farmland
+settlement (Zharr-Naggrund) in game. If it shows Grain, the label expression needs the condition
+added.
+
+## 12. The rare goods' own buildings (2026-10-01)
+
+Built and deployed; **not yet checked in game**. Eight three-level chains, `derpy_mr_bld_<good>`,
+12 tables (the template set minus units allowed and slot unlocks; **no AI score row**, so the
+AI never builds them and keeps the half-rate by-products of §11). Every wide row is cloned off
+`wh_main_DWARFS_industry` levels 1-3.
+
+| Good | Built by | Icon frame |
+|---|---|---|
+| gromril | Dwarfs | `dwarf_gold` (chains) |
+| ithilmar | High Elves | `high_elves_resource_gold` (horns) |
+| dragon bone | every culture in `CULTURES` (user: whoever holds the Plain of Bones) | none - glyph alone |
+| sea dragon hide | Dark Elves | `dark_elves_resource_gold` |
+| black lotus | Dark Elves, Skaven | `dark_elves_resource_gold` |
+| starwood | Wood Elves (also in the wef forest set) | none - glyph alone |
+| feathers | Bretonnia, Empire (and the teb roster) | `empire_gold` |
+| wyvern scales | Greenskins, Ogres | `wh_main_grn_resource_gold` (gear) |
+
+**Icons, `tools/gen_building_icons.py`.** CA's resource-building icons are one flat colour,
+(85,31,0) at alpha ~204 (never 255): a race frame around a solid cog with the resource cut in
+as a solid glyph ringed by a transparent gap; race-neutral ones are the glyph alone, detail cut
+as transparent lines. Codex draws each glyph as a black-on-white stencil (CA's generic glyphs as
+the reference - painted art through edge detection gave speckle); the tool fills the CA frame's
+cog and cuts the glyph in, colour and alpha read off that frame. `--check` holds size, colour
+and top alpha to CA's (bicubic upscaling overshot the alpha to 208 until clamped).
+
+**Per level, after CA's resource buildings** (`wh_main_dwf_resource_iron` 1-3, whose level rows
+are cloned: 1000/2000/3000 gold, 2/3/4 turns, main settlement 1/2/3): the good 10/15/23 (CA's
+20/30/45 halved - these trade at about double a common good's price), income 100/150/200
+(`wh_main_effect_economy_gdp_mining`), and a lore bonus from `BONUS` - CA effects CA already puts
+on buildings, at CA's scopes and values: recruit cost -20/-25/-30%, recruit rank +1/+2 from level
+2, upkeep -3% at level 3, hero rank +1/+2. Damaged = half rounded away from zero, CA's rule
+(`damaged()`), now on every row this pack writes.
+
+| Good | Bonus |
+|---|---|
+| gromril | Ironbreakers and Hammerers |
+| ithilmar | Swordmasters, Phoenix Guard, Dragon Princes (CA's High Elf iron bonus) |
+| dragon bone | hero recruit rank, any owner |
+| sea dragon hide | Black Ark Corsairs (CA's Dark Elf salt bonus) |
+| black lotus | Dark Elves: Witch Elves (CA's medicine bonus); Skaven: Assassin rank |
+| starwood | Glade Guard and Glade Riders |
+| feathers | Bretonnia: Pegasus and Hippogryph Knights; Empire: Demigryphs |
+| wyvern scales | Greenskins: Black Orcs and Big 'Uns; Ogres: hunters' beasts (Sabretusks, Stonehorns) |
+
+On a building two races can build, a race's bonus is gated on the lore AND
+`Region.Owner.CultureKey` (CA's `IsRegionNorsca` form), so neither sees the other's line.
+`check_rare()` holds that, and that every race that can build one gets a bonus. Trap met: on a
+one-race building the race gate IS the lore gate, and writing both emitted the same condition key
+twice - the pack's duplicate-key refusal caught it; `check()` now does too.
+
+**Buildable in any ordinary slot of those races, and makes nothing
+outside the lore** (user ruling): there is no region lock without a startpos, so the production
+row's context condition is the lock. `rare_cond()` derives it from the good's by-product
+sources, adding what each pool implied (`Region.IsPort == true` for a port source - CA's own
+`IsRegionPort` row - and `HasResource` for a mine source), so it cannot reach a region the lore
+rule does not; `check_rare()` asserts that region by region, that every building row is gated,
+and that rosters, building sets and icons exist. Rosters are every
+`building_chain_availabilities` set of the culture outside the prologue, faction ones included
+(Lokhir, Aislinn). The short description says where the building works.
+
+## 13. IEE's own regions (2026-10-01)
+
+The lore parity check covers IE and Realm of Chaos only, so IEE's 236 new regions (Ind, Nippon,
+Khuresh, Khosun, the chaos wastes, and IEE's additions elsewhere) had never been measured.
+`submod_signals()` now reads them from IEE's pack: areas, climate (`campaign_map_settlements`;
+the 42 regions without one are sea and river), province, and a coast where a `cr_port_<tail>`
+template exists. **Deposits and cultural origin live only in IEE's binary `startpos.esf`**, so
+they read empty: mine-sourced and origin-gated goods are under-counted there, never over - those
+need an in-game check. The normal run prints the reach per IEE area; `check_submod_reach()` fails
+any good that covers every region of an IEE area of 10 or more (a rule with its terrain condition
+missing), and the selftest proves it by dropping one.
+
+It found one: Ind incense had no terrain condition and reached all 31 Ind regions, peaks and
+jungle alike. Now Ind's desert, savannah and temperate regions only (9), as Araby's is
+desert-only. What IEE's new areas get now:
+
+| Area | Regions | Goods |
+|---|---|---|
+| Ind | 31 | tea 23, silk 16, salted fish 14, incense 9, pearls 8; and 7 Ind peaks IEE also tags Mountains of Mourn get salted meat, rhinox hides, wyvern scales |
+| Khuresh | 42 | salted fish 22, black lotus 19 (jungle), pearls 16 |
+| Nippon | 22 | tea 12, silk 8, porcelain 8, salted fish 6, pearls 1 |
+| Khosun | 21 | the same 21 regions as northern Cathay: tea, jade, silk, porcelain |
+| chaos wastes | 45 | nothing (chaotic) |
+
+## 14. Two in-game findings (2026-10-01, IEE, Conclave turn 1, via the bridge)
+
+**A chain is filed under ONE building set.** `CcoCampaignBuildingSlot.PossibleBuildingChainsList`
+showed every race's rare building offered correctly (Karaz-a-Karak gromril, Altdorf/Couronne
+feathers, Naggarond lotus and sea dragon hide, Lothern/Vaul's Anvil ithilmar) - except on the
+Conclave's settlements, where none was, dragon bone included. `BuildingSetContext` on the shared
+dragon bone chain answered `wh2_main_set_highelf_infrastructure`: of the 17 set rows it carried,
+the game used one, so Dwarfs saw it filed under the High Elves, and Chaos Dwarf slots - whose
+`PossibleBuildingSetList` holds only Chaos Dwarf sets - never offered it. Fixed as CA does it: one
+chain per race (`rare_chains()`, `derpy_mr_bld_<good>_<race>` on a shared good), each in its own
+race's set and rosters, which also retires the owner-culture gates of §12. `check_rare()` asserts
+exactly one set per chain and one culture's rosters; the selftest adds a second set and a stolen
+bonus. 27 chains. Zharr-Naggrund's tower slots take no ordinary-slot chain at all, ours or CA's.
+
+**Dug, not smelted.** The user caught the Gold Sluice (`wh3_dlc23_chd_factory_refinery_2`) making
+brass, brimstone and coal while the Mineshaft (`wh3_dlc23_chd_outpost_mine_2`) made nothing: the
+refinery was in `KIND_CHAINS["industry"]` and coal's and brimstone's second sources were industry
+sources, while no list held the Chaos Dwarf mines. Coal and brimstone now take a `dig` pool - the
+Miners' Workshop (`factory_drills`) and the outpost Mineshaft; brass stays on the refinery,
+assembly line and furnace. Dwarfs keep coal from their iron mines; their Trinket Maker no longer
+makes it.
+
+## 15. The building audit (2026-10-01)
+
+`py tools/gen_more_resources.py --audit` writes `Modding Files/reference/more_resources_building_audit.md`:
+every building that makes a good, by CA's in-game name per level, beside what it makes. Reading
+it against the names found the pools were too coarse - `KIND_CHAINS` had held every "growth" and
+"income" chain, so the Greenskin Idolz could grow grain, the Skaven Rubbish Pit make porcelain,
+Kislev's Royal Barracks (Tzar Guard) breed warhorses. The pools are now chosen by building name
+and description: `farm` (Fields, Windmill, Barley Field, Elf Homestead, Kislev Farmstead, Dark
+Elf Manors), `hunt` (Skink Foraging Camp, Trapper's Den, Maw Pit), `teahouse` (Cathay Tea
+Parlour), `inn` (Kislev Roadhouse, "sell nothing but kvas"), `craft` (weavers, Elf and Druchii
+artisans, Cathay, Kislev and Skink markets), `forge` (CHD Furnace and Gunsmith, Dwarf Toolmaker),
+`dig` (CHD Miners' Workshop and Mineshaft), `stables` (horse breeders incl. Kislev's Stud Farm),
+`eyrie` (Bretonnia's Pegasus Aerie, Empire's Menagerie). Starwood moved to the Wood Elf
+settlement (the forest gives it), Nuln's blackpowder to the city of Nuln.
+
+Excluded by name: `NOT_A_HARBOUR` - the CHD river sluice and irrigation qanat, Nakai's port
+temples; `NOT_A_MINE` - the `_military` smithies on an iron deposit (Arsenal, Black Orc Forge,
+Master Swordsmith's Forge, Unholy Forge), to which CA itself gives none of the deposit's good.
+Dropped altogether: Vampire Coast, Skaven, Warriors of Chaos, Greenskin, Ogre-income and Wood
+Elf vineyard chains, the Cathay labour bureau, the Bretonnian cellar and the CHD gold refinery.
+5,002 production rows.
+
+## 16. Trading the goods on the Zharr Exchange (2026-10-01)
+
+`derpy_zharr_exchange.pack` trades all 37 goods when More Resources is installed. The More
+Resources packs are unchanged; the whole bridge lives in the Exchange (`docs/ZHARR_EXCHANGE.md`
+§19, "More Resources' goods").
+
+- **Detection, per good:** `common.get_localised_string("resources_onscreen_text_res_derpy_<good>")`
+  is the good's name with this mod installed and `""` without it. Measured in game.
+- **Supply:** the production rows are lore-gated per region, so no building-to-goods map can
+  describe them. The Exchange reads one CCO expression per settlement instead:
+  `BuildingSlotList.JoinString(BuildingContext.EffectList.Filter(EffectKey.StartsWith("derpy_effect_region_resource_")).JoinString(EffectKey + "=" + Value, ","), ",")`.
+  `EffectList` holds only the rows whose condition holds, at their real value. Measured on IEE:
+  Lothern's port reads pearls 6 and salted fish 6, Erengrad's reads amber 6 and salted fish 6,
+  and all 749 regions take 0.064s.
+- **Rename a good, its effect key or the `res_derpy_` prefix** and the Exchange stops seeing it.
+  Regenerate `EX.MR` (`check_more_resources()` in `gen_zharr_exchange.py` fails until you do).

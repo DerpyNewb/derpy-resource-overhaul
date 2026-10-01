@@ -1,0 +1,325 @@
+key	text	tooltip
+#Loc;1;text/db/derpy_more_resources.loc
+commodity_unit_names_singular_derpy_horses	horse	false
+commodity_unit_names_plural_derpy_horses	horses	false
+commodity_unit_names_singular_derpy_crates	crate	false
+commodity_unit_names_plural_derpy_crates	crates	false
+commodity_unit_names_singular_derpy_bolts	bolt	false
+commodity_unit_names_plural_derpy_bolts	bolts	false
+commodity_unit_names_singular_derpy_flasks	flask	false
+commodity_unit_names_plural_derpy_flasks	flasks	false
+commodity_unit_names_singular_derpy_rolls	roll	false
+commodity_unit_names_plural_derpy_rolls	rolls	false
+commodity_unit_names_singular_derpy_hides	hide	false
+commodity_unit_names_plural_derpy_hides	hides	false
+commodity_unit_names_singular_derpy_bales	bale	false
+commodity_unit_names_plural_derpy_bales	bales	false
+resources_onscreen_text_res_derpy_salted_fish	Salted Fish	false
+resources_description_res_derpy_salted_fish	Herring, cod and eel, gutted on the quay and packed in brine. Every port from Marienburg to Lothern sends it inland, and every army marches on it.	false
+resources_long_description_res_derpy_salted_fish		false
+effects_description_derpy_effect_region_resource_salted_fish_production	Salted Fish resource production: %n barrels	false
+uied_component_texts_localised_string_derpy_mr_salted_fish_Tooltip	Salted Fish||A building in this settlement produces Salted Fish, a trade good.	false
+resources_onscreen_text_res_derpy_whale_oil	Whale Oil	false
+resources_description_res_derpy_whale_oil	Rendered from the great whales of the northern seas. It lights the lamps of every city that can afford them.	false
+resources_long_description_res_derpy_whale_oil		false
+effects_description_derpy_effect_region_resource_whale_oil_production	Whale Oil resource production: %n barrels	false
+uied_component_texts_localised_string_derpy_mr_whale_oil_Tooltip	Whale Oil||A building in this settlement produces Whale Oil, a trade good.	false
+resources_onscreen_text_res_derpy_sea_dragon_hide	Sea Dragon Hide	false
+resources_description_res_derpy_sea_dragon_hide	Taken by Druchii corsairs from the sea dragons of the cold seas off Naggaroth. A cloak of it turns a blade.	false
+resources_long_description_res_derpy_sea_dragon_hide		false
+effects_description_derpy_effect_region_resource_sea_dragon_hide_production	Sea Dragon Hide resource production: %n bundle	false
+uied_component_texts_localised_string_derpy_mr_sea_dragon_hide_Tooltip	Sea Dragon Hide||A building in this settlement produces Sea Dragon Hide, a trade good.	false
+resources_onscreen_text_res_derpy_rum	Rum	false
+resources_description_res_derpy_rum	Cane spirit from the hot coasts. Sartosa and the Vampire Coast float on it.	false
+resources_long_description_res_derpy_rum		false
+effects_description_derpy_effect_region_resource_rum_production	Rum resource production: %n kegs	false
+uied_component_texts_localised_string_derpy_mr_rum_Tooltip	Rum||A building in this settlement produces Rum, a trade good.	false
+resources_onscreen_text_res_derpy_amber	Amber	false
+resources_description_res_derpy_amber	Golden resin washed up on the Sea of Claws shores, prized by jewellers and wizards alike.	false
+resources_long_description_res_derpy_amber		false
+effects_description_derpy_effect_region_resource_amber_production	Amber resource production: %n chests	false
+uied_component_texts_localised_string_derpy_mr_amber_Tooltip	Amber||A building in this settlement produces Amber, a trade good.	false
+resources_onscreen_text_res_derpy_grain	Grain	false
+resources_description_res_derpy_grain	Wheat, rye and barley from the farmland of the Old World. Bread for cities and fodder for armies.	false
+resources_long_description_res_derpy_grain		false
+effects_description_derpy_effect_region_resource_grain_production	Grain resource production: %n sacks	false
+uied_component_texts_localised_string_derpy_mr_grain_Tooltip	Grain||A building in this settlement produces Grain, a trade good.	false
+resources_onscreen_text_res_derpy_warhorses	Warhorses	false
+resources_description_res_derpy_warhorses	Bretonnian destriers, Kislevite steppe horses and Arabyan coursers, bred for war.	false
+resources_long_description_res_derpy_warhorses		false
+effects_description_derpy_effect_region_resource_warhorses_production	Warhorses resource production: %n horses	false
+uied_component_texts_localised_string_derpy_mr_warhorses_Tooltip	Warhorses||A building in this settlement produces Warhorses, a trade good.	false
+resources_onscreen_text_res_derpy_pipeweed	Pipeweed	false
+resources_description_res_derpy_pipeweed	Halfling leaf from the Moot, smoked in every tavern from Altdorf to Marienburg.	false
+resources_long_description_res_derpy_pipeweed		false
+effects_description_derpy_effect_region_resource_pipeweed_production	Pipeweed resource production: %n bundle	false
+uied_component_texts_localised_string_derpy_mr_pipeweed_Tooltip	Pipeweed||A building in this settlement produces Pipeweed, a trade good.	false
+resources_onscreen_text_res_derpy_books	Books	false
+resources_description_res_derpy_books	Printed tomes and copied scrolls from the great presses, colleges and libraries.	false
+resources_long_description_res_derpy_books		false
+effects_description_derpy_effect_region_resource_books_production	Books resource production: %n crates	false
+uied_component_texts_localised_string_derpy_mr_books_Tooltip	Books||A building in this settlement produces Books, a trade good.	false
+resources_onscreen_text_res_derpy_olive_oil	Olive Oil	false
+resources_description_res_derpy_olive_oil	Pressed in the groves of Tilea and Estalia, shipped across the Middle Sea.	false
+resources_long_description_res_derpy_olive_oil		false
+effects_description_derpy_effect_region_resource_olive_oil_production	Olive Oil resource production: %n barrels	false
+uied_component_texts_localised_string_derpy_mr_olive_oil_Tooltip	Olive Oil||A building in this settlement produces Olive Oil, a trade good.	false
+resources_onscreen_text_res_derpy_silk	Silk	false
+resources_description_res_derpy_silk	Woven in the lowland provinces of Cathay. It is what the Ivory Road carries west.	false
+resources_long_description_res_derpy_silk		false
+effects_description_derpy_effect_region_resource_silk_production	Silk resource production: %n bolts	false
+uied_component_texts_localised_string_derpy_mr_silk_Tooltip	Silk||A building in this settlement produces Silk, a trade good.	false
+resources_onscreen_text_res_derpy_tea	Tea	false
+resources_description_res_derpy_tea	Leaf from the terraced hills of Cathay, steeped from Wei-Jin to Nan-Gau.	false
+resources_long_description_res_derpy_tea		false
+effects_description_derpy_effect_region_resource_tea_production	Tea resource production: %n chests	false
+uied_component_texts_localised_string_derpy_mr_tea_Tooltip	Tea||A building in this settlement produces Tea, a trade good.	false
+resources_onscreen_text_res_derpy_jade	Jade	false
+resources_description_res_derpy_jade	Green stone quarried in Cathay's mountains, carved into charms and statues.	false
+resources_long_description_res_derpy_jade		false
+effects_description_derpy_effect_region_resource_jade_production	Jade resource production: %n slabs	false
+uied_component_texts_localised_string_derpy_mr_jade_Tooltip	Jade||A building in this settlement produces Jade, a trade good.	false
+resources_onscreen_text_res_derpy_coal	Coal	false
+resources_description_res_derpy_coal	Black fuel dug beside the iron seams. Every forge and furnace burns it.	false
+resources_long_description_res_derpy_coal		false
+effects_description_derpy_effect_region_resource_coal_production	Coal resource production: %n sacks	false
+uied_component_texts_localised_string_derpy_mr_coal_Tooltip	Coal||A building in this settlement produces Coal, a trade good.	false
+resources_onscreen_text_res_derpy_silver	Silver	false
+resources_description_res_derpy_silver	Veins of silver found in mountain mines already worked for iron, gems or gold.	false
+resources_long_description_res_derpy_silver		false
+effects_description_derpy_effect_region_resource_silver_production	Silver resource production: %n ingot	false
+uied_component_texts_localised_string_derpy_mr_silver_Tooltip	Silver||A building in this settlement produces Silver, a trade good.	false
+resources_onscreen_text_res_derpy_gromril	Gromril	false
+resources_description_res_derpy_gromril	Meteoric iron found only deep beneath the old Dwarf holds. Nothing forged is harder.	false
+resources_long_description_res_derpy_gromril		false
+effects_description_derpy_effect_region_resource_gromril_production	Gromril resource production: %n ingot	false
+uied_component_texts_localised_string_derpy_mr_gromril_Tooltip	Gromril||A building in this settlement produces Gromril, a trade good.	false
+resources_onscreen_text_res_derpy_quicksilver	Quicksilver	false
+resources_description_res_derpy_quicksilver	Liquid metal cooked out of cinnabar in volcanic rock. Alchemists and engineers pay well for it.	false
+resources_long_description_res_derpy_quicksilver		false
+effects_description_derpy_effect_region_resource_quicksilver_production	Quicksilver resource production: %n flasks	false
+uied_component_texts_localised_string_derpy_mr_quicksilver_Tooltip	Quicksilver||A building in this settlement produces Quicksilver, a trade good.	false
+resources_onscreen_text_res_derpy_brimstone	Brimstone	false
+resources_description_res_derpy_brimstone	Yellow sulphur scraped from the vents of the Dark Lands and every obsidian field.	false
+resources_long_description_res_derpy_brimstone		false
+effects_description_derpy_effect_region_resource_brimstone_production	Brimstone resource production: %n sacks	false
+uied_component_texts_localised_string_derpy_mr_brimstone_Tooltip	Brimstone||A building in this settlement produces Brimstone, a trade good.	false
+resources_onscreen_text_res_derpy_brass	Brass	false
+resources_description_res_derpy_brass	Hashut's own metal, cast in the forges of the Chaos Dwarfs.	false
+resources_long_description_res_derpy_brass		false
+effects_description_derpy_effect_region_resource_brass_production	Brass resource production: %n ingot	false
+uied_component_texts_localised_string_derpy_mr_brass_Tooltip	Brass||A building in this settlement produces Brass, a trade good.	false
+resources_onscreen_text_res_derpy_blackpowder	Blackpowder	false
+resources_description_res_derpy_blackpowder	Saltpetre from the salt pans, ground with charcoal and sulphur by the races that know the secret.	false
+resources_long_description_res_derpy_blackpowder		false
+effects_description_derpy_effect_region_resource_blackpowder_production	Blackpowder resource production: %n kegs	false
+uied_component_texts_localised_string_derpy_mr_blackpowder_Tooltip	Blackpowder||A building in this settlement produces Blackpowder, a trade good.	false
+resources_onscreen_text_res_derpy_ithilmar	Ithilmar	false
+resources_description_res_derpy_ithilmar	The light, bright metal of the elves, found only in the rock of Ulthuan.	false
+resources_long_description_res_derpy_ithilmar		false
+effects_description_derpy_effect_region_resource_ithilmar_production	Ithilmar resource production: %n ingot	false
+uied_component_texts_localised_string_derpy_mr_ithilmar_Tooltip	Ithilmar||A building in this settlement produces Ithilmar, a trade good.	false
+resources_onscreen_text_res_derpy_dragon_bone	Dragon Bone	false
+resources_description_res_derpy_dragon_bone	Bones from the dragon-holds of Caledor and the old dragon graveyards.	false
+resources_long_description_res_derpy_dragon_bone		false
+effects_description_derpy_effect_region_resource_dragon_bone_production	Dragon Bone resource production: %n crates	false
+uied_component_texts_localised_string_derpy_mr_dragon_bone_Tooltip	Dragon Bone||A building in this settlement produces Dragon Bone, a trade good.	false
+resources_onscreen_text_res_derpy_lustrian_plumes	Lustrian Plumes	false
+resources_description_res_derpy_lustrian_plumes	Brilliant feathers of Lustria's jungle birds and serpents, worth their weight in gold in the courts of the Old World.	false
+resources_long_description_res_derpy_lustrian_plumes		false
+effects_description_derpy_effect_region_resource_lustrian_plumes_production	Lustrian Plumes resource production: %n bundle	false
+uied_component_texts_localised_string_derpy_mr_lustrian_plumes_Tooltip	Lustrian Plumes||A building in this settlement produces Lustrian Plumes, a trade good.	false
+resources_onscreen_text_res_derpy_black_lotus	Black Lotus	false
+resources_description_res_derpy_black_lotus	A poison flower of the southern jungles, sought by assassins and Witch Elves.	false
+resources_long_description_res_derpy_black_lotus		false
+effects_description_derpy_effect_region_resource_black_lotus_production	Black Lotus resource production: %n ounce	false
+uied_component_texts_localised_string_derpy_mr_black_lotus_Tooltip	Black Lotus||A building in this settlement produces Black Lotus, a trade good.	false
+resources_onscreen_text_res_derpy_incense	Incense	false
+resources_description_res_derpy_incense	Frankincense and myrrh from the deserts of Araby, burned in temples and tombs.	false
+resources_long_description_res_derpy_incense		false
+effects_description_derpy_effect_region_resource_incense_production	Incense resource production: %n sacks	false
+uied_component_texts_localised_string_derpy_mr_incense_Tooltip	Incense||A building in this settlement produces Incense, a trade good.	false
+resources_onscreen_text_res_derpy_salted_meat	Salted Meat	false
+resources_description_res_derpy_salted_meat	Ogre herds and hunting grounds fill the barrels. Meat keeps; armies march on it.	false
+resources_long_description_res_derpy_salted_meat		false
+effects_description_derpy_effect_region_resource_salted_meat_production	Salted Meat resource production: %n barrels	false
+uied_component_texts_localised_string_derpy_mr_salted_meat_Tooltip	Salted Meat||A building in this settlement produces Salted Meat, a trade good.	false
+resources_onscreen_text_res_derpy_carpets	Arabyan Carpets	false
+resources_description_res_derpy_carpets	Knotted by hand in the cities of Araby, in patterns older than the Empire.	false
+resources_long_description_res_derpy_carpets		false
+effects_description_derpy_effect_region_resource_carpets_production	Arabyan Carpets resource production: %n rolls	false
+uied_component_texts_localised_string_derpy_mr_carpets_Tooltip	Arabyan Carpets||A building in this settlement produces Arabyan Carpets, a trade good.	false
+resources_onscreen_text_res_derpy_kvas	Kvas	false
+resources_description_res_derpy_kvas	Sour rye drink of Kislev, brewed from black bread. Every stanitsa keeps a barrel.	false
+resources_long_description_res_derpy_kvas		false
+effects_description_derpy_effect_region_resource_kvas_production	Kvas resource production: %n kegs	false
+uied_component_texts_localised_string_derpy_mr_kvas_Tooltip	Kvas||A building in this settlement produces Kvas, a trade good.	false
+resources_onscreen_text_res_derpy_rhinox_hides	Rhinox Hides	false
+resources_description_res_derpy_rhinox_hides	Thick grey hides of the Ogre Kingdoms' rhinox herds, tough enough for armour.	false
+resources_long_description_res_derpy_rhinox_hides		false
+effects_description_derpy_effect_region_resource_rhinox_hides_production	Rhinox Hides resource production: %n hides	false
+uied_component_texts_localised_string_derpy_mr_rhinox_hides_Tooltip	Rhinox Hides||A building in this settlement produces Rhinox Hides, a trade good.	false
+resources_onscreen_text_res_derpy_mead	Mead	false
+resources_description_res_derpy_mead	Honey wine of the Norscan halls, drunk from horns before every raid.	false
+resources_long_description_res_derpy_mead		false
+effects_description_derpy_effect_region_resource_mead_production	Mead resource production: %n kegs	false
+uied_component_texts_localised_string_derpy_mr_mead_Tooltip	Mead||A building in this settlement produces Mead, a trade good.	false
+resources_onscreen_text_res_derpy_glassware	Glassware	false
+resources_description_res_derpy_glassware	Blown glass from the workshops of Tilea, Estalia, Marienburg and Lothern.	false
+resources_long_description_res_derpy_glassware		false
+effects_description_derpy_effect_region_resource_glassware_production	Glassware resource production: %n crates	false
+uied_component_texts_localised_string_derpy_mr_glassware_Tooltip	Glassware||A building in this settlement produces Glassware, a trade good.	false
+resources_onscreen_text_res_derpy_wool	Wool	false
+resources_description_res_derpy_wool	Fleece from the sheep that graze the Old World's uplands. Spun and woven in every town.	false
+resources_long_description_res_derpy_wool		false
+effects_description_derpy_effect_region_resource_wool_production	Wool resource production: %n bales	false
+uied_component_texts_localised_string_derpy_mr_wool_Tooltip	Wool||A building in this settlement produces Wool, a trade good.	false
+resources_onscreen_text_res_derpy_porcelain	Porcelain	false
+resources_description_res_derpy_porcelain	Fine white ware fired in the kilns of Cathay's lowland cities.	false
+resources_long_description_res_derpy_porcelain		false
+effects_description_derpy_effect_region_resource_porcelain_production	Porcelain resource production: %n crates	false
+uied_component_texts_localised_string_derpy_mr_porcelain_Tooltip	Porcelain||A building in this settlement produces Porcelain, a trade good.	false
+resources_onscreen_text_res_derpy_pearls	Pearls	false
+resources_description_res_derpy_pearls	Brought up by divers on the warm coasts, and worn by every noble who can pay.	false
+resources_long_description_res_derpy_pearls		false
+effects_description_derpy_effect_region_resource_pearls_production	Pearls resource production: %n chests	false
+uied_component_texts_localised_string_derpy_mr_pearls_Tooltip	Pearls||A building in this settlement produces Pearls, a trade good.	false
+resources_onscreen_text_res_derpy_starwood	Starwood	false
+resources_description_res_derpy_starwood	Wood the living trees of Athel Loren shed by their own will. It is given, never cut.	false
+resources_long_description_res_derpy_starwood		false
+effects_description_derpy_effect_region_resource_starwood_production	Starwood resource production: %n logs	false
+uied_component_texts_localised_string_derpy_mr_starwood_Tooltip	Starwood||A building in this settlement produces Starwood, a trade good.	false
+resources_onscreen_text_res_derpy_feathers	Griffon and Pegasus Feathers	false
+resources_description_res_derpy_feathers	Feathers gathered from the mountain eyries of griffons and pegasi.	false
+resources_long_description_res_derpy_feathers		false
+effects_description_derpy_effect_region_resource_feathers_production	Griffon and Pegasus Feathers resource production: %n bundle	false
+uied_component_texts_localised_string_derpy_mr_feathers_Tooltip	Griffon and Pegasus Feathers||A building in this settlement produces Griffon and Pegasus Feathers, a trade good.	false
+resources_onscreen_text_res_derpy_wyvern_scales	Wyvern Scales	false
+resources_description_res_derpy_wyvern_scales	Scales of the wyverns that nest in the Badlands and the Mountains of Mourn.	false
+resources_long_description_res_derpy_wyvern_scales		false
+effects_description_derpy_effect_region_resource_wyvern_scales_production	Wyvern Scales resource production: %n bundle	false
+uied_component_texts_localised_string_derpy_mr_wyvern_scales_Tooltip	Wyvern Scales||A building in this settlement produces Wyvern Scales, a trade good.	false
+building_culture_variants_name_derpy_mr_bld_gromril_1	Gromril Prospect	false
+building_culture_variants_name_derpy_mr_bld_gromril_2	Gromril Delving	false
+building_culture_variants_name_derpy_mr_bld_gromril_3	Deep Gromril Mine	false
+building_chains_chain_tooltip_derpy_mr_bld_gromril	Gromril	false
+building_short_description_texts_short_description_derpy_mr_bld_gromril	Meteoric iron found only deep beneath the old Dwarf holds. Nothing forged is harder. Only a Dwarf hold in the mountains, sitting on iron, gems or gold, has gromril to dig. Anywhere else it makes nothing.	false
+building_description_texts_long_description_derpy_mr_bld_gromril	Meteoric iron found only deep beneath the old Dwarf holds. Nothing forged is harder. Only a Dwarf hold in the mountains, sitting on iron, gems or gold, has gromril to dig. Anywhere else it makes nothing.	false
+building_culture_variants_name_derpy_mr_bld_ithilmar_1	Ithilmar Lode	false
+building_culture_variants_name_derpy_mr_bld_ithilmar_2	Ithilmar Mine	false
+building_culture_variants_name_derpy_mr_bld_ithilmar_3	Ithilmar Deepworks	false
+building_chains_chain_tooltip_derpy_mr_bld_ithilmar	Ithilmar	false
+building_short_description_texts_short_description_derpy_mr_bld_ithilmar	The light, bright metal of the elves, found only in the rock of Ulthuan. Ithilmar lies only in the rock of Ulthuan, under iron, gems, gold or marble, and at Vaul's Anvil. Anywhere else it makes nothing.	false
+building_description_texts_long_description_derpy_mr_bld_ithilmar	The light, bright metal of the elves, found only in the rock of Ulthuan. Ithilmar lies only in the rock of Ulthuan, under iron, gems, gold or marble, and at Vaul's Anvil. Anywhere else it makes nothing.	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_brt_1	Bone Pickers	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_brt_2	Dragon Bone Digs	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_brt_3	Dragon Graveyard Excavation	false
+building_chains_chain_tooltip_derpy_mr_bld_dragon_bone_brt	Dragon Bone	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_chd_1	Bone Pickers	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_chd_2	Dragon Bone Digs	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_chd_3	Dragon Graveyard Excavation	false
+building_chains_chain_tooltip_derpy_mr_bld_dragon_bone_chd	Dragon Bone	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_chs_1	Bone Pickers	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_chs_2	Dragon Bone Digs	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_chs_3	Dragon Graveyard Excavation	false
+building_chains_chain_tooltip_derpy_mr_bld_dragon_bone_chs	Dragon Bone	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_cst_1	Bone Pickers	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_cst_2	Dragon Bone Digs	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_cst_3	Dragon Graveyard Excavation	false
+building_chains_chain_tooltip_derpy_mr_bld_dragon_bone_cst	Dragon Bone	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_cth_1	Bone Pickers	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_cth_2	Dragon Bone Digs	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_cth_3	Dragon Graveyard Excavation	false
+building_chains_chain_tooltip_derpy_mr_bld_dragon_bone_cth	Dragon Bone	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_def_1	Bone Pickers	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_def_2	Dragon Bone Digs	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_def_3	Dragon Graveyard Excavation	false
+building_chains_chain_tooltip_derpy_mr_bld_dragon_bone_def	Dragon Bone	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_dwf_1	Bone Pickers	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_dwf_2	Dragon Bone Digs	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_dwf_3	Dragon Graveyard Excavation	false
+building_chains_chain_tooltip_derpy_mr_bld_dragon_bone_dwf	Dragon Bone	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_emp_1	Bone Pickers	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_emp_2	Dragon Bone Digs	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_emp_3	Dragon Graveyard Excavation	false
+building_chains_chain_tooltip_derpy_mr_bld_dragon_bone_emp	Dragon Bone	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_grn_1	Bone Pickers	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_grn_2	Dragon Bone Digs	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_grn_3	Dragon Graveyard Excavation	false
+building_chains_chain_tooltip_derpy_mr_bld_dragon_bone_grn	Dragon Bone	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_hef_1	Bone Pickers	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_hef_2	Dragon Bone Digs	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_hef_3	Dragon Graveyard Excavation	false
+building_chains_chain_tooltip_derpy_mr_bld_dragon_bone_hef	Dragon Bone	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_ksl_1	Bone Pickers	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_ksl_2	Dragon Bone Digs	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_ksl_3	Dragon Graveyard Excavation	false
+building_chains_chain_tooltip_derpy_mr_bld_dragon_bone_ksl	Dragon Bone	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_lzd_1	Bone Pickers	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_lzd_2	Dragon Bone Digs	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_lzd_3	Dragon Graveyard Excavation	false
+building_chains_chain_tooltip_derpy_mr_bld_dragon_bone_lzd	Dragon Bone	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_nor_1	Bone Pickers	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_nor_2	Dragon Bone Digs	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_nor_3	Dragon Graveyard Excavation	false
+building_chains_chain_tooltip_derpy_mr_bld_dragon_bone_nor	Dragon Bone	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_ogr_1	Bone Pickers	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_ogr_2	Dragon Bone Digs	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_ogr_3	Dragon Graveyard Excavation	false
+building_chains_chain_tooltip_derpy_mr_bld_dragon_bone_ogr	Dragon Bone	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_skv_1	Bone Pickers	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_skv_2	Dragon Bone Digs	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_skv_3	Dragon Graveyard Excavation	false
+building_chains_chain_tooltip_derpy_mr_bld_dragon_bone_skv	Dragon Bone	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_vmp_1	Bone Pickers	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_vmp_2	Dragon Bone Digs	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_vmp_3	Dragon Graveyard Excavation	false
+building_chains_chain_tooltip_derpy_mr_bld_dragon_bone_vmp	Dragon Bone	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_wef_1	Bone Pickers	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_wef_2	Dragon Bone Digs	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_wef_3	Dragon Graveyard Excavation	false
+building_chains_chain_tooltip_derpy_mr_bld_dragon_bone_wef	Dragon Bone	false
+building_short_description_texts_short_description_derpy_mr_bld_dragon_bone	Bones from the dragon-holds of Caledor and the old dragon graveyards. Dragon bones lie only in Caledor's dragon mountains and mines and on the Plain of Bones. Anywhere else it makes nothing.	false
+building_description_texts_long_description_derpy_mr_bld_dragon_bone	Bones from the dragon-holds of Caledor and the old dragon graveyards. Dragon bones lie only in Caledor's dragon mountains and mines and on the Plain of Bones. Anywhere else it makes nothing.	false
+building_culture_variants_name_derpy_mr_bld_sea_dragon_hide_1	Flensing Yard	false
+building_culture_variants_name_derpy_mr_bld_sea_dragon_hide_2	Sea Dragon Hunters	false
+building_culture_variants_name_derpy_mr_bld_sea_dragon_hide_3	Sea Dragon Fleet	false
+building_chains_chain_tooltip_derpy_mr_bld_sea_dragon_hide	Sea Dragon Hide	false
+building_short_description_texts_short_description_derpy_mr_bld_sea_dragon_hide	Taken by Druchii corsairs from the sea dragons of the cold seas off Naggaroth. A cloak of it turns a blade. Sea dragons are hunted only from the ports of Naggaroth's cold coasts. Anywhere else it makes nothing.	false
+building_description_texts_long_description_derpy_mr_bld_sea_dragon_hide	Taken by Druchii corsairs from the sea dragons of the cold seas off Naggaroth. A cloak of it turns a blade. Sea dragons are hunted only from the ports of Naggaroth's cold coasts. Anywhere else it makes nothing.	false
+building_culture_variants_name_derpy_mr_bld_black_lotus_def_1	Lotus Gatherers	false
+building_culture_variants_name_derpy_mr_bld_black_lotus_def_2	Lotus Garden	false
+building_culture_variants_name_derpy_mr_bld_black_lotus_def_3	Black Lotus Plantation	false
+building_chains_chain_tooltip_derpy_mr_bld_black_lotus_def	Black Lotus	false
+building_culture_variants_name_derpy_mr_bld_black_lotus_skv_1	Lotus Gatherers	false
+building_culture_variants_name_derpy_mr_bld_black_lotus_skv_2	Lotus Garden	false
+building_culture_variants_name_derpy_mr_bld_black_lotus_skv_3	Black Lotus Plantation	false
+building_chains_chain_tooltip_derpy_mr_bld_black_lotus_skv	Black Lotus	false
+building_short_description_texts_short_description_derpy_mr_bld_black_lotus	A poison flower of the southern jungles, sought by assassins and Witch Elves. The black lotus grows only in the jungles of the Southlands and Khuresh. Anywhere else it makes nothing.	false
+building_description_texts_long_description_derpy_mr_bld_black_lotus	A poison flower of the southern jungles, sought by assassins and Witch Elves. The black lotus grows only in the jungles of the Southlands and Khuresh. Anywhere else it makes nothing.	false
+building_culture_variants_name_derpy_mr_bld_starwood_1	Glade of Gifts	false
+building_culture_variants_name_derpy_mr_bld_starwood_2	Starwood Grove	false
+building_culture_variants_name_derpy_mr_bld_starwood_3	Grove of the Willing	false
+building_chains_chain_tooltip_derpy_mr_bld_starwood	Starwood	false
+building_short_description_texts_short_description_derpy_mr_bld_starwood	Wood the living trees of Athel Loren shed by their own will. It is given, never cut. Only the enchanted forest of Athel Loren gives starwood. Anywhere else it makes nothing.	false
+building_description_texts_long_description_derpy_mr_bld_starwood	Wood the living trees of Athel Loren shed by their own will. It is given, never cut. Only the enchanted forest of Athel Loren gives starwood. Anywhere else it makes nothing.	false
+building_culture_variants_name_derpy_mr_bld_feathers_brt_1	Eyrie Climbers	false
+building_culture_variants_name_derpy_mr_bld_feathers_brt_2	Mountain Eyrie	false
+building_culture_variants_name_derpy_mr_bld_feathers_brt_3	Great Eyrie	false
+building_chains_chain_tooltip_derpy_mr_bld_feathers_brt	Griffon and Pegasus Feathers	false
+building_culture_variants_name_derpy_mr_bld_feathers_emp_1	Eyrie Climbers	false
+building_culture_variants_name_derpy_mr_bld_feathers_emp_2	Mountain Eyrie	false
+building_culture_variants_name_derpy_mr_bld_feathers_emp_3	Great Eyrie	false
+building_chains_chain_tooltip_derpy_mr_bld_feathers_emp	Griffon and Pegasus Feathers	false
+building_short_description_texts_short_description_derpy_mr_bld_feathers	Feathers gathered from the mountain eyries of griffons and pegasi. Griffons and pegasi nest only in the mountains of Bretonnia, the Empire and the Border Princes. Anywhere else it makes nothing.	false
+building_description_texts_long_description_derpy_mr_bld_feathers	Feathers gathered from the mountain eyries of griffons and pegasi. Griffons and pegasi nest only in the mountains of Bretonnia, the Empire and the Border Princes. Anywhere else it makes nothing.	false
+building_culture_variants_name_derpy_mr_bld_wyvern_scales_grn_1	Scale Scavengers	false
+building_culture_variants_name_derpy_mr_bld_wyvern_scales_grn_2	Wyvern Roost	false
+building_culture_variants_name_derpy_mr_bld_wyvern_scales_grn_3	Wyvern Hunters' Lodge	false
+building_chains_chain_tooltip_derpy_mr_bld_wyvern_scales_grn	Wyvern Scales	false
+building_culture_variants_name_derpy_mr_bld_wyvern_scales_ogr_1	Scale Scavengers	false
+building_culture_variants_name_derpy_mr_bld_wyvern_scales_ogr_2	Wyvern Roost	false
+building_culture_variants_name_derpy_mr_bld_wyvern_scales_ogr_3	Wyvern Hunters' Lodge	false
+building_chains_chain_tooltip_derpy_mr_bld_wyvern_scales_ogr	Wyvern Scales	false
+building_short_description_texts_short_description_derpy_mr_bld_wyvern_scales	Scales of the wyverns that nest in the Badlands and the Mountains of Mourn. Wyverns nest only in the mountains of the Badlands and the Mountains of Mourn. Anywhere else it makes nothing.	false
+building_description_texts_long_description_derpy_mr_bld_wyvern_scales	Scales of the wyverns that nest in the Badlands and the Mountains of Mourn. Wyverns nest only in the mountains of the Badlands and the Mountains of Mourn. Anywhere else it makes nothing.	false

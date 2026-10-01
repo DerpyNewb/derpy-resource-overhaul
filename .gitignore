@@ -1,0 +1,23 @@
+__pycache__/
+*.pyc
+.skilltree_cache/
+*.pack
+*.bak*
+
+# Creative Assembly-derived art is never published. It ships in the .pack only.
+*.png
+*.dds
+*.jpg
+*.jpeg
+*.webp
+*.tga
+
+# CA's own rows cloned out of db.pack, and CA's patched ui file; regenerated from your game.
+Modding Files/source/more_resources/resources_tables__*
+Modding Files/source/more_resources/resources_to_campaign_junctions_tables__*
+Modding Files/source/more_resources/cai_personality_strategic_resource_values_tables__*
+Modding Files/source/more_resources/effects_tables__*
+Modding Files/source/more_resources/building_chains_tables__*
+Modding Files/source/more_resources/building_levels_tables__*
+Modding Files/source/more_resources/building_culture_variants_tables__*
+*.twui.xml
