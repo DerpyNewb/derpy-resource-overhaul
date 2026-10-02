@@ -326,7 +326,8 @@ function F.trade(exporter)
             for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
                 local b = best[g.stem]
                 if b and F.lacks(partner, g) then
-                    local n = F.share(b.held, pct)
+                    -- ONLY WHAT FITS LEAVES: trade never destroys stock (spec section 3)
+                    local n = math.min(F.share(b.held, pct), F.free(to, g.stem))
                     if n > 0 then
                         F.move(b.region, to, g.stem, n, KIND.trade, exporter:name(), partner:name())
                         b.held = b.held - n
@@ -385,7 +386,9 @@ end
 function F.on_faction_turn_start(faction)
     F.rates()                                     -- frozen at the first turn start
     if faction:is_human() then
-        F.snapshot(faction)
+        -- ITS OWN GUARD: the snapshot reads through the UI-side CCO and loc, and a throw there must
+        -- not skip the trade below, which is model state every machine has to run alike
+        F.guard(F.snapshot, faction)
         F.round_cost, F.cost = F.cost, { raid = 0, turn = 0 }
     end
     F.trade(faction)

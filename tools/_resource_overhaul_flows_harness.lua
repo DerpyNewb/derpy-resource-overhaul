@@ -163,6 +163,10 @@ local function decide(kind, r, taker, prev, ch)
     })
 end
 
+-- ANOTHER MOD'S CALLBACKS, ALREADY IN CA'S LISTS AND THROWING: CA calls the lists in one
+-- unprotected loop, so ours only runs if it went in ahead of them.
+local function thrower() error("another mod's callback threw") end
+cm.saving_game_callbacks[1], cm.loading_game_callbacks[1] = thrower, thrower
 dofile("__STORES__")
 dofile("__FLOWS__")
 local F = DERPY_MR_FLOWS
@@ -217,9 +221,10 @@ raid(army(hum, a1, 12, 0, "MILITARY_FORCE_ACTIVE_STANCE_TYPE_DEFAULT")); untouch
 -- a raid between two humans books both
 local hum2 = faction("hum2", { human = true })
 local g1 = region("g1", 0, 50, 200, { coal = 100 }); own(hum2, g1, true); war(hum, hum2)
+h1.held = {}                                   -- room to receive, so the raider's side is measured
 raid(army(hum, g1, 0, 50))
 eq(F.book("hum2").now.coal.raided_out, 10, "the human victim's ledger counts the loss")
-eq(F.book("hum").now.coal.raided_in, 14, "the raider's in is capped by space (h1 is full)")
+eq(F.book("hum").now.coal.raided_in, 24, "and the human raider's counts what arrived (14 + 10)")
 
 -- ---- sack and raze ----------------------------------------------------------------------
 a1.held, h1.held, h2.held = { coal = 100 }, {}, {}
@@ -277,6 +282,28 @@ hum.partners = { tA }; tA.partners = { hum }; h1.held = {}; h2.held = {}
 turn_start(tA); eq(h1.held.coal > 0, true, "switch off: a player's partner still receives")
 F.state.rates.ai = true; tA.partners = { tB, tC }; hum.partners = {}
 
+-- trade never destroys stock: a partner with little room gets what fits and the sender keeps the rest
+local tD = faction("tD"); local tD1 = region("tD1", 700, 0, 2000, { salt = 1000 }); own(tD, tD1, true)
+local tE = faction("tE"); local tE1 = region("tE1", 710, 0, 20, {}); own(tE, tE1, true)
+tD.partners = { tE }
+turn_start(tD)
+eq(tE1.held.salt, 20, "a partner with little room gets what fits")
+eq(tD1.held.salt, 980, "and the sender loses only that - trade never destroys stock")
+F.LACK_TEST = "exists"           -- tE has no salt by the engine's word, so only space stops it
+turn_start(tD)
+eq(tD1.held.salt, 980, "a full partner store takes nothing and costs the sender nothing")
+F.LACK_TEST = "capital"; tD.partners = {}
+
+-- a history snapshot that throws must not stop a human's exports (they are model state)
+hum.partners = { tB }; h1.held = { salt = 100 }; tB1.held.salt = 0
+local real_read = DERPY_MR_STORES.read_realm
+DERPY_MR_STORES.read_realm = function() error("a UI-side read threw") end
+turn_start(hum)
+DERPY_MR_STORES.read_realm = real_read
+eq(tB1.held.salt, 5, "the human's exports still went out")
+eq(#ERRORS, 1, "and the snapshot's failure was logged"); ERRORS = {}
+hum.partners = {}
+
 -- ---- history ----------------------------------------------------------------------------
 CCO_MADE = "derpy_mr_store_coal_stocked=6"
 F.state.factions.hum = nil
@@ -298,7 +325,11 @@ eq(#bk.total.coal, 20, "the series trimmed with them"); eq(bk.total.coal[20], 25
 eq(F.state.factions.tA, nil, "no history for a computer-run faction")
 
 -- ---- save and load ----------------------------------------------------------------------
-eq(cm.saving_game_callbacks[1] ~= nil and cm.loading_game_callbacks[1] ~= nil, true, "callbacks first in CA's lists")
+eq(cm.saving_game_callbacks[2], thrower, "our save callback went in ahead of another mod's")
+eq(cm.loading_game_callbacks[2], thrower, "and so did our load callback")
+SAVED = {}
+pcall(function() for _, fn in ipairs(cm.saving_game_callbacks) do fn({}) end end)   -- CA's loop
+eq(SAVED.derpy_mr_flows ~= nil, true, "a mod that throws after us cannot stop our save")
 F.push(bk, 200, { coal = 7.6 }, { coal = 2.5 })   -- fractions in; none may reach the save
 local function whole(v, path)
     if type(v) == "number" then eq(math.floor(v), v, "every number saved is whole: " .. path)
