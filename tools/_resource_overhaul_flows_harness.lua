@@ -1,0 +1,369 @@
+-- Derpy Resource Overhaul: the flows script (derpy_more_resources_flows.lua) run against a stub
+-- world. tools/gen_mr_ui.py --selftest writes the scripts into a temp folder and fills in
+-- __FLOWS__, __STORES__ (whose read_realm the history uses) and __MCT__.
+local ERRORS = {}
+out = function(m) ERRORS[#ERRORS + 1] = tostring(m) end
+local function eq(a, b, what)
+    if a ~= b then error(what .. ": expected " .. tostring(b) .. ", got " .. tostring(a), 2) end
+end
+
+local NULL = { is_null_interface = function() return true end }
+local function list(items)
+    return { num_items = function() return #items end,
+             item_at = function(_, i) return items[i + 1] end,
+             is_empty = function() return #items == 0 end }
+end
+
+-- ---- the world --------------------------------------------------------------------------
+-- A region's stores are r.held (stem -> n), every store r.cap big. r.readable = false is a
+-- region whose pools the engine no longer hands out (a raze, Task 1).
+local FACTIONS, REGIONS, LOG = {}, {}, {}
+local CCO_MADE = ""
+local function pool(r, stem)
+    local key = "derpy_mr_store_" .. stem
+    return { is_null_interface = function() return false end, key = function() return key end,
+             value = function() return r.held[stem] or 0 end,
+             maximum_value = function() return r.cap end }
+end
+local function region(key, x, y, cap, held)
+    local r = { key = key, x = x, y = y, cap = cap, held = held or {}, owner = nil, readable = true }
+    local settlement = {
+        is_null_interface = function() return false end,
+        cqi = function() return 0 end,
+        logical_position_x = function() return r.x end,
+        logical_position_y = function() return r.y end,
+        primary_slot = function() return { building = function()
+            return { building_level = function() return 1 end } end } end,
+    }
+    r.iface = {
+        __r = r,
+        is_null_interface = function() return false end,
+        name = function() return key end,
+        is_abandoned = function() return r.owner == nil end,
+        owning_faction = function() return r.owner and r.owner.iface or NULL end,
+        settlement = function() return settlement end,
+        pooled_resource_manager = function()
+            return {
+                resource = function(_, k)
+                    local stem = string.match(k, "^derpy_mr_store_(.+)$")
+                    if not r.readable or not stem then return NULL end
+                    return pool(r, stem)
+                end,
+                resources = function()
+                    local items = {}
+                    if r.readable then
+                        for stem in pairs(r.held) do items[#items + 1] = pool(r, stem) end
+                    end
+                    return list(items)
+                end,
+            }
+        end,
+    }
+    REGIONS[key] = r
+    return r
+end
+local function faction(name, opts)
+    opts = opts or {}
+    local f = { name = name, human = opts.human or false, rebel = opts.rebel or false,
+                regions = {}, war = {}, partners = {}, has = opts.has or {}, home = nil }
+    f.iface = {
+        is_null_interface = function() return false end,
+        name = function() return name end,
+        is_human = function() return f.human end,
+        is_rebel = function() return f.rebel end,
+        is_dead = function() return false end,
+        at_war_with = function(_, o) return f.war[o:name()] == true end,
+        region_list = function()
+            local t = {}
+            for _, r in ipairs(f.regions) do t[#t + 1] = r.iface end
+            return list(t)
+        end,
+        has_home_region = function() return f.home ~= nil end,
+        home_region = function() return f.home and f.home.iface or NULL end,
+        factions_trading_with = function()
+            local t = {}
+            for _, o in ipairs(f.partners) do t[#t + 1] = o.iface end
+            return list(t)
+        end,
+        trade_resource_exists = function(_, res) return f.has[res] == true end,
+    }
+    FACTIONS[name] = f
+    return f
+end
+local function own(f, r, home)
+    r.owner = f
+    f.regions[#f.regions + 1] = r
+    if home then f.home = r end
+end
+local function war(a, b) a.war[b.name] = true; b.war[a.name] = true end
+local function army(f, r, x, y, stance)
+    return {
+        has_military_force = function() return true end,
+        military_force = function() return { active_stance = function()
+            return stance or "MILITARY_FORCE_ACTIVE_STANCE_TYPE_LAND_RAID" end } end,
+        region = function() return r and r.iface or NULL end,
+        faction = function() return f.iface end,
+        logical_position_x = function() return x end,
+        logical_position_y = function() return y end,
+    }
+end
+
+local function copy(v)
+    if type(v) ~= "table" then return v end
+    local t = {}
+    for k, x in pairs(v) do t[k] = copy(x) end
+    return t
+end
+local SAVED, MP, TURN = {}, false, 1
+local FIRST, LISTENERS = {}, {}
+cm = {
+    saving_game_callbacks = {}, loading_game_callbacks = {},
+    add_saving_game_callback = function() error("the save callback must go first in CA's list") end,
+    add_loading_game_callback = function() error("the load callback must go first in CA's list") end,
+    add_first_tick_callback = function(_, fn) FIRST[#FIRST + 1] = fn end,
+    callback = function() end,
+    repeat_real_callback = function() end,
+    get_local_faction_name = function() return "hum" end,
+    get_faction = function(_, k) return FACTIONS[k] and FACTIONS[k].iface or false end,
+    is_multiplayer = function() return MP end,
+    model = function() return { turn_number = function() return TURN end } end,
+    -- the engine clamps a pool to [0, its maximum]; this stub does the same
+    entity_add_pooled_resource_transaction = function(_, e, j, n)
+        local r = e.__r
+        LOG[#LOG + 1] = { r.key, j, n }
+        local stem = string.match(j, "^derpy_mr_store_(.+)_%a+$")
+        r.held[stem] = math.max(0, math.min(r.cap, (r.held[stem] or 0) + n))
+    end,
+    save_named_value = function(_, k, v) SAVED[k] = copy(v) end,
+    load_named_value = function(_, k, d) if SAVED[k] == nil then return d end return copy(SAVED[k]) end,
+}
+core = {
+    add_listener = function(_, _name, event, cond, fn)
+        LISTENERS[#LISTENERS + 1] = { event = event, cond = cond, fn = fn }
+    end,
+}
+common = {
+    get_localised_string = function() return "" end,
+    get_context_value = function() return CCO_MADE end,
+}
+local function fire(event, context)
+    for _, l in ipairs(LISTENERS) do
+        if l.event == event and (l.cond == true or (type(l.cond) == "function" and l.cond(context))) then
+            l.fn(context)
+        end
+    end
+end
+local function raid(ch) fire("CharacterTurnStart", { character = function() return ch end }) end
+local function decide(kind, r, taker, prev, ch)
+    fire("CharacterPerformsSettlementOccupationDecision", {
+        occupation_decision_type = function() return kind end,
+        previous_owner = function() return prev end,
+        garrison_residence = function() return { region = function() return r.iface end } end,
+        character = function() return ch or army(taker, r, r.x, r.y) end,
+    })
+end
+
+dofile("__STORES__")
+dofile("__FLOWS__")
+local F = DERPY_MR_FLOWS
+F.init()                     -- not FIRST: the stores script's first tick wants a UI
+
+-- ---- the world for taking ---------------------------------------------------------------
+local hum = faction("hum", { human = true })
+local h1, h2 = region("h1", 0, 0, 200), region("h2", 100, 0, 200)
+own(hum, h1, true); own(hum, h2)
+local ai1 = faction("ai1")
+local a1 = region("a1", 10, 0, 400, { coal = 95, iron = 9 })
+own(ai1, a1, true)
+local ally = faction("ally")
+local b1 = region("b1", 50, 50, 200, { coal = 50 }); own(ally, b1, true)
+local horde = faction("horde")                   -- no settlements
+local reb = faction("reb", { rebel = true })
+local rb1 = region("rb1", 20, 20, 200, { coal = 50 }); own(reb, rb1, true)
+local ruin = region("ruin", 30, 30, 200, { coal = 50 })   -- no owner
+war(hum, ai1); war(horde, ai1); war(hum, reb)
+
+-- ---- raids ------------------------------------------------------------------------------
+eq(F.share(95, 10), 9, "a share is floored"); eq(F.share(9, 10), 0, "a small store yields nothing")
+raid(army(hum, a1, 12, 0))
+eq(a1.held.coal, 86, "a raid takes 10% of the victim's coal")
+eq(h1.held.coal, 9, "into the raider's nearest settlement")
+eq(h2.held.coal, nil, "not the far one")
+eq(a1.held.iron, 9, "a store too small to yield 1 gives nothing")
+eq(LOG[1][2], "derpy_mr_store_coal_raided", "booked to the raided junction")
+h1.held.coal = 195
+raid(army(hum, a1, 12, 0))
+eq(a1.held.coal, 78, "the victim loses the whole share"); eq(h1.held.coal, 200, "the raider keeps what fits")
+eq(F.book("hum").now.coal.raided_in, 14, "the human raider's ledger counts what arrived")
+eq(F.state.factions.ai1, nil, "a computer-run victim keeps no ledger")
+local n = #LOG
+raid(army(horde, a1, 12, 0))
+eq(a1.held.coal, 71, "a horde's raid still costs the victim"); eq(#LOG, n + 1, "and lands nowhere")
+local before = {}
+for k, r in pairs(REGIONS) do before[k] = copy(r.held) end
+local function untouched(what)
+    for k, r in pairs(REGIONS) do
+        for stem, v in pairs(before[k]) do eq(r.held[stem], v, what .. " (" .. k .. " " .. stem .. ")") end
+        for stem, v in pairs(r.held) do eq(v, before[k][stem], what .. " (" .. k .. " " .. stem .. ")") end
+    end
+end
+raid(army(ally, h2, 100, 0)); untouched("raiding a faction it is not at war with takes nothing")
+raid(army(hum, h1, 0, 0)); untouched("raiding its own land takes nothing")
+raid(army(hum, rb1, 20, 20)); untouched("a rebel-held settlement gives nothing")
+raid(army(hum, ruin, 30, 30)); untouched("an abandoned region gives nothing")
+raid(army(hum, nil, 5, 5)); untouched("raiding at sea takes nothing")
+raid(army(hum, a1, 12, 0, "MILITARY_FORCE_ACTIVE_STANCE_TYPE_DEFAULT")); untouched("marching through takes nothing")
+
+-- a raid between two humans books both
+local hum2 = faction("hum2", { human = true })
+local g1 = region("g1", 0, 50, 200, { coal = 100 }); own(hum2, g1, true); war(hum, hum2)
+raid(army(hum, g1, 0, 50))
+eq(F.book("hum2").now.coal.raided_out, 10, "the human victim's ledger counts the loss")
+eq(F.book("hum").now.coal.raided_in, 14, "the raider's in is capped by space (h1 is full)")
+
+-- ---- sack and raze ----------------------------------------------------------------------
+a1.held, h1.held, h2.held = { coal = 100 }, {}, {}
+decide("occupation_decision_sack", a1, hum, "ai1")
+eq(a1.held.coal, 50, "a sack takes half"); eq(h1.held.coal, 50, "into the sacker's nearest")
+eq(LOG[#LOG][2], "derpy_mr_store_coal_plundered", "booked to plunder")
+decide("occupation_decision_raze_without_occupy", a1, hum, "ai1")
+eq(a1.held.coal, 25, "a raze takes half"); eq(h1.held.coal, 75, "into the razer's nearest")
+n = #LOG
+decide("occupation_decision_occupy", a1, hum, "ai1"); eq(#LOG, n, "occupying moves nothing")
+decide("occupation_decision_loot", a1, hum, "ai1"); eq(#LOG, n, "loot-and-occupy moves nothing")
+decide("occupation_decision_sack", rb1, hum, ""); eq(#LOG, n, "rebels (no previous owner) give nothing")
+a1.readable = false
+decide("occupation_decision_raze_without_occupy", a1, hum, "ai1")
+eq(#LOG, n, "a raze of unreadable stores moves nothing")
+eq(#ERRORS, 1, "and says so once"); ERRORS = {}
+a1.readable = true
+
+-- ---- trade ------------------------------------------------------------------------------
+local tA = faction("tA", { has = { res_derpy_coal = true } })
+local tA1, tA2 = region("tA1", 500, 0, 600, { coal = 100 }), region("tA2", 520, 0, 600, { coal = 300 })
+own(tA, tA1, true); own(tA, tA2)
+local tB = faction("tB", { has = { res_rom_iron = true } })
+local tB1 = region("tB1", 600, 0, 600, { iron = 200 }); own(tB, tB1, true)
+local tC = faction("tC")                                   -- a partner with no settlements
+tA.partners = { tB, tC }; tB.partners = { tA }; tC.partners = { tA }
+local function turn_start(f) fire("FactionTurnStart", { faction = function() return f.iface end }) end
+F.LACK_TEST = "exists"
+n = #LOG
+turn_start(tA)
+eq(tA2.held.coal, 285, "the fullest store sends 5%"); eq(tA1.held.coal, 100, "the other is untouched")
+eq(tB1.held.coal, 15, "into the partner's capital")
+eq(#LOG, n + 2, "one move, two transactions - nothing to the partner with no settlements")
+eq(LOG[n + 1][2], "derpy_mr_store_coal_traded", "booked to traded")
+turn_start(tB)
+eq(tB1.held.iron, 190, "the partner exports what the sender lacks"); eq(tA1.held.iron, 10, "to its capital")
+eq(tB1.held.coal, 15, "coal is not sent back: tA has coal by the rule")
+tB.has.res_derpy_coal = true; n = #LOG
+turn_start(tA); eq(#LOG, n, "a partner that has the good gets none of it")
+tB.has.res_derpy_coal = nil
+-- the capital rule: a partner whose capital holds the good gets none
+F.LACK_TEST = "capital"; n = #LOG
+turn_start(tA); eq(#LOG, n, "capital rule: tB's capital already holds coal")
+tB1.held.coal = 0; turn_start(tA); eq(tB1.held.coal > 0, true, "capital rule: an empty capital store receives")
+-- a partner with no settlements leaves the exporter untouched
+tA.partners = { tC }; local c2 = tA2.held.coal
+turn_start(tA); eq(tA2.held.coal, c2, "a partner with no settlements leaves the exporter untouched")
+tA.partners = { tB, tC }
+
+-- ---- the switch: goods move between other factions -------------------------------------
+F.state.rates.ai = false
+n = #LOG; tB1.held.coal = 0
+turn_start(tA); eq(#LOG, n, "switch off: two computer-run factions trade nothing")
+hum.partners = { tA }; tA.partners = { hum }; h1.held = {}; h2.held = {}
+turn_start(tA); eq(h1.held.coal > 0, true, "switch off: a player's partner still receives")
+F.state.rates.ai = true; tA.partners = { tB, tC }; hum.partners = {}
+
+-- ---- history ----------------------------------------------------------------------------
+CCO_MADE = "derpy_mr_store_coal_stocked=6"
+F.state.factions.hum = nil
+h1.held, h2.held = { coal = 40 }, { coal = 2 }
+raid(army(hum, a1, 12, 0))                                  -- something in the ledger
+local raided = F.book("hum").now.coal.raided_in
+TURN = 7; turn_start(hum)
+local bk = F.book("hum")
+eq(bk.turns[1], 7, "the snapshot's turn"); eq(bk.total.coal[1], h1.held.coal + h2.held.coal, "realm total")
+eq(bk.last.coal.raided_in, raided, "the ledger becomes last turn's"); eq(bk.last.coal.made, 12, "made, both settlements")
+eq(next(bk.now), nil, "and a new ledger starts")
+eq(#bk.total.salted_fish, 1, "every good gets a value each turn, so every series lines up")
+local t, s = F.series("hum", "coal"); eq(t[1], 7, "series turns"); eq(s[1], bk.total.coal[1], "series totals")
+eq(F.last("hum", "coal").made, 12, "last"); eq(next(F.last("nobody", "coal")), nil, "no book, no last")
+local nobody = F.series("nobody", "coal"); eq(#nobody, 0, "no book, no series")
+for i = 1, 25 do F.push(bk, 100 + i, { coal = i }, {}) end
+eq(#bk.turns, 20, "twenty turns kept"); eq(bk.turns[1], 106, "the oldest dropped first")
+eq(#bk.total.coal, 20, "the series trimmed with them"); eq(bk.total.coal[20], 25, "newest last")
+eq(F.state.factions.tA, nil, "no history for a computer-run faction")
+
+-- ---- save and load ----------------------------------------------------------------------
+eq(cm.saving_game_callbacks[1] ~= nil and cm.loading_game_callbacks[1] ~= nil, true, "callbacks first in CA's lists")
+F.push(bk, 200, { coal = 7.6 }, { coal = 2.5 })   -- fractions in; none may reach the save
+local function whole(v, path)
+    if type(v) == "number" then eq(math.floor(v), v, "every number saved is whole: " .. path)
+    elseif type(v) == "table" then for k, x in pairs(v) do whole(x, path .. "." .. tostring(k)) end end
+end
+local ok_walk = pcall(whole, { 1.5 }, "planted"); eq(ok_walk, false, "the whole-number walk catches a fraction")
+cm.saving_game_callbacks[1]({}); whole(SAVED.derpy_mr_flows, "state")
+eq(SAVED.derpy_mr_flows.factions.hum.total.coal[20], 8, "7.6 is saved as 8")
+F.state = { factions = {} }
+cm.loading_game_callbacks[1]({})
+eq(F.state.factions.hum.turns[#F.state.factions.hum.turns], 200, "history survives a save and load")
+eq(F.state.rates.raid, 10, "and so do the rates")
+SAVED = {}
+cm.loading_game_callbacks[1]({})
+eq(next(F.state.factions), nil, "an old save starts an empty history"); eq(#ERRORS, 0, "without an error")
+
+-- ---- rates: MCT, frozen, multiplayer ----------------------------------------------------
+local MCT = {}
+local function option()
+    local o = {}
+    function o:set_text() end
+    function o:set_tooltip_text() end
+    function o:slider_set_precision() end
+    function o:slider_set_min_max() end
+    function o:slider_set_step_size() end
+    function o:set_assigned_section() end
+    function o:set_default_value(v) self.value = v end
+    function o:get_finalized_setting() return self.value end
+    return o
+end
+local MCT_API = {
+    register_mod = function(_, k)
+        local m = { options = {} }
+        function m:set_title() end
+        function m:set_author() end
+        function m:set_description() end
+        function m:add_new_section() end
+        function m:add_new_option(key) local o = option(); self.options[key] = o; return o end
+        function m:get_option_by_key(key) return self.options[key] end
+        MCT[k] = m
+        return m
+    end,
+    get_mod_by_key = function(_, k) return MCT[k] end,
+}
+get_mct = function() return MCT_API end
+dofile("__MCT__")
+local opt = MCT.derpy_more_resources.options
+for k, d in pairs(DERPY_MR_FLOWS_DEFAULTS) do
+    eq(opt[k] ~= nil, true, "the MCT file has an option for " .. k)
+    eq(opt[k].value, d, "the MCT default for " .. k .. " is the script's")
+end
+F.state = { factions = {} }
+opt.raid.value, opt.ai.value = 30, false
+eq(F.rates().raid, 30, "a new campaign takes MCT's raid share")
+eq(F.rates().ai, false, "an unticked box stays unticked")
+opt.raid.value = 40; eq(F.rates().raid, 30, "frozen: a later MCT change does not reach a running campaign")
+F.state = { factions = {} }; MP = true
+eq(F.rates().raid, 10, "multiplayer takes the defaults"); eq(F.rates().ai, true, "all of them")
+MP = false; get_mct = nil; F.state.rates = nil; F.rates()
+
+-- ---- the run-cost counter (Task 7 reads it) --------------------------------------------
+local counters = F.cost
+turn_start(tA); eq(F.cost, counters, "a computer-run turn start keeps counting into the same round")
+turn_start(hum); eq(F.round_cost, counters, "a human's turn start hands the round's counters over")
+eq(F.cost.raid, 0, "and starts new ones")
+
+eq(#ERRORS, 0, "script errors: " .. table.concat(ERRORS, "; "))
+print("harness ok")

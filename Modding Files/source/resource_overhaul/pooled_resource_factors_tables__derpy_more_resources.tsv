@@ -1,3 +1,6 @@
 key	is_hidden
 #pooled_resource_factors_tables;5;db/pooled_resource_factors_tables/derpy_more_resources
 derpy_mr_stocked	false
+derpy_mr_raided	false
+derpy_mr_plundered	false
+derpy_mr_traded	false

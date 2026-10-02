@@ -364,6 +364,23 @@ def store_fx(stem):
     return "derpy_mr_store_%s_stocked" % stem
 
 
+# THE FLOWS (spec 2026-10-02-resource-overhaul-stores-flows-design.md section 5): one factor per
+# kind of move, and one junction per store and kind. TWO-WAY, unlike the gain-only _stocked one:
+# a junction's bounds decide which way stock may move (CA's wh3_cp1_cth_relics_settlements_other
+# is -max..0, _uncovered 0..max), and a raid books OUT of the victim and IN to the raider on the
+# same factor. CA ships 456 two-way junctions, 7 on REGION pools.
+FLOW_FACTORS = (("raided", "Raid spoils", "Raided"), ("plundered", "Plunder", "Plundered"),
+                ("traded", "Traded in", "Traded out"))
+
+
+def flow_factor(kind):
+    return "derpy_mr_" + kind
+
+
+def flow_junction(stem, kind):
+    return "derpy_mr_store_%s_%s" % (stem, kind)
+
+
 @functools.lru_cache(None)
 def _ca_names():
     import read_vanilla_loc as rvl
@@ -551,7 +568,7 @@ def rare_cond(good):
 def n_loc():
     chains = sum(len(rare_chains(g)) for g in RARE)
     return (LOC_PER_GOOD * len(GOODS) + 2 * len(UNITS) + LOC_PER_RARE_GOOD * len(RARE)
-            + LOC_PER_CHAIN * chains + 5 * (len(GOODS) + len(CA_STEMS)) + 3)
+            + LOC_PER_CHAIN * chains + 5 * (len(GOODS) + len(CA_STEMS)) + 3 + 2 * len(FLOW_FACTORS))
 
 # Owners with no living people to make or eat a good: daemons, the dead, and beasts with no towns
 # to sell in. Matched on the CHAIN key, so a special variant for one of them goes too.
@@ -986,6 +1003,10 @@ def _stores(t, add, loc):
     add("pooled_resource_factors_tables", {"key": STORE_FACTOR, "is_hidden": False})
     loc += [("pooled_resource_factors_display_name_positive_" + STORE_FACTOR, "Stocked"),
             ("pooled_resource_factors_display_name_negative_" + STORE_FACTOR, "Stocked")]
+    for kind, pos, neg in FLOW_FACTORS:
+        add("pooled_resource_factors_tables", {"key": flow_factor(kind), "is_hidden": False})
+        loc += [("pooled_resource_factors_display_name_positive_" + flow_factor(kind), pos),
+                ("pooled_resource_factors_display_name_negative_" + flow_factor(kind), neg)]
     for stem, (_res, fx, name) in stems.items():
         add("pooled_resources_tables", dict(donor, key=store(stem), maximum=STORE_BASE, minimum=0,
                                             ai_ignored=True, default_factor="other", optional_icon_path="",
@@ -993,6 +1014,11 @@ def _stores(t, add, loc):
         add("pooled_resource_factor_junctions_tables", {
             "unique_id": store_fx(stem), "factor": STORE_FACTOR, "resource": store(stem),
             "minimum": 0, "maximum": 2147483647, "specific_faction_set": "", "sort_order": 0})
+        for kind, _pos, _neg in FLOW_FACTORS:
+            add("pooled_resource_factor_junctions_tables", {
+                "unique_id": flow_junction(stem, kind), "factor": flow_factor(kind),
+                "resource": store(stem), "minimum": -2147483647, "maximum": 2147483647,
+                "specific_faction_set": "", "sort_order": 0})
         add("campaign_group_pooled_resources_tables",
             {"campaign_group": "wh_main_feature_all", "resource": store(stem), "initial_amount": 0})
         add("effects_tables", dict(fx_rows[fx], effect=store_fx(stem)))
@@ -1558,6 +1584,14 @@ def check_stores(t, loc):
         jr = j[store_fx(s)]
         assert jr["resource"] == store(s) and jr["factor"] == STORE_FACTOR, jr
         assert jr["minimum"] == 0 < jr["maximum"], "store junction must be gain-only: %s" % jr
+    factors = {r["key"] for r in t["pooled_resource_factors_tables"][2]}
+    for kind, pos, neg in FLOW_FACTORS:
+        assert flow_factor(kind) in factors, "no factor %s" % flow_factor(kind)
+        for s in stems:
+            jr = j.get(flow_junction(s, kind))
+            assert jr, "no flow junction %s" % flow_junction(s, kind)
+            assert (jr["resource"], jr["factor"]) == (store(s), flow_factor(kind)), jr
+            assert jr["minimum"] < 0 < jr["maximum"], "flow junction must be two-way: %s" % jr
     reach = {(r["campaign_group"], r["resource"]) for r in t["campaign_group_pooled_resources_tables"][2]}
     assert {("wh_main_feature_all", store(s)) for s in stems} <= reach, "a store no owner can reach"
     bind = {(r["effect"], r["resource_factor"]) for r in
@@ -1570,6 +1604,9 @@ def check_stores(t, loc):
         assert any(k.startswith(pre) for k in van), "no CA pool uses loc prefix %s" % pre
         for s in stems:
             assert keys.get(pre + store(s)), pre + store(s)
+    for kind, pos, neg in FLOW_FACTORS:
+        assert keys.get("pooled_resource_factors_display_name_positive_" + flow_factor(kind)) == pos, kind
+        assert keys.get("pooled_resource_factors_display_name_negative_" + flow_factor(kind)) == neg, kind
     for s in stems:
         assert keys.get("effects_description_" + store_fx(s)), store_fx(s)
     by_fx = {fx: s for s, (_r, fx, _n) in stems.items()}
@@ -1780,6 +1817,8 @@ def selftest():
                              effect=CA_GOODS["furs"]["effect"])),
                     lambda t: t["pooled_resources_tables"][2][0].update(scope="FACTION"),
                     lambda t: t["pooled_resource_factor_junctions_tables"][2][0].update(maximum=0),
+                    lambda t: [r for r in t["pooled_resource_factor_junctions_tables"][2]
+                               if r["unique_id"].endswith("_raided")][0].update(minimum=0),
                     lambda t: t["campaign_group_pooled_resources_tables"][2].pop(),
                     lambda t: t["building_effects_junction_tables:ca"][2].pop(),
                     lambda t: [r for r in t["building_effects_junction_tables"][2]

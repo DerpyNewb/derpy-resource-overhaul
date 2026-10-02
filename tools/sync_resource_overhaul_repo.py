@@ -69,6 +69,7 @@ def manifest(root=ROOT):
         "gen_mr_ui.py",                     # the Stores panel's script and .twui.xml
         "gen_mr_emitter.py",                # its own copy of the XML emitter
         "_resource_overhaul_stores_harness.lua",   # the panel's test, run by gen_mr_ui --selftest
+        "_resource_overhaul_flows_harness.lua",    # the flows script's test, run by gen_mr_ui --selftest
         "sync_derpy_hub.py",                # writes this pack's Derpy HUD hub copy
         "_hub_harness.lua",
         "gen_guilds_emitter.py",            # sync_derpy_hub builds the hub's .twui.xml with it
@@ -76,6 +77,9 @@ def manifest(root=ROOT):
     )] + ["Modding Files/reference/resource_overhaul_building_audit.md",
           "Modding Files/pack/script/campaign/mod/derpy_more_resources_ai.lua",
           "Modding Files/source/resource_overhaul/stores_panel.lua",
+          "Modding Files/source/resource_overhaul/flows.lua",
+          "Modding Files/pack/script/campaign/mod/derpy_more_resources_flows.lua",
+          "Modding Files/pack/script/mct/settings/derpy_more_resources.lua",
           "Modding Files/pack/script/campaign/mod/derpy_more_resources_stores.lua",
           "Modding Files/pack/script/campaign/mod/derpy_hub_mr.lua",
           "Modding Files/source/derpy_hub/derpy_hud_hub.lua"]

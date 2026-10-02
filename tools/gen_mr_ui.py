@@ -10,6 +10,11 @@ DERPY_MR_STORES_GOODS, the 54 stores) in front of the hand-written
 Modding Files/source/resource_overhaul/stores_panel.lua, so every coordinate and the goods list
 have one source. gen_resource_overhaul.py's write() calls write_all() and its pack() refuses a
 stale() file. An unknown flag is refused: tools here have no --help.
+
+It also writes the flows script (derpy_more_resources_flows.lua: raids, sacks, razes and trade
+move stock; the history the panel charts) the same way, from
+Modding Files/source/resource_overhaul/flows.lua behind DERPY_MR_FLOWS_DEFAULTS / _KIND / _GOODS,
+and runs tools/_resource_overhaul_flows_harness.lua beside the panel's harness.
 """
 import io
 import os
@@ -27,6 +32,33 @@ UI_REL = "Modding Files/pack/ui/campaign ui/"
 PACK_REL = "Modding Files/pack/"
 HARNESS = os.path.join(ROOT, "tools", "_resource_overhaul_stores_harness.lua")
 LUA_EXE = r"C:\Program Files (x86)\Lua\5.1\lua.exe"
+FLOWS_SRC = os.path.join(ROOT, "Modding Files", "source", "resource_overhaul", "flows.lua")
+FLOWS_REL = "Modding Files/pack/script/campaign/mod/derpy_more_resources_flows.lua"
+FLOWS_HARNESS = os.path.join(ROOT, "tools", "_resource_overhaul_flows_harness.lua")
+MCT_REL = "Modding Files/pack/script/mct/settings/derpy_more_resources.lua"
+
+# THE RATES (flows spec section 6): key, label, tooltip, min, max, default. One source for the
+# flows script's defaults and the MCT sliders, so the two cannot disagree. Plain words: no "AI".
+RATES = (
+    ("raid", "Raid share per turn",
+     "Each turn an army raids a settlement, it carries off this share of every good the settlement "
+     "keeps, into its own nearest settlement as far as that has room. 0 turns this off.", 0, 50, 10),
+    ("sack", "Sack share",
+     "Sacking a settlement carries off this share of every good it keeps, into the sacker's "
+     "nearest settlement as far as that has room. 0 turns this off.", 0, 100, 50),
+    ("raze", "Raze share",
+     "Razing a settlement carries off this share of every good it keeps before it burns. "
+     "0 turns this off.", 0, 100, 50),
+    ("trade", "Trade share per turn",
+     "Each turn, every trade agreement sends this share of a good from the sender's fullest store "
+     "to the partner's capital, for each good the partner lacks. 0 turns this off.", 0, 25, 5),
+)
+AI_SWITCH = ("ai", "Goods move between other factions",
+             "Raids, sacks and trade between two factions no player controls move goods too. Off: "
+             "goods move only when a player's faction is one of the two, which makes turns faster on "
+             "a slow machine.", True)
+# Which factor each kind of move books to: the junction is derpy_mr_store_<stem>_<kind>.
+FLOW_KIND = {"raid": "raided", "sack": "plundered", "raze": "plundered", "trade": "traded"}
 
 # THE LAYOUT, in panel coordinates: (x, y, w, h). The Lua MoveTo's every component from these;
 # the .twui.xml sizes are the same numbers. cols are (x, w) inside a row, which starts at list x.
@@ -38,6 +70,12 @@ L = {
     "back": (720, 52, 120, 26), "sub_title": (20, 86, 820, 22), "head_y": 112,
     "list": (20, 138, 820, 448), "empty": (20, 150, 820, 60), "hint": (20, 600, 820, 22),
     "icon": (6, 2, 24, 24),
+    # THE CHART (flows spec section 7), on a good's drill-down only: the list drops to CHART_ROWS
+    # and twenty bars stand on one baseline under it.
+    "CHART_ROWS": 9, "BARS": 20, "BAR_W": 33, "BAR_PITCH": 41, "BAR_MIN": 2,
+    "chart_top": (20, 400, 300, 18), "bars": (20, 420, 820, 120),
+    "chart_from": (20, 542, 200, 18), "chart_to": (640, 542, 200, 18),
+    "chart_line": (20, 564, 820, 22),
     "cols": ((36, 204), (244, 90), (338, 100), (442, 110), (556, 240)),
 }
 
@@ -74,6 +112,7 @@ SLIDER_HANDLE_UNDER = "ui/skins/default/slider_vertical_handle_underlay.png"
 SND_OPEN = "UI_GBL_TMP_Round_Medium_Button"
 SND_SMALL = "UI_GBL_TMP_Round_Small_Button"
 MUTED = "#C8B48CFF"
+BAR_COLOUR = "#C8A060DD"
 ALIGN = ("Left", "Right", "Right", "Right", "Right")
 TIP_OPEN = "Stores||What each of your settlements keeps of every good, and how fast it fills."
 
@@ -117,6 +156,11 @@ def build_panel():
     p.add(E.C("rows_holder", L["list"][2], L["list"][3]))
     p.add(_cell(E, "empty_text", L["empty"][2], L["empty"][3], size=13))
     p.add(_cell(E, "hint_text", L["hint"][2], L["hint"][3], size=12, colour=MUTED))
+    p.add(_cell(E, "chart_top", L["chart_top"][2], L["chart_top"][3], size=12, colour=MUTED))
+    p.add(_cell(E, "chart_from", L["chart_from"][2], L["chart_from"][3], size=12, colour=MUTED))
+    p.add(_cell(E, "chart_to", L["chart_to"][2], L["chart_to"][3], size=12, colour=MUTED,
+                align="Right"))
+    p.add(_cell(E, "chart_line", L["chart_line"][2], L["chart_line"][3], size=12))
     E.assign(root, "MR01")
     return E.layout(root, "derpy: Resource Overhaul's Stores panel. Created at runtime by "
                     "script/campaign/mod/derpy_more_resources_stores.lua, which MoveTo's every "
@@ -188,9 +232,20 @@ def build_sp():
                     "tools/gen_mr_ui.py; do not hand-edit.")
 
 
+def build_bar():
+    """One bar of the history chart: a flat tinted image the Lua sizes and moves."""
+    import gen_mr_emitter as E
+    root = E.C("root", L["BAR_W"], L["bars"][3])
+    root.add(E.C("derpy_mr_stores_bar", L["BAR_W"], L["bars"][3], interactive=True,
+                 image=WHITE, colour_img=BAR_COLOUR))
+    E.assign(root, "MR06")
+    return E.layout(root, "derpy: one bar of the Stores panel's history chart, created twenty "
+                    "times into the panel. Generated by tools/gen_mr_ui.py; do not hand-edit.")
+
+
 BUILDERS = (("derpy_mr_stores_panel", build_panel), ("derpy_mr_stores_row", build_row),
             ("derpy_mr_stores_button", build_button), ("derpy_mr_stores_list", build_list),
-            ("derpy_mr_stores_sp", build_sp))
+            ("derpy_mr_stores_sp", build_sp), ("derpy_mr_stores_bar", build_bar))
 
 
 def goods():
@@ -227,9 +282,71 @@ def stores_lua():
         return header() + fh.read()
 
 
+def flows_header():
+    lines = ["-- GENERATED by tools/gen_mr_ui.py from Modding Files/source/resource_overhaul/flows.lua.",
+             "-- Edit the source or the generator, never this file.",
+             "DERPY_MR_FLOWS_DEFAULTS = {"]
+    lines += ["    %s = %d," % (k, d) for k, _l, _t, _lo, _hi, d in RATES]
+    lines += ["    %s = %s," % (AI_SWITCH[0], "true" if AI_SWITCH[3] else "false"), "}",
+              "DERPY_MR_FLOWS_KIND = {"]
+    lines += ['    %s = "%s",' % (k, FLOW_KIND[k]) for k in sorted(FLOW_KIND)]
+    lines += ["}", "DERPY_MR_FLOWS_GOODS = {"]
+    lines += ['    {stem = "%s", res = "%s"},' % (s, r) for s, r, _i in goods()]
+    lines.append("}")
+    return "\n".join(lines) + "\n"
+
+
+def flows_lua():
+    with io.open(FLOWS_SRC, encoding="utf-8", newline="") as fh:
+        return flows_header() + fh.read()
+
+
+MCT_TITLE = "Derpy Resource Overhaul"
+MCT_DESC = ("How goods move between settlement stores. These are fixed for the life of a campaign: "
+            "change them from the main menu before starting a new one. In a multiplayer campaign "
+            "they are ignored and every value is the default on every machine.")
+
+
+def mct_lua():
+    lines = ["-- GENERATED by tools/gen_mr_ui.py - do not edit by hand.",
+             "--",
+             "-- MCT registration for Resource Overhaul's stores. MCT loads every .lua under",
+             "-- script/mct/settings/, so this file only ever runs when MCT is installed. The",
+             "-- campaign script freezes these values into the save at the first turn start.",
+             "",
+             "local mct = get_mct and get_mct()",
+             "if not mct then return end",
+             "",
+             'local m = mct:register_mod("derpy_more_resources")',
+             'm:set_title("%s")' % MCT_TITLE,
+             'm:set_author("_D3rpyN3wb_")',
+             'm:set_description("%s")' % MCT_DESC,
+             'm:add_new_section("stores", "Stores")']
+    for k, label, tip, lo, hi, d in RATES:
+        lines += ["",
+                  'local o_%s = m:add_new_option("%s", "slider")' % (k, k),
+                  'o_%s:set_text("%s")' % (k, label),
+                  'o_%s:set_tooltip_text("%s")' % (k, tip),
+                  "o_%s:slider_set_precision(0)" % k,
+                  "o_%s:slider_set_min_max(%d, %d)" % (k, lo, hi),
+                  "o_%s:slider_set_step_size(1, 0)" % k,
+                  "o_%s:set_default_value(%d)" % (k, d),
+                  'o_%s:set_assigned_section("stores")' % k]
+    k, label, tip, d = AI_SWITCH
+    lines += ["",
+              'local o_%s = m:add_new_option("%s", "checkbox")' % (k, k),
+              'o_%s:set_text("%s")' % (k, label),
+              'o_%s:set_tooltip_text("%s")' % (k, tip),
+              "o_%s:set_default_value(%s)" % (k, "true" if d else "false"),
+              'o_%s:set_assigned_section("stores")' % k]
+    return "\n".join(lines) + "\n"
+
+
 def files():
     out = {UI_REL + name + ".twui.xml": build() for name, build in BUILDERS}
     out[LUA_REL] = stores_lua()
+    out[FLOWS_REL] = flows_lua()
+    out[MCT_REL] = mct_lua()
     return out
 
 
@@ -259,8 +376,10 @@ def pack_paths():
     return [rel[len(PACK_REL):] for rel in files()]
 
 
-def run_harness():
-    """The harness against the built files, from a temp folder: (returncode, output)."""
+def run_harness(harness=HARNESS):
+    """A harness against the built files, from a temp folder: (returncode, output).
+    __SCRIPT__ and __STORES__ are the stores script, __FLOWS__ the flows script, __MCT__ the MCT
+    settings file and __UIDIR__ the folder the .twui.xml files are in."""
     tmp = tempfile.mkdtemp()
     try:
         for rel, text in files().items():
@@ -268,8 +387,11 @@ def run_harness():
                          newline="\n") as fh:
                 fh.write(text)
         fwd = tmp.replace("\\", "/")
-        with io.open(HARNESS, encoding="utf-8") as fh:
-            h = fh.read().replace("__SCRIPT__", fwd + "/" + os.path.basename(LUA_REL))
+        with io.open(harness, encoding="utf-8") as fh:
+            h = fh.read()
+        for token, rel in (("__SCRIPT__", LUA_REL), ("__STORES__", LUA_REL),
+                           ("__FLOWS__", FLOWS_REL), ("__MCT__", MCT_REL)):
+            h = h.replace(token, fwd + "/" + os.path.basename(rel))
         h = h.replace("__UIDIR__", fwd)
         hp = os.path.join(tmp, "harness.lua")
         with io.open(hp, "w", encoding="utf-8", newline="\n") as fh:
@@ -296,6 +418,17 @@ def check_layout():
     for x, w in L["cols"]:
         assert x >= end, "the column at %d overlaps the one before it" % x
         end = x + w
+    for k in ("chart_top", "bars", "chart_from", "chart_to", "chart_line"):
+        x, y, w, h = L[k]
+        assert 0 <= x and 0 <= y and x + w <= W and y + h <= H, "%s leaves the panel" % k
+    assert ly + L["CHART_ROWS"] * L["PITCH"] <= L["chart_top"][1], "the short list runs into the chart"
+    assert L["chart_top"][1] + L["chart_top"][3] <= L["bars"][1], "the top label overlaps the bars"
+    assert L["bars"][1] + L["bars"][3] <= L["chart_from"][1], "the bars run into the turn labels"
+    assert L["chart_from"][0] + L["chart_from"][2] <= L["chart_to"][0], "the turn labels overlap"
+    assert L["chart_from"][1] + L["chart_from"][3] <= L["chart_line"][1], "the turn labels overlap the line"
+    assert L["chart_line"][1] + L["chart_line"][3] <= L["hint"][1], "the chart runs into the hint"
+    assert (L["BARS"] - 1) * L["BAR_PITCH"] + L["BAR_W"] <= L["bars"][2], "twenty bars do not fit"
+    assert L["BAR_MIN"] <= L["bars"][3], "a sliver taller than the chart"
     assert end <= lw - L["SLIDER_W"], "the last column runs under the slider"
 
 
@@ -323,10 +456,10 @@ def check_text_fits():
 
 
 def check_xml():
-    """Five files; every GUID unique across them and linked; every image and sound real."""
+    """Six files; every GUID unique across them and linked; every image and sound real."""
     import gen_mr_emitter as E
     texts = {rel: t for rel, t in files().items() if rel.endswith(".twui.xml")}
-    assert len(texts) == 5, sorted(texts)
+    assert len(texts) == 6, sorted(texts)
     seen = {}
     for rel, text in texts.items():
         for g in set(re.findall(r'uniqueguid="([^"]+)"', text)):
@@ -367,8 +500,12 @@ def selftest():
     finally:
         shutil.rmtree(tmp)
     assert os.path.isfile(LUA_EXE), "lua.exe is required for the harness"
-    code, out = run_harness()
-    assert code == 0 and "harness ok" in out, out
+    for h in (HARNESS, FLOWS_HARNESS):
+        code, out = run_harness(h)
+        assert code == 0 and "harness ok" in out, "%s:\n%s" % (os.path.basename(h), out)
+    # the Lua builds derpy_mr_store_<stem>_<kind> from FLOW_KIND; those must be Task 2's junctions
+    assert set(FLOW_KIND.values()) == {k for k, _p, _n in G.FLOW_FACTORS}, FLOW_KIND
+    assert G.flow_junction("coal", "raided") == "derpy_mr_store_coal_raided"
     problems = stale()
     assert not problems, "stale, run py tools/gen_mr_ui.py: %s" % problems
     import preview_guilds_panel as PV
@@ -384,10 +521,12 @@ SAMPLE = (("Salted Fish", "1240", "+18", "1240 / 4000", "7 of 12"),
           ("Iron", "0", "+4", "0 / 200", "1 of 12"))
 
 
-def preview(path=None):
-    """The layout drawn from L, with sample rows: a design-review picture, not the engine."""
+def preview(path=None, chart=False):
+    """The layout drawn from L, with sample rows: a design-review picture, not the engine.
+    chart=True draws a good's drill-down: the short list and a demo history under it."""
     from PIL import Image, ImageDraw
-    path = path or os.path.join(ROOT, ".skilltree_cache", "ui_preview", "mr_stores.png")
+    name = "mr_stores_chart.png" if chart else "mr_stores.png"
+    path = path or os.path.join(ROOT, ".skilltree_cache", "ui_preview", name)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     W, H = L["W"], L["H"]
     im = Image.new("RGB", (W, H), (43, 33, 22))
@@ -402,13 +541,15 @@ def preview(path=None):
 
     for k, label in (("title", "Stores"), ("close", "X"), ("tab_goods", "Goods"),
                      ("tab_settlements", "Settlements"), ("back", "Back"),
-                     ("sub_title", "Every good your settlements keep"),
-                     ("hint", "Click a good to see where it is kept.")):
+                     ("sub_title", "Where Salted Fish is kept" if chart else
+                      "Every good your settlements keep"),
+                     ("hint", "" if chart else "Click a good to see where it is kept.")):
         box(L[k], label)
-    lx, ly, lw, lh = L["list"]
+    lx, ly, lw, _lh = L["list"]
+    rows = L["CHART_ROWS"] if chart else L["ROWS"]
     for j, (x, w) in enumerate(L["cols"]):
         box((lx + x, L["head_y"], w, 22), SAMPLE_HEADS[j])
-    for i in range(L["ROWS"]):
+    for i in range(rows):
         y = ly + i * L["PITCH"]
         d.rectangle((lx, y, lx + lw - L["SLIDER_W"], y + L["PITCH"] - 2), fill=(30, 24, 16))
         ix, iy, iw, ih = L["icon"]
@@ -417,7 +558,19 @@ def preview(path=None):
             t = SAMPLE[i % len(SAMPLE)][j]
             tx = lx + x if ALIGN[j] == "Left" else lx + x + w - d.textlength(t)
             d.text((tx, y + 8), t, fill=ink)
-    d.rectangle((lx + lw - L["SLIDER_W"], ly, lx + lw, ly + lh), outline=(200, 160, 90))
+    d.rectangle((lx + lw - L["SLIDER_W"], ly, lx + lw, ly + rows * L["PITCH"]), outline=(200, 160, 90))
+    if chart:
+        demo = [40, 55, 60, 52, 80, 95, 90, 120, 118, 130, 160, 150, 170, 168, 190, 210, 205, 220, 240, 236]
+        bx, by, _bw, bh = L["bars"]
+        top = max(demo)
+        for i, v in enumerate(demo):
+            h = max(L["BAR_MIN"], v * bh // top)
+            x = bx + i * L["BAR_PITCH"]
+            d.rectangle((x, by + bh - h, x + L["BAR_W"], by + bh), fill=(200, 160, 96))
+        box(L["chart_top"], str(top))
+        box(L["chart_from"], "Turn 31")
+        box(L["chart_to"], "Turn 50")
+        box(L["chart_line"], "Last turn: made +12, raided -30, traded in +5")
     im.save(path)
     return path
 
@@ -436,5 +589,6 @@ if __name__ == "__main__":
         selftest()
     elif args == ["--preview"]:
         print("wrote", preview())
+        print("wrote", preview(chart=True))
     else:
         raise SystemExit("unknown arguments %r - see the docstring" % (args,))

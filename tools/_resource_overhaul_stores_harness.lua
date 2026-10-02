@@ -343,5 +343,72 @@ click("derpy_mr_close"); LOCAL = "fac_empty"; click("derpy_mr_stores_button"); c
 eq(shown_rows(), 0, "nothing listed"); eq(find("empty_text").visible, true, "says why")
 eq(find("empty_text").text, S.NO_REALM, "no settlements")
 
+-- ---- the history chart on a good's drill-down (flows spec section 7) ---------------------
+local L = DERPY_MR_STORES_L
+local HIST = { turns = {}, total = {}, last = {} }
+DERPY_MR_FLOWS = {
+    series = function(fk, stem)
+        eq(fk, LOCAL, "the local faction's history"); eq(stem, "coal", "the focused good's")
+        return HIST.turns, HIST.total
+    end,
+    last = function() return HIST.last end,
+}
+-- the model
+eq(S.chart_model({}, {}, {}).chart_line, S.NO_HISTORY, "no turns: no history")
+eq(S.chart_model({ 4 }, { 10 }, {}).bars, nil, "one turn draws no bars")
+local c = S.chart_model({ 3, 4, 5 }, { 0, 50, 100 }, { made = 12, raided_out = 30, traded_in = 5 })
+eq(#c.bars, 3, "a bar a turn"); eq(c.bars[1].h, L.BAR_MIN, "an empty turn keeps a sliver")
+eq(c.bars[2].h, 60, "half the top is half the height"); eq(c.bars[3].h, 120, "the top fills the chart")
+eq(c.bars[3].tip, "Turn 5: 100 held", "bar tooltip"); eq(c.chart_top, "100", "top value")
+eq(c.chart_from, "Turn 3", "first turn"); eq(c.chart_to, "Turn 5", "last turn")
+eq(c.chart_line, "Last turn: made +12, raided -30, traded in +5", "the last-turn line")
+eq(S.chart_model({ 1, 2 }, { 0, 0 }, {}).bars[2].h, L.BAR_MIN, "all empty: slivers, no division by zero")
+eq(S.last_line({}), "Last turn: no change", "a quiet turn")
+eq(S.last_line({ plundered_in = 40, plundered_out = 10, traded_out = 3 }),
+   "Last turn: plundered +30, traded out -3", "plunder is netted, trade out shown on its own")
+-- 7px a character: gen_mr_ui.CHAR_W, the same flat estimate check_text_fits uses
+local widest = S.last_line({ made = 123456, raided_out = 123456, plundered_out = 123456,
+                             traded_in = 123456, traded_out = 123456 })
+eq(#widest * 7 <= L.chart_line[3], true, "the widest last-turn line fits: " .. widest)
+eq(#S.NO_HISTORY * 7 <= L.chart_line[3], true, "the no-history line fits")
+
+-- on screen
+local function bars_shown()
+    local k = 0
+    for i = 1, L.BARS do
+        local bar = find("derpy_mr_bar_" .. i)
+        if bar and bar.visible then k = k + 1 end
+    end
+    return k
+end
+click("derpy_mr_close"); LOCAL = "fac_a"
+HIST.turns, HIST.total, HIST.last = { 3, 4, 5 }, { 0, 50, 100 }, { made = 12 }
+click("derpy_mr_stores_button")
+eq(find("hdr_1").text, "Good", "reopened on the Goods tab")
+eq(bars_shown(), 0, "no bars on a top view"); eq(find("chart_line").visible, false, "no chart on a top view")
+eq(find("derpy_mr_stores_list").h, L.ROWS * L.PITCH, "the full list on a top view")
+click("derpy_mr_row_1")
+eq(find("sub_title").text, "Where Coal is kept", "coal's drill-down")
+eq(bars_shown(), 3, "three bars for three turns")
+local pnl, b3 = find("derpy_mr_stores_panel"), find("derpy_mr_bar_3")
+eq(b3.h, 120, "the top bar is full height")
+eq(b3.y + b3.h, pnl.y + L.bars[2] + L.bars[4], "bars stand on one baseline")
+eq(b3.x - find("derpy_mr_bar_2").x, L.BAR_PITCH, "bar pitch"); eq(b3.tip, "Turn 5: 100 held", "bar tooltip")
+eq(find("chart_line").text, "Last turn: made +12", "the last-turn line")
+eq(find("chart_line").visible, true, "shown"); eq(find("chart_to").text, "Turn 5", "the last turn's label")
+eq(find("derpy_mr_stores_list").h, L.CHART_ROWS * L.PITCH, "the list shortens for the chart")
+eq(find("vslider").maxValue, L.CHART_ROWS * L.PITCH - L.HANDLE_H, "and its slider with it")
+HIST.turns, HIST.total = { 5 }, { 100 }
+click("derpy_mr_back"); click("derpy_mr_row_1")
+eq(bars_shown(), 0, "one turn: no bars"); eq(find("chart_line").text, S.NO_HISTORY, "and says why")
+click("derpy_mr_back")
+eq(find("chart_line").visible, false, "Back hides the chart")
+eq(find("derpy_mr_stores_list").h, L.ROWS * L.PITCH, "and restores the full list")
+click("derpy_mr_tab_settlements"); click("derpy_mr_row_1")
+eq(bars_shown(), 0, "no chart on a settlement's stores")
+DERPY_MR_FLOWS = nil
+click("derpy_mr_tab_goods"); click("derpy_mr_row_1")
+eq(find("chart_line").text, S.NO_HISTORY, "without the flows script: no history, no error")
+
 eq(#ERRORS, 0, "script errors: " .. table.concat(ERRORS, "; "))
 print("harness ok")

@@ -2,6 +2,10 @@
 
 ## 2026-10-02
 
+- Raids, sacks and razes carry off a share of a settlement's stores.
+- Trade agreements move goods a partner lacks into its capital each turn.
+- Stores panel: a 20-turn chart and last turn's changes for each good.
+- MCT settings for the four shares.
 - A Stores panel: every settlement's stores, by good or by settlement.
 - Every settlement keeps a store of each good.
 - Stores fill each turn from its buildings.

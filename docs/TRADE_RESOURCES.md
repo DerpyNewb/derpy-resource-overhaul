@@ -653,3 +653,82 @@ Plan: `superpowers/plans/2026-10-02-resource-overhaul-stores-phase2.md`.
     only. The label is now written to hover and standard.
   - The open tab had no selected look. It now wears CA's `button_square_large_text_selected`
     art on images 0 and 1, which the engine maps to the faction's theme skin.
+
+## 21. Stores flows and history (2026-10-02)
+
+This section covers phase 3. The spec is
+`docs/superpowers/specs/2026-10-02-resource-overhaul-stores-flows-design.md`, and the plan is
+`docs/superpowers/plans/2026-10-02-resource-overhaul-stores-phase3.md`.
+
+**The script** is `script/campaign/mod/derpy_more_resources_flows.lua`. It is generated from
+`Modding Files/source/resource_overhaul/flows.lua` behind a header that `tools/gen_mr_ui.py`
+writes.
+
+**The flows** (defaults; MCT sliders, frozen into the save at the first turn start):
+
+| Flow | Event | Share | Lands in |
+|---|---|---|---|
+| Raid | `CharacterTurnStart`, army in `LAND_RAID`, on land of a faction it is at war with | 10% a turn | the raider's nearest settlement |
+| Sack | `CharacterPerformsSettlementOccupationDecision`, `occupation_decision_sack` | 50% | the sacker's nearest settlement |
+| Raze | the same event, `occupation_decision_raze_without_occupy` | 50% | the razer's nearest settlement |
+| Trade | `FactionTurnStart`, each partner in `factions_trading_with()` | 5% a turn of the exporter's fullest store, per good the partner lacks | the partner's capital |
+
+A share is `floor(held * pct / 100)`, so a store too small to yield 1 gives nothing.
+
+**Cases where nothing is taken:**
+- the owner is a rebel, there is no owner, or the owner is the taker;
+- an occupy or a loot-and-occupy (the stock already goes with the settlement);
+- a trade partner with no settlements.
+
+**Cases where stock is lost:**
+- a taker with no settlements (a horde): the victim still loses the share;
+- anything over the receiver's space.
+
+**How a move is made:** two `cm:entity_add_pooled_resource_transaction` calls.
+- The source gets `-n`. The receiver gets `min(n, free space)`.
+- CA calls this in `wh3_campaign_grudges.lua` and `wh3_cp1_bhashiva.lua`, negative values
+  included, but does not document it. `check_lua_api.py` therefore carries it in `CA_USED`.
+- `entity_transfer_pooled_resource` is not used. Its behaviour at a full store was unmeasured,
+  and the script now enforces the rule itself.
+
+**Junctions:** each move books to `derpy_mr_store_<stem>_<raided|plundered|traded>`.
+- Each is a junction on factor `derpy_mr_raided`, `derpy_mr_plundered` or `derpy_mr_traded`.
+  That is 3 factors and 162 junctions.
+- **They are two-way** (min -2147483647, max 2147483647). A junction's bounds decide which way
+  stock may move: CA's `wh3_cp1_cth_relics_settlements_other` is loss-only and `_uncovered`
+  gain-only. CA ships 456 two-way junctions.
+
+**"Nearest"** is measured from the taking army's position, because the settlement may already
+be null at a raze.
+
+**Gated by the "Goods move between other factions" switch** (default on): when it is off, a
+move runs only if a player's faction is on one side.
+
+**Ledger and history:**
+- Kept for human factions only.
+- The ledger has six counters per good: `raided_in`, `raided_out`, `plundered_in`,
+  `plundered_out`, `traded_in` and `traded_out`.
+- At a human's turn start, the realm total per good goes into a 20-turn ring, and the ledger
+  becomes last turn's, together with `made`.
+- **Saving:**
+  - It is saved as `derpy_mr_flows`, with whole numbers only, because of the decimal-comma
+    locale trap.
+  - The save and load callbacks go first in CA's lists.
+  - Multiplayer ignores MCT and uses the defaults.
+
+**The chart:**
+- It appears on a good's drill-down. The list drops to 9 rows, and 20 bars (`derpy_mr_stores_bar`,
+  GUID prefix MR06) stand on one baseline.
+- A bar's tooltip reads "Turn N: X held".
+- Under the bars is the line "Last turn: made +12, raided -30, traded in +5". Raids and plunder
+  are netted; trade in and trade out are shown separately.
+- With fewer than 2 turns recorded it reads "No history yet - check back next turn."
+
+**Rulings pending the in-game check** (plan Task 1 moved to run with Task 7):
+- `LACK_TEST = "capital"`: a partner lacks a good when its capital's store of it is empty.
+- `RAZE = "live"`: unreadable stores at a raze take nothing and log one line.
+
+**The gate** is `py tools/gen_mr_ui.py --selftest`. It runs both harnesses
+(`_resource_overhaul_stores_harness.lua` and `_resource_overhaul_flows_harness.lua`).
+
+**In game:** not yet measured; see the session index line.
