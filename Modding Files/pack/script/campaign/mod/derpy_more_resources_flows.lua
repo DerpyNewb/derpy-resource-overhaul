@@ -6,68 +6,76 @@ DERPY_MR_FLOWS_DEFAULTS = {
     raze = 50,
     trade = 5,
     ai = true,
+    upkeep = true,
 }
 DERPY_MR_FLOWS_KIND = {
+    eat = "eaten",
     raid = "raided",
     raze = "plundered",
     sack = "plundered",
     trade = "traded",
 }
 DERPY_MR_FLOWS_GOODS = {
-    {stem = "salted_fish", res = "res_derpy_salted_fish"},
-    {stem = "whale_oil", res = "res_derpy_whale_oil"},
-    {stem = "sea_dragon_hide", res = "res_derpy_sea_dragon_hide"},
-    {stem = "rum", res = "res_derpy_rum"},
-    {stem = "amber", res = "res_derpy_amber"},
-    {stem = "grain", res = "res_derpy_grain"},
-    {stem = "warhorses", res = "res_derpy_warhorses"},
-    {stem = "pipeweed", res = "res_derpy_pipeweed"},
-    {stem = "books", res = "res_derpy_books"},
-    {stem = "olive_oil", res = "res_derpy_olive_oil"},
-    {stem = "silk", res = "res_derpy_silk"},
-    {stem = "tea", res = "res_derpy_tea"},
-    {stem = "jade", res = "res_derpy_jade"},
-    {stem = "coal", res = "res_derpy_coal"},
-    {stem = "silver", res = "res_derpy_silver"},
-    {stem = "gromril", res = "res_derpy_gromril"},
-    {stem = "quicksilver", res = "res_derpy_quicksilver"},
-    {stem = "brimstone", res = "res_derpy_brimstone"},
-    {stem = "brass", res = "res_derpy_brass"},
-    {stem = "blackpowder", res = "res_derpy_blackpowder"},
-    {stem = "ithilmar", res = "res_derpy_ithilmar"},
-    {stem = "dragon_bone", res = "res_derpy_dragon_bone"},
-    {stem = "lustrian_plumes", res = "res_derpy_lustrian_plumes"},
-    {stem = "black_lotus", res = "res_derpy_black_lotus"},
-    {stem = "incense", res = "res_derpy_incense"},
-    {stem = "salted_meat", res = "res_derpy_salted_meat"},
-    {stem = "carpets", res = "res_derpy_carpets"},
-    {stem = "kvas", res = "res_derpy_kvas"},
-    {stem = "rhinox_hides", res = "res_derpy_rhinox_hides"},
-    {stem = "mead", res = "res_derpy_mead"},
-    {stem = "glassware", res = "res_derpy_glassware"},
-    {stem = "wool", res = "res_derpy_wool"},
-    {stem = "porcelain", res = "res_derpy_porcelain"},
-    {stem = "pearls", res = "res_derpy_pearls"},
-    {stem = "starwood", res = "res_derpy_starwood"},
-    {stem = "feathers", res = "res_derpy_feathers"},
-    {stem = "wyvern_scales", res = "res_derpy_wyvern_scales"},
-    {stem = "animals", res = "res_animals"},
-    {stem = "dyes", res = "res_dyes"},
-    {stem = "gems", res = "res_gems"},
-    {stem = "gold_idols", res = "res_gold_idols"},
-    {stem = "tusks", res = "res_ivory"},
-    {stem = "medicine", res = "res_medicine"},
-    {stem = "obsidian", res = "res_obsidian"},
-    {stem = "furs", res = "res_rom_furs"},
-    {stem = "beer", res = "res_rom_glass"},
-    {stem = "iron", res = "res_rom_iron"},
-    {stem = "salt", res = "res_rom_lead"},
-    {stem = "marble", res = "res_rom_marble"},
-    {stem = "pottery", res = "res_rom_textiles"},
-    {stem = "timber", res = "res_rom_timber"},
-    {stem = "wine", res = "res_rom_wine"},
-    {stem = "spices", res = "res_spices"},
-    {stem = "trinkets", res = "res_trinkets"},
+    {stem = "salted_fish", res = "res_derpy_salted_fish", use = "provisions"},
+    {stem = "whale_oil", res = "res_derpy_whale_oil", use = "war"},
+    {stem = "sea_dragon_hide", res = "res_derpy_sea_dragon_hide", use = "mounts"},
+    {stem = "rum", res = "res_derpy_rum", use = "provisions"},
+    {stem = "amber", res = "res_derpy_amber", use = "luxuries"},
+    {stem = "grain", res = "res_derpy_grain", use = "provisions"},
+    {stem = "warhorses", res = "res_derpy_warhorses", use = "mounts"},
+    {stem = "pipeweed", res = "res_derpy_pipeweed", use = "luxuries"},
+    {stem = "books", res = "res_derpy_books", use = "luxuries"},
+    {stem = "olive_oil", res = "res_derpy_olive_oil", use = "provisions"},
+    {stem = "silk", res = "res_derpy_silk", use = "luxuries"},
+    {stem = "tea", res = "res_derpy_tea", use = "provisions"},
+    {stem = "jade", res = "res_derpy_jade", use = "luxuries"},
+    {stem = "coal", res = "res_derpy_coal", use = "war"},
+    {stem = "silver", res = "res_derpy_silver", use = "luxuries"},
+    {stem = "gromril", res = "res_derpy_gromril", use = "war"},
+    {stem = "quicksilver", res = "res_derpy_quicksilver", use = "war"},
+    {stem = "brimstone", res = "res_derpy_brimstone", use = "war"},
+    {stem = "brass", res = "res_derpy_brass", use = "war"},
+    {stem = "blackpowder", res = "res_derpy_blackpowder", use = "war"},
+    {stem = "ithilmar", res = "res_derpy_ithilmar", use = "war"},
+    {stem = "dragon_bone", res = "res_derpy_dragon_bone", use = "mounts"},
+    {stem = "lustrian_plumes", res = "res_derpy_lustrian_plumes", use = "luxuries"},
+    {stem = "black_lotus", res = "res_derpy_black_lotus", use = "luxuries"},
+    {stem = "incense", res = "res_derpy_incense", use = "luxuries"},
+    {stem = "salted_meat", res = "res_derpy_salted_meat", use = "provisions"},
+    {stem = "carpets", res = "res_derpy_carpets", use = "luxuries"},
+    {stem = "kvas", res = "res_derpy_kvas", use = "provisions"},
+    {stem = "rhinox_hides", res = "res_derpy_rhinox_hides", use = "mounts"},
+    {stem = "mead", res = "res_derpy_mead", use = "provisions"},
+    {stem = "glassware", res = "res_derpy_glassware", use = "building"},
+    {stem = "wool", res = "res_derpy_wool", use = "luxuries"},
+    {stem = "porcelain", res = "res_derpy_porcelain", use = "luxuries"},
+    {stem = "pearls", res = "res_derpy_pearls", use = "luxuries"},
+    {stem = "starwood", res = "res_derpy_starwood", use = "building"},
+    {stem = "feathers", res = "res_derpy_feathers", use = "mounts"},
+    {stem = "wyvern_scales", res = "res_derpy_wyvern_scales", use = "mounts"},
+    {stem = "animals", res = "res_animals", use = "mounts"},
+    {stem = "dyes", res = "res_dyes", use = "luxuries"},
+    {stem = "gems", res = "res_gems", use = "luxuries"},
+    {stem = "gold_idols", res = "res_gold_idols", use = "luxuries"},
+    {stem = "tusks", res = "res_ivory", use = "mounts"},
+    {stem = "medicine", res = "res_medicine", use = "provisions"},
+    {stem = "obsidian", res = "res_obsidian", use = "war"},
+    {stem = "furs", res = "res_rom_furs", use = "mounts"},
+    {stem = "beer", res = "res_rom_glass", use = "provisions"},
+    {stem = "iron", res = "res_rom_iron", use = "war"},
+    {stem = "salt", res = "res_rom_lead", use = "provisions"},
+    {stem = "marble", res = "res_rom_marble", use = "building"},
+    {stem = "pottery", res = "res_rom_textiles", use = "building"},
+    {stem = "timber", res = "res_rom_timber", use = "building"},
+    {stem = "wine", res = "res_rom_wine", use = "provisions"},
+    {stem = "spices", res = "res_spices", use = "provisions"},
+    {stem = "trinkets", res = "res_trinkets", use = "luxuries"},
+}
+DERPY_MR_FLOWS_NO_STORES = {"dae", "kho", "nur", "sla", "tze", "tmb", "nag", "bst"}
+DERPY_MR_FLOWS_BUNDLES = {
+    provisions = "derpy_mr_well_fed",
+    war = "derpy_mr_garrison_stocked",
+    luxuries = "derpy_mr_comforts",
 }
 -- Derpy Resource Overhaul: stores flows. Raids, sacks and razes carry stock out of a settlement's
 -- stores into the taker's; trade agreements carry it between partners; a ledger and a 20-turn
@@ -495,6 +503,115 @@ function F.on_ui_trigger(context)
     end
 end
 
+-- ---- using the stores (spending spec section 2, phase 4) ----------------------------------
+-- Every settlement eats provisions at its owner's turn start, and well-stocked stores give a
+-- region bundle each: Well fed, Garrison stocked, Comforts (gen_resource_overhaul.USE_BUNDLES).
+F.NEED = 2               -- provisions a turn per settlement level
+F.FED_TURNS = 5          -- Well fed: this many turns' need still held after eating
+F.STOCKED_PCT = 25       -- Garrison stocked and Comforts: this share of one store's space
+-- RENEWED EACH TURN, REMOVED THE TURN ITS CONDITION FAILS: 2, not 1, so a bundle cannot lapse
+-- before growth is counted, and one the pass no longer reaches (the mod removed) still lapses.
+F.BUNDLE_TURNS = 2
+
+-- Daemons, the undead and Beastmen: their buildings make nothing, so they keep nothing to use.
+function F.uses_stores(faction)
+    local sc = faction:subculture()
+    for _, t in ipairs(DERPY_MR_FLOWS_NO_STORES) do
+        -- no plain flag: it corrupts the game's string library; the tokens are letters only
+        if string.find(sc, "_" .. t .. "_") then return false end
+    end
+    return true
+end
+
+-- One read of a settlement's stores: {stem = held}, and one store's space.
+function F.stock(region)
+    local held, cap = {}, 0
+    local list = region:pooled_resource_manager():resources()
+    for i = 0, list:num_items() - 1 do
+        local p = list:item_at(i)
+        if not p:is_null_interface() then
+            local k = p:key()
+            if string.sub(k, 1, #F.PREFIX) == F.PREFIX then
+                held[string.sub(k, #F.PREFIX + 1)] = p:value()
+                if p:maximum_value() > cap then cap = p:maximum_value() end
+            end
+        end
+    end
+    return held, cap
+end
+
+function F.use_total(held, use)
+    local n = 0
+    for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+        if g.use == use then n = n + (held[g.stem] or 0) end
+    end
+    return n
+end
+
+-- THE DRAWING RULE (spec section 1): take n of a use, the fullest store first, then the next,
+-- until n is taken or the stores are empty. A tie goes by key, so every machine takes alike.
+-- `held` is updated as it goes. Returns what was taken.
+function F.draw(region, held, use, n, kind, fkey)
+    local stems = {}
+    for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+        if g.use == use and (held[g.stem] or 0) > 0 then stems[#stems + 1] = g.stem end
+    end
+    table.sort(stems, function(a, b)
+        if held[a] ~= held[b] then return held[a] > held[b] end
+        return a < b
+    end)
+    local taken = 0
+    for _, stem in ipairs(stems) do
+        if taken >= n then break end
+        local k = math.min(n - taken, held[stem])
+        F.move(region, nil, stem, k, kind, fkey, nil)
+        held[stem] = held[stem] - k
+        taken = taken + k
+    end
+    return taken
+end
+
+function F.bundle(rkey, region, use, on)
+    local b = DERPY_MR_FLOWS_BUNDLES[use]
+    if on then
+        cm:apply_effect_bundle_to_region(b, rkey, F.BUNDLE_TURNS)
+    elseif region:has_effect_bundle(b) then
+        cm:remove_effect_bundle_from_region(b, rkey)
+    end
+end
+
+function F.upkeep_region(region, fkey, uses)
+    local fed, war, lux = false, false, false
+    if uses then
+        local held, cap = F.stock(region)
+        local level = 0
+        pcall(function() level = region:settlement():primary_slot():building():building_level() end)
+        local need = F.NEED * level
+        if need > 0 then
+            F.draw(region, held, "provisions", need, KIND.eat, fkey)
+            fed = F.use_total(held, "provisions") >= F.FED_TURNS * need
+        end
+        local quarter = cap * F.STOCKED_PCT / 100
+        war = cap > 0 and F.use_total(held, "war") >= quarter
+        lux = cap > 0 and F.use_total(held, "luxuries") >= quarter
+    end
+    local rkey = region:name()
+    F.bundle(rkey, region, "provisions", fed)
+    F.bundle(rkey, region, "war", war)
+    F.bundle(rkey, region, "luxuries", lux)
+end
+
+function F.upkeep(faction)
+    local r = F.rates()
+    if not r.upkeep or not (r.ai or faction:is_human()) then return end
+    local fkey, uses = faction:name(), F.uses_stores(faction)
+    local rl = faction:region_list()
+    for i = 0, rl:num_items() - 1 do
+        local region = rl:item_at(i)
+        if not region:is_null_interface() then F.upkeep_region(region, fkey, uses) end
+    end
+end
+
 -- ---- history ------------------------------------------------------------------------------
 -- WHOLE NUMBERS ONLY: a fraction crosses CA's table save as "1,1" under a decimal-comma locale.
 function F.push(b, turn, totals, made)
@@ -548,6 +665,9 @@ function F.on_faction_turn_start(faction)
         F.guard(F.snapshot, faction)
         F.round_cost, F.cost = F.cost, { raid = 0, turn = 0 }
     end
+    -- eat before trading, so a partner is sent what is left; its own guard, so a throw in one
+    -- settlement cannot stop the trade every machine must run alike
+    F.guard(F.upkeep, faction)
     F.trade(faction)
 end
 

@@ -50,7 +50,15 @@ o_trade:set_default_value(5)
 o_trade:set_assigned_section("stores")
 
 local o_ai = m:add_new_option("ai", "checkbox")
-o_ai:set_text("Resources move between other factions")
-o_ai:set_tooltip_text("Raids, sacks and trade between two factions no player controls move resources too. Off: resources move only when a player's faction is one of the two, which makes turns faster on a slow machine.")
+o_ai:set_text("Other factions use their stores")
+o_ai:set_tooltip_text("Factions no player controls raid, sack, trade, eat and gain bonuses from their stores as a player does. Off: resources move only when a player's faction is one of the two, and other factions' settlements neither eat nor gain bonuses, which makes turns faster on a slow machine.")
 o_ai:set_default_value(true)
 o_ai:set_assigned_section("stores")
+
+m:add_new_section("using", "Using stores")
+
+local o_upkeep = m:add_new_option("upkeep", "checkbox")
+o_upkeep:set_text("Settlements use their stores")
+o_upkeep:set_tooltip_text("Each turn every settlement eats provisions from its stores. Five turns of provisions left make it Well fed; war materials and luxuries filling a quarter of one store's space give Garrison stocked and Comforts. Off: stores are only kept, raided and traded.")
+o_upkeep:set_default_value(true)
+o_upkeep:set_assigned_section("using")

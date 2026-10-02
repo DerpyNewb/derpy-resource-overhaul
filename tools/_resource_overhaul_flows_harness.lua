@@ -18,6 +18,7 @@ end
 -- A region's stores are r.held (stem -> n), every store r.cap big. r.readable = false is a
 -- region whose pools the engine no longer hands out (a raze, Task 1).
 local FACTIONS, REGIONS, LOG = {}, {}, {}
+BUNDLES = {}                 -- region key -> {bundle = turns}, as cm applies and removes them
 local CCO_MADE = ""
 local function pool(r, stem)
     local key = "derpy_mr_store_" .. stem
@@ -26,20 +27,21 @@ local function pool(r, stem)
              maximum_value = function() return r.cap end }
 end
 local function region(key, x, y, cap, held)
-    local r = { key = key, x = x, y = y, cap = cap, held = held or {}, owner = nil, readable = true }
+    local r = { key = key, x = x, y = y, cap = cap, held = held or {}, owner = nil, readable = true, level = 1 }
     local settlement = {
         is_null_interface = function() return false end,
         cqi = function() return 0 end,
         logical_position_x = function() return r.x end,
         logical_position_y = function() return r.y end,
         primary_slot = function() return { building = function()
-            return { building_level = function() return 1 end } end } end,
+            return { building_level = function() return r.level end } end } end,
     }
     r.iface = {
         __r = r,
         is_null_interface = function() return false end,
         name = function() return key end,
         is_abandoned = function() return r.owner == nil end,
+        has_effect_bundle = function(_, b) return BUNDLES[key] ~= nil and BUNDLES[key][b] ~= nil end,
         owning_faction = function() return r.owner and r.owner.iface or NULL end,
         settlement = function() return settlement end,
         pooled_resource_manager = function()
@@ -73,6 +75,7 @@ local function faction(name, opts)
         name = function() return name end,
         command_queue_index = function() return f.cqi end,
         is_human = function() return f.human end,
+        subculture = function() return opts.sc or "wh_main_sc_emp_empire" end,
         is_rebel = function() return f.rebel end,
         is_dead = function() return false end,
         at_war_with = function(_, o) return f.war[o:name()] == true end,
@@ -143,6 +146,11 @@ cm = {
         local stem = string.match(j, "^derpy_mr_store_(.+)_%a+$")
         r.held[stem] = math.max(0, math.min(r.cap, (r.held[stem] or 0) + n))
     end,
+    apply_effect_bundle_to_region = function(_, b, rk, turns)
+        BUNDLES[rk] = BUNDLES[rk] or {}
+        BUNDLES[rk][b] = turns
+    end,
+    remove_effect_bundle_from_region = function(_, b, rk) if BUNDLES[rk] then BUNDLES[rk][b] = nil end end,
     save_named_value = function(_, k, v) SAVED[k] = copy(v) end,
     load_named_value = function(_, k, d) if SAVED[k] == nil then return d end return copy(SAVED[k]) end,
 }
@@ -182,6 +190,8 @@ dofile("__STORES__")
 dofile("__FLOWS__")
 local F = DERPY_MR_FLOWS
 F.init()                     -- not FIRST: the stores script's first tick wants a UI
+-- THE MOVES ARE MEASURED ALONE: settlements eating provisions (phase 4) has its own section below
+F.rates(); F.state.rates.upkeep = false
 
 -- ---- the world for taking ---------------------------------------------------------------
 local hum = faction("hum", { human = true })
@@ -527,6 +537,76 @@ opt.raid.value = 40; eq(F.rates().raid, 30, "frozen: a later MCT change does not
 F.state = { factions = {} }; MP = true
 eq(F.rates().raid, 10, "multiplayer takes the defaults"); eq(F.rates().ai, true, "all of them")
 MP = false; get_mct = nil; F.state.rates = nil; F.rates()
+
+-- ---- phase 4: settlements eat provisions; well-stocked stores give bonuses --------------
+eq(F.rates().upkeep, true, "on by default")
+local WF, GS, CF = "derpy_mr_well_fed", "derpy_mr_garrison_stocked", "derpy_mr_comforts"
+local function has(r, b) return BUNDLES[r.key] ~= nil and BUNDLES[r.key][b] ~= nil end
+local uF = faction("uF", { human = true })
+local u1 = region("u1", 5000, 0, 200, { grain = 30, salt = 10, coal = 60, silk = 49 }); u1.level = 3
+own(uF, u1, true)
+turn_start(uF)
+eq(u1.held.grain, 24, "a level-3 settlement eats 6, from its fullest provisions store first")
+eq(u1.held.salt, 10, "and leaves the next one alone when the first covers it")
+eq(F.book("uF").now.grain.eaten_out, 6, "booked as eaten, for the panel's last-turn line")
+eq(has(u1, WF), true, "Well fed: 34 left, five turns' need is 30")
+eq(BUNDLES.u1[WF], F.BUNDLE_TURNS, "for a short spell, renewed each turn, so a leftover lapses")
+eq(has(u1, GS), true, "Garrison stocked: 60 war materials, a quarter of one store is 50")
+eq(has(u1, CF), false, "no Comforts: 49 luxuries is under a quarter")
+eq(u1.held.coal, 60, "war materials are not eaten"); eq(u1.held.silk, 49, "nor luxuries")
+u1.held.coal, u1.held.silk = 10, 50; turn_start(uF)
+eq(has(u1, GS), false, "Garrison stocked ends the turn the stock falls under a quarter")
+eq(has(u1, CF), true, "Comforts at exactly a quarter")
+-- the drawing rule: fullest first, then the next, until the need is met
+local u2 = region("u2", 5100, 0, 200, { grain = 3, salt = 2, wine = 1 }); u2.level = 2; own(uF, u2)
+turn_start(uF)
+eq(u2.held.grain, 0, "fullest first, emptied"); eq(u2.held.salt, 1, "then the next, for what is left of the 4")
+eq(u2.held.wine, 1, "and no further"); eq(has(u2, WF), false, "2 left is not five turns of 4")
+-- a tie goes by the resource's key, so every machine eats the same
+local u3 = region("u3", 5200, 0, 200, { mead = 5, beer = 5 }); u3.level = 3; own(uF, u3)
+turn_start(uF)
+eq(u3.held.beer, 0, "a tie: beer before mead"); eq(u3.held.mead, 4, "then mead for the rest")
+-- the fullest store, not the first by name
+local u6 = region("u6", 5250, 0, 200, { beer = 1, wine = 9 }); u6.level = 2; own(uF, u6)
+-- Well fed is judged on what is left AFTER eating: 11 before, 9 after, five turns of 2 is 10
+local u7 = region("u7", 5260, 0, 200, { grain = 11 }); u7.level = 1; own(uF, u7)
+-- exactly a quarter of war materials is enough
+local u8 = region("u8", 5270, 0, 200, { coal = 50 }); u8.level = 1; own(uF, u8)
+turn_start(uF)
+eq(u6.held.wine, 5, "wine, the fullest, is eaten first"); eq(u6.held.beer, 1, "beer is left alone")
+eq(u7.held.grain, 9, "eaten"); eq(has(u7, WF), false, "and not Well fed on what it held before eating")
+eq(has(u8, GS), true, "Garrison stocked at exactly a quarter")
+-- short: everything eaten, no Well fed, nothing worse
+local u4 = region("u4", 5300, 0, 200, { grain = 4 }); u4.level = 5; own(uF, u4)
+BUNDLES.u4 = { [WF] = 2 }
+turn_start(uF)
+eq(u4.held.grain, 0, "a short store is eaten to nothing"); eq(has(u4, WF), false, "and Well fed is withdrawn at once")
+local n4 = 0; for _ in pairs(BUNDLES.u4) do n4 = n4 + 1 end; eq(n4, 0, "being short brings no other bundle")
+local u5 = region("u5", 5400, 0, 200, { grain = 40 }); u5.level = 0; own(uF, u5)
+turn_start(uF); eq(u5.held.grain, 40, "no settlement level, nothing eaten"); eq(has(u5, WF), false, "and no Well fed")
+-- daemons, the undead and Beastmen neither eat nor gain, and a bundle left from a former owner goes
+local dF = faction("dF", { human = true, sc = "wh3_main_sc_kho_khorne" })
+local d1 = region("d1", 5500, 0, 200, { grain = 50, coal = 100 }); d1.level = 2; own(dF, d1, true)
+BUNDLES.d1 = { [WF] = 2, [GS] = 2 }
+turn_start(dF)
+eq(d1.held.grain, 50, "Khorne eats nothing"); eq(has(d1, WF), false, "and keeps no Well fed")
+eq(has(d1, GS), false, "nor Garrison stocked")
+local bF = faction("bF", { human = true, sc = "wh_dlc03_sc_bst_beastmen" })
+local e1 = region("e1", 5600, 0, 200, { grain = 50 }); e1.level = 2; own(bF, e1, true)
+turn_start(bF); eq(e1.held.grain, 50, "nor do the Beastmen")
+-- other factions, under the switch
+local aF = faction("aF")
+local f1 = region("f1", 5700, 0, 200, { grain = 50 }); f1.level = 1; own(aF, f1, true)
+F.state.rates.ai = false; turn_start(aF)
+eq(f1.held.grain, 50, "switched off, other factions eat nothing"); eq(has(f1, WF), false, "and gain nothing")
+F.state.rates.ai = true; turn_start(aF)
+eq(f1.held.grain, 48, "switched on, they eat"); eq(has(f1, WF), true, "and are Well fed")
+eq(F.state.factions.aF, nil, "with no ledger: only a player's panel reads it")
+local before = u1.held.grain + u1.held.salt
+F.state.rates.upkeep = false; turn_start(uF)
+eq(u1.held.grain + u1.held.salt, before, "upkeep off: nothing eaten")
+F.state.rates.upkeep = true
+eq(#ERRORS, 0, "no script errors in the upkeep pass")
 
 -- ---- the run-cost counter (Task 7 reads it) --------------------------------------------
 local counters = F.cost

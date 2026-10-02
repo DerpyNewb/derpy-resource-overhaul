@@ -37,6 +37,7 @@ local function pool(key, value, max)
 end
 -- pools: stem -> held, every store at the settlement's space `cap`; nil = a save from before
 -- the stores. cco: what the settlement's buildings list, or nil when the read gives nothing.
+BUNDLED = {}                 -- region key -> {bundle = true}: what region:has_effect_bundle answers
 local function region(key, cqi, level, cap, pools, cco, extra)
     local items = {}
     for stem, v in pairs(pools or {}) do items[#items + 1] = pool("derpy_mr_store_" .. stem, v, cap) end
@@ -52,6 +53,7 @@ local function region(key, cqi, level, cap, pools, cco, extra)
         is_null_interface = function() return false end,
         name = function() return key end,
         settlement = function() return settlement end,
+        has_effect_bundle = function(_, b) return BUNDLED[key] ~= nil and BUNDLED[key][b] == true end,
         pooled_resource_manager = function() return { resources = function() return list(items) end } end,
     }
 end
@@ -143,7 +145,20 @@ eq(v.rows[1][1], "Bravo", "by settlement"); eq(v.rows[1][2], "200 / 200", "held 
 eq(v.rows[1][4], "[[col:red]]Full[[/col]]", "full mark"); eq(v.rows[1].tip, S.FULL_TIP, "full tooltip")
 eq(v.rows[2][4], "", "not full")
 S.view, S.focus = "settlements", nil; v = S.view_model(realm)
-eq(v.rows[2][2], "1", "Bravo level"); eq(v.rows[2][3], "200", "space per good")
+eq(v.rows[2][2], "1", "Bravo level")
+-- USING (phase 4): the bundles a settlement's stores give, as icons; the row's tooltip names them
+eq(v.heads[3], "Using", "the Using column"); eq(v.rows[2][3], "-", "Bravo uses nothing yet")
+eq(#v.rows[2].using, 0, "no icons"); eq(v.rows[2].tip, "", "and no tooltip")
+local WF, CF = DERPY_MR_STORES_BUNDLES[1], DERPY_MR_STORES_BUNDLES[3]
+eq(WF.key, "derpy_mr_well_fed", "Well fed first"); eq(CF.key, "derpy_mr_comforts", "Comforts third")
+LOC["effect_bundles_localised_title_derpy_mr_well_fed"] = "Well fed"
+LOC["effect_bundles_localised_title_derpy_mr_comforts"] = "Comforts"
+BUNDLED.reg_b = { derpy_mr_comforts = true, derpy_mr_well_fed = true }
+realm = S.read_realm(FACTIONS.fac_a); v = S.view_model(realm)
+eq(v.rows[2][3], "", "icons in place of the dash"); eq(#v.rows[2].using, 2, "two in use")
+eq(v.rows[2].using[1], WF.icon, "in the bundles' own order: Well fed"); eq(v.rows[2].using[2], CF.icon, "then Comforts")
+eq(v.rows[2].tip, "Using: Well fed, Comforts", "the tooltip names them")
+eq(v.rows[1].tip, "", "Alpha uses nothing")
 eq(v.rows[2][5], "Coal 100%", "fullest"); eq(v.rows[3][5], "-", "none"); eq(v.rows[1].open, "reg_a", "opens Alpha")
 S.focus = "reg_a"; v = S.view_model(realm)
 eq(v.title, "Stores of Alpha", "settlement drill-down title"); eq(#v.rows, 2, "Alpha's two goods")
@@ -363,6 +378,14 @@ eq(icon(1, 3).visible, false, "no third good, no third icon")
 eq(icon(1, 2).x - icon(1, 1).x, L0.ICON_PITCH, "icons at the pitch")
 eq(cell(1, 1).x, find("derpy_mr_row_1").x + L0.VIEWS.settlements[1][1] + L0.ICON_PITCH, "the name moves past the icons")
 eq(icon(3, 1).visible, false, "Charlie keeps nothing: no icon")
+local function use(i, k) return find_uicomponent(find("derpy_mr_row_" .. i), "use" .. k) end
+eq(find("hdr_3").text, "Using", "the Using header")
+eq(use(2, 1).visible, true, "Bravo's first bundle shown"); eq(use(2, 1).image, WF.icon, "Well fed's icon")
+eq(use(2, 1).x, find("derpy_mr_row_2").x + L0.VIEWS.settlements[3][1], "at the Using column")
+eq(use(2, 2).image, CF.icon, "then Comforts"); eq(use(2, 2).x - use(2, 1).x, L0.ICON_PITCH, "at the pitch")
+eq(use(2, 3).visible, false, "no third"); eq(use(1, 1).visible, false, "Alpha uses nothing")
+eq(find("derpy_mr_row_2").tip, "Using: Well fed, Comforts", "the row's tooltip names them")
+eq(L0.VIEWS.settlements[3][2] >= 3 * L0.ICON_PITCH, true, "three icons fit the column")
 eq(cell(3, 1).x, cell(1, 1).x, "and its name lines up with the rest (seen ragged in game 2026-10-02)")
 local alpha_cco = CCO["1"]
 CCO["1"] = "derpy_mr_store_coal_stocked=6,derpy_mr_store_brimstone_stocked=9"
@@ -370,6 +393,7 @@ click("derpy_mr_tab_settlements")
 eq(icon(1, 1).image, good_icon("brimstone"), "made more but held none: what it is FOR comes first")
 CCO["1"] = alpha_cco; click("derpy_mr_tab_settlements")
 click("derpy_mr_row_1"); eq(find("sub_title").text, "Stores of Alpha", "settlement drill-down")
+eq(use(2, 1).visible, false, "no Using icons on a drill-down")
 eq(lit("derpy_mr_tab_settlements"), SEL, "a drill-down keeps its tab lit")
 eq(cell(2, 3).text, "+6", "brimstone per turn")
 click("derpy_mr_row_9"); eq(find("sub_title").text, "Stores of Alpha", "a row past the data does nothing")
@@ -418,9 +442,10 @@ eq(S.chart_model({ 1, 2 }, { 0, 0 }, {}).bars[2].h, L.BAR_MIN, "all empty: slive
 eq(S.last_line({}), "Last turn: no change", "a quiet turn")
 eq(S.last_line({ plundered_in = 40, plundered_out = 10, traded_out = 3 }),
    "Last turn: plundered +30, traded out -3", "plunder is netted, trade out shown on its own")
+eq(S.last_line({ made = 4, eaten_out = 6 }), "Last turn: made +4, eaten -6", "what the settlements ate")
 -- 7px a character: gen_mr_ui.CHAR_W, the same flat estimate check_text_fits uses
 local widest = S.last_line({ made = 123456, raided_out = 123456, plundered_out = 123456,
-                             traded_in = 123456, traded_out = 123456 })
+                             traded_in = 123456, traded_out = 123456, eaten_out = 123456 })
 eq(#widest * 7 <= L.chart_line[3], true, "the widest last-turn line fits: " .. widest)
 eq(#S.NO_HISTORY * 7 <= L.chart_line[3], true, "the no-history line fits")
 

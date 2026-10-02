@@ -817,3 +817,32 @@ freezes them on one machine. A 500 ms poll keeps it up; the tooltip lists up to 
 
 **In game, still to see:** the raid plate's per-good icons; the redesigned panel (checkbox
 art, header alignment, bands).
+
+## 22. Using the stores: upkeep and holding bonuses (phase 4, 2026-10-02)
+
+Built, deployed to `data/`, **not yet seen in game**. Spec: `superpowers/specs/2026-10-02-resource-overhaul-stores-spending-design.md` §2.
+Plan, with what was measured offline and the rulings: `superpowers/plans/2026-10-02-resource-overhaul-phase4-upkeep.md`.
+
+- **Eating:** at each owner's turn start, `F.upkeep` (in `flows.lua`) runs over every settlement. Each eats
+  `2 x level` provisions with `F.draw`, the drawing rule: the fullest store first, ties by key.
+  The amount is booked to the new `derpy_mr_eaten` factor and shown as "eaten" in the panel's
+  last-turn line.
+- **Bundles:** applied for 2 turns and renewed each turn; removed the turn their condition fails.
+  - **Well fed** (growth +10): five turns' need is still held after eating.
+  - **Garrison stocked** (garrison melee attack and defence +4): war materials fill a quarter of
+    one store.
+  - **Comforts** (public order +3): luxuries fill a quarter of one store.
+- **Effects:** all CA's own, at the scopes CA's region bundles use. Sayl's region bundle is the
+  donor for the garrison scope.
+- **Who is skipped:**
+  - Subcultures with no stores to use, `DERPY_MR_FLOWS_NO_STORES`. These are the same tokens as
+    `EXCLUDE`, and `check_uses()` asserts that they match.
+  - Other factions, when "Other factions use their stores" is off.
+  - Everyone, when the new MCT switch "Settlements use their stores" is off.
+- **Uses:** the five-use table is `gen_mr_ui.USES`, carried on `DERPY_MR_FLOWS_GOODS` as `use`.
+- **Panel:** the Settlements tab's third column is now **Using**. It shows the bundles' icons,
+  and the row's tooltip names them.
+- **Measure in game:**
+  - that the bundles show on the settlement;
+  - that growth is counted with Well fed on;
+  - the pass's cost over a round (booked to `F.cost.turn`).

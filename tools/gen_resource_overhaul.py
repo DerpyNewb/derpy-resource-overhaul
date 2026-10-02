@@ -370,7 +370,26 @@ def store_fx(stem):
 # is -max..0, _uncovered 0..max), and a raid books OUT of the victim and IN to the raider on the
 # same factor. CA ships 456 two-way junctions, 7 on REGION pools.
 FLOW_FACTORS = (("raided", "Raid spoils", "Raided"), ("plundered", "Plunder", "Plundered"),
-                ("traded", "Traded in", "Traded out"))
+                ("traded", "Traded in", "Traded out"), ("eaten", "Eaten", "Eaten"))
+
+# PHASE 4 (spending spec section 2): what well-stocked stores give a settlement, one region bundle
+# per use, applied and removed by the flows script each turn. Effects, scopes and values are CA's
+# own (plan 2026-10-02-resource-overhaul-phase4-upkeep.md): growth and public order the way CA's
+# region bundles carry them, the garrison buff the way Sayl's region bundle reaches the garrison.
+# (use, key, icon, title, description, [(effect, scope, value)])
+USE_BUNDLES = (
+    ("provisions", "derpy_mr_well_fed", "growth.png", "Well fed",
+     "After eating, this settlement's stores still hold five turns of provisions.",
+     [("wh_main_effect_province_growth_events", "region_to_province_own_unseen", 10)]),
+    ("war", "derpy_mr_garrison_stocked", "siege_defence.png", "Garrison stocked",
+     "War materials fill at least a quarter of one store's space in this settlement.",
+     [("wh_main_effect_force_stat_melee_attack", "region_to_force_own_regionwide_if_garrison", 4),
+      ("wh_main_effect_force_stat_melee_defence", "region_to_force_own_regionwide_if_garrison", 4)]),
+    ("luxuries", "derpy_mr_comforts", "public_order_happy.png", "Comforts",
+     "Luxuries fill at least a quarter of one store's space in this settlement.",
+     [("wh_main_effect_public_order_events", "region_to_province_own_unseen", 3)]),
+)
+BUNDLE_DONOR = "wh2_dlc15_hef_mist_of_yvresse_rite_empowered"   # global, not in 3D, owner only
 
 
 def flow_factor(kind):
@@ -568,7 +587,8 @@ def rare_cond(good):
 def n_loc():
     chains = sum(len(rare_chains(g)) for g in RARE)
     return (LOC_PER_GOOD * len(GOODS) + 2 * len(UNITS) + LOC_PER_RARE_GOOD * len(RARE)
-            + LOC_PER_CHAIN * chains + 5 * (len(GOODS) + len(CA_STEMS)) + 3 + 2 * len(FLOW_FACTORS))
+            + LOC_PER_CHAIN * chains + 5 * (len(GOODS) + len(CA_STEMS)) + 3 + 2 * len(FLOW_FACTORS)
+            + 2 * len(USE_BUNDLES))
 
 # Owners with no living people to make or eat a good: daemons, the dead, and beasts with no towns
 # to sell in. Matched on the CHAIN key, so a special variant for one of them goes too.
@@ -1158,7 +1178,47 @@ def build():
         loc += [("building_short_description_texts_short_description_" + stem, text),
                 ("building_description_texts_long_description_" + stem, text)]
     _stores(t, add, loc)
+    _bundles(add, loc)
     return t, loc
+
+
+def _bundles(add, loc):
+    """Phase 4's three region bundles, their effects and loc."""
+    donor, = [r for r in db("effect_bundles_tables")[1] if r["key"] == BUNDLE_DONOR]
+    for _use, key, icon_, title, desc, fx in USE_BUNDLES:
+        add("effect_bundles_tables", dict(donor, key=key, localised_title=title, localised_description=desc,
+                                          ui_icon=icon_))
+        for e, scope, v in fx:
+            add("effect_bundles_to_effects_junctions_tables", {
+                "effect_bundle_key": key, "effect_key": e, "effect_scope": scope, "value": float(v),
+                "advancement_stage": "start_turn_completed"})
+        loc += [("effect_bundles_localised_title_" + key, title),
+                ("effect_bundles_localised_description_" + key, desc)]
+
+
+def check_bundles(t, loc):
+    """Each bundle is a region bundle with its loc; every effect and scope is CA's; every value
+    is a bonus by its effect's own sign; the icon is in CA's ui packs."""
+    import gen_mr_emitter as E
+    keys = dict(loc)
+    rows = {r["key"]: r for r in t["effect_bundles_tables"][2]}
+    van_fx = {r["effect"]: r for r in db("effects_tables")[1]}
+    scopes = {r["key"] for r in db("campaign_effect_scopes_tables")[1]}
+    have = E._game_assets()
+    fx = t["effect_bundles_to_effects_junctions_tables"][2]
+    for use, key, icon_, _t, _d, effects in USE_BUNDLES:
+        b = rows[key]
+        assert b["bundle_target"] == "region" and b["ui_icon"] == icon_, b
+        assert "ui/campaign ui/effect_bundles/" + icon_ in have, "no such bundle icon: %s" % icon_
+        for pre in ("effect_bundles_localised_title_", "effect_bundles_localised_description_"):
+            assert keys.get(pre + key), pre + key
+        got = [(r["effect_key"], r["effect_scope"], r["value"]) for r in fx if r["effect_bundle_key"] == key]
+        assert got == [(e, s, float(v)) for e, s, v in effects], (key, got)
+        for e, s, v in got:
+            assert e in van_fx, "no CA effect %s" % e
+            assert s in scopes, "no CA scope %s" % s
+            assert (v > 0) == van_fx[e]["is_positive_value_good"], "%s %s is a penalty" % (key, e)
+    assert len(rows) == len(USE_BUNDLES), sorted(rows)
 
 
 AUDIT = os.path.join(ROOT, "Modding Files", "reference", "resource_overhaul_building_audit.md")
@@ -1416,6 +1476,7 @@ def reach_table():
 
 def check(t, loc):
     """Fail on anything that would load wrong or silently do nothing."""
+    check_bundles(t, loc)
     import guess_region_commodities as grc
     import gen_commodity_icons
     # every good has an icon, a lore rule, and is one of the 26
@@ -1797,6 +1858,18 @@ def selftest():
     t, loc = build()
     check(t, loc)
     print(check_ai(ai_script()).strip().splitlines()[-1])
+    for breakit in (lambda t, l: t["effect_bundles_to_effects_junctions_tables"][2][0].update(value=-10.0),
+                    lambda t, l: t["effect_bundles_to_effects_junctions_tables"][2][0].update(effect_scope="nowhere"),
+                    lambda t, l: t["effect_bundles_tables"][2][0].update(bundle_target="faction"),
+                    lambda t, l: t["effect_bundles_tables"][2][0].update(ui_icon="no_such.png"),
+                    lambda t, l: l.remove([x for x in l if x[0].startswith("effect_bundles_localised_title_")][0])):
+        bad, bloc = build()
+        breakit(bad, bloc)
+        try:
+            check_bundles(bad, bloc)
+        except AssertionError:
+            continue
+        raise SystemExit("selftest: a broken bundle passed check_bundles()")
     # a bad row must be caught, or the check proves nothing
     for breakit in (lambda t: t["building_effects_junction_tables"][2].append(
                         dict(t["building_effects_junction_tables"][2][0], building="wh3_main_dae_port_1")),

@@ -53,7 +53,12 @@ end
 function S.read_settlement(region)
     local key = region:name()
     local s = { key = key, name = loc("regions_onscreen_" .. key, key), level = 0, cap = 0,
-                held = {}, made = {} }
+                held = {}, made = {}, using = {} }
+    -- what its stores give it (phase 4), in DERPY_MR_STORES_BUNDLES order
+    for _, b in ipairs(DERPY_MR_STORES_BUNDLES) do
+        local ok, on = pcall(function() return region:has_effect_bundle(b.key) end)
+        if ok and on then s.using[#s.using + 1] = b end
+    end
     local list = region:pooled_resource_manager():resources()
     for i = 0, list:num_items() - 1 do
         local p = list:item_at(i)
@@ -149,7 +154,7 @@ function S.settlement_rows(realm)
     local out = {}
     for _, s in ipairs(realm) do
         local r = { key = s.key, name = s.name, level = s.level, cap = s.cap, goods = 0,
-                    fullest = nil, pct = 0, icons = {} }
+                    fullest = nil, pct = 0, icons = {}, using = s.using or {} }
         local kept = {}
         for _, g in ipairs(DERPY_MR_STORES_GOODS) do
             local held = s.held[g.stem] or 0
@@ -212,6 +217,7 @@ function S.last_line(l)
     add("plundered", (l.plundered_in or 0) - (l.plundered_out or 0))
     add("traded in", l.traded_in or 0)
     add("traded out", -(l.traded_out or 0))
+    add("eaten", -(l.eaten_out or 0))
     if #parts == 0 then return "Last turn: no change" end
     return "Last turn: " .. table.concat(parts, ", ")
 end
@@ -397,13 +403,20 @@ function S.view_model(realm)
         end
     else
         v.title = "Every settlement you hold"
-        v.heads = { "Settlement", "Level", "Space each", "Resources", "Fullest store" }
+        v.heads = { "Settlement", "Level", "Using", "Resources", "Fullest store" }
         v.hint = "Click a settlement to see its stores."
         for _, r in ipairs(S.settlement_rows(realm)) do
             local fullest = "-"
             if r.fullest then fullest = S.name(r.fullest) .. " " .. r.pct .. "%" end
-            v.rows[#v.rows + 1] = { r.name, tostring(r.level), S.num(r.cap), tostring(r.goods),
-                                    fullest, open = r.key, icons = r.icons }
+            local icons, names = {}, {}
+            for _, b in ipairs(r.using) do
+                icons[#icons + 1] = b.icon
+                names[#names + 1] = loc("effect_bundles_localised_title_" .. b.key, b.key)
+            end
+            local tip = ""
+            if #names > 0 then tip = "Using: " .. table.concat(names, ", ") end
+            v.rows[#v.rows + 1] = { r.name, tostring(r.level), #icons > 0 and "" or "-", tostring(r.goods),
+                                    fullest, open = r.key, icons = r.icons, using = icons, tip = tip }
         end
         v.empty = S.NO_REALM
     end
@@ -705,6 +718,18 @@ function S.draw_rows(p, rows, heads, cols)
                 end
             end
             draw_switches(r, rc, rx, ry, cols)
+            -- the Using column's icons: a Settlements row's bundles, in the third column
+            for k = 1, L.USING do
+                local u = find_uicomponent(r, "use" .. k)
+                if is_uicomponent(u) then
+                    local path = rc.using and rc.using[k]
+                    u:SetVisible(path ~= nil)
+                    if path then
+                        u:MoveTo(rx + cols[3][1] + (k - 1) * L.ICON_PITCH, ry + L.icon[2])
+                        u:SetImagePath(path, 0)
+                    end
+                end
+            end
             -- a column line in each gap before a column that has a header; none on a section row
             for j = 2, #cols do
                 local vl = find_uicomponent(r, "vline" .. j)

@@ -54,12 +54,34 @@ RATES = (
      "Each turn, every trade agreement sends this share of a resource from the sender's fullest store "
      "to the partner's capital, for each resource the partner lacks. 0 turns this off.", 0, 25, 5),
 )
-AI_SWITCH = ("ai", "Resources move between other factions",
-             "Raids, sacks and trade between two factions no player controls move resources too. Off: "
-             "resources move only when a player's faction is one of the two, which makes turns faster on "
-             "a slow machine.", True)
+AI_SWITCH = ("ai", "Other factions use their stores",
+             "Factions no player controls raid, sack, trade, eat and gain bonuses from their stores as a "
+             "player does. Off: resources move only when a player's faction is one of the two, and other "
+             "factions' settlements neither eat nor gain bonuses, which makes turns faster on a slow "
+             "machine.", True)
+# PHASE 4 (spending spec section 2): settlements eat provisions and well-stocked stores give bonuses
+UPKEEP_SWITCH = ("upkeep", "Settlements use their stores",
+                 "Each turn every settlement eats provisions from its stores. Five turns of provisions left "
+                 "make it Well fed; war materials and luxuries filling a quarter of one store's space give "
+                 "Garrison stocked and Comforts. Off: stores are only kept, raided and traded.", True)
+SWITCHES = (AI_SWITCH, UPKEEP_SWITCH)
+# THE FIVE USES (spending spec section 1): every store has exactly one; check_uses() asserts it.
+USES = {
+    "provisions": ("grain", "salted_fish", "salted_meat", "olive_oil", "tea", "kvas", "mead", "rum", "beer",
+                   "wine", "spices", "salt", "medicine"),
+    "building": ("timber", "marble", "pottery", "glassware", "starwood"),
+    "war": ("iron", "coal", "brass", "blackpowder", "brimstone", "gromril", "ithilmar", "quicksilver",
+            "obsidian", "whale_oil"),
+    "mounts": ("warhorses", "feathers", "rhinox_hides", "wyvern_scales", "dragon_bone", "sea_dragon_hide",
+               "animals", "tusks", "furs"),
+    "luxuries": ("silk", "jade", "carpets", "porcelain", "pearls", "amber", "lustrian_plumes", "incense",
+                 "black_lotus", "pipeweed", "books", "gems", "gold_idols", "dyes", "trinkets", "silver", "wool"),
+}
+# WHO HAS NO STORES TO USE: the subculture tokens whose buildings make nothing
+# (gen_resource_overhaul.EXCLUDE); check_uses() asserts the two lists agree.
+NO_STORES = ("dae", "kho", "nur", "sla", "tze", "tmb", "nag", "bst")
 # Which factor each kind of move books to: the junction is derpy_mr_store_<stem>_<kind>.
-FLOW_KIND = {"raid": "raided", "sack": "plundered", "raze": "plundered", "trade": "traded"}
+FLOW_KIND = {"raid": "raided", "sack": "plundered", "raze": "plundered", "trade": "traded", "eat": "eaten"}
 
 # THE LAYOUT, in panel coordinates: (x, y, w, h). The Lua MoveTo's every component from these;
 # the .twui.xml sizes are the same numbers. cols are (x, w) inside a row, which starts at list x.
@@ -84,6 +106,8 @@ L = {
     # right past them. ponytail: a long name with four icons runs toward the Level column, whose
     # right-aligned digits leave room; measure in game if one collides.
     "ICONS": 4, "ICON_PITCH": 26,
+    # THE USING COLUMN (phase 4): up to USING bundle icons in a Settlements row's third column
+    "USING": 3,
     # THE CHART (flows spec section 7), on a good's drill-down only: the list drops to CHART_ROWS
     # and twenty bars stand on one baseline under it.
     "CHART_ROWS": 9, "BARS": 20, "BAR_W": 33, "BAR_PITCH": 41, "BAR_MIN": 2,
@@ -99,7 +123,7 @@ L = {
                   (556, 240, "right")),
         "focus": ((36, 230, "left"), (276, 120, "right"), (406, 90, "right"), (506, 80, "left"),
                   (596, 204, "left")),
-        "settlements": ((36, 230, "left"), (276, 46, "right"), (330, 90, "right"), (430, 80, "right"),
+        "settlements": ((36, 230, "left"), (276, 46, "right"), (330, 90, "left"), (430, 80, "right"),
                         (520, 280, "right")),
         "trade": ((36, 230, "left"), (276, 60, "right"), (346, 90, "centre"), (446, 90, "centre"),
                   (546, 254, "left")),
@@ -226,6 +250,8 @@ def build_row():
     r.add(E.C("icon", L["icon"][2], L["icon"][3], image=ICON_BG))
     for j in range(2, L["ICONS"] + 1):
         r.add(E.C("icon%d" % j, L["icon"][2], L["icon"][3], image=ICON_BG))
+    for j in range(1, L["USING"] + 1):
+        r.add(E.C("use%d" % j, L["icon"][2], L["icon"][3], image=ICON_BG))
     for j, (_x, cw, _a) in enumerate(COLS, 1):
         r.add(_cell(E, "c%d" % j, cw, 20, size=12, align=ALIGN[j - 1]))
     for j in range(2, len(COLS) + 1):
@@ -336,6 +362,24 @@ def capture_kinds():
     return tuple(sorted(out.items()))
 
 
+def use_of(stem):
+    for use, stems in USES.items():
+        if stem in stems:
+            return use
+    return None
+
+
+def check_uses():
+    import gen_resource_overhaul as G
+    stems = list(G.store_stems())
+    flat = [s for v in USES.values() for s in v]
+    assert len(flat) == len(set(flat)), "a store has two uses"
+    assert sorted(flat) == sorted(stems), "uses vs stores: %s" % (set(flat) ^ set(stems))
+    toks = set(re.search(r"\((dae[^)]*)\)", G.EXCLUDE.pattern).group(1).split("|")) - {"beastmen", "BEASTMEN"}
+    assert toks == set(NO_STORES), "NO_STORES %s, EXCLUDE %s" % (sorted(NO_STORES), sorted(toks))
+    assert {u for u, *_ in G.USE_BUNDLES} <= set(USES), "a bundle for a use that does not exist"
+
+
 def check_capture_kinds():
     got = dict(capture_kinds())
     assert len(got) > 40, "only %d sack/raze options read" % len(got)
@@ -363,6 +407,8 @@ def header():
     lines += ['    {stem = "%s", res = "%s", icon = "%s"},' % g for g in goods()]
     lines += ["}", "DERPY_MR_CAPTURE_KIND = {"]
     lines += ['    [%d] = "%s",' % kv for kv in capture_kinds()]
+    lines += ["}", "DERPY_MR_STORES_BUNDLES = {"]
+    lines += ['    {key = "%s", icon = "ui/campaign ui/effect_bundles/%s"},' % (k, i) for _u, k, i, *_r in bundles()]
     lines.append("}")
     return "\n".join(lines) + "\n"
 
@@ -377,13 +423,21 @@ def flows_header():
              "-- Edit the source or the generator, never this file.",
              "DERPY_MR_FLOWS_DEFAULTS = {"]
     lines += ["    %s = %d," % (k, d) for k, _l, _t, _lo, _hi, d in RATES]
-    lines += ["    %s = %s," % (AI_SWITCH[0], "true" if AI_SWITCH[3] else "false"), "}",
-              "DERPY_MR_FLOWS_KIND = {"]
+    lines += ["    %s = %s," % (k, "true" if d else "false") for k, _l, _t, d in SWITCHES]
+    lines += ["}", "DERPY_MR_FLOWS_KIND = {"]
     lines += ['    %s = "%s",' % (k, FLOW_KIND[k]) for k in sorted(FLOW_KIND)]
     lines += ["}", "DERPY_MR_FLOWS_GOODS = {"]
-    lines += ['    {stem = "%s", res = "%s"},' % (s, r) for s, r, _i in goods()]
+    lines += ['    {stem = "%s", res = "%s", use = "%s"},' % (s, r, use_of(s)) for s, r, _i in goods()]
+    lines += ["}", "DERPY_MR_FLOWS_NO_STORES = {%s}" % ", ".join('"%s"' % t for t in NO_STORES),
+              "DERPY_MR_FLOWS_BUNDLES = {"]
+    lines += ['    %s = "%s",' % (u, k) for u, k, *_r in bundles()]
     lines.append("}")
     return "\n".join(lines) + "\n"
+
+
+def bundles():
+    import gen_resource_overhaul as G
+    return G.USE_BUNDLES
 
 
 def flows_lua():
@@ -422,13 +476,15 @@ def mct_lua():
                   "o_%s:slider_set_step_size(1, 0)" % k,
                   "o_%s:set_default_value(%d)" % (k, d),
                   'o_%s:set_assigned_section("stores")' % k]
-    k, label, tip, d = AI_SWITCH
-    lines += ["",
-              'local o_%s = m:add_new_option("%s", "checkbox")' % (k, k),
-              'o_%s:set_text("%s")' % (k, label),
-              'o_%s:set_tooltip_text("%s")' % (k, tip),
-              "o_%s:set_default_value(%s)" % (k, "true" if d else "false"),
-              'o_%s:set_assigned_section("stores")' % k]
+    for (k, label, tip, d), section in ((AI_SWITCH, "stores"), (UPKEEP_SWITCH, "using")):
+        if section == "using":
+            lines += ["", 'm:add_new_section("using", "Using stores")']
+        lines += ["",
+                  'local o_%s = m:add_new_option("%s", "checkbox")' % (k, k),
+                  'o_%s:set_text("%s")' % (k, label),
+                  'o_%s:set_tooltip_text("%s")' % (k, tip),
+                  "o_%s:set_default_value(%s)" % (k, "true" if d else "false"),
+                  'o_%s:set_assigned_section("%s")' % (k, section)]
     return "\n".join(lines) + "\n"
 
 
@@ -585,6 +641,7 @@ def selftest():
     check_text_fits()
     check_xml()
     check_capture_kinds()
+    check_uses()
     import gen_resource_overhaul as G
     g = goods()
     assert [s for s, _r, _i in g] == list(G.store_stems()), "the panel's goods are not the stores"

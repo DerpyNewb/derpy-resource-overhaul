@@ -1,0 +1,5 @@
+key	localised_description	localised_title	bundle_target	priority	ui_icon	is_global_effect	show_in_3d_space	owner_only
+#effect_bundles_tables;4;db/effect_bundles_tables/derpy_more_resources
+derpy_mr_well_fed	After eating, this settlement's stores still hold five turns of provisions.	Well fed	region	1	growth.png	true	false	true
+derpy_mr_garrison_stocked	War materials fill at least a quarter of one store's space in this settlement.	Garrison stocked	region	1	siege_defence.png	true	false	true
+derpy_mr_comforts	Luxuries fill at least a quarter of one store's space in this settlement.	Comforts	region	1	public_order_happy.png	true	false	true

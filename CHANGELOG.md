@@ -2,6 +2,10 @@
 
 ## 2026-10-02
 
+- Settlements eat provisions each turn: 2 per settlement level.
+- Well fed (+growth), Garrison stocked and Comforts (+public order) from well-stocked stores.
+- Stores panel: a Using column on Settlements; "eaten" in last turn's changes.
+- MCT: Settlements use their stores; Other factions use their stores.
 - "Goods" renamed "Resources" everywhere the player reads it.
 - Trade tab: Allow all / Stop all buttons for exports and imports.
 - Trade tab: click "Resources you do not have" to hide or show them.
