@@ -78,6 +78,8 @@ L = {
     # right past them. ponytail: a long name with four icons runs toward the Level column, whose
     # right-aligned digits leave room; measure in game if one collides.
     "ICONS": 4, "ICON_PITCH": 26,
+    # A COLUMN LINE sits LINE_GAP left of each column from the second: in the gap between them.
+    "LINE_GAP": 2,
     # THE CHART (flows spec section 7), on a good's drill-down only: the list drops to CHART_ROWS
     # and twenty bars stand on one baseline under it.
     "CHART_ROWS": 9, "BARS": 20, "BAR_W": 33, "BAR_PITCH": 41, "BAR_MIN": 2,
@@ -163,6 +165,8 @@ def build_panel():
     p.add(_cell(E, "sub_title", L["sub_title"][2], L["sub_title"][3], size=13, colour=MUTED))
     for j, (_x, w) in enumerate(L["cols"], 1):
         p.add(_cell(E, "hdr_%d" % j, w, 22, size=12, colour=MUTED, align=ALIGN[j - 1]))
+    for j in range(2, len(L["cols"]) + 1):
+        p.add(E.C("hdr_line_%d" % j, 1, 22, image=WHITE, colour_img=DIVIDER_COLOUR))
     p.add(E.C("rows_holder", L["list"][2], L["list"][3]))
     p.add(_cell(E, "empty_text", L["empty"][2], L["empty"][3], size=13))
     p.add(_cell(E, "hint_text", L["hint"][2], L["hint"][3], size=12, colour=MUTED))
@@ -191,6 +195,8 @@ def build_row():
         r.add(E.C("icon%d" % j, L["icon"][2], L["icon"][3], image=ICON_BG))
     for j, (_x, cw) in enumerate(L["cols"], 1):
         r.add(_cell(E, "c%d" % j, cw, 20, size=12, align=ALIGN[j - 1]))
+    for j in range(2, len(L["cols"]) + 1):
+        r.add(E.C("vline%d" % j, 1, L["PITCH"], image=WHITE, colour_img=DIVIDER_COLOUR))
     for d in ("export", "import"):
         r.add(_cell(E, "derpy_mr_sw_" + d, L["switch"][0], L["switch"][1], interactive=True,
                     image=BTN_BG, hover=[_flat(BTN_HOVER)], sound=SND_SMALL, align="Center",
@@ -469,8 +475,10 @@ def check_layout():
         assert L["switch"][0] <= L["cols"][j][1], "a switch is wider than its column"
     assert L["switch"][1] <= L["PITCH"] - 2, "a switch is taller than a row"
     end = L["icon"][0] + L["icon"][2]
-    for x, w in L["cols"]:
+    for j, (x, w) in enumerate(L["cols"]):
         assert x >= end, "the column at %d overlaps the one before it" % x
+        if j:
+            assert end <= x - L["LINE_GAP"], "no room for the line before the column at %d" % x
         end = x + w
     for k in ("chart_top", "bars", "chart_from", "chart_to", "chart_line"):
         x, y, w, h = L[k]

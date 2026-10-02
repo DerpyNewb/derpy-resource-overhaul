@@ -460,6 +460,7 @@ function S.layout(p)
     for name, box in pairs(boxes) do put(find_uicomponent(p, name), px, py, box) end
     for j, col in ipairs(L.cols) do
         put(find_uicomponent(p, "hdr_" .. j), px, py, { L.list[1] + col[1], L.head_y, col[2], 22 })
+        put(find_uicomponent(p, "hdr_line_" .. j), px, py, { L.list[1] + col[1] - L.LINE_GAP, L.head_y })
     end
 end
 
@@ -579,7 +580,9 @@ local function draw_switches(r, rc, rx, ry)
             local show = rc[d] ~= nil
             sw:SetVisible(show)
             if show then
-                sw:MoveTo(rx + L.cols[2 + j][1], ry + 2)
+                -- right-aligned, as its column's header is
+                local col = L.cols[2 + j]
+                sw:MoveTo(rx + col[1] + col[2] - L.switch[1], ry + 2)
                 label(sw, rc[d] and S.STOPPED or S.ALLOWED)
                 sw:SetTooltipText(S.switch_tip(d, rc[d], rc[1]), true)
             end
@@ -588,7 +591,7 @@ local function draw_switches(r, rc, rx, ry)
 end
 
 -- Rows are made once and kept; the ones past the end go hidden.
-function S.draw_rows(p, rows)
+function S.draw_rows(p, rows, heads)
     local holder = find_uicomponent(p, "rows_holder")
     if not is_uicomponent(holder) then return end
     local hx, hy = holder:Position()
@@ -621,6 +624,14 @@ function S.draw_rows(p, rows)
                 end
             end
             draw_switches(r, rc, rx, ry)
+            -- a column line before each column that has a header
+            for j, col in ipairs(L.cols) do
+                local vl = find_uicomponent(r, "vline" .. j)
+                if is_uicomponent(vl) then
+                    vl:MoveTo(rx + col[1] - L.LINE_GAP, ry)
+                    vl:SetVisible((heads[j] or "") ~= "")
+                end
+            end
             local div = find_uicomponent(r, "divider")
             if is_uicomponent(div) then div:MoveTo(rx, ry + L.PITCH - 2) end
             r:SetTooltipText(rc.tip or "", true)
@@ -671,7 +682,11 @@ function S.refresh()
     local v = S.view_model(realm)
     S.data = v.rows
     set(find_uicomponent(p, "sub_title"), v.title)
-    for j = 1, 5 do set(find_uicomponent(p, "hdr_" .. j), v.heads[j]) end
+    for j = 1, 5 do
+        set(find_uicomponent(p, "hdr_" .. j), v.heads[j])
+        local hl = find_uicomponent(p, "hdr_line_" .. j)
+        if is_uicomponent(hl) then hl:SetVisible((v.heads[j] or "") ~= "") end
+    end
     set(find_uicomponent(p, "hint_text"), v.hint or "")
     local back = find_uicomponent(p, S.BACK)
     if is_uicomponent(back) then back:SetVisible(S.focus ~= nil) end
@@ -696,7 +711,7 @@ function S.refresh()
     local holder = find_uicomponent(p, "rows_holder")
     if is_uicomponent(holder) then sized(holder, L.list[3], math.max(S.rows_shown(), #v.rows) * L.PITCH) end
     S.ensure_list(p, #v.rows)
-    S.draw_rows(p, v.rows)
+    S.draw_rows(p, v.rows, v.heads)
     S.draw_chart(p, v.chart)
 end
 

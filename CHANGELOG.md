@@ -10,6 +10,7 @@
 - Settlement Captured: Occupy shows the stores it keeps.
 - Shorter tooltips on the raid and capture values; names line up on Settlements.
 - Raid and capture values: one per good, with that good's icon (up to three).
+- Stores panel: column lines; Trade switches line up under their headers.
 - Raids take from any faction's land, not only at war.
 - Small stores lose at least 1 to a raid, sack or raze.
 - Trade sends only whole shares; single units no longer bounce between partners.

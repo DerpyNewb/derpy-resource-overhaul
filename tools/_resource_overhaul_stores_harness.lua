@@ -336,6 +336,9 @@ eq(holder.y, box.y, "rows follow the list"); eq(find("derpy_mr_row_1").y, box.y,
 -- drill into a good, then back
 click("derpy_mr_row_1")
 eq(find("sub_title").text, "Where Coal is kept", "drill-down title")
+eq(find_uicomponent(find("derpy_mr_row_1"), "vline3").visible, true, "a line before a column with a header")
+eq(find_uicomponent(find("derpy_mr_row_1"), "vline4").visible, false, "none before a column without one")
+eq(find("hdr_line_5").visible, false, "nor in its header")
 eq(find("rows_holder").y, 358, "a new list starts at the top")
 eq(shown_rows(), 2, "two settlements keep coal"); eq(cell(1, 1).text, "Bravo", "most held first")
 eq(find("derpy_mr_row_1").tip, S.FULL_TIP, "full tooltip"); eq(find("derpy_mr_back").visible, true, "Back shown")
@@ -480,7 +483,20 @@ eq(cell(1, 1).text, "Coal", "most held first"); eq(cell(1, 2).text, "100", "held
 eq(cell(1, 3).text, "", "the switch, not the cell, carries the word")
 eq(switch(1, "export").visible, true, "an export switch"); eq(switch(1, "export").text, "Allowed", "allowed by default")
 eq(switch(1, "import").visible, true, "an import switch")
-eq(switch(1, "export").x, find("derpy_mr_row_1").x + DERPY_MR_STORES_L.cols[3][1], "in the Exports column")
+-- RIGHT-ALIGNED UNDER THEIR HEADERS, which are right-aligned (seen off-line in game 2026-10-02)
+local LL = DERPY_MR_STORES_L
+eq(switch(1, "export").x + LL.switch[1], find("derpy_mr_row_1").x + LL.cols[3][1] + LL.cols[3][2],
+   "the export switch ends where the Exports header ends")
+eq(switch(1, "import").x + LL.switch[1], find("derpy_mr_row_1").x + LL.cols[4][1] + LL.cols[4][2],
+   "the import switch ends where the Imports header ends")
+-- COLUMN LINES: one before each column from the second, through the header and every row
+for j = 2, 5 do
+    local vl = find_uicomponent(find("derpy_mr_row_1"), "vline" .. j)
+    eq(vl.visible, true, "a column line before column " .. j)
+    eq(vl.x, find("derpy_mr_row_1").x + LL.cols[j][1] - LL.LINE_GAP, "between the columns")
+    eq(find("hdr_line_" .. j).visible, true, "and through the header")
+    eq(find("hdr_line_" .. j).x, vl.x, "lined up with the rows'")
+end
 eq(cell(1, 5).text, "sent 15, received 2", "last turn's trade"); eq(cell(2, 5).text, "-", "no trade last turn")
 -- GOODS YOU NEITHER HOLD NOR MAKE ARE GREYED, LAST: no export switch, but you can still refuse them
 eq(cell(2, 1).text, "Brimstone", "a good you make but do not hold yet is not greyed")
