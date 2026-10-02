@@ -344,6 +344,22 @@ click("derpy_mr_back"); eq(cell(1, 1).text, "Coal", "back to the goods")
 click("derpy_mr_tab_settlements"); eq(shown_rows(), 3, "three settlements")
 eq(lit("derpy_mr_tab_settlements"), SEL, "the clicked tab is lit"); eq(lit("derpy_mr_tab_goods"), OFF, "the old one is not")
 eq(cell(2, 5).text, "Coal 100%", "fullest store")
+-- the goods each settlement keeps, as icons before its name: most made first, then most held
+local function icon(i, j) return find_uicomponent(find("derpy_mr_row_" .. i), j == 1 and "icon" or "icon" .. j) end
+local L0 = DERPY_MR_STORES_L
+local function good_icon(stem) for _, g in ipairs(DERPY_MR_STORES_GOODS) do if g.stem == stem then return g.icon end end end
+eq(icon(1, 1).image, good_icon("coal"), "Alpha's first icon: coal, made and held")
+eq(icon(1, 2).image, good_icon("brimstone"), "then brimstone, made"); eq(icon(1, 2).visible, true, "shown")
+eq(icon(1, 3).visible, false, "no third good, no third icon")
+eq(icon(1, 2).x - icon(1, 1).x, L0.ICON_PITCH, "icons at the pitch")
+eq(cell(1, 1).x, find("derpy_mr_row_1").x + L0.cols[1][1] + L0.ICON_PITCH, "the name moves past the icons")
+eq(icon(3, 1).visible, false, "Charlie keeps nothing: no icon")
+eq(cell(3, 1).x, find("derpy_mr_row_3").x + L0.cols[1][1], "and its name stays put")
+local alpha_cco = CCO["1"]
+CCO["1"] = "derpy_mr_store_coal_stocked=6,derpy_mr_store_brimstone_stocked=9"
+click("derpy_mr_tab_settlements")
+eq(icon(1, 1).image, good_icon("brimstone"), "made more but held none: what it is FOR comes first")
+CCO["1"] = alpha_cco; click("derpy_mr_tab_settlements")
 click("derpy_mr_row_1"); eq(find("sub_title").text, "Stores of Alpha", "settlement drill-down")
 eq(lit("derpy_mr_tab_settlements"), SEL, "a drill-down keeps its tab lit")
 eq(cell(2, 3).text, "+6", "brimstone per turn")
@@ -466,6 +482,18 @@ eq(switch(1, "export").visible, true, "an export switch"); eq(switch(1, "export"
 eq(switch(1, "import").visible, true, "an import switch")
 eq(switch(1, "export").x, find("derpy_mr_row_1").x + DERPY_MR_STORES_L.cols[3][1], "in the Exports column")
 eq(cell(1, 5).text, "sent 15, received 2", "last turn's trade"); eq(cell(2, 5).text, "-", "no trade last turn")
+-- GOODS YOU NEITHER HOLD NOR MAKE ARE GREYED, LAST: no export switch, but you can still refuse them
+eq(cell(2, 1).text, "Brimstone", "a good you make but do not hold yet is not greyed")
+eq(switch(2, "export").visible, true, "and can be exported")
+eq(cell(3, 1).text, S.grey("Iron"), "the first good you neither hold nor make, greyed")
+eq(cell(3, 2).text, S.grey("0"), "its count too")
+eq(switch(3, "export").visible, false, "no export switch: there is nothing to send")
+eq(switch(3, "import").visible, true, "an import switch: you can still refuse it")
+eq(S.grey("x"), "[[col:ui_font_inactive_grey]]x[[/col]]", "CA's own inactive grey (ui_colours_tables)")
+local brim = "pooled_resources_display_name_derpy_mr_store_brimstone"
+LOC[brim] = "Zz Brimstone"; click("derpy_mr_tab_trade")
+eq(cell(2, 1).text, "Zz Brimstone", "a good you make comes before every good you do not, whatever its name")
+LOC[brim] = "Brimstone"; click("derpy_mr_tab_trade")
 press(switch(1, "export"))
 eq(SENT[1], "fac_a|export|coal", "a click sends the local faction's switch")
 eq(switch(1, "export").text, S.STOPPED, "and the panel shows it at once")

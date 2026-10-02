@@ -10,6 +10,8 @@ DERPY_MR_STORES_L = {
     GAP = 4,
     H = 640,
     HANDLE_H = 40,
+    ICONS = 4,
+    ICON_PITCH = 26,
     PITCH = 28,
     ROWS = 16,
     SLIDER_W = 16,
@@ -338,7 +340,8 @@ function S.settlement_rows(realm)
     local out = {}
     for _, s in ipairs(realm) do
         local r = { key = s.key, name = s.name, level = s.level, cap = s.cap, goods = 0,
-                    fullest = nil, pct = 0 }
+                    fullest = nil, pct = 0, icons = {} }
+        local kept = {}
         for _, g in ipairs(DERPY_MR_STORES_GOODS) do
             local held = s.held[g.stem] or 0
             if held > 0 then
@@ -347,7 +350,16 @@ function S.settlement_rows(realm)
                 if s.cap > 0 then pct = math.floor(held * 100 / s.cap) end
                 if r.fullest == nil or pct > r.pct then r.fullest, r.pct = g.stem, pct end
             end
+            if keeps(s, g.stem) then
+                kept[#kept + 1] = { icon = g.icon, made = s.made[g.stem] or 0, held = held }
+            end
         end
+        -- most made first, then most held: what the settlement is FOR comes first
+        table.sort(kept, function(a, b)
+            if a.made ~= b.made then return a.made > b.made end
+            return a.held > b.held
+        end)
+        for i = 1, math.min(#kept, L.ICONS) do r.icons[i] = kept[i].icon end
         out[#out + 1] = r
     end
     return out                      -- the realm is already in name order
@@ -419,6 +431,9 @@ end
 S.STOPPED = "[[col:red]]Stopped[[/col]]"
 S.ALLOWED = "Allowed"
 S.DIRS = { "export", "import" }
+S.GREY = "ui_font_inactive_grey"       -- CA's own, out of db/ui_colours_tables (102,102,102)
+
+function S.grey(s) return "[[col:" .. S.GREY .. "]]" .. s .. "[[/col]]" end
 
 -- The flows script's function `name`, or nil without it: the panel must not need it to open.
 function S.flows(name)
@@ -426,16 +441,23 @@ function S.flows(name)
     return F and F[name]
 end
 
--- EVERY GOOD, held or not: refusing an import matters most for a good you have none of.
+-- EVERY GOOD, held or not: refusing an import matters most for a good you have none of. The
+-- realm's own - held or made somewhere - come first; the rest are greyed below them.
 function S.trade_rows(realm)
     local out = {}
     for _, g in ipairs(DERPY_MR_STORES_GOODS) do
-        local held = 0
-        for _, s in ipairs(realm) do held = held + (s.held[g.stem] or 0) end
-        out[#out + 1] = { stem = g.stem, name = S.name(g.stem), icon = g.icon, res = g.res,
-                          held = held }
+        local r = { stem = g.stem, name = S.name(g.stem), icon = g.icon, res = g.res, held = 0,
+                    own = false }
+        for _, s in ipairs(realm) do
+            r.held = r.held + (s.held[g.stem] or 0)
+            if keeps(s, g.stem) then r.own = true end
+        end
+        out[#out + 1] = r
     end
-    table.sort(out, by_held)
+    table.sort(out, function(a, b)
+        if a.own ~= b.own then return a.own end
+        return by_held(a, b)
+    end)
     return out
 end
 
@@ -493,8 +515,13 @@ function S.view_model(realm)
         for _, g in ipairs(S.trade_rows(realm)) do
             local row = { g.name, S.num(g.held), "", "", S.trade_line(last and last(fk, g.stem) or {}),
                           icon = g.icon, tip = S.good_tip(g), stem = g.stem }
+            if not g.own then
+                for j = 1, 5 do row[j] = row[j] ~= "" and S.grey(row[j]) or "" end
+            end
             if switches then
-                row.export, row.import = stopped(fk, "export", g.stem), stopped(fk, "import", g.stem)
+                -- nothing to send of a good you neither hold nor make: no export switch
+                if g.own then row.export = stopped(fk, "export", g.stem) end
+                row.import = stopped(fk, "import", g.stem)
             end
             v.rows[#v.rows + 1] = row
         end
@@ -521,7 +548,7 @@ function S.view_model(realm)
             local fullest = "-"
             if r.fullest then fullest = S.name(r.fullest) .. " " .. r.pct .. "%" end
             v.rows[#v.rows + 1] = { r.name, tostring(r.level), S.num(r.cap), tostring(r.goods),
-                                    fullest, open = r.key }
+                                    fullest, open = r.key, icons = r.icons }
         end
         v.empty = S.NO_REALM
     end
@@ -764,16 +791,20 @@ function S.draw_rows(p, rows)
             local rx, ry = hx, hy + (i - 1) * L.PITCH
             r:MoveTo(rx, ry)
             sized(r, L.list[3] - L.SLIDER_W, L.PITCH)
-            local ic = find_uicomponent(r, "icon")
-            if is_uicomponent(ic) then
-                ic:MoveTo(rx + L.icon[1], ry + L.icon[2])
-                ic:SetVisible(rc.icon ~= nil)
-                if rc.icon then ic:SetImagePath(rc.icon, 0) end
+            local icons = rc.icons or { rc.icon }
+            for k = 1, L.ICONS do
+                local ic = find_uicomponent(r, k == 1 and "icon" or "icon" .. k)
+                if is_uicomponent(ic) then
+                    ic:MoveTo(rx + L.icon[1] + (k - 1) * L.ICON_PITCH, ry + L.icon[2])
+                    ic:SetVisible(icons[k] ~= nil)
+                    if icons[k] then ic:SetImagePath(icons[k], 0) end
+                end
             end
+            local shift = math.max(0, #icons - 1) * L.ICON_PITCH
             for j, col in ipairs(L.cols) do
                 local c = find_uicomponent(r, "c" .. j)
                 if is_uicomponent(c) then
-                    c:MoveTo(rx + col[1], ry + 4)
+                    c:MoveTo(rx + col[1] + (j == 1 and shift or 0), ry + 4)
                     set(c, rc[j])
                 end
             end

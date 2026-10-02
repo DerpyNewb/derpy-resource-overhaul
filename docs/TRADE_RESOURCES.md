@@ -757,6 +757,10 @@ move runs only if a player's faction is on one side.
 - The switch's row is read off `UIComponent(UIComponent(context.component):Parent()):Id()`,
   CA's own idiom (`wh_campaign_setup.lua:2585`).
 
+Goods you neither hold nor make sit below the rest, greyed with CA's `ui_font_inactive_grey`, with no Exports switch (nothing to send) and the Imports switch kept.
+
+**Settlements tab icons:** up to `ICONS` (4) goods per settlement before its name, most made first, then most held; the name moves right by `ICON_PITCH` per extra icon.
+
 **The raid plate:** a copy of CA's Labour raid plate (`CopyComponent`, measured: the text set on
 the copy persists and CA's horizontal layout places it) beside the raid values above a raiding
 army, `3d_ui_parent > label_<character cqi> > list_parent > stance_holder > icon_stance >

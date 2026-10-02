@@ -74,6 +74,10 @@ L = {
     "back": (720, 52, 120, 26), "sub_title": (20, 86, 820, 22), "head_y": 112,
     "list": (20, 138, 820, 448), "empty": (20, 150, 820, 60), "hint": (20, 600, 820, 22),
     "icon": (6, 2, 24, 24),
+    # A SETTLEMENTS ROW SHOWS UP TO ICONS GOODS before its name, ICON_PITCH apart; the name moves
+    # right past them. ponytail: a long name with four icons runs toward the Level column, whose
+    # right-aligned digits leave room; measure in game if one collides.
+    "ICONS": 4, "ICON_PITCH": 26,
     # THE CHART (flows spec section 7), on a good's drill-down only: the list drops to CHART_ROWS
     # and twenty bars stand on one baseline under it.
     "CHART_ROWS": 9, "BARS": 20, "BAR_W": 33, "BAR_PITCH": 41, "BAR_MIN": 2,
@@ -183,6 +187,8 @@ def build_row():
                      hover=[_flat(WHITE, colour="#FFFFFF22")]))
     r.add(E.C("divider", w, 2, image=WHITE, colour_img=DIVIDER_COLOUR))
     r.add(E.C("icon", L["icon"][2], L["icon"][3], image=ICON_BG))
+    for j in range(2, L["ICONS"] + 1):
+        r.add(E.C("icon%d" % j, L["icon"][2], L["icon"][3], image=ICON_BG))
     for j, (_x, cw) in enumerate(L["cols"], 1):
         r.add(_cell(E, "c%d" % j, cw, 20, size=12, align=ALIGN[j - 1]))
     for d in ("export", "import"):
