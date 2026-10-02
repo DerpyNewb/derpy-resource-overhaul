@@ -765,7 +765,25 @@ raid_holder`. Image 1 is the icon (image 0 the plate); the stores icon replaces 
 what the raid then takes; it shows nothing before the rates are frozen, so a UI read never
 freezes them on one machine. A 500 ms poll keeps it up; the tooltip lists up to ten goods.
 
+**The capture panel** (Sack and Raze show the goods they take), read in game 2026-10-02:
+- `settlement_captured > button_parent > <option id> > frame > icon_parent > [dy_income, ...]`.
+  `settlement_captured:GetContextObjectId("CcoCampaignSettlement")` is the region key.
+- **The option id is the `culture_settlement_occupation_options` row's `id`** (the option's
+  `CcoCultureSettlementOccupationOptionRecord` Key, with the component's own name as its context
+  id); `settlement_option` on that row says which decision it is. The option's label is
+  translated text and the picture names lie (Norsca's `raze_serpent`, Vampire Coast's
+  `sack_build_cove` are other decisions), so `gen_mr_ui.capture_kinds()` emits
+  `DERPY_MR_CAPTURE_KIND` from CA's db.pack, and its check asserts the four ids read off the
+  Chaos Dwarf panel.
+- A copy of `dy_income` (it keeps its `icon` child) holds the number; text, tooltip and icon
+  persist. CA's row is full, so it wraps to a second line and the row moves up 13px.
+- The number is `F.capture_preview`, the same `F.preview` / `F.share` the move uses, and nothing
+  for rebels or your own settlement, as `F.on_occupation` skips them. Polled with the raid plates.
+- The battle's reading was confirmed live: `F.at_battle` held Eagle Eyries' 6 wyvern scales on
+  the open capture panel.
+
 **The gate** is `py tools/gen_mr_ui.py --selftest`. It runs both harnesses
 (`_resource_overhaul_stores_harness.lua` and `_resource_overhaul_flows_harness.lua`).
 
-**In game, still to see:** the Trade tab and the raid plate's look; a raze after a battle.
+**In game, still to see:** the Trade tab, the raid plate and the capture values' look; a raze
+after a battle.

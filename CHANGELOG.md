@@ -4,6 +4,7 @@
 
 - Stores panel: a Trade tab to stop each good's exports or imports.
 - Raiding army shows the goods its raid takes, with a tooltip per good.
+- Settlement Captured: Sack and Raze show the goods they take.
 - Raids take from any faction's land, not only at war.
 - Small stores lose at least 1 to a raid, sack or raze.
 - Trade sends only whole shares; single units no longer bounce between partners.

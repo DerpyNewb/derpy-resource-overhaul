@@ -90,6 +90,103 @@ DERPY_MR_STORES_GOODS = {
     {stem = "spices", res = "res_spices", icon = "ui/campaign ui/effect_bundles/resource_spices.png"},
     {stem = "trinkets", res = "res_trinkets", icon = "ui/campaign ui/effect_bundles/resource_trinkets.png"},
 }
+DERPY_MR_CAPTURE_KIND = {
+    [367] = "raze",
+    [386] = "sack",
+    [404] = "raze",
+    [408] = "raze",
+    [411] = "raze",
+    [414] = "sack",
+    [441] = "raze",
+    [450] = "sack",
+    [570] = "raze",
+    [617] = "raze",
+    [631] = "sack",
+    [664] = "raze",
+    [679] = "sack",
+    [716] = "raze",
+    [731] = "sack",
+    [883] = "raze",
+    [895] = "sack",
+    [939] = "raze",
+    [956] = "sack",
+    [1032] = "raze",
+    [1036] = "sack",
+    [1070] = "raze",
+    [1078] = "sack",
+    [1110] = "raze",
+    [1118] = "sack",
+    [1148] = "raze",
+    [1161] = "sack",
+    [1172] = "raze",
+    [145887959] = "raze",
+    [202589444] = "raze",
+    [245305707] = "raze",
+    [293506302] = "sack",
+    [353169368] = "sack",
+    [361127595] = "raze",
+    [457649475] = "raze",
+    [496508567] = "raze",
+    [508172808] = "raze",
+    [511807217] = "sack",
+    [518942702] = "sack",
+    [538881431] = "sack",
+    [559770731] = "raze",
+    [594303340] = "sack",
+    [610425586] = "sack",
+    [707729614] = "sack",
+    [729276206] = "raze",
+    [802537361] = "raze",
+    [811802588] = "raze",
+    [817651267] = "sack",
+    [829952812] = "sack",
+    [891798250] = "raze",
+    [1017060144] = "sack",
+    [1040061951] = "raze",
+    [1053367624] = "sack",
+    [1091624345] = "sack",
+    [1093034375] = "sack",
+    [1137941435] = "raze",
+    [1160750842] = "raze",
+    [1182606115] = "raze",
+    [1187793590] = "sack",
+    [1256143616] = "raze",
+    [1262847535] = "sack",
+    [1264917555] = "sack",
+    [1265929297] = "sack",
+    [1269523315] = "raze",
+    [1407772052] = "sack",
+    [1466869363] = "raze",
+    [1552158562] = "sack",
+    [1574012279] = "raze",
+    [1597900073] = "raze",
+    [1598549406] = "raze",
+    [1619577718] = "sack",
+    [1655985515] = "sack",
+    [1671725074] = "sack",
+    [1673500944] = "raze",
+    [1714590130] = "raze",
+    [1764857690] = "sack",
+    [1764888954] = "sack",
+    [1769740993] = "raze",
+    [1790090163] = "raze",
+    [1804337934] = "sack",
+    [1832879274] = "sack",
+    [1861824734] = "sack",
+    [1874367291] = "raze",
+    [1922893679] = "raze",
+    [1924306848] = "raze",
+    [1934843980] = "sack",
+    [1957389147] = "sack",
+    [1980885647] = "raze",
+    [1992765694] = "raze",
+    [2093320437] = "raze",
+    [2096334299] = "sack",
+    [2099100715] = "raze",
+    [2124658784] = "raze",
+    [2135151227] = "raze",
+    [2137868110] = "sack",
+}
 -- Derpy Resource Overhaul: the Stores panel. It shows what every settlement of the local
 -- faction holds of each good, what its buildings add each turn, and how much space it has.
 -- Read-only and local: nothing here writes the model, so it cannot desync multiplayer.
@@ -939,7 +1036,76 @@ function S.plate(lab, cqi)
     plate:SetVisible(true)
 end
 
+-- ---- the capture panel: Sack and Raze show the goods they take ---------------------------
+-- settlement_captured > button_parent > <option id> > frame > icon_parent, read in game
+-- 2026-10-02. A copy of CA's gold value (dy_income) wraps under CA's row; its text, tooltip and
+-- icon persist (measured). The option id says which decision it is: DERPY_MR_CAPTURE_KIND.
+S.CAPTURE = "derpy_mr_capture_goods"
+S.CAPTURE_VERB = { sack = "Sacking", raze = "Razing" }
+
+function S.capture_tip(pv, kind)
+    local lines = {}
+    if pv.lost then
+        lines[1] = S.CAPTURE_VERB[kind] .. " destroys these goods - you hold no settlement to carry them to, so they are lost:"
+    else
+        lines[1] = S.CAPTURE_VERB[kind] .. " carries these goods off to your nearest settlement:"
+    end
+    for i, part in ipairs(pv.parts) do
+        if i > S.PLATE_LINES then
+            lines[#lines + 1] = "and " .. (#pv.parts - S.PLATE_LINES) .. " more"
+            break
+        end
+        lines[#lines + 1] = S.name(part.stem) .. " " .. S.num(part.n)
+    end
+    return table.concat(lines, "\n")
+end
+
+function S.capture_plate(opt, pv, kind)
+    local holder = find_uicomponent(opt, "frame", "icon_parent")
+    if not is_uicomponent(holder) then return end
+    local plate = find_uicomponent(holder, S.CAPTURE)
+    if not pv then
+        if is_uicomponent(plate) then plate:SetVisible(false) end
+        return
+    end
+    if not is_uicomponent(plate) then
+        local src = find_uicomponent(holder, "dy_income")
+        if not is_uicomponent(src) then return end
+        plate = UIComponent(src:CopyComponent(S.CAPTURE))
+    end
+    local tip = S.capture_tip(pv, kind)
+    set(plate, tostring(pv.total))
+    plate:SetTooltipText(tip, true)
+    local icon = find_uicomponent(plate, "icon")
+    if is_uicomponent(icon) then
+        icon:SetImagePath(S.PLATE_ICON, 0)
+        icon:SetTooltipText(tip, true)
+    end
+    plate:SetVisible(true)
+end
+
+function S.capture_poll()
+    local sc = find_uicomponent(S.root(), "settlement_captured")
+    if not is_uicomponent(sc) or not sc:Visible() then return end
+    local preview = S.flows("capture_preview")
+    if not preview then return end
+    local key = sc:GetContextObjectId("CcoCampaignSettlement")
+    if not key or key == "" then return end
+    local region = cm:get_region(key)
+    local taker = cm:get_faction(cm:get_local_faction_name(true))
+    if not region or not taker then return end
+    local bp = find_uicomponent(sc, "button_parent")
+    if not is_uicomponent(bp) then return end
+    for i = 0, bp:ChildCount() - 1 do
+        local opt = UIComponent(bp:Find(i))
+        local kind = DERPY_MR_CAPTURE_KIND[tonumber(opt:Id())]
+        if kind then S.capture_plate(opt, preview(region, taker, kind), kind) end
+    end
+end
+
+-- One poll for both: the army plates and the capture panel.
 function S.plate_poll()
+    S.capture_poll()
     local p3d = find_uicomponent(S.root(), "3d_ui_parent")
     if not is_uicomponent(p3d) then return end
     for i = 0, p3d:ChildCount() - 1 do

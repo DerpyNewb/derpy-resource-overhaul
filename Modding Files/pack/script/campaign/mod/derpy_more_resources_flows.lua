@@ -274,17 +274,12 @@ function F.on_character_turn_start(character)
            character:logical_position_x(), character:logical_position_y())
 end
 
--- WHAT THE RAID TAKES NEXT TURN, for the army's plate: {total, parts = {{stem, n}}, to = region
--- key or nil}, most first, or nil when nothing. Read only. Nothing before the rates are frozen:
--- a UI read must not freeze them on one machine ahead of the turn start that does it everywhere.
-function F.raid_preview(character)
-    local rates = F.state.rates
-    if not rates or (rates.raid or 0) <= 0 then return nil end
-    local region, _, taker = F.raid_target(character)
-    if not region then return nil end
+-- WHAT F.take WOULD TAKE from `region` at `pct`: {total, parts = {{stem, n}}}, most first, or nil
+-- when nothing. Read only - the plates' number, by the same F.share the move uses.
+function F.preview(region, pct)
     local parts, total = {}, 0
     for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
-        local n = F.share(F.held(region, g.stem), rates.raid)
+        local n = F.share(F.held(region, g.stem), pct)
         if n > 0 then
             parts[#parts + 1] = { stem = g.stem, n = n }
             total = total + n
@@ -295,8 +290,34 @@ function F.raid_preview(character)
         if a.n ~= b.n then return a.n > b.n end
         return a.stem < b.stem
     end)
+    return { total = total, parts = parts }
+end
+
+-- WHAT THE RAID TAKES NEXT TURN, for the army's plate: F.preview plus `to`, the region key it
+-- lands in (nil for a horde). Nothing before the rates are frozen: a UI read must not freeze
+-- them on one machine ahead of the turn start that does it everywhere.
+function F.raid_preview(character)
+    local rates = F.state.rates
+    if not rates or (rates.raid or 0) <= 0 then return nil end
+    local region, _, taker = F.raid_target(character)
+    if not region then return nil end
+    local pv = F.preview(region, rates.raid)
+    if not pv then return nil end
     local to = F.nearest(taker, character:logical_position_x(), character:logical_position_y())
-    return { total = total, parts = parts, to = to and to:name() or nil }
+    pv.to = to and to:name() or nil
+    return pv
+end
+
+-- WHAT A SACK OR RAZE OF `region` WOULD TAKE, for the capture panel: F.preview plus `lost`, true
+-- when the taker holds no settlement to carry it to. `kind` is "sack" or "raze"; nil otherwise,
+-- and for the cases F.on_occupation skips (rebels, its own settlement).
+function F.capture_preview(region, taker, kind)
+    local rates = F.state.rates
+    if not rates or (kind ~= "sack" and kind ~= "raze") or (rates[kind] or 0) <= 0 then return nil end
+    if not F.victim(region, taker) then return nil end
+    local pv = F.preview(region, rates[kind])
+    if pv then pv.lost = taker:region_list():num_items() == 0 end
+    return pv
 end
 
 function F.on_occupation(context)

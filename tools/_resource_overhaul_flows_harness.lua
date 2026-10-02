@@ -264,6 +264,21 @@ a1.held, h1.held, h2.held = { coal = 100 }, {}, {}
 decide("occupation_decision_sack", a1, hum, "ai1")
 eq(a1.held.coal, 50, "a sack takes half"); eq(h1.held.coal, 50, "into the sacker's nearest")
 eq(LOG[#LOG][2], "derpy_mr_store_coal_plundered", "booked to plunder")
+-- the capture panel's preview: what each choice takes, read only, before it is chosen
+a1.held, h1.held = { coal = 50, iron = 1 }, { coal = 50 }
+n = #LOG
+local cp = F.capture_preview(a1.iface, hum.iface, "raze")
+eq(#LOG, n, "the capture preview moves nothing")
+eq(cp.total, 26, "half the coal and the one iron"); eq(cp.parts[1].stem, "coal", "most first")
+eq(cp.lost, false, "a taker with settlements keeps it")
+eq(F.capture_preview(a1.iface, horde.iface, "sack").lost, true, "a horde's sack is lost")
+eq(F.capture_preview(rb1.iface, hum.iface, "sack"), nil, "a rebel settlement shows nothing")
+eq(F.capture_preview(h1.iface, hum.iface, "sack"), nil, "nor its own")
+eq(F.capture_preview(a1.iface, hum.iface, "occupy"), nil, "nor an occupation")
+frozen = F.state.rates; F.state.rates = nil
+eq(F.capture_preview(a1.iface, hum.iface, "sack"), nil, "nothing before the rates are frozen")
+F.state.rates = frozen
+a1.held.iron = nil
 decide("occupation_decision_raze_without_occupy", a1, hum, "ai1")
 eq(a1.held.coal, 25, "a raze takes half"); eq(h1.held.coal, 75, "into the razer's nearest")
 n = #LOG

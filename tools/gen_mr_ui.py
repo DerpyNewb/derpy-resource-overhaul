@@ -16,6 +16,7 @@ move stock; the history the panel charts) the same way, from
 Modding Files/source/resource_overhaul/flows.lua behind DERPY_MR_FLOWS_DEFAULTS / _KIND / _GOODS,
 and runs tools/_resource_overhaul_flows_harness.lua beside the panel's harness.
 """
+import functools
 import io
 import os
 import re
@@ -266,6 +267,35 @@ def goods():
     return out
 
 
+# THE CAPTURE PANEL'S OPTIONS, by id. Each option component is named for its
+# culture_settlement_occupation_options row's `id` (CcoCultureSettlementOccupationOptionRecord's Key),
+# and only that row says which decision it is: the option's name is translated text, and picture
+# names lie (Norsca's raze_serpent, Vampire Coast's sack_build_cove are other decisions).
+DECISION_KIND = {"occupation_decision_sack": "sack", "occupation_decision_raze_without_occupy": "raze"}
+# read off the Chaos Dwarf panel in game, 2026-10-02
+MEASURED_OPTIONS = {1671725074: "sack", 1992765694: "raze", 222165943: None, 1899472825: None}
+
+
+@functools.lru_cache(maxsize=None)
+def capture_kinds():
+    """{option id: "sack" | "raze"} out of CA's db.pack, every culture."""
+    import read_vanilla_db as rvd
+    out = {}
+    for _p, _v, rows in rvd.load(rvd.DB_PACK, "culture_settlement_occupation_options_tables"):
+        for r in rows:
+            k = DECISION_KIND.get(r["settlement_option"])
+            if k:
+                out[r["id"]] = k
+    return tuple(sorted(out.items()))
+
+
+def check_capture_kinds():
+    got = dict(capture_kinds())
+    assert len(got) > 40, "only %d sack/raze options read" % len(got)
+    for oid, kind in MEASURED_OPTIONS.items():
+        assert got.get(oid) == kind, "option %d is %r in the table, %r in game" % (oid, got.get(oid), kind)
+
+
 def _lua(v):
     if isinstance(v, (tuple, list)):
         return "{" + ", ".join(_lua(x) for x in v) + "}"
@@ -282,6 +312,8 @@ def header():
     lines += ["    %s = %s," % (k, _lua(L[k])) for k in sorted(L)]
     lines += ["}", "DERPY_MR_STORES_GOODS = {"]
     lines += ['    {stem = "%s", res = "%s", icon = "%s"},' % g for g in goods()]
+    lines += ["}", "DERPY_MR_CAPTURE_KIND = {"]
+    lines += ['    [%d] = "%s",' % kv for kv in capture_kinds()]
     lines.append("}")
     return "\n".join(lines) + "\n"
 
@@ -498,6 +530,7 @@ def selftest():
     check_layout()
     check_text_fits()
     check_xml()
+    check_capture_kinds()
     import gen_resource_overhaul as G
     g = goods()
     assert [s for s, _r, _i in g] == list(G.store_stems()), "the panel's goods are not the stores"

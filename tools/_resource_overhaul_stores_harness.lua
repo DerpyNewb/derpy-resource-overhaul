@@ -72,6 +72,7 @@ local FIRST, REPEATS, LISTENERS = {}, {}, {}
 local CHARS = {}
 cm = {
     get_character_by_cqi = function(_, cqi) return CHARS[cqi] or false end,
+    get_region = function(_, key) return { key = key } end,
     add_first_tick_callback = function(_, fn) FIRST[#FIRST + 1] = fn end,
     callback = function() end,                      -- retries are not run
     repeat_real_callback = function(_, fn, _ms, name) REPEATS[name] = fn end,
@@ -246,15 +247,19 @@ end
 function is_uicomponent(c) return type(c) == "table" and c.__uic == true end
 function UIComponent(address) return address end
 function UIC:Parent() return self.parent end
+function UIC:GetContextObjectId(t) return (self.ctx and self.ctx[t]) or "" end
 function UIC:ChildCount() return #self.kids end
 function UIC:Find(i) return self.kids[i + 1] end
--- A sibling under the same parent, as the engine's: same images, same text, same visibility.
-function UIC:CopyComponent(name)
-    local c = new(name, self.parent)
-    c.images, c.text, c.visible = {}, self.text, self.visible
-    for i, p in pairs(self.images or {}) do c.images[i] = p end
+-- A sibling under the same parent, as the engine's: same images, text, visibility and children
+-- (measured 2026-10-02: a copy of dy_income kept its icon child).
+local function clone(src, name, parent)
+    local c = new(name, parent)
+    c.images, c.text, c.visible = {}, src.text, src.visible
+    for i, p in pairs(src.images or {}) do c.images[i] = p end
+    for _, k in ipairs(src.kids) do clone(k, k.name, c) end
     return c
 end
+function UIC:CopyComponent(name) return clone(self, name, self.parent) end
 
 UI_ROOT = new("root")
 local bar = new("resources_bar", UI_ROOT)
@@ -517,6 +522,42 @@ PREVIEW[ch7] = { total = 14, parts = many_parts, to = "reg_b" }
 REPEATS.derpy_mr_raid_plate()
 eq(string.find(plate.tip, "and 4 more", 1, true) ~= nil, true, "a long list is cut at ten")
 DERPY_MR_FLOWS = nil; REPEATS.derpy_mr_raid_plate(); eq(plate.visible, false, "without the flows script: no plate")
+
+-- ---- the capture panel: Sack and Raze show the goods they take -------------------------
+-- settlement_captured > button_parent > <option id> > frame > icon_parent > dy_income > icon,
+-- read in game 2026-10-02; the ids are CA's culture_settlement_occupation_options rows.
+eq(DERPY_MR_CAPTURE_KIND[1671725074], "sack", "the generated table knows the Chaos Dwarf sack")
+eq(DERPY_MR_CAPTURE_KIND[1992765694], "raze", "and raze"); eq(DERPY_MR_CAPTURE_KIND[222165943], nil, "not an occupy")
+local sc = new("settlement_captured", UI_ROOT)
+sc.ctx = { CcoCampaignSettlement = "reg_b" }
+local bpar = new("button_parent", sc)
+local function option(id)
+    local ip = new("icon_parent", new("frame", new(id, bpar)))
+    new("icon", new("dy_income", ip))
+    return ip
+end
+local sack_ip, raze_ip, occ_ip = option("1671725074"), option("1992765694"), option("222165943")
+local CALLS = {}
+local CAP = { sack = { total = 50, parts = { { stem = "coal", n = 50 } }, lost = false },
+              raze = { total = 3, parts = { { stem = "iron", n = 3 } }, lost = true } }
+DERPY_MR_FLOWS = { capture_preview = function(region, taker, kind)
+    CALLS[#CALLS + 1] = region.key .. "|" .. tostring(taker and taker:name()) .. "|" .. kind
+    return CAP[kind]
+end }
+REPEATS.derpy_mr_raid_plate()
+local sg, rg = find_uicomponent(sack_ip, S.CAPTURE), find_uicomponent(raze_ip, S.CAPTURE)
+eq(sg ~= false, true, "Sack gets a goods value"); eq(sg.text, "50", "the goods a sack takes")
+eq(find_uicomponent(sg, "icon").images[0], S.PLATE_ICON, "with the stores icon")
+eq(string.find(sg.tip, "Coal 50", 1, true) ~= nil, true, "the tooltip lists each good")
+eq(string.find(sg.tip, "Sacking", 1, true) ~= nil, true, "and names the choice")
+eq(find_uicomponent(sg, "icon").tip, sg.tip, "the icon says the same")
+eq(rg.text, "3", "Raze gets its own"); eq(string.find(rg.tip, "lost", 1, true) ~= nil, true, "a horde's goods are lost")
+eq(find_uicomponent(occ_ip, S.CAPTURE), false, "an occupy option gets nothing")
+eq(CALLS[1], "reg_b|fac_a|sack", "read for the panel's settlement and the local faction")
+REPEATS.derpy_mr_raid_plate(); eq(#sack_ip.kids, 2, "made once, not once a poll")
+CAP.sack = nil; REPEATS.derpy_mr_raid_plate(); eq(sg.visible, false, "hidden when the sack takes nothing")
+sc.visible = false; CALLS = {}; REPEATS.derpy_mr_raid_plate(); eq(#CALLS, 0, "nothing read while the panel is closed")
+DERPY_MR_FLOWS = nil; sc.visible = true; REPEATS.derpy_mr_raid_plate(); eq(#ERRORS, 0, "without the flows script: no error")
 
 eq(#ERRORS, 0, "script errors: " .. table.concat(ERRORS, "; "))
 print("harness ok")
