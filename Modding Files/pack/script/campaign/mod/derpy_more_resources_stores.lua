@@ -99,92 +99,224 @@ DERPY_MR_CAPTURE_KIND = {
     [408] = "raze",
     [411] = "raze",
     [414] = "sack",
+    [438] = "occupy",
     [441] = "raze",
     [450] = "sack",
+    [524] = "occupy",
     [570] = "raze",
+    [604] = "occupy",
+    [608] = "occupy",
     [617] = "raze",
     [631] = "sack",
+    [658] = "occupy",
+    [662] = "occupy",
     [664] = "raze",
     [679] = "sack",
+    [701] = "occupy",
+    [707] = "occupy",
     [716] = "raze",
     [731] = "sack",
+    [866] = "occupy",
+    [874] = "occupy",
     [883] = "raze",
     [895] = "sack",
+    [924] = "occupy",
+    [930] = "occupy",
     [939] = "raze",
     [956] = "sack",
+    [1024] = "occupy",
+    [1027] = "occupy",
     [1032] = "raze",
     [1036] = "sack",
+    [1058] = "occupy",
+    [1063] = "occupy",
     [1070] = "raze",
     [1078] = "sack",
+    [1096] = "occupy",
+    [1103] = "occupy",
     [1110] = "raze",
     [1118] = "sack",
+    [1137] = "occupy",
     [1148] = "raze",
     [1161] = "sack",
     [1172] = "raze",
+    [5586644] = "occupy",
+    [35490988] = "occupy",
+    [98659958] = "occupy",
+    [118708369] = "occupy",
     [145887959] = "raze",
+    [156637305] = "occupy",
+    [164375587] = "occupy",
     [202589444] = "raze",
+    [210388482] = "occupy",
+    [222165943] = "occupy",
+    [224851311] = "occupy",
     [245305707] = "raze",
+    [268063204] = "occupy",
     [293506302] = "sack",
+    [293667196] = "occupy",
+    [309401646] = "occupy",
+    [315079436] = "occupy",
+    [320440271] = "occupy",
+    [320879811] = "occupy",
+    [330464196] = "occupy",
+    [339049739] = "occupy",
+    [342244081] = "occupy",
+    [347600671] = "occupy",
     [353169368] = "sack",
     [361127595] = "raze",
+    [380297612] = "occupy",
+    [403649005] = "occupy",
+    [451600901] = "occupy",
     [457649475] = "raze",
     [496508567] = "raze",
     [508172808] = "raze",
+    [508454578] = "occupy",
     [511807217] = "sack",
     [518942702] = "sack",
+    [524353926] = "occupy",
     [538881431] = "sack",
+    [554730390] = "occupy",
+    [556969995] = "occupy",
+    [558001227] = "occupy",
     [559770731] = "raze",
     [594303340] = "sack",
+    [599554704] = "occupy",
     [610425586] = "sack",
+    [626112581] = "occupy",
+    [637870988] = "occupy",
+    [652221506] = "occupy",
+    [658217422] = "occupy",
+    [660652013] = "occupy",
+    [661358814] = "occupy",
     [707729614] = "sack",
+    [713002568] = "occupy",
     [729276206] = "raze",
+    [733745098] = "occupy",
+    [738050561] = "occupy",
+    [755822422] = "occupy",
+    [783993629] = "occupy",
+    [793725149] = "occupy",
     [802537361] = "raze",
     [811802588] = "raze",
     [817651267] = "sack",
     [829952812] = "sack",
+    [860538929] = "occupy",
+    [865089996] = "occupy",
     [891798250] = "raze",
+    [922680816] = "occupy",
+    [998467618] = "occupy",
     [1017060144] = "sack",
+    [1033089891] = "occupy",
+    [1036292950] = "occupy",
     [1040061951] = "raze",
     [1053367624] = "sack",
+    [1084419564] = "occupy",
+    [1089810075] = "occupy",
     [1091624345] = "sack",
     [1093034375] = "sack",
+    [1094801031] = "occupy",
+    [1102425063] = "occupy",
+    [1126388421] = "occupy",
+    [1132210129] = "occupy",
+    [1136399258] = "occupy",
     [1137941435] = "raze",
+    [1145889343] = "occupy",
+    [1150855325] = "occupy",
+    [1156478547] = "occupy",
     [1160750842] = "raze",
+    [1170481443] = "occupy",
     [1182606115] = "raze",
     [1187793590] = "sack",
+    [1218317010] = "occupy",
+    [1227812903] = "occupy",
+    [1230269865] = "occupy",
+    [1231725576] = "occupy",
+    [1233004991] = "occupy",
+    [1235803466] = "occupy",
+    [1245397969] = "occupy",
     [1256143616] = "raze",
     [1262847535] = "sack",
     [1264917555] = "sack",
     [1265929297] = "sack",
     [1269523315] = "raze",
+    [1292694896] = "occupy",
+    [1328414927] = "occupy",
+    [1337096881] = "occupy",
+    [1350451005] = "occupy",
+    [1369123792] = "occupy",
+    [1374550912] = "occupy",
     [1407772052] = "sack",
+    [1407842613] = "occupy",
     [1466869363] = "raze",
+    [1489372626] = "occupy",
+    [1509766842] = "occupy",
+    [1517426446] = "occupy",
+    [1537682911] = "occupy",
     [1552158562] = "sack",
     [1574012279] = "raze",
+    [1589874304] = "occupy",
+    [1595781982] = "occupy",
     [1597900073] = "raze",
     [1598549406] = "raze",
+    [1602511048] = "occupy",
+    [1609392163] = "occupy",
+    [1613790614] = "occupy",
+    [1616752924] = "occupy",
     [1619577718] = "sack",
+    [1650533241] = "occupy",
     [1655985515] = "sack",
+    [1667253945] = "occupy",
     [1671725074] = "sack",
     [1673500944] = "raze",
     [1714590130] = "raze",
+    [1717385055] = "occupy",
+    [1760484900] = "occupy",
     [1764857690] = "sack",
     [1764888954] = "sack",
+    [1768627474] = "occupy",
     [1769740993] = "raze",
     [1790090163] = "raze",
+    [1796393989] = "occupy",
     [1804337934] = "sack",
+    [1812399685] = "occupy",
+    [1813814333] = "occupy",
+    [1824195232] = "occupy",
+    [1832673091] = "occupy",
     [1832879274] = "sack",
+    [1842870344] = "occupy",
+    [1843733444] = "occupy",
+    [1858950653] = "occupy",
     [1861824734] = "sack",
+    [1863516118] = "occupy",
     [1874367291] = "raze",
+    [1881499731] = "occupy",
+    [1899057904] = "occupy",
+    [1899472825] = "occupy",
+    [1909882981] = "occupy",
+    [1919578493] = "occupy",
     [1922893679] = "raze",
     [1924306848] = "raze",
     [1934843980] = "sack",
+    [1942353263] = "occupy",
     [1957389147] = "sack",
+    [1963655228] = "occupy",
     [1980885647] = "raze",
+    [1982656245] = "occupy",
+    [1984729267] = "occupy",
     [1992765694] = "raze",
+    [1998628524] = "occupy",
+    [2018305932] = "occupy",
+    [2074767882] = "occupy",
+    [2085734495] = "occupy",
+    [2085841467] = "occupy",
     [2093320437] = "raze",
+    [2094730810] = "occupy",
     [2096334299] = "sack",
     [2099100715] = "raze",
+    [2114891607] = "occupy",
+    [2118593073] = "occupy",
+    [2123500571] = "occupy",
     [2124658784] = "raze",
     [2135151227] = "raze",
     [2137868110] = "sack",
@@ -783,6 +915,10 @@ function S.draw_rows(p, rows)
     local holder = find_uicomponent(p, "rows_holder")
     if not is_uicomponent(holder) then return end
     local hx, hy = holder:Position()
+    -- EVERY NAME STARTS AFTER THE WIDEST ROW'S ICONS: shifted per row, they ran ragged in game
+    local widest = 0
+    for _, rc in ipairs(rows) do widest = math.max(widest, #(rc.icons or { rc.icon })) end
+    local shift = math.max(0, widest - 1) * L.ICON_PITCH
     local n = 0
     for i, rc in ipairs(rows) do
         local r = S.row(holder, i)
@@ -800,7 +936,6 @@ function S.draw_rows(p, rows)
                     if icons[k] then ic:SetImagePath(icons[k], 0) end
                 end
             end
-            local shift = math.max(0, #icons - 1) * L.ICON_PITCH
             for j, col in ipairs(L.cols) do
                 local c = find_uicomponent(r, "c" .. j)
                 if is_uicomponent(c) then
@@ -1023,22 +1158,28 @@ S.PLATE_MS = 500
 S.PLATE_LINES = 10
 S.RAID_PATH = { "list_parent", "stance_holder", "icon_stance", "raid_holder" }
 
-function S.plate_tip(pv)
-    local lines = {}
-    if pv.to then
-        lines[1] = "Raiding carries these goods off each turn, into "
-                   .. loc("regions_onscreen_" .. pv.to, pv.to) .. ":"
-    else
-        lines[1] = "Raiding destroys these goods each turn - this army has no settlement to carry them to:"
-    end
-    for i, part in ipairs(pv.parts) do
+-- SHORT LINES: CA's tooltip wraps at about 50 characters, which split "Zharr-" from "Naggrund"
+-- (seen in game 2026-10-02). The harness holds every line to TIP_CHARS.
+S.TIP_CHARS = 44
+
+-- head, one line a good (cut at PLATE_LINES), foot
+local function tip_lines(head, parts, foot)
+    local lines = { head }
+    for i, part in ipairs(parts) do
         if i > S.PLATE_LINES then
-            lines[#lines + 1] = "and " .. (#pv.parts - S.PLATE_LINES) .. " more"
+            lines[#lines + 1] = "and " .. (#parts - S.PLATE_LINES) .. " more"
             break
         end
         lines[#lines + 1] = S.name(part.stem) .. " " .. S.num(part.n)
     end
+    lines[#lines + 1] = foot
     return table.concat(lines, "\n")
+end
+
+function S.plate_tip(pv)
+    local foot = "Lost: this army has no settlement"
+    if pv.to then foot = "Into " .. loc("regions_onscreen_" .. pv.to, pv.to) end
+    return tip_lines("Raiding takes, each turn:", pv.parts, foot)
 end
 
 function S.plate(lab, cqi)
@@ -1072,23 +1213,15 @@ end
 -- 2026-10-02. A copy of CA's gold value (dy_income) wraps under CA's row; its text, tooltip and
 -- icon persist (measured). The option id says which decision it is: DERPY_MR_CAPTURE_KIND.
 S.CAPTURE = "derpy_mr_capture_goods"
-S.CAPTURE_VERB = { sack = "Sacking", raze = "Razing" }
+S.CAPTURE_VERB = { sack = "Sacking", raze = "Razing", occupy = "Occupying" }
 
 function S.capture_tip(pv, kind)
-    local lines = {}
-    if pv.lost then
-        lines[1] = S.CAPTURE_VERB[kind] .. " destroys these goods - you hold no settlement to carry them to, so they are lost:"
-    else
-        lines[1] = S.CAPTURE_VERB[kind] .. " carries these goods off to your nearest settlement:"
+    if kind == "occupy" then
+        return tip_lines("Occupying keeps its stores:", pv.parts, "They stay in this settlement")
     end
-    for i, part in ipairs(pv.parts) do
-        if i > S.PLATE_LINES then
-            lines[#lines + 1] = "and " .. (#pv.parts - S.PLATE_LINES) .. " more"
-            break
-        end
-        lines[#lines + 1] = S.name(part.stem) .. " " .. S.num(part.n)
-    end
-    return table.concat(lines, "\n")
+    local foot = "Into your nearest settlement"
+    if pv.lost then foot = "Lost: you hold no settlement" end
+    return tip_lines(S.CAPTURE_VERB[kind] .. " takes:", pv.parts, foot)
 end
 
 function S.capture_plate(opt, pv, kind)

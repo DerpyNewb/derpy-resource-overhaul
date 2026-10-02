@@ -7,6 +7,8 @@
 - Settlement Captured: Sack and Raze show the goods they take.
 - Trade tab: goods you neither hold nor make are greyed and listed last.
 - Settlements tab: icons of each settlement's goods before its name.
+- Settlement Captured: Occupy shows the stores it keeps.
+- Shorter tooltips on the raid and capture values; names line up on Settlements.
 - Raids take from any faction's land, not only at war.
 - Small stores lose at least 1 to a raid, sack or raze.
 - Trade sends only whole shares; single units no longer bounce between partners.

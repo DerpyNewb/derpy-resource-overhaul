@@ -779,6 +779,8 @@ freezes them on one machine. A 500 ms poll keeps it up; the tooltip lists up to 
   `sack_build_cove` are other decisions), so `gen_mr_ui.capture_kinds()` emits
   `DERPY_MR_CAPTURE_KIND` from CA's db.pack, and its check asserts the four ids read off the
   Chaos Dwarf panel.
+- Occupy and Loot-and-Occupy show the whole store as kept (`F.capture_preview(..., "occupy")`, 100%; rebels' included, since the store stays with the settlement). Occupy-and-vassal, resettle and colonise show nothing.
+- Tooltip lines are held to `S.TIP_CHARS` (44): CA's tooltip wraps at about 50 and split "Zharr-" from "Naggrund".
 - A copy of `dy_income` (it keeps its `icon` child) holds the number; text, tooltip and icon
   persist. CA's row is full, so it wraps to a second line and the row moves up 13px.
 - The number is `F.capture_preview`, the same `F.preview` / `F.share` the move uses, and nothing

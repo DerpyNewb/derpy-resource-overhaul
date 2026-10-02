@@ -308,14 +308,25 @@ function F.raid_preview(character)
     return pv
 end
 
--- WHAT A SACK OR RAZE OF `region` WOULD TAKE, for the capture panel: F.preview plus `lost`, true
--- when the taker holds no settlement to carry it to. `kind` is "sack" or "raze"; nil otherwise,
--- and for the cases F.on_occupation skips (rebels, its own settlement).
+-- WHAT A CAPTURE CHOICE DOES TO `region`'s STORES, for the capture panel: F.preview plus `lost`,
+-- true when the taker holds no settlement to carry it to. "sack" and "raze" take their share
+-- (nil for the cases F.on_occupation skips: rebels, its own settlement); "occupy" keeps the
+-- whole store, which stays with the settlement, rebels' included. nil for any other kind.
 function F.capture_preview(region, taker, kind)
     local rates = F.state.rates
-    if not rates or (kind ~= "sack" and kind ~= "raze") or (rates[kind] or 0) <= 0 then return nil end
+    if not rates then return nil end
+    local pct
+    if kind == "occupy" then
+        if region:is_abandoned() or region:owning_faction():name() == taker:name() then return nil end
+        local pv = F.preview(region, 100)
+        if pv then pv.lost = false end
+        return pv
+    elseif kind == "sack" or kind == "raze" then
+        pct = rates[kind] or 0
+    end
+    if not pct or pct <= 0 then return nil end
     if not F.victim(region, taker) then return nil end
-    local pv = F.preview(region, rates[kind])
+    local pv = F.preview(region, pct)
     if pv then pv.lost = taker:region_list():num_items() == 0 end
     return pv
 end

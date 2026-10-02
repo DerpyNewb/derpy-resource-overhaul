@@ -274,7 +274,12 @@ eq(cp.lost, false, "a taker with settlements keeps it")
 eq(F.capture_preview(a1.iface, horde.iface, "sack").lost, true, "a horde's sack is lost")
 eq(F.capture_preview(rb1.iface, hum.iface, "sack"), nil, "a rebel settlement shows nothing")
 eq(F.capture_preview(h1.iface, hum.iface, "sack"), nil, "nor its own")
-eq(F.capture_preview(a1.iface, hum.iface, "occupy"), nil, "nor an occupation")
+local oc = F.capture_preview(a1.iface, hum.iface, "occupy")
+eq(oc.total, 51, "an occupation keeps the whole store"); eq(oc.lost, false, "and loses none of it")
+eq(F.capture_preview(a1.iface, hum.iface, "gift"), nil, "nor any other choice")
+eq(F.capture_preview(h1.iface, hum.iface, "occupy"), nil, "nor occupying its own")
+eq(F.capture_preview(ruin.iface, hum.iface, "occupy"), nil, "nor a ruin")
+eq(F.capture_preview(rb1.iface, hum.iface, "occupy").total, 50, "an occupied rebel settlement keeps its store too")
 frozen = F.state.rates; F.state.rates = nil
 eq(F.capture_preview(a1.iface, hum.iface, "sack"), nil, "nothing before the rates are frozen")
 F.state.rates = frozen

@@ -592,6 +592,10 @@ function S.draw_rows(p, rows)
     local holder = find_uicomponent(p, "rows_holder")
     if not is_uicomponent(holder) then return end
     local hx, hy = holder:Position()
+    -- EVERY NAME STARTS AFTER THE WIDEST ROW'S ICONS: shifted per row, they ran ragged in game
+    local widest = 0
+    for _, rc in ipairs(rows) do widest = math.max(widest, #(rc.icons or { rc.icon })) end
+    local shift = math.max(0, widest - 1) * L.ICON_PITCH
     local n = 0
     for i, rc in ipairs(rows) do
         local r = S.row(holder, i)
@@ -609,7 +613,6 @@ function S.draw_rows(p, rows)
                     if icons[k] then ic:SetImagePath(icons[k], 0) end
                 end
             end
-            local shift = math.max(0, #icons - 1) * L.ICON_PITCH
             for j, col in ipairs(L.cols) do
                 local c = find_uicomponent(r, "c" .. j)
                 if is_uicomponent(c) then
@@ -832,22 +835,28 @@ S.PLATE_MS = 500
 S.PLATE_LINES = 10
 S.RAID_PATH = { "list_parent", "stance_holder", "icon_stance", "raid_holder" }
 
-function S.plate_tip(pv)
-    local lines = {}
-    if pv.to then
-        lines[1] = "Raiding carries these goods off each turn, into "
-                   .. loc("regions_onscreen_" .. pv.to, pv.to) .. ":"
-    else
-        lines[1] = "Raiding destroys these goods each turn - this army has no settlement to carry them to:"
-    end
-    for i, part in ipairs(pv.parts) do
+-- SHORT LINES: CA's tooltip wraps at about 50 characters, which split "Zharr-" from "Naggrund"
+-- (seen in game 2026-10-02). The harness holds every line to TIP_CHARS.
+S.TIP_CHARS = 44
+
+-- head, one line a good (cut at PLATE_LINES), foot
+local function tip_lines(head, parts, foot)
+    local lines = { head }
+    for i, part in ipairs(parts) do
         if i > S.PLATE_LINES then
-            lines[#lines + 1] = "and " .. (#pv.parts - S.PLATE_LINES) .. " more"
+            lines[#lines + 1] = "and " .. (#parts - S.PLATE_LINES) .. " more"
             break
         end
         lines[#lines + 1] = S.name(part.stem) .. " " .. S.num(part.n)
     end
+    lines[#lines + 1] = foot
     return table.concat(lines, "\n")
+end
+
+function S.plate_tip(pv)
+    local foot = "Lost: this army has no settlement"
+    if pv.to then foot = "Into " .. loc("regions_onscreen_" .. pv.to, pv.to) end
+    return tip_lines("Raiding takes, each turn:", pv.parts, foot)
 end
 
 function S.plate(lab, cqi)
@@ -881,23 +890,15 @@ end
 -- 2026-10-02. A copy of CA's gold value (dy_income) wraps under CA's row; its text, tooltip and
 -- icon persist (measured). The option id says which decision it is: DERPY_MR_CAPTURE_KIND.
 S.CAPTURE = "derpy_mr_capture_goods"
-S.CAPTURE_VERB = { sack = "Sacking", raze = "Razing" }
+S.CAPTURE_VERB = { sack = "Sacking", raze = "Razing", occupy = "Occupying" }
 
 function S.capture_tip(pv, kind)
-    local lines = {}
-    if pv.lost then
-        lines[1] = S.CAPTURE_VERB[kind] .. " destroys these goods - you hold no settlement to carry them to, so they are lost:"
-    else
-        lines[1] = S.CAPTURE_VERB[kind] .. " carries these goods off to your nearest settlement:"
+    if kind == "occupy" then
+        return tip_lines("Occupying keeps its stores:", pv.parts, "They stay in this settlement")
     end
-    for i, part in ipairs(pv.parts) do
-        if i > S.PLATE_LINES then
-            lines[#lines + 1] = "and " .. (#pv.parts - S.PLATE_LINES) .. " more"
-            break
-        end
-        lines[#lines + 1] = S.name(part.stem) .. " " .. S.num(part.n)
-    end
-    return table.concat(lines, "\n")
+    local foot = "Into your nearest settlement"
+    if pv.lost then foot = "Lost: you hold no settlement" end
+    return tip_lines(S.CAPTURE_VERB[kind] .. " takes:", pv.parts, foot)
 end
 
 function S.capture_plate(opt, pv, kind)

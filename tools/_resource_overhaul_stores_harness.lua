@@ -354,7 +354,7 @@ eq(icon(1, 3).visible, false, "no third good, no third icon")
 eq(icon(1, 2).x - icon(1, 1).x, L0.ICON_PITCH, "icons at the pitch")
 eq(cell(1, 1).x, find("derpy_mr_row_1").x + L0.cols[1][1] + L0.ICON_PITCH, "the name moves past the icons")
 eq(icon(3, 1).visible, false, "Charlie keeps nothing: no icon")
-eq(cell(3, 1).x, find("derpy_mr_row_3").x + L0.cols[1][1], "and its name stays put")
+eq(cell(3, 1).x, cell(1, 1).x, "and its name lines up with the rest (seen ragged in game 2026-10-02)")
 local alpha_cco = CCO["1"]
 CCO["1"] = "derpy_mr_store_coal_stocked=6,derpy_mr_store_brimstone_stocked=9"
 click("derpy_mr_tab_settlements")
@@ -507,6 +507,12 @@ DERPY_MR_FLOWS = nil; click("derpy_mr_tab_trade")
 eq(switch(1, "export").visible, false, "without the flows script: no switches"); eq(#ERRORS, 0, "and no error")
 
 -- ---- the raid plate above a raiding army -----------------------------------------------
+local function fits(tip)
+    for line in string.gmatch(tip .. "\n", "(.-)\n") do
+        eq(#line <= S.TIP_CHARS, true, "a tooltip line fits unwrapped: " .. line)
+    end
+end
+LOC.regions_onscreen_reg_long = "Karak Eight Peaks of the Deep"      -- a long settlement name
 local PREVIEW = {}
 DERPY_MR_FLOWS = { raid_preview = function(ch) return PREVIEW[ch] end }
 local p3d = new("3d_ui_parent", UI_ROOT)
@@ -537,9 +543,12 @@ eq(plate.visible, true, "shown even when copied from a hidden plate")
 eq(plate.images[1], S.PLATE_ICON, "with the stores icon")
 eq(string.find(plate.tip, "Coal 9", 1, true) ~= nil, true, "the tooltip lists each good")
 eq(string.find(plate.tip, "Bravo", 1, true) ~= nil, true, "and where it goes")
+PREVIEW[ch7].to = "reg_long"; REPEATS.derpy_mr_raid_plate(); fits(plate.tip)
+PREVIEW[ch7].to = "reg_b"
 REPEATS.derpy_mr_raid_plate(); eq(plates(rh), 1, "made once, not once a poll")
 PREVIEW[ch7].to = nil; REPEATS.derpy_mr_raid_plate()
 eq(string.find(plate.tip, "no settlement", 1, true) ~= nil, true, "a horde's plate says the goods are lost")
+fits(plate.tip)
 PREVIEW[ch7] = nil; REPEATS.derpy_mr_raid_plate(); eq(plate.visible, false, "hidden when the raid stops")
 rh.visible = false; PREVIEW[ch7] = { total = 1, parts = { { stem = "coal", n = 1 } }, to = "reg_b" }
 REPEATS.derpy_mr_raid_plate(); eq(plate.visible, false, "nothing drawn while CA hides the raid values")
@@ -555,7 +564,7 @@ DERPY_MR_FLOWS = nil; REPEATS.derpy_mr_raid_plate(); eq(plate.visible, false, "w
 -- settlement_captured > button_parent > <option id> > frame > icon_parent > dy_income > icon,
 -- read in game 2026-10-02; the ids are CA's culture_settlement_occupation_options rows.
 eq(DERPY_MR_CAPTURE_KIND[1671725074], "sack", "the generated table knows the Chaos Dwarf sack")
-eq(DERPY_MR_CAPTURE_KIND[1992765694], "raze", "and raze"); eq(DERPY_MR_CAPTURE_KIND[222165943], nil, "not an occupy")
+eq(DERPY_MR_CAPTURE_KIND[1992765694], "raze", "and raze"); eq(DERPY_MR_CAPTURE_KIND[222165943], "occupy", "and occupy")
 local sc = new("settlement_captured", UI_ROOT)
 sc.ctx = { CcoCampaignSettlement = "reg_b" }
 local bpar = new("button_parent", sc)
@@ -567,7 +576,8 @@ end
 local sack_ip, raze_ip, occ_ip = option("1671725074"), option("1992765694"), option("222165943")
 local CALLS = {}
 local CAP = { sack = { total = 50, parts = { { stem = "coal", n = 50 } }, lost = false },
-              raze = { total = 3, parts = { { stem = "iron", n = 3 } }, lost = true } }
+              raze = { total = 3, parts = { { stem = "iron", n = 3 } }, lost = true },
+              occupy = { total = 51, parts = { { stem = "coal", n = 51 } }, lost = false } }
 DERPY_MR_FLOWS = { capture_preview = function(region, taker, kind)
     CALLS[#CALLS + 1] = region.key .. "|" .. tostring(taker and taker:name()) .. "|" .. kind
     return CAP[kind]
@@ -579,8 +589,12 @@ eq(find_uicomponent(sg, "icon").images[0], S.PLATE_ICON, "with the stores icon")
 eq(string.find(sg.tip, "Coal 50", 1, true) ~= nil, true, "the tooltip lists each good")
 eq(string.find(sg.tip, "Sacking", 1, true) ~= nil, true, "and names the choice")
 eq(find_uicomponent(sg, "icon").tip, sg.tip, "the icon says the same")
-eq(rg.text, "3", "Raze gets its own"); eq(string.find(rg.tip, "lost", 1, true) ~= nil, true, "a horde's goods are lost")
-eq(find_uicomponent(occ_ip, S.CAPTURE), false, "an occupy option gets nothing")
+eq(rg.text, "3", "Raze gets its own"); eq(string.find(rg.tip, "no settlement", 1, true) ~= nil, true, "a horde's goods are lost")
+local og = find_uicomponent(occ_ip, S.CAPTURE)
+eq(og.text, "51", "an occupy option shows the store it keeps")
+eq(string.find(og.tip, "keeps", 1, true) ~= nil, true, "and says it is kept, not taken")
+-- CA'S TOOLTIP WRAPS AT ABOUT 50 CHARACTERS (seen in game 2026-10-02: "into Zharr-" / "Naggrund:")
+for _, t in ipairs({ sg.tip, rg.tip, og.tip }) do fits(t) end
 eq(CALLS[1], "reg_b|fac_a|sack", "read for the panel's settlement and the local faction")
 REPEATS.derpy_mr_raid_plate(); eq(#sack_ip.kids, 2, "made once, not once a poll")
 CAP.sack = nil; REPEATS.derpy_mr_raid_plate(); eq(sg.visible, false, "hidden when the sack takes nothing")

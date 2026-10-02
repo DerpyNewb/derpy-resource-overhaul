@@ -277,9 +277,12 @@ def goods():
 # culture_settlement_occupation_options row's `id` (CcoCultureSettlementOccupationOptionRecord's Key),
 # and only that row says which decision it is: the option's name is translated text, and picture
 # names lie (Norsca's raze_serpent, Vampire Coast's sack_build_cove are other decisions).
-DECISION_KIND = {"occupation_decision_sack": "sack", "occupation_decision_raze_without_occupy": "raze"}
+# "occupy": the store stays with the settlement and becomes the taker's (loot-and-occupy too).
+# Not occupy_and_vassal, resettle or colonise: the store goes to someone else, or there is none.
+DECISION_KIND = {"occupation_decision_sack": "sack", "occupation_decision_raze_without_occupy": "raze",
+                 "occupation_decision_occupy": "occupy", "occupation_decision_loot": "occupy"}
 # read off the Chaos Dwarf panel in game, 2026-10-02
-MEASURED_OPTIONS = {1671725074: "sack", 1992765694: "raze", 222165943: None, 1899472825: None}
+MEASURED_OPTIONS = {1671725074: "sack", 1992765694: "raze", 222165943: "occupy", 1899472825: "occupy"}
 
 
 @functools.lru_cache(maxsize=None)
