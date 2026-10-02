@@ -641,4 +641,15 @@ Plan: `superpowers/plans/2026-10-02-resource-overhaul-stores-phase2.md`.
 - **Reopening** keeps the tab and drops the drill-down.
 - **Level** is shown as `building_level()` returns it. Not yet measured in game; see below.
 
-**In game:** not yet checked (phase 2, Task 5).
+**In game** (IEE Conclave, turns 1-2, through the bridge and the author's play, 2026-10-02):
+- **Button:** sits in the hub's column. **Speed:** the panel opens in 0.006 s.
+- **Row clicks work:** `ComponentLClickUp` reaches `derpy_mr_row_<i>` through
+  `list_clip > rows_holder`.
+- **Level is right as returned:** Zharr-Naggrund 3 / 600, The Falls of Doom 2 / 400.
+- **Capture:** a captured settlement keeps its stock. Eagle Eyries held the previous owner's
+  Wyvern Scales (3/200) and keeps filling for the new owner. Raze and abandon are unmeasured.
+- **Two faults, both fixed:**
+  - Tab and Back labels went blank on hover, because `SetStateText` writes the current state
+    only. The label is now written to hover and standard.
+  - The open tab had no selected look. It now wears CA's `button_square_large_text_selected`
+    art on images 0 and 1, which the engine maps to the faction's theme skin.

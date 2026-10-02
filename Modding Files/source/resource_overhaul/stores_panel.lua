@@ -251,6 +251,14 @@ S.SCROLL_MS = 16            -- every frame: the rows trail the bar by up to one 
 S.FOLLOW_MS = 300           -- the opener follows the strip's end a few times a second
 S.PLACE_TRIES = 150         -- x2.0s: the HUD is not built at first tick
 S.data = {}                 -- what each row shows, for the click handler
+-- THE OPEN TAB IS LIT: CA's selected art on image 0 (standard) and 1 (hover), the order
+-- tools/gen_mr_ui.py emits them in.
+S.TAB_ART = {
+    [true] = { "ui/skins/default/button_square_large_text_selected.png",
+               "ui/skins/default/button_square_large_text_selected_hover.png" },
+    [false] = { "ui/skins/default/button_square_large_text_active.png",
+                "ui/skins/default/button_square_large_text_hover.png" },
+}
 
 function S.root() return core:get_ui_root() end
 function S.panel() return find_uicomponent(S.root(), S.PANEL) end
@@ -272,6 +280,16 @@ local function set(c, s)
     if is_uicomponent(c) then c:SetStateText(s or "") end
 end
 
+-- A BUTTON'S LABEL GOES IN BOTH STATES. SetStateText writes the current state only, so a label
+-- set once vanished the moment the mouse arrived (seen in game 2026-10-02; EX's row buttons).
+local function label(c, s)
+    if not is_uicomponent(c) then return end
+    c:SetState("hover")
+    c:SetStateText(s)
+    c:SetState("standard")
+    c:SetStateText(s)
+end
+
 function S.build()
     local root = S.root()
     pcall(function() root:CreateComponent(S.PANEL, S.PATH .. "derpy_mr_stores_panel") end)
@@ -280,9 +298,9 @@ function S.build()
     p:SetVisible(false)
     p:SetInteractive(false)
     set(find_uicomponent(p, "title_text"), "Stores")
-    set(find_uicomponent(p, S.TAB.goods), "Goods")
-    set(find_uicomponent(p, S.TAB.settlements), "Settlements")
-    set(find_uicomponent(p, S.BACK), "Back")
+    label(find_uicomponent(p, S.TAB.goods), "Goods")
+    label(find_uicomponent(p, S.TAB.settlements), "Settlements")
+    label(find_uicomponent(p, S.BACK), "Back")
     return p
 end
 
@@ -462,6 +480,14 @@ function S.refresh()
     set(find_uicomponent(p, "hint_text"), v.hint or "")
     local back = find_uicomponent(p, S.BACK)
     if is_uicomponent(back) then back:SetVisible(S.focus ~= nil) end
+    for view, name in pairs(S.TAB) do
+        local t = find_uicomponent(p, name)
+        if is_uicomponent(t) then
+            local art = S.TAB_ART[view == S.view]
+            t:SetImagePath(art[1], 0)
+            t:SetImagePath(art[2], 1)
+        end
+    end
     local empty = find_uicomponent(p, "empty_text")
     if is_uicomponent(empty) then
         set(empty, v.empty)

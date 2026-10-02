@@ -340,6 +340,9 @@ def check_xml():
             assert p in have, "%s: not in CA's ui packs: %s" % (rel, p)
         for s in re.findall(r'soundcategory="([^"]+)"', text):
             assert s in cats, "%s: a sound CA never uses: %s" % (rel, s)
+    with io.open(SRC, encoding="utf-8") as fh:       # art the script swaps in at runtime
+        for p in re.findall(r'"(ui/[^"]+\.png)"', fh.read()):
+            assert p in have, "the script names art CA does not ship: %s" % p
     for stem, _res, icon in goods():
         assert icon in have or os.path.isfile(os.path.join(ROOT, PACK_REL, *icon.split("/"))), \
             "no icon for %s: %s" % (stem, icon)

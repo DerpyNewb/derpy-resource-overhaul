@@ -182,6 +182,7 @@ UIC.__index = UIC
 local function new(name, parent)
     local c = setmetatable({ name = name, kids = {}, parent = parent, x = 0, y = 0, w = 10, h = 10,
                              visible = true, text = "", tip = "", interactive = false,
+                             state = "standard", texts = {},
                              __uic = true }, UIC)
     if parent then parent.kids[#parent.kids + 1] = c end
     return c
@@ -212,10 +213,13 @@ function UIC:SetCanResizeHeight() end
 function UIC:SetVisible(v) self.visible = v and true or false end
 function UIC:Visible() return self.visible end
 function UIC:SetInteractive(v) self.interactive = v and true or false end
-function UIC:SetStateText(t) self.text = t end
-function UIC:GetStateText() return self.text end
+-- SetStateText writes the CURRENT state only, as the engine's does; .text is the standard one.
+function UIC:SetStateText(t) self.texts[self.state] = t; if self.state == "standard" then self.text = t end end
+function UIC:GetStateText() return self.texts[self.state] or "" end
+function UIC:SetState(s) self.state = s end
+function UIC:CurrentState() return self.state end
 function UIC:SetTooltipText(t) self.tip = t end
-function UIC:SetImagePath(p) self.image = p end
+function UIC:SetImagePath(p, i) self.image = p; self.images = self.images or {}; self.images[i or 0] = p end
 function UIC:SetProperty(k, v) self[k] = v end
 function UIC:Layout() end
 function UIC:Adopt(c) unlink(c); c.parent = self; self.kids[#self.kids + 1] = c end
@@ -279,11 +283,22 @@ local p = find("derpy_mr_stores_panel")
 eq(p.visible, true, "open"); eq(p.interactive, true, "eats the mouse while open")
 eq(p.x, 530, "centred across"); eq(p.y, 220, "centred down")
 eq(find("title_text").text, "Stores", "title"); eq(find("hdr_2").text, "Held", "header")
+for name, label in pairs({ derpy_mr_tab_goods = "Goods", derpy_mr_tab_settlements = "Settlements", derpy_mr_back = "Back" }) do
+    local c = find(name); c:SetState("hover")
+    eq(c:GetStateText(), label, name .. " keeps its label on hover"); c:SetState("standard")
+    eq(c:GetStateText(), label, name .. " label")
+end
 eq(shown_rows(), 3, "three goods"); eq(cell(1, 1).text, "Coal", "first good")
 eq(cell(1, 4).text, "300 / 600", "space"); eq(cell(3, 1).text, "Brimstone", "made, not held")
 eq(find_uicomponent(find("derpy_mr_row_1"), "icon").image ~= nil, true, "icon set")
 eq(find("derpy_mr_row_2").y - find("derpy_mr_row_1").y, 28, "row pitch")
 eq(find("derpy_mr_back").visible, false, "no Back on a top view")
+local SEL = "ui/skins/default/button_square_large_text_selected.png"
+local OFF = "ui/skins/default/button_square_large_text_active.png"
+local function lit(name) return (find(name).images or {})[0] end
+eq(lit("derpy_mr_tab_goods"), SEL, "the open tab is lit")
+eq(find("derpy_mr_tab_goods").images[1], "ui/skins/default/button_square_large_text_selected_hover.png", "and lit on hover")
+eq(lit("derpy_mr_tab_settlements"), OFF, "the other is not")
 eq(find("empty_text").visible, false, "no empty text over rows")
 -- the list: rows_holder inside the clip, no slider for three rows; a scroll carries every row
 eq(find_uicomponent(find("list_clip"), "rows_holder") ~= false, true, "rows inside the list")
@@ -300,8 +315,10 @@ eq(find("derpy_mr_row_1").tip, S.FULL_TIP, "full tooltip"); eq(find("derpy_mr_ba
 click("derpy_mr_back"); eq(cell(1, 1).text, "Coal", "back to the goods")
 -- the Settlements tab, then one settlement's stores
 click("derpy_mr_tab_settlements"); eq(shown_rows(), 3, "three settlements")
+eq(lit("derpy_mr_tab_settlements"), SEL, "the clicked tab is lit"); eq(lit("derpy_mr_tab_goods"), OFF, "the old one is not")
 eq(cell(2, 5).text, "Coal 100%", "fullest store")
 click("derpy_mr_row_1"); eq(find("sub_title").text, "Stores of Alpha", "settlement drill-down")
+eq(lit("derpy_mr_tab_settlements"), SEL, "a drill-down keeps its tab lit")
 eq(cell(2, 3).text, "+6", "brimstone per turn")
 click("derpy_mr_row_9"); eq(find("sub_title").text, "Stores of Alpha", "a row past the data does nothing")
 -- turn start reads the realm again while the panel is open
