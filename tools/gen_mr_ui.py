@@ -31,14 +31,14 @@ LUA_EXE = r"C:\Program Files (x86)\Lua\5.1\lua.exe"
 # THE LAYOUT, in panel coordinates: (x, y, w, h). The Lua MoveTo's every component from these;
 # the .twui.xml sizes are the same numbers. cols are (x, w) inside a row, which starts at list x.
 L = {
-    "W": 820, "H": 640, "PITCH": 28, "ROWS": 16, "SLIDER_W": 16, "HANDLE_H": 40,
+    "W": 860, "H": 640, "PITCH": 28, "ROWS": 16, "SLIDER_W": 16, "HANDLE_H": 40,
     "BUTTON": 48, "GAP": 4,
-    "title": (20, 14, 500, 28), "close": (778, 12, 30, 30),
+    "title": (20, 14, 500, 28), "close": (818, 12, 30, 30),
     "tab_goods": (20, 52, 140, 26), "tab_settlements": (168, 52, 140, 26),
-    "back": (680, 52, 120, 26), "sub_title": (20, 86, 780, 22), "head_y": 112,
-    "list": (20, 138, 780, 448), "empty": (20, 150, 780, 60), "hint": (20, 600, 780, 22),
+    "back": (720, 52, 120, 26), "sub_title": (20, 86, 820, 22), "head_y": 112,
+    "list": (20, 138, 820, 448), "empty": (20, 150, 820, 60), "hint": (20, 600, 820, 22),
     "icon": (6, 2, 24, 24),
-    "cols": ((36, 230), (270, 110), (390, 110), (510, 130), (650, 110)),
+    "cols": ((36, 204), (244, 90), (338, 100), (442, 110), (556, 240)),
 }
 
 # CA's own icon for each of its 17 goods (the Exchange's EX.INFO). Five filenames do not match
@@ -299,6 +299,29 @@ def check_layout():
     assert end <= lw - L["SLIDER_W"], "the last column runs under the slider"
 
 
+# ponytail: a flat glyph-width estimate for body_12, not a font metric. The cells are "Never
+# split", so text past its column runs into the next one. Measure in game if a column clips.
+CHAR_W = 7
+
+
+def check_text_fits():
+    """The longest good name fits the name column and, with " 100%", the Fullest store column;
+    every header the source writes fits its column; the widest Space sum fits column 4."""
+    import gen_resource_overhaul as G
+    longest = max((n for _r, _f, n in G.store_stems().values()), key=len)
+    widths = [w for _x, w in L["cols"]]
+    assert CHAR_W * len(longest) <= widths[0], "%r overflows the name column" % longest
+    assert CHAR_W * len(longest + " 100%") <= widths[4], "%r overflows Fullest store" % longest
+    assert CHAR_W * len("123456 / 200000") <= widths[3], "a realm-wide Space sum overflows"
+    with io.open(SRC, encoding="utf-8") as fh:
+        src = fh.read()
+    heads = re.findall(r"v\.heads = \{([^}]*)\}", src)
+    assert len(heads) == 4, "expected four views' headers, found %d" % len(heads)
+    for h in heads:
+        for j, label in enumerate(re.findall(r'"([^"]*)"', h)):
+            assert CHAR_W * len(label) <= widths[j], "header %r overflows column %d" % (label, j + 1)
+
+
 def check_xml():
     """Five files; every GUID unique across them and linked; every image and sound real."""
     import gen_mr_emitter as E
@@ -324,6 +347,7 @@ def check_xml():
 
 def selftest():
     check_layout()
+    check_text_fits()
     check_xml()
     import gen_resource_overhaul as G
     g = goods()

@@ -470,6 +470,10 @@ function S.refresh()
     -- THE HOLDER STARTS AT THE TOP; a kept list's poll puts it back where the bar is.
     local px, py = p:Position()
     put(find_uicomponent(p, "rows_holder"), px, py, L.list)
+    -- AS TALL AS WHAT IT HOLDS (docs/CUSTOM_UI.md, drawn whole, step 5): a row outside its
+    -- parent's box is not known to take clicks or the wheel.
+    local holder = find_uicomponent(p, "rows_holder")
+    if is_uicomponent(holder) then sized(holder, L.list[3], math.max(L.ROWS, #v.rows) * L.PITCH) end
     S.ensure_list(p, #v.rows)
     S.draw_rows(p, v.rows)
 end

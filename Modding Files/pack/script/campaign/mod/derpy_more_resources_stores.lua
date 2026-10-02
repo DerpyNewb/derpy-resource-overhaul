@@ -8,16 +8,16 @@ DERPY_MR_STORES_L = {
     PITCH = 28,
     ROWS = 16,
     SLIDER_W = 16,
-    W = 820,
-    back = {680, 52, 120, 26},
-    close = {778, 12, 30, 30},
-    cols = {{36, 230}, {270, 110}, {390, 110}, {510, 130}, {650, 110}},
-    empty = {20, 150, 780, 60},
+    W = 860,
+    back = {720, 52, 120, 26},
+    close = {818, 12, 30, 30},
+    cols = {{36, 204}, {244, 90}, {338, 100}, {442, 110}, {556, 240}},
+    empty = {20, 150, 820, 60},
     head_y = 112,
-    hint = {20, 600, 780, 22},
+    hint = {20, 600, 820, 22},
     icon = {6, 2, 24, 24},
-    list = {20, 138, 780, 448},
-    sub_title = {20, 86, 780, 22},
+    list = {20, 138, 820, 448},
+    sub_title = {20, 86, 820, 22},
     tab_goods = {20, 52, 140, 26},
     tab_settlements = {168, 52, 140, 26},
     title = {20, 14, 500, 28},
@@ -550,6 +550,10 @@ function S.refresh()
     -- THE HOLDER STARTS AT THE TOP; a kept list's poll puts it back where the bar is.
     local px, py = p:Position()
     put(find_uicomponent(p, "rows_holder"), px, py, L.list)
+    -- AS TALL AS WHAT IT HOLDS (docs/CUSTOM_UI.md, drawn whole, step 5): a row outside its
+    -- parent's box is not known to take clicks or the wheel.
+    local holder = find_uicomponent(p, "rows_holder")
+    if is_uicomponent(holder) then sized(holder, L.list[3], math.max(L.ROWS, #v.rows) * L.PITCH) end
     S.ensure_list(p, #v.rows)
     S.draw_rows(p, v.rows)
 end

@@ -261,6 +261,8 @@ eq(b ~= false, true, "button made"); eq(b.x, 1454, "right of the strip"); eq(b.y
 eq(b.visible, true, "shown once placed")
 bar.w = 1100; REPEATS.derpy_mr_follow_bar(); eq(b.x, 1535, "follows the strip's end")
 bar.y = -600; REPEATS.derpy_mr_follow_bar(); eq(b.x, 1535, "a strip sliding away is ignored")
+eq(b.y, 2, "a strip sliding away leaves the button where it was")
+bar.y = -40; REPEATS.derpy_mr_follow_bar(); eq(b.y, 0, "a strip just above the screen clamps the button onto it")
 bar.y = -4
 unlink(bar); eq(S.anchor(), nil, "no strip, no anchor"); REPEATS.derpy_mr_follow_bar()
 eq(b.x, 1535, "and the button stays put"); bar.parent = UI_ROOT; UI_ROOT.kids[#UI_ROOT.kids + 1] = bar
@@ -275,7 +277,7 @@ bar.w = 1019; REPEATS.derpy_mr_follow_bar(); eq(b.x, 1535, "the hub owns its pla
 click("derpy_mr_stores_button")
 local p = find("derpy_mr_stores_panel")
 eq(p.visible, true, "open"); eq(p.interactive, true, "eats the mouse while open")
-eq(p.x, 550, "centred across"); eq(p.y, 220, "centred down")
+eq(p.x, 530, "centred across"); eq(p.y, 220, "centred down")
 eq(find("title_text").text, "Stores", "title"); eq(find("hdr_2").text, "Held", "header")
 eq(shown_rows(), 3, "three goods"); eq(cell(1, 1).text, "Coal", "first good")
 eq(cell(1, 4).text, "300 / 600", "space"); eq(cell(3, 1).text, "Brimstone", "made, not held")
@@ -318,6 +320,7 @@ eq(find("hdr_1").text, "Settlement", "reopened on the Settlements tab")
 eq(shown_rows(), 200, "every settlement drawn"); eq(find("vslider").visible, true, "a slider for 200 rows")
 eq(cell(1, 1).text, "r1", "a region with no loc name shows its key")
 eq(find("derpy_mr_row_200").y - find("derpy_mr_row_1").y, 199 * 28, "drawn whole, at the pitch")
+eq(find("rows_holder").h, 200 * 28, "the holder is as tall as what it holds")
 -- no settlements
 click("derpy_mr_close"); LOCAL = "fac_empty"; click("derpy_mr_stores_button"); click("derpy_mr_tab_goods")
 eq(shown_rows(), 0, "nothing listed"); eq(find("empty_text").visible, true, "says why")
