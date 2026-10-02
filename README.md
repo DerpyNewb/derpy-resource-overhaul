@@ -1,4 +1,4 @@
-# Derpy More Resources
+# Derpy Resource Overhaul
 
 A campaign mod for **Total War: WARHAMMER III**. It adds 37 new trade goods to the
 campaign map. They are made by the buildings the lore says would make them, only where the
@@ -8,6 +8,15 @@ It needs no map edit and no new start position. Every good is a production row o
 the game already has, gated by a condition on the region. A port on Naggaroth's cold coast
 lands Sea Dragon Hide, and a port in the jungle lands Rum and Pearls. A Dwarf hold in the
 mountains digs Gromril, and the farms of the Empire grow Grain.
+
+It also makes four of CA's own goods as common as these. Salt, Furs, Pottery and Wine sit on
+only 11 to 13 deposits in vanilla. Here harbours on warm coasts make Salt, the frozen north
+traps Furs, the Old World's craft houses fire Pottery and its southern farms press Wine.
+These rows use CA's own production effects, so the goods are still CA's.
+
+Until 2026-10-02 this mod was called Derpy More Resources. Its packs are now
+`derpy_resource_overhaul.pack` and `derpy_resource_overhaul_iee.pack`. Every in-game key is
+unchanged, and so are the DB table file names inside the packs.
 
 **Status:** not on the Steam Workshop yet. Tested in an Immortal Empires Expanded campaign
 through a live connection to the running game. A Salted Fish surplus traded in a vanilla
@@ -59,7 +68,7 @@ building set, so one chain shared between races appears for only one of them.
 
 ## Other mods
 
-- **Immortal Empires Expanded.** `derpy_more_resources_iee.pack` extends the conditions to
+- **Immortal Empires Expanded.** `derpy_resource_overhaul_iee.pack` extends the conditions to
   IEE's 236 extra regions (Ind, Khuresh, Nippon and the rest). The IEE pack itself is not
   needed to build anything here.
 - **Derpy's Grand Trade Exchange.** When both are installed, the Exchange trades all 37
@@ -74,17 +83,17 @@ building set, so one chain shared between races appears for only one of them.
 
 Python 3 and Pillow. The tools read CA's data straight out of your own game install. The paths
 are at the top of `tools/read_vanilla_db.py`, `tools/read_vanilla_loc.py`,
-`tools/survey_resource_map.py` and `tools/gen_more_resources.py`. Set them to your install.
+`tools/survey_resource_map.py` and `tools/gen_resource_overhaul.py`. Set them to your install.
 
 ```
-py tools/gen_more_resources.py              # write every TSV, the loc and the map label
-py tools/gen_more_resources.py --check      # build and verify, write nothing
-py tools/gen_more_resources.py --selftest
-py tools/gen_more_resources.py --audit      # what each building makes, by its in-game name
-py tools/gen_more_resources.py --pack       # build the .pack files (RPFM's MCP server open)
+py tools/gen_resource_overhaul.py              # write every TSV, the loc and the map label
+py tools/gen_resource_overhaul.py --check      # build and verify, write nothing
+py tools/gen_resource_overhaul.py --selftest
+py tools/gen_resource_overhaul.py --audit      # what each building makes, by its in-game name
+py tools/gen_resource_overhaul.py --pack       # build the .pack files (RPFM's MCP server open)
 ```
 
-`Modding Files/reference/more_resources_building_audit.md` is the `--audit` output: every
+`Modding Files/reference/resource_overhaul_building_audit.md` is the `--audit` output: every
 building that makes a good, by its in-game name per level, beside what it makes.
 
 The icons are made by `tools/gen_commodity_icons.py` and `tools/gen_building_icons.py`. Each
@@ -104,12 +113,12 @@ Nothing of Games Workshop's or Creative Assembly's is published here:
 
 The generator rebuilds all of them from your install. The TSVs that are here hold only this
 mod's own rows: production, conditions, prices, unit names, the new chains' placement, and
-the text. `tools/sync_more_resources_repo.py` refuses to copy anything else into this
+the text. `tools/sync_resource_overhaul_repo.py` refuses to copy anything else into this
 repository.
 
 ## How it is tested
 
-There is no test framework. Each tool carries a `--selftest`, and `gen_more_resources.py`
+There is no test framework. Each tool carries a `--selftest`, and `gen_resource_overhaul.py`
 checks every build before writing it:
 
 - **Conditions.** Each condition is rendered to CA's expression language for the game, and

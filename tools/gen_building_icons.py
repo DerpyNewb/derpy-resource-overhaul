@@ -1,4 +1,4 @@
-"""The rare-good buildings' icons (Derpy More Resources), in CA's resource-building style.
+"""The rare-good buildings' icons (Derpy Resource Overhaul), in CA's resource-building style.
 
     py tools/gen_building_icons.py                  # draw any missing glyph, then compose all
     py tools/gen_building_icons.py gromril feathers # (re)draw just these glyphs, then compose
@@ -14,7 +14,7 @@ silhouette with its detail cut in as transparent lines.
 
 So: Codex draws each glyph as a black stencil on white, with CA's own generic glyphs as the
 style reference (painted art run through edge detection gave speckle, not lines). This script
-then takes the race frame from CA's own icon - RARE[good]["frame"] in gen_more_resources -
+then takes the race frame from CA's own icon - RARE[good]["frame"] in gen_resource_overhaul -
 fills its cog solid, and cuts the glyph in. Colour and alpha are read off that CA icon, so a
 shipped icon matches its frame exactly.
 
@@ -31,7 +31,7 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gen_commodity_icons as gci       # noqa: E402  the Codex driver
-import gen_more_resources as gmr        # noqa: E402  RARE: goods, frames, chain keys
+import gen_resource_overhaul as gmr        # noqa: E402  RARE: goods, frames, chain keys
 import read_pack_index as rpi           # noqa: E402
 import read_vanilla_loc as rvl          # noqa: E402
 

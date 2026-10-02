@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-02
+
+- Renamed to Derpy Resource Overhaul. New pack names, same keys.
+- Salt, Furs, Pottery and Wine made common, on CA's own effects.
+- Wine only from Bretonnian, Empire and High Elf farms.
+
 ## 2026-10-01
 
 - First public source.

@@ -1,14 +1,16 @@
-"""Derpy More Resources - new trade goods for every faction, no map edit.
+"""Derpy Resource Overhaul - new trade goods for every faction, no map edit.
 
-    py tools/gen_more_resources.py              # write TSVs + loc, copy icons
-    py tools/gen_more_resources.py --check      # build and verify, write nothing
-    py tools/gen_more_resources.py --selftest
-    py tools/gen_more_resources.py --audit      # what each building makes, by its in-game name
-    py tools/gen_more_resources.py --pack       # RPFM open: build Modpacks/derpy_more_resources.pack
-                                                # and one derpy_more_resources_<map>.pack per SUBMODS
+    py tools/gen_resource_overhaul.py              # write TSVs + loc, copy icons
+    py tools/gen_resource_overhaul.py --check      # build and verify, write nothing
+    py tools/gen_resource_overhaul.py --selftest
+    py tools/gen_resource_overhaul.py --audit      # what each building makes, by its in-game name
+    py tools/gen_resource_overhaul.py --pack       # RPFM open: build Modpacks/derpy_resource_overhaul.pack
+                                                # and one derpy_resource_overhaul_<map>.pack per SUBMODS
+                                                # (DB tables inside keep FRAG, derpy_more_resources)
 
 37 trade goods (GOODS). Salted Fish alone was proven first in an IEE game - produced, on the
-map label, and traded in a Trade Agreement (docs/TRADE_RESOURCES.md §10-§11).
+map label, and traded in a Trade Agreement (docs/TRADE_RESOURCES.md §10-§11). CA_GOODS makes
+four of CA's own thin goods - Salt, Furs, Pottery, Wine - as common, on CA's own effects (§18).
 
 Every row is cloned off a vanilla donor good (Salt, res_rom_lead) read out of CA's db.pack, so
 the column order and versions are CA's own. A sweep of all 1,600 vanilla tables for res_rom_lead
@@ -31,10 +33,11 @@ import read_vanilla_db as rvd
 import survey_resource_map as srm
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(ROOT, "Modding Files", "source", "more_resources")
+OUT = os.path.join(ROOT, "Modding Files", "source", "resource_overhaul")
 PACK = os.path.join(ROOT, "Modding Files", "pack")
 ICONS = os.path.join(ROOT, "Modding Files", "source", "exchange_icons", "new_commodities")
-FRAG = "derpy_more_resources"
+FRAG = "derpy_more_resources"   # DB table and loc file names: kept through the rename
+PACK_NAME = "derpy_resource_overhaul"   # the .pack files (was derpy_more_resources until 2026-10-02)
 ICON_DIR = "ui/campaign ui/effect_bundles"
 
 # WHERE A GOOD COMES FROM: a list of sources, each (pool, condition). The POOL is which buildings
@@ -307,6 +310,33 @@ GOODS = {
         sources=[("settlement", ALL(CLIM("climate_mountain"), AREA("badlands", "mountains_of_mourn")))]),
 }
 
+# CA's OWN common goods, made as common as ours (user, 2026-10-02): CA put Salt, Furs, Pottery and
+# Wine on only 11-13 deposits each. Same sources and lore gates as GOODS, but the row carries CA's
+# own production effect, so no resource, icon or loc is minted. A level that already makes the good
+# in vanilla keeps CA's row and gets none of ours (Wood Elf Game Lodges already make Furs).
+CA_GOODS = {
+    "salt": dict(res="res_rom_lead", effect="wh_main_effect_region_resource_salt_production",
+                 sources=[("port", CLIM("climate_temperate", "climate_savannah", "climate_desert",
+                                        "climate_island"))]),
+    "furs": dict(res="res_rom_furs", effect="wh_main_effect_region_resource_furs_production",
+                 sources=[("hunt", ANY(CLIM("climate_frozen"), ALL(ORIGIN("ogr"), CLIM("climate_mountain")))),
+                          ("farm", CLIM("climate_frozen")),
+                          (("settlement", "nor"), CLIM("climate_frozen"))]),
+    "pottery": dict(res="res_rom_textiles", effect="wh_main_effect_region_resource_pottery_production",
+                    sources=[("craft", ALL(NOT(CLIM("climate_frozen", "climate_chaotic", "climate_mountain")),
+                                           ANY(AREA(*(FARMLAND + ("araby",))), ORIGIN("teb"))))]),
+    "wine": dict(res="res_rom_wine", effect="wh_main_effect_region_resource_wine_production",
+                 sources=[("vineyard", ALL(CLIM("climate_temperate", "climate_savannah", "climate_island"),
+                                       ANY(AREA("bretonnia", "southern_empire", "border_princes",
+                                                "eastern_border_princes", "western_border_princes", "ulthuan"),
+                                           ORIGIN("teb"))))]),
+}
+
+
+def good_spec(good):
+    return GOODS[good] if good in GOODS else CA_GOODS[good]
+
+
 # Our units, beside CA's twelve (commodity_unit_names): key -> (singular, plural).
 UNITS = {"derpy_horses": ("horse", "horses"), "derpy_crates": ("crate", "crates"),
          "derpy_bolts": ("bolt", "bolts"), "derpy_flasks": ("flask", "flasks"),
@@ -492,7 +522,7 @@ NOT_A_MINE = re.compile(r"_military")
 SETTLE_SKIP = re.compile(r"ruin|prologue|dummy|endgame|horde")
 TABLES = {"port": [6, 8, 12], "mine": [6, 8, 12], "settlement": [4, 6, 8, 10, 12],
           **{k: [6, 8, 12] for k in ("farm", "hunt", "teahouse", "inn", "craft", "forge", "dig",
-                                     "stables", "eyrie")}}
+                                     "stables", "eyrie", "vineyard")}}
 
 # The economy buildings of each kind, by culture - the "green" buildings. Listed rather than
 # matched, because the naming is per DLC (Cathay's growth/income yin and yang, the Chaos Dwarf
@@ -522,6 +552,9 @@ KIND_CHAINS = {
                 "wh_main_NORSCA_stables", "wh3_main_ksl_growth_xp"],
     # where griffons and pegasi are kept: the Pegasus Aerie and the Menagerie
     "eyrie": ["wh_main_BRETONNIA_stables", "wh_main_EMPIRE_stables"],
+    # the farms of the peoples who keep vines - not a Dwarf barley field or a Druchii manor
+    "vineyard": ["wh_main_BRETONNIA_farm_basic", "wh_main_BRETONNIA_farm_extra", "wh_main_EMPIRE_farm_basic",
+                 "wh2_main_hef_farm"],
 }
 # A chain's race, from the tag in its key - CA's culture variants leave 80 settlement chains
 # without a culture, so the key is the only reliable signal. Synonyms fold to one code.
@@ -852,7 +885,7 @@ def evaluate(c, g):
 
 def reaches(good, g):
     """Can this region make the good: some source's building can stand here and its rule holds."""
-    for pool, cond in GOODS[good]["sources"]:
+    for pool, cond in good_spec(good)["sources"]:
         kind = _kind(pool)
         if kind == "port" and not g["coastal"]:
             continue
@@ -876,6 +909,30 @@ def build():
         assert list(row) == cols, "%s columns %s != CA's %s" % (table, list(row), cols)
         t.setdefault(table, (ver, cols, []))[2].append(row)
 
+    van_made = {(r["building"], r["effect"]) for r in db("building_effects_junction_tables")[1]}
+
+    def produce(good, e):
+        """One production row per level of each source's pool, gated by the source's condition."""
+        g = good_spec(good)
+        for i, (pool, cond) in enumerate(g["sources"]):
+            req = ""
+            if cond is not None:
+                req = cond_key(good, i)
+                # display_only_active_effects: the tooltip shows the line only where it applies
+                add("building_effect_context_expressions_tables", {
+                    "expression": render(cond), "key": req,
+                    "display_only_active_effects": True, "always_show_display_text": False})
+            for c, levels in sorted(pool_chains(pool).items()):
+                table = TABLES[_kind(pool)]
+                for n, lvl in enumerate(levels):
+                    if (lvl, e) in van_made:   # CA already makes it here; its row stands
+                        continue
+                    v = float(max(1, round(table[min(n, len(table) - 1)] * g.get("scale", 1.0))))
+                    add("building_effects_junction_tables", {   # damaged = half, as CA's own rows
+                        "building": lvl, "effect": e, "effect_scope": "building_to_building_own",
+                        "value": v, "value_damaged": damaged(v), "value_ruined": 0.0,
+                        "context_requirement": req})
+
     loc = []
     donor, = [r for r in db("resources_tables")[1] if r["key"] == DONOR]
     dfx, = [r for r in db("effects_tables")[1] if r["effect"] == "wh_main_effect_region_resource_salt_production"]
@@ -897,28 +954,15 @@ def build():
                                    icon_negative=icon(good) + ".png"))
         add("effect_bonus_value_resource_junction_tables",
             {"effect": e, "bonus_value_id": "production", "resource": k})
-        for i, (pool, cond) in enumerate(g["sources"]):
-            req = ""
-            if cond is not None:
-                req = cond_key(good, i)
-                # display_only_active_effects: the tooltip shows the line only where it applies
-                add("building_effect_context_expressions_tables", {
-                    "expression": render(cond), "key": req,
-                    "display_only_active_effects": True, "always_show_display_text": False})
-            for c, levels in sorted(pool_chains(pool).items()):
-                table = TABLES[_kind(pool)]
-                for n, lvl in enumerate(levels):
-                    v = float(max(1, round(table[min(n, len(table) - 1)] * g.get("scale", 1.0))))
-                    add("building_effects_junction_tables", {   # damaged = half, as CA's own rows
-                        "building": lvl, "effect": e, "effect_scope": "building_to_building_own",
-                        "value": v, "value_damaged": damaged(v), "value_ruined": 0.0,
-                        "context_requirement": req})
+        produce(good, e)
         unit = UNITS.get(g["unit"], (None, g["unit"]))[1]
         loc += [("resources_onscreen_text_" + k, g["name"]),
                 ("resources_description_" + k, g["desc"]),
                 ("resources_long_description_" + k, ""),
                 ("effects_description_" + e, "%s resource production: %%n %s" % (g["name"], unit)),
                 ("uied_component_texts_localised_string_%s_Tooltip" % label_id(good), tooltip(good))]
+    for good, g in CA_GOODS.items():   # CA's goods: rows only, on CA's own effect and loc
+        produce(good, g["effect"])
     # the rare goods' own buildings, every wide row cloned off one vanilla three-level chain
     chain_row, = [r for r in db("building_chains_tables")[1] if r["key"] == BUILD_DONOR]
     lvl_rows = sorted((r for r in db("building_levels_tables")[1] if r["chain"] == LEVEL_DONOR),
@@ -964,7 +1008,7 @@ def build():
     return t, loc
 
 
-AUDIT = os.path.join(ROOT, "Modding Files", "reference", "more_resources_building_audit.md")
+AUDIT = os.path.join(ROOT, "Modding Files", "reference", "resource_overhaul_building_audit.md")
 
 
 def audit():
@@ -989,8 +1033,8 @@ def audit():
     by_pool = collections.defaultdict(list)
     for ch, gs in made.items():
         by_pool[" + ".join(sorted({k for k, _g in gs}))].append(ch)
-    out = ["# Derpy More Resources - what each building makes", "",
-           "Generated by `py tools/gen_more_resources.py --audit`. Names and descriptions are CA's own",
+    out = ["# Derpy Resource Overhaul - what each building makes", "",
+           "Generated by `py tools/gen_resource_overhaul.py --audit`. Names and descriptions are CA's own",
            "loc; a good only appears in game where its lore condition holds for the region", ""]
     for pool in sorted(by_pool):
         out += ["## %s (%d buildings)" % (pool, len(by_pool[pool])), "",
@@ -1024,7 +1068,7 @@ def audit():
 AI_LUA = os.path.join(PACK, "script", "campaign", "mod", "derpy_more_resources_ai.lua")
 AI_PACE = 5        # turns between one AI faction's actions, staggered per faction
 AI_RESERVE = 2     # it pays only while it holds this many times the price
-AI_HARNESS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_more_resources_ai_harness.lua")
+AI_HARNESS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_resource_overhaul_ai_harness.lua")
 LUA_EXE = r"C:\Program Files (x86)\Lua\5.1\lua.exe"
 
 _AI_LOGIC = """
@@ -1151,8 +1195,8 @@ def ai_script():
     lvl = sorted((r for r in db("building_levels_tables")[1] if r["chain"] == LEVEL_DONOR),
                  key=lambda r: r["level"])[:3]
     regions = ai_regions()
-    lines = ["-- Derpy More Resources: the AI builds the rare goods' buildings, only where they work.",
-             "-- GENERATED by tools/gen_more_resources.py (ai_script). Edit the generator, not this file.",
+    lines = ["-- Derpy Resource Overhaul: the AI builds the rare goods' buildings, only where they work.",
+             "-- GENERATED by tools/gen_resource_overhaul.py (ai_script). Edit the generator, not this file.",
              "MR_AI = {}",
              "MR_AI.PACE = %d" % AI_PACE,
              "MR_AI.RESERVE = %d" % AI_RESERVE,
@@ -1208,7 +1252,7 @@ def check_ai(text):
 def reach_table():
     """good -> {campaign: regions it can be made in}, from the region signals."""
     out = {}
-    for good in GOODS:
+    for good in list(GOODS) + list(CA_GOODS):
         n = collections.Counter()
         for g in _signals().values():
             if reaches(good, g):
@@ -1257,6 +1301,15 @@ def check(t, loc):
         seen.add((r["building"], r["effect"]))
     for good in GOODS:   # every good has rows
         assert any(r["effect"] == effect(good) for r in t["building_effects_junction_tables"][2]), good
+    # CA's goods: CA's own effect, bound to that good, and no row of ours lands on a CA row's key
+    assert not set(CA_GOODS) & set(GOODS)
+    van_bind = {(r["effect"], r["bonus_value_id"]): r["resource"] for r in db("effect_bonus_value_resource_junction_tables")[1]}
+    for good, g in CA_GOODS.items():
+        assert van_bind.get((g["effect"], "production")) == g["res"], (good, g["effect"])
+        assert any(r["effect"] == g["effect"] for r in t["building_effects_junction_tables"][2]), good
+    van_made = {(r["building"], r["effect"]) for r in db("building_effects_junction_tables")[1]}
+    clash = [r for r in t["building_effects_junction_tables"][2] if (r["building"], r["effect"]) in van_made]
+    assert not clash, "rows on a key CA already uses: %s" % clash[:3]
     # the donor's footprint is copied whole: same row count per table as Salt has
     for table, want in (("resources_to_campaign_junctions_tables", 2),
                         ("cai_personality_strategic_resource_values_tables", 78)):
@@ -1264,8 +1317,9 @@ def check(t, loc):
     bound = {r["effect"] for r in t["effect_bonus_value_resource_junction_tables"][2]}
     assert bound == {effect(g) for g in GOODS}
     # THE LORE PARITY: what ships reaches exactly the regions the rules table names, per region
-    rules = dict((c, test) for c, test, _l in grc.RULES)
-    for good in GOODS:
+    rules = dict((c, test) for c, test, _l in grc.RULES + grc.CA_RULES)
+    assert sorted(c for c, _t, _l in grc.CA_RULES) == sorted(CA_GOODS)
+    for good in list(GOODS) + list(CA_GOODS):
         diff = [g["region"] for g in _signals().values() if reaches(good, g) != bool(rules[good](g))]
         assert not diff, "%s: shipped rule and rules table disagree on %d regions, e.g. %s" % (
             good, len(diff), diff[:4])
@@ -1288,7 +1342,8 @@ def check(t, loc):
         assert not bad, "%s chains not buildable in a secondary slot: %s" % (kind, bad)
         assert all(race(c) for c in chains), "%s chain with no race tag" % kind
     # lore: these make no farm/industry goods of their own - a fallback must not creep back in
-    for kind, races in (("farm", {"chd", "nor", "vmp"}), ("craft", {"nor", "vmp"})):
+    for kind, races in (("farm", {"chd", "nor", "vmp"}), ("craft", {"nor", "vmp"}),
+                        ("vineyard", set(CULTURES) - {"brt", "emp", "hef"})):
         leak = sorted(c for c in pool_chains(kind) if race(c) in races)
         assert not leak, "%s pool reaches %s: %s" % (kind, races, leak)
     hall = pool_chains(("settlement", "nor"))
@@ -1437,7 +1492,7 @@ def submod_reach(name):
     for g in sig.values():
         for a in g["areas"] or {"(none)"}:
             out[a][0] += 1
-            for good in GOODS:
+            for good in list(GOODS) + list(CA_GOODS):
                 if reaches(good, g):
                     out[a][1][good] += 1
     return out
@@ -1504,7 +1559,10 @@ def selftest():
                     lambda t: t["building_effects_junction_tables"][2].append(   # another race's bonus
                         dict([r for r in t["building_effects_junction_tables"][2]
                               if r["building"] == "derpy_mr_bld_feathers_brt_1"][0],
-                             effect="wh2_main_effect_resource_recruitment_cost_reduction_emp_demigryphs"))):
+                             effect="wh2_main_effect_resource_recruitment_cost_reduction_emp_demigryphs")),
+                    lambda t: t["building_effects_junction_tables"][2].append(   # onto CA's own furs row
+                        dict(t["building_effects_junction_tables"][2][0], building="wh_dlc05_wef_growth_1",
+                             effect=CA_GOODS["furs"]["effect"]))):
         bad, _ = build()
         breakit(bad)
         try:
@@ -1516,16 +1574,18 @@ def selftest():
     for good, sources in (("whale_oil", [("port", None)]),
                           ("gromril", [(("mine",) + MINED, CLIM("climate_mountain"))]),
                           ("books", [("settlement", REG("altdorf"))]),
-                          ("grain", [("settlement", ALL(CLIM("climate_temperate"), AREA("no_such_area")))])):
-        real = GOODS[good]["sources"]
-        GOODS[good]["sources"] = sources
+                          ("grain", [("settlement", ALL(CLIM("climate_temperate"), AREA("no_such_area")))]),
+                          ("salt", [("port", None)]),
+                          ("wine", [("farm", CLIM("climate_temperate"))])):
+        real = good_spec(good)["sources"]
+        good_spec(good)["sources"] = sources
         try:
             bad, bloc = build()
             check(bad, bloc)
         except AssertionError:
             continue
         finally:
-            GOODS[good]["sources"] = real
+            good_spec(good)["sources"] = real
         raise SystemExit("selftest: a drifted rule for %s passed check()" % good)
     # an IEE-only area with its terrain condition dropped must be caught
     real = GOODS["incense"]["sources"]
@@ -1570,7 +1630,8 @@ def selftest():
 
 
 def modpack(frag):
-    return os.path.join(ROOT, "Modding Files", "Modpacks", frag + ".pack")
+    """The pack FILE is named for the mod; its DB table files keep FRAG (renamed 2026-10-02)."""
+    return os.path.join(ROOT, "Modding Files", "Modpacks", frag.replace(FRAG, PACK_NAME, 1) + ".pack")
 
 
 def pack(t, frag=FRAG):
@@ -1648,7 +1709,7 @@ def main():
     print("%-16s %4s %4s  sources" % ("good", "IE", "RoC"))
     for good, n in reach_table().items():
         print("%-16s %4d %4d  %s" % (good, n["wh3_main_combi"], n["wh3_main_chaos"],
-                                       ", ".join(str(_kind(p)) for p, _c in GOODS[good]["sources"])))
+                                       ", ".join(str(_kind(p)) for p, _c in good_spec(good)["sources"])))
     print("(of %d IE and %d RoC regions)" % (tot["wh3_main_combi"], tot["wh3_main_chaos"]))
     for name in SUBMODS:   # the map mod's own regions, by area (deposit/origin goods under-counted)
         print("%s own regions, by area:" % name)

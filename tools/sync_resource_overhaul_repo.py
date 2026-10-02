@@ -1,13 +1,13 @@
-"""Mirror Derpy More Resources' files into repos/derpy-more-resources, the public GitHub repo.
+"""Mirror Derpy Resource Overhaul' files into repos/derpy-resource-overhaul, the public GitHub repo.
 
 The workspace is the source of truth; the repo is a copy with the same layout, so every
 tool's relative paths ("Modding Files/...", "tools/...") work from either root.
 README.md, CHANGELOG.md, LICENSE, .gitignore and .gitattributes are written in the repo
 itself and never touched here. The copying is sync_guilds_repo's.
 
-    py tools/sync_more_resources_repo.py            # copy every changed file into the repo
-    py tools/sync_more_resources_repo.py --check    # list drift, copy nothing; exit 1 on drift
-    py tools/sync_more_resources_repo.py --selftest
+    py tools/sync_resource_overhaul_repo.py            # copy every changed file into the repo
+    py tools/sync_resource_overhaul_repo.py --check    # list drift, copy nothing; exit 1 on drift
+    py tools/sync_resource_overhaul_repo.py --selftest
 
 Then commit and push from inside the repo folder.
 
@@ -25,10 +25,10 @@ import sys
 import sync_guilds_repo as SG
 
 ROOT = SG.ROOT
-REPO = os.path.join(ROOT, "repos", "derpy-more-resources")
-_SRC = "Modding Files/source/more_resources/"
+REPO = os.path.join(ROOT, "repos", "derpy-resource-overhaul")
+_SRC = "Modding Files/source/resource_overhaul/"
 
-# The tables gen_more_resources.build() fills by cloning a vanilla row (dict(donor, key=...)):
+# The tables gen_resource_overhaul.build() fills by cloning a vanilla row (dict(donor, key=...)):
 # every column but the key is CA's. Ours are the rest - production rows, conditions, the new
 # chains' set and roster junctions, prices, unit names and the loc.
 CA_CLONES = ("resources_tables", "resources_to_campaign_junctions_tables",
@@ -51,7 +51,7 @@ def _tsvs(root=ROOT):
 
 def manifest(root=ROOT):
     same = _tsvs(root) + ["tools/" + n for n in (
-        "gen_more_resources.py",            # the mod: every row, the loc, the IEE submod
+        "gen_resource_overhaul.py",            # the mod: every row, the loc, the IEE submod
         "gen_building_icons.py",            # the rare buildings' icons (output not published)
         "gen_commodity_icons.py",           # the goods' icons (output not published)
         "guess_region_commodities.py",      # the lore rules, checked against what ships
@@ -62,9 +62,9 @@ def manifest(root=ROOT):
         "import_house_ancillaries.py",      # the RPFM client --pack uses
         "check_lua_undeclared.py",          # imported by it
         "sync_guilds_repo.py",              # this file's copying
-        "sync_more_resources_repo.py",
-        "_more_resources_ai_harness.lua",   # the AI builder's test, run by --selftest
-    )] + ["Modding Files/reference/more_resources_building_audit.md",
+        "sync_resource_overhaul_repo.py",
+        "_resource_overhaul_ai_harness.lua",   # the AI builder's test, run by --selftest
+    )] + ["Modding Files/reference/resource_overhaul_building_audit.md",
           "Modding Files/pack/script/campaign/mod/derpy_more_resources_ai.lua"]
     out = [(p, p) for p in same]
     out += [("docs/TRADE_RESOURCES.md", "docs/TRADE_RESOURCES.md"),

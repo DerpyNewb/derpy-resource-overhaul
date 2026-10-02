@@ -209,9 +209,9 @@ mountain, so a mountain test for Ithilmar matched nothing. **The Graves of the D
 the Plain of Bones** - The Bone Gulch in IE, Darkhold in Realm of Chaos. `check()` refuses a rule
 that matches no IE region or more than 30% of them, and a signal that loads empty.
 
-## 10. The Salted Fish test pack (Derpy More Resources)
+## 10. The Salted Fish test pack (Derpy Resource Overhaul)
 
-`tools/gen_more_resources.py` builds `Modding Files/Modpacks/derpy_more_resources.pack`, one good
+`tools/gen_resource_overhaul.py` builds `Modding Files/Modpacks/derpy_resource_overhaul.pack`, one good
 to prove a mod-added resource works before the other 25 are built. Deployed to `data/` 2026-10-01,
 **not yet tested in game.** Planned as its own mod; the Exchange will detect it rather than ship a
 compat pack.
@@ -244,7 +244,7 @@ info bar shows the icon; a trade agreement lists Salted Fish and raises trade in
 economy panel's trade tab names it. Any of those failing answers §7's open question.
 
 **Map mods (2026-10-01).** IEE (`cr_combi_expanded`) gets its own pack,
-`derpy_more_resources_iee.pack`, holding only the `resources_to_campaign_junctions` row. A row
+`derpy_resource_overhaul_iee.pack`, holding only the `resources_to_campaign_junctions` row. A row
 naming a campaign that is not loaded is an unresolvable foreign key and the game refuses the
 whole pack, so it cannot sit in the main one. IEE does the same for CA's 18 goods in its
 `!cr_vanilla` fragment. No production rows are needed for IEE: its 67 own port templates
@@ -272,7 +272,7 @@ Three calls that look like checks and are not:
 `ui/campaign ui/city_info_bar.twui.xml`) is filled by the engine from **map deposits only**: Bay
 of Blades' port makes Salted Fish and its label showed nothing (the user looked). So the main
 pack overrides that file, rebuilt from the live `ui3.pack` on every run by
-`gen_more_resources.py`: one 24px icon per good, inserted right after `resource_list` in
+`gen_resource_overhaul.py`: one 24px icon per good, inserted right after `resource_list` in
 `icon_holder` (a HorizontalList, so it flows beside the deposit icon), shown by
 `ContextVisibilitySetter` on `BuildingSlotList.Any(BuildingContext.EffectList.Any(EffectKey ==
 "<production effect>"))`. That expression was measured live first: true at Bay of Blades,
@@ -458,7 +458,7 @@ makes it.
 
 ## 15. The building audit (2026-10-01)
 
-`py tools/gen_more_resources.py --audit` writes `Modding Files/reference/more_resources_building_audit.md`:
+`py tools/gen_resource_overhaul.py --audit` writes `Modding Files/reference/resource_overhaul_building_audit.md`:
 every building that makes a good, by CA's in-game name per level, beside what it makes. Reading
 it against the names found the pools were too coarse - `KIND_CHAINS` had held every "growth" and
 "income" chain, so the Greenskin Idolz could grow grain, the Skaven Rubbish Pit make porcelain,
@@ -480,9 +480,9 @@ Elf vineyard chains, the Cathay labour bureau, the Bretonnian cellar and the CHD
 
 ## 16. Trading the goods on the Zharr Exchange (2026-10-01)
 
-`derpy_zharr_exchange.pack` trades all 37 goods when More Resources is installed. The More
+`derpy_zharr_exchange.pack` trades all 37 goods when Resource Overhaul is installed. The More
 Resources packs are unchanged; the whole bridge lives in the Exchange (`docs/ZHARR_EXCHANGE.md`
-§19, "More Resources' goods").
+§19, "Resource Overhaul' goods").
 
 - **Detection, per good:** `common.get_localised_string("resources_onscreen_text_res_derpy_<good>")`
   is the good's name with this mod installed and `""` without it. Measured in game.
@@ -517,9 +517,40 @@ factions instead.
 - **How it builds.** `cm:add_building_to_settlement` picks the slot itself. Upgrades use
   `cm:instantly_upgrade_building_in_region`. The script then looks for the building, and charges
   gold only if it is really there.
-- **Checked by.** `check_ai()` and `tools/_more_resources_ai_harness.lua`, which run the
+- **Checked by.** `check_ai()` and `tools/_resource_overhaul_ai_harness.lua`, which run the
   generated script under Lua 5.1. Mutation-tested against four faults: charging without
   verifying, ignoring the region list, skipping the tier check, and acting for a human.
 - **Not yet seen in game.** `cm:add_building_to_settlement` has no use anywhere in CA's scripts.
   The script logs `derpy_mr_ai:` for every build, upgrade and failure, so the first AI turn in a
   campaign shows whether it works.
+
+## 18. CA's four thin goods made common (2026-10-02)
+
+CA placed Salt, Furs, Pottery and Wine on only 11-13 deposits each (section 2), against the
+40-130 regions this mod's common goods reach. `CA_GOODS` in `gen_resource_overhaul.py` adds them
+the same way as the mod's own goods: production rows on existing economy buildings, each gated by
+a lore rule. The difference is that the rows carry **CA's own production effect**
+(`wh_main_effect_region_resource_<good>_production`), so no resource, icon or loc is minted, and
+the goods trade as CA's own.
+
+| Good | Buildings | Lore rule | IE | RoC | Rows |
+|---|---|---|---|---|---|
+| Salt | every harbour (port pool) | temperate, savannah, desert or island coast | 69 | 9 | 111 |
+| Furs | hunting lodges, farms, the Norscan hall | frozen climate; or mountains of Ogre origin | 96 | 51 | 43 |
+| Pottery | craft buildings | Old World farmland, Araby or the Southern Realms, not frozen, chaotic or mountain | 94 | 45 | 26 |
+| Wine | Bretonnian, Empire and High Elf farms only (`vineyard`) | temperate, savannah or island, in Bretonnia, the southern Empire, the Border Princes, Ulthuan, or Tilea and Estalia | 76 | 0 | 20 |
+
+- **A level CA already makes the good on keeps CA's row.** Wood Elf Game Lodges
+  (`wh_dlc05_wef_growth_1-3`) make Furs in vanilla. A second row on the same building and effect
+  would replace CA's, so `produce()` skips it. `check()` fails on any row that lands on a key CA
+  already uses, and dropping the skip makes it fail (tested by mutation).
+- **The rules table is the spec, as for the mod's own goods.** `guess_region_commodities.CA_RULES`
+  holds the four rules, and `check()` asserts that what ships reaches exactly those regions. The
+  selftest loosens Salt and Wine and expects the check to fail.
+- **Not on the map label.** CA's `resource_list` draws deposits only (section 10), and the label
+  icons this mod adds are for its own 37 goods. A region making Salt from a harbour shows it in the
+  building tooltip and the trade screen, not on the label.
+- **The Exchange does not see these rows yet.** It reads Resource Overhaul' supply by the
+  `derpy_effect_region_resource_` prefix, and CA's goods from its baked building map, so the extra
+  Salt, Furs, Pottery and Wine do not move its prices.
+- **Not checked in game.**

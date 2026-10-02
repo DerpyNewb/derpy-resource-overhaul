@@ -1,5 +1,5 @@
--- Derpy More Resources' AI builder (derpy_more_resources_ai.lua), run against stub factions and
--- regions. gen_more_resources.py --selftest writes the script to a temp file and puts its path
+-- Derpy Resource Overhaul' AI builder (derpy_more_resources_ai.lua), run against stub factions and
+-- regions. gen_resource_overhaul.py --selftest writes the script to a temp file and puts its path
 -- in place of the marker below. Every case is one the game could hand it.
 core = nil
 out = nil

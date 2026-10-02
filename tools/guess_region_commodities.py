@@ -141,6 +141,23 @@ RULES = [
      "Scales of the wyverns that nest in the Badlands and the Mountains of Mourn."),
 ]
 
+# CA's own common goods, made as common as ours (2026-10-02): CA put each on only 11-13 deposits.
+# Same shape as RULES; gen_resource_overhaul ships these through CA's own production effects.
+CA_RULES = [
+    ("salt", lambda g: g["coastal"] and g["climate"] in ("climate_temperate", "climate_savannah", "climate_desert",
+                                                         "climate_island"),
+     "Sea salt raked from the pans of every warm or temperate coast."),
+    ("furs", lambda g: g["climate"] == "climate_frozen" or (g["climate"] == "climate_mountain" and g["origin"] == "ogr"),
+     "Trappers of the frozen north - Kislev, Norsca, Naggaroth - and the Ogre hunters' mountains."),
+    ("pottery", lambda g: g["climate"] not in ("climate_frozen", "climate_chaotic", "climate_mountain")
+     and (g["areas"] & (OLD_WORLD_FARMLAND | {"araby"}) or g["origin"] == "teb"),
+     "Clay and kilns in every lowland town of the Old World, the Southern Realms and Araby."),
+    ("wine", lambda g: g["climate"] in ("climate_temperate", "climate_savannah", "climate_island")
+     and (g["areas"] & {"bretonnia", "southern_empire", "border_princes", "eastern_border_princes",
+                        "western_border_princes", "ulthuan"} or g["origin"] == "teb"),
+     "Vineyards of Bretonnia, the southern Empire, the Border Princes, Tilea, Estalia and Ulthuan."),
+]
+
 
 def signals():
     """One dict per (campaign, region) with every signal the rules read."""
@@ -176,7 +193,7 @@ def signals():
 
 
 def guess(g):
-    return [c for c, test, _lore in RULES if test(g)]
+    return [c for c, test, _lore in RULES + CA_RULES if test(g)]
 
 
 def check(sig):
@@ -186,7 +203,7 @@ def check(sig):
     assert sorted(names) == sorted(gen_commodity_icons.ICONS), set(names) ^ set(gen_commodity_icons.ICONS)
     ie = [g for g in sig.values() if g["campaign"] == "wh3_main_combi"]
     bad = []
-    for c, test, _l in RULES:
+    for c, test, _l in RULES + CA_RULES:
         n = sum(1 for g in ie if test(g))
         if n == 0 or n > 0.3 * len(ie):
             bad.append("%s matches %d of %d IE regions" % (c, n, len(ie)))
@@ -221,7 +238,7 @@ def main():
         cr = [r for r in rows if r["campaign"] == camp]
         cnt = collections.Counter(c for r in cr for c in r["guessed"].split(", ") if c)
         print("%s: %d regions, %d get at least one guess" % (camp, len(cr), sum(1 for r in cr if r["guessed"])))
-        print("   " + ", ".join("%s %d" % (c, cnt[c]) for c, _t, _l in RULES))
+        print("   " + ", ".join("%s %d" % (c, cnt[c]) for c, _t, _l in RULES + CA_RULES))
     print("wrote %s" % OUT)
 
 
