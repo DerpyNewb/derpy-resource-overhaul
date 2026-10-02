@@ -19,6 +19,7 @@ end
 -- region whose pools the engine no longer hands out (a raze, Task 1).
 local FACTIONS, REGIONS, LOG = {}, {}, {}
 BUNDLES = {}                 -- region key -> {bundle = turns}, as cm applies and removes them
+FBUNDLES, TREASURY = {}, {}  -- faction key -> {bundle = turns}; faction key -> gold added
 local CCO_MADE = ""
 local function pool(r, stem)
     local key = "derpy_mr_store_" .. stem
@@ -151,6 +152,14 @@ cm = {
         BUNDLES[rk][b] = turns
     end,
     remove_effect_bundle_from_region = function(_, b, rk) if BUNDLES[rk] then BUNDLES[rk][b] = nil end end,
+    apply_effect_bundle = function(_, b, fk, turns)
+        FBUNDLES[fk] = FBUNDLES[fk] or {}
+        FBUNDLES[fk][b] = turns
+    end,
+    treasury_mod = function(_, fk, n)
+        if n <= 0 then error("treasury_mod takes a positive amount") end
+        TREASURY[fk] = (TREASURY[fk] or 0) + n
+    end,
     save_named_value = function(_, k, v) SAVED[k] = copy(v) end,
     load_named_value = function(_, k, d) if SAVED[k] == nil then return d end return copy(SAVED[k]) end,
 }
@@ -607,6 +616,107 @@ F.state.rates.upkeep = false; turn_start(uF)
 eq(u1.held.grain + u1.held.salt, before, "upkeep off: nothing eaten")
 F.state.rates.upkeep = true
 eq(#ERRORS, 0, "no script errors in the upkeep pass")
+
+-- ---- phase 7: the panel's actions ------------------------------------------------------
+eq(F.rates().actions, true, "on by default")
+-- SEND HERE: from the fullest OTHER store, as much as arrives into the free space, 10% lost
+local sP = faction("sP", { human = true })
+local s1 = region("s1", 6000, 0, 200, { coal = 50 }); own(sP, s1, true)
+local s2 = region("s2", 6100, 0, 200, { coal = 10 }); own(sP, s2)
+local s3 = region("s3", 6200, 0, 200, { coal = 190 }); own(sP, s3)
+local p = F.send_plan(sP.iface, "s3", "coal")
+eq(p.from:name(), "s1", "from the fullest other store, never the target's own fuller one")
+eq(p.n, 12, "the most whose arrival fits: 12 sent")
+eq(p.got, 10, "12 less 2 lost (10% rounded up) = 10, the free space")
+F.request("sP", "send", "coal", "s3")
+eq(s1.held.coal, 38, "the source loses what was sent"); eq(s3.held.coal, 200, "the target gains what arrived")
+eq(F.book("sP").now.coal.moved_out, 12, "booked out"); eq(F.book("sP").now.coal.moved_in, 10, "and in")
+eq(F.send_plan(sP.iface, "s3", "coal"), nil, "a full store: nothing to send")
+local s4 = region("s4", 6300, 0, 200, {}); own(sP, s4)
+s2.held.brass = 38
+p = F.send_plan(sP.iface, "s4", "brass"); eq(p.n, 38, "an empty target: everything the source holds")
+eq(p.got, 34, "38 less 4 (3.8 rounded up)")
+local s5 = region("s5", 6400, 0, 200, { iron = 1 }); own(sP, s5)
+eq(F.send_plan(sP.iface, "s4", "iron"), nil, "one unit would all be lost: no send")
+eq(F.send_plan(sP.iface, "s4", "salt"), nil, "nobody holds it: no send")
+eq(F.send_plan(sP.iface, "h1", "coal"), nil, "a settlement that is not yours: no send")
+local s1_before = s1.held.coal
+F.request("sP", "send", "coal", "h1"); eq(s1.held.coal, s1_before, "and the request moves nothing")
+-- two equally full sources: the one whose key comes first, so every machine picks alike
+local tP2 = faction("tP2", { human = true })
+local t1 = region("t1", 6500, 0, 200, {}); own(tP2, t1, true)
+local t2b = region("t2b", 6600, 0, 200, { coal = 20 }); own(tP2, t2b)
+local t2a = region("t2a", 6700, 0, 200, { coal = 20 }); own(tP2, t2a)
+eq(F.send_plan(tP2.iface, "t1", "coal").from:name(), "t2a", "a tie: the first key sends")
+-- and a draw from two equally full stores takes the first key's first
+F.draw_realm({ { region = t2b.iface, held = { coal = 20 } }, { region = t2a.iface, held = { coal = 20 } } },
+             function(g) return g.stem == "coal" end, 20, "sold", nil)
+eq(t2a.held.coal, 0, "a tie in a draw: the first key's store first"); eq(t2b.held.coal, 20, "the other untouched")
+-- ORDERS: the cost drawn from the fullest stores realm-wide; then a 10-turn wait, kept in the save
+local oP = faction("oP", { human = true })
+local o1 = region("o1", 7000, 0, 400, { silk = 150 }); own(oP, o1, true)
+local o2 = region("o2", 7100, 0, 400, { jade = 100, coal = 30 }); own(oP, o2)
+local st = F.order_state(oP.iface, "festival")
+eq(st.ok, true, "250 luxuries: Festival can be bought"); eq(st.have, 250, "and says how many are held")
+TURN = 40
+F.request("oP", "order", "festival")
+eq(o1.held.silk, 0, "silk, the fullest, paid first"); eq(o2.held.jade, 50, "jade the rest of 200")
+eq(FBUNDLES.oP.derpy_mr_order_festival, 5, "Festival for 5 turns")
+eq(F.book("oP").now.silk.spent_out, 150, "booked as spent")
+o1.held.silk = 300
+st = F.order_state(oP.iface, "festival"); eq(st.ok, false, "bought this turn: not again")
+eq(st.wait, 10, "ready in 10 turns")
+F.request("oP", "order", "festival"); eq(o1.held.silk, 300, "and a request does nothing")
+TURN = 49; eq(F.order_state(oP.iface, "festival").wait, 1, "a turn to go")
+TURN = 50; eq(F.order_state(oP.iface, "festival").ok, true, "ready after 10 turns")
+st = F.order_state(oP.iface, "muster"); eq(st.ok, false, "30 war materials is short of 200"); eq(st.have, 30, "says so")
+F.request("oP", "order", "muster"); eq(o2.held.coal, 30, "a short order takes nothing")
+eq(FBUNDLES.oP.derpy_mr_order_muster, nil, "and gives nothing")
+F.request("oP", "order", "no_such_order"); eq(#ERRORS, 0, "an unknown order is ignored")
+cm.saving_game_callbacks[1]({})
+eq(SAVED.derpy_mr_flows.factions.oP.orders.festival, 40, "the last purchase is kept in the save")
+-- SELL: the surplus above half the realm's space, fullest store first
+local lP = faction("lP", { human = true })
+local l1 = region("l1", 8000, 0, 200, { coal = 180 }); own(lP, l1, true)
+local l2 = region("l2", 8100, 0, 200, { coal = 20 }); own(lP, l2)
+eq(F.sale(lP.iface, "coal"), nil, "200 held in 400 space: exactly half, nothing to sell")
+l1.held.coal = 190
+local sale = F.sale(lP.iface, "coal")
+eq(sale.n, 10, "10 above half"); eq(sale.price, 3, "war materials at 3 gold without the Exchange")
+eq(sale.gold, 30, "30 gold")
+F.request("lP", "sell", "coal")
+eq(l1.held.coal, 180, "taken from the fullest store"); eq(l2.held.coal, 20, "not the other")
+eq(TREASURY.lP, 30, "and paid"); eq(F.book("lP").now.coal.sold_out, 10, "booked as sold")
+F.request("lP", "sell", "coal"); eq(TREASURY.lP, 30, "nothing left to sell, nothing paid")
+l1.held.coal = 190
+EX = { sell_price = function(res) eq(res, "res_derpy_coal", "asked by resource key"); return 51 end }
+eq(F.sale(lP.iface, "coal").gold, 510, "the Exchange's price when it is loaded")
+EX = { sell_price = function() error("the Exchange broke") end }
+eq(F.sale(lP.iface, "coal").price, 3, "the fixed rate when it errors")
+EX = { sell_price = function() return 0 end }; eq(F.sale(lP.iface, "coal").price, 3, "or prices at nothing")
+EX = nil
+-- EVERY ACTION GOES THROUGH UITrigger in multiplayer; computer factions and the switch refuse
+MP = true; SENT = {}
+F.request("lP", "sell", "coal")
+eq(SENT[1][2], "dmr1|sell|coal", "multiplayer: sent, not run"); eq(TREASURY.lP, 30, "nothing paid yet")
+ui_trigger(SENT[1][1], SENT[1][2]); eq(TREASURY.lP, 60, "the trigger runs it")
+F.request("sP", "send", "brass", "s4"); eq(SENT[2][2], "dmr1|send|brass|s4", "a send carries the settlement")
+ui_trigger(lP.cqi, SENT[2][2]); eq(s4.held.brass or 0, 0, "another player's trigger cannot move my resources")
+ui_trigger(sP.cqi, SENT[2][2]); eq(s4.held.brass, 34, "my own does")
+s2.held.brass = 20
+ui_trigger(sP.cqi, "dmr1|send|brass|s4|extra|parts"); eq(s2.held.brass, 20, "a trigger with extra parts is ignored")
+ui_trigger(sP.cqi, "dmr1|send|brass"); eq(s2.held.brass, 20, "and one with too few")
+eq(F.parse("dmr1|sell|co al"), nil, "a part that is not a key is refused whole")
+eq(F.parse("dmr1|sell|coal")[2], "coal", "a good one parses"); eq(#ERRORS, 0, "no errors from malformed triggers")
+MP = false; SENT = {}
+a1.held.coal = 300
+F.dispatch("ai1", { "sell", "coal" }); eq(TREASURY.ai1, nil, "a computer-run faction has no panel")
+eq(a1.held.coal, 300, "and sells nothing")
+F.state.rates.actions = false
+l1.held.coal = 190; F.request("lP", "sell", "coal"); eq(TREASURY.lP, 60, "switched off: no sale")
+F.request("lP", "export", "coal"); eq(F.stopped("lP", "export", "coal"), true, "but trade switches still work")
+F.state.rates.actions = true
+eq(#ERRORS, 0, "no script errors in the actions")
 
 -- ---- the run-cost counter (Task 7 reads it) --------------------------------------------
 local counters = F.cost

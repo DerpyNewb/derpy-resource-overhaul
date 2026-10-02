@@ -2,6 +2,10 @@
 
 ## 2026-10-02
 
+- Stores panel: Send here moves a resource from another settlement (10% lost on the way).
+- Stores panel: Festival, Muster and Great Works orders, paid with 200 of your stores.
+- Stores panel: Sell surplus, at the Zharr Exchange's price when it is installed.
+- MCT: Stores panel actions.
 - Settlements eat provisions each turn: 2 per settlement level.
 - Well fed (+growth), Garrison stocked and Comforts (+public order) from well-stocked stores.
 - Stores panel: a Using column on Settlements; "eaten" in last turn's changes.

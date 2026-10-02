@@ -218,6 +218,9 @@ function S.last_line(l)
     add("traded in", l.traded_in or 0)
     add("traded out", -(l.traded_out or 0))
     add("eaten", -(l.eaten_out or 0))
+    add("moved", (l.moved_in or 0) - (l.moved_out or 0))      -- netted: what the road lost
+    add("spent", -(l.spent_out or 0))
+    add("sold", -(l.sold_out or 0))
     if #parts == 0 then return "Last turn: no change" end
     return "Last turn: " .. table.concat(parts, ", ")
 end
@@ -321,6 +324,81 @@ function S.view_key()
     return S.view
 end
 
+-- ---- the actions (spending spec section 5, phase 7) ------------------------------------
+S.SEND = "derpy_mr_sendhere"
+S.ORDER = "derpy_mr_order_"
+S.SELL = "derpy_mr_sell"
+S.USE_WORD = { provisions = "provisions", building = "building materials", war = "war materials",
+               mounts = "mounts", luxuries = "luxuries" }
+S.act = { orders = {} }      -- what the shown action buttons do, for the click handler
+
+-- Only with the flows script loaded and its MCT switch on.
+function S.actions_on()
+    local rates = S.flows("rates")
+    if not (rates and S.flows("request")) then return false end
+    local ok, r = pcall(rates)
+    return ok and type(r) == "table" and r.actions == true
+end
+
+-- The flows script's `name`, called safely: a throw is logged and reads as "cannot".
+function S.ask(name, ...)
+    local fn = S.flows(name)
+    if not fn then return nil end
+    local ok, r = pcall(fn, ...)
+    if ok then return r end
+    S.say(r)
+    return nil
+end
+
+function S.local_faction()
+    local ok, f = pcall(function() return cm:get_faction(cm:get_local_faction_name(true)) end)
+    if ok and f and not f:is_null_interface() then return f end
+    return nil
+end
+
+local function turns(n)
+    if n == 1 then return "1 turn" end
+    return n .. " turns"
+end
+
+function S.send_tip(plan, d)
+    if plan then
+        local from = loc("regions_onscreen_" .. plan.from:name(), plan.from:name())
+        return "Bring " .. S.num(plan.n) .. " " .. d.name .. " from " .. from .. ": " .. S.num(plan.got)
+            .. " arrive, " .. S.num(plan.n - plan.got) .. " are lost on the way."
+    end
+    if d.full then return "This store of " .. d.name .. " is full." end
+    return "No other settlement of yours can send " .. d.name .. "."
+end
+
+function S.order_tip(o, st)
+    local word = S.USE_WORD[st.use] or st.use
+    local out = o.label .. "\nSpend " .. S.num(st.cost) .. " " .. word .. ": " .. o.what .. ", for " .. turns(o.turns) .. ".\n"
+    if st.wait then return out .. "Ready again in " .. turns(st.wait) .. "." end
+    if not st.ok then return out .. "Your stores hold " .. S.num(st.have) .. " " .. word .. "." end
+    return out .. "Your stores hold " .. S.num(st.have) .. ". Click to buy it."
+end
+
+function S.sell_tip(sale, name)
+    if sale then
+        return "Sell " .. S.num(sale.n) .. " " .. name .. " for " .. S.num(sale.gold)
+            .. " gold: what your stores hold above half their space."
+    end
+    return "Nothing to sell: your stores of " .. name .. " are no more than half full."
+end
+
+-- GREYED, NOT JUST DISABLED: SetDisabled alone draws a live button (memory
+-- wh3-setdisabled-draws-nothing); the shader is the Zharr Exchange's EX.set_off, seen in game.
+function S.set_off(c, off)
+    if not is_uicomponent(c) then return end
+    off = off and true or false
+    c:SetDisabled(off)
+    pcall(function()
+        c:ShaderTechniqueSet(off and "set_greyscale_t0" or "normal_t0", true, true)
+        if off then c:ShaderVarsSet(1, 0.6, 0, 0, true, true) end
+    end)
+end
+
 function S.rows_shown()
     if S.view == "goods" and S.focus then return L.CHART_ROWS end
     return L.ROWS
@@ -340,6 +418,11 @@ function S.view_model(realm)
                                     per_turn(d.made), full_mark(d.full), "", tip = tip }
         end
         v.chart = S.chart_model(S.history(S.focus))
+        if S.actions_on() then
+            local f = S.local_faction()
+            local sale = f and S.ask("sale", f, S.focus)
+            v.sell = { tip = S.sell_tip(sale, S.name(S.focus)), off = sale == nil }
+        end
     elseif S.view == "goods" then
         v.title = "Every resource your settlements keep"
         v.heads = { "Resource", "Held", "Per turn", "Space", "Stored in" }
@@ -348,6 +431,14 @@ function S.view_model(realm)
             v.rows[#v.rows + 1] = { g.name, S.num(g.held), per_turn(g.made),
                                     S.num(g.held) .. " / " .. S.num(g.cap), g.n .. " of " .. g.of,
                                     icon = g.icon, tip = S.good_tip(g), open = g.stem }
+        end
+        if S.actions_on() then
+            local f = S.local_faction()
+            v.orders = {}
+            for i, o in ipairs(DERPY_MR_STORES_ORDERS) do
+                local st = f and S.ask("order_state", f, o.key)
+                if st then v.orders[i] = { key = o.key, tip = S.order_tip(o, st), off = not st.ok } end
+            end
         end
         if #realm == 0 then v.empty = S.NO_REALM end
     elseif S.view == "trade" then
@@ -394,12 +485,18 @@ function S.view_model(realm)
         end
         v.title = "Stores of " .. s.name
         v.heads = { "Resource", "Held / Space", "Per turn", "", "" }
+        local f = S.actions_on() and S.local_faction()
         for _, d in ipairs(S.settlement_detail(s)) do
             local tip = S.good_tip(d)
             if d.full then tip = S.FULL_TIP end
-            v.rows[#v.rows + 1] = { d.name, S.num(d.held) .. " / " .. S.num(d.cap),
-                                    per_turn(d.made), full_mark(d.full), "", icon = d.icon,
-                                    tip = tip }
+            local row = { d.name, S.num(d.held) .. " / " .. S.num(d.cap),
+                          per_turn(d.made), full_mark(d.full), "", icon = d.icon,
+                          tip = tip, stem = d.stem }
+            if f then
+                local plan = S.ask("send_plan", f, s.key, d.stem)
+                row.send = { tip = S.send_tip(plan, d), off = plan == nil }
+            end
+            v.rows[#v.rows + 1] = row
         end
     else
         v.title = "Every settlement you hold"
@@ -718,6 +815,16 @@ function S.draw_rows(p, rows, heads, cols)
                 end
             end
             draw_switches(r, rc, rx, ry, cols)
+            local sb = find_uicomponent(r, S.SEND)
+            if is_uicomponent(sb) then
+                sb:SetVisible(rc.send ~= nil)
+                if rc.send then
+                    sb:MoveTo(rx + cols[5][1], ry + math.floor((L.PITCH - L.send[2]) / 2))
+                    label(sb, "Send here")
+                    sb:SetTooltipText(rc.send.tip, true)
+                    S.set_off(sb, rc.send.off)
+                end
+            end
             -- the Using column's icons: a Settlements row's bundles, in the third column
             for k = 1, L.USING do
                 local u = find_uicomponent(r, "use" .. k)
@@ -801,6 +908,33 @@ function S.refresh()
         end
     end
     set(find_uicomponent(p, "hint_text"), v.hint or "")
+    -- THE ACTIONS on the bottom line: orders in slots 2-4 on the Resources tab, Sell in slot 4
+    -- on a resource's drill-down
+    S.act = { orders = {}, sell = v.sell }
+    local slot_w = L.bulk[3] + L.BULK_GAP
+    for i, o in ipairs(DERPY_MR_STORES_ORDERS) do
+        local bt, a = find_uicomponent(p, S.ORDER .. o.key), v.orders and v.orders[i]
+        if a then S.act.orders[o.key] = a end
+        if is_uicomponent(bt) then
+            bt:SetVisible(a ~= nil)
+            if a then
+                put(bt, px, py, { L.bulk[1] + i * slot_w, L.bulk[2], L.bulk[3], L.bulk[4] })
+                label(bt, o.label)
+                bt:SetTooltipText(a.tip, true)
+                S.set_off(bt, a.off)
+            end
+        end
+    end
+    local sell = find_uicomponent(p, S.SELL)
+    if is_uicomponent(sell) then
+        sell:SetVisible(v.sell ~= nil)
+        if v.sell then
+            put(sell, px, py, { L.bulk[1] + 3 * slot_w, L.bulk[2], L.bulk[3], L.bulk[4] })
+            label(sell, "Sell surplus")
+            sell:SetTooltipText(v.sell.tip, true)
+            S.set_off(sell, v.sell.off)
+        end
+    end
     for _, dm in ipairs(S.BULK_ORDER) do
         local bt = find_uicomponent(p, S.BULK .. dm[1] .. "_" .. dm[2])
         if is_uicomponent(bt) then bt:SetVisible(v.bulk == true) end
@@ -863,7 +997,8 @@ function S.is_mine(name)
     return type(name) == "string" and (name == S.BUTTON or name == S.CLOSE or name == S.BACK
         or name == S.TAB.goods or name == S.TAB.settlements or name == S.TAB.trade
         or string.sub(name, 1, #S.ROW) == S.ROW or string.sub(name, 1, #S.SW) == S.SW
-        or string.sub(name, 1, #S.BULK) == S.BULK)
+        or string.sub(name, 1, #S.BULK) == S.BULK or string.sub(name, 1, #S.ORDER) == S.ORDER
+        or name == S.SEND or name == S.SELL)
 end
 
 -- A SWITCH NAMES NO GOOD: its row does, so the row is read off the clicked component's parent.
@@ -885,7 +1020,36 @@ function S.click_bulk(dir, mode)
     return S.refresh()
 end
 
+-- An action goes to the flows script's one door, F.request, which runs it now in singleplayer
+-- and sends it as a UITrigger in multiplayer.
+function S.request(...)
+    local req = S.flows("request")
+    if not req then return end
+    req(cm:get_local_faction_name(true), ...)
+    return S.refresh()
+end
+
+-- Send here names no resource: its row does, read off the clicked component's parent.
+function S.click_send(component)
+    if not component then return end
+    local row = UIComponent(UIComponent(component):Parent())
+    local i = tonumber(string.match(row:Id() or "", "^derpy_mr_row_(%d+)$"))
+    local rc = i and S.data[i]
+    if rc and rc.send and not rc.send.off then return S.request("send", rc.stem, S.focus) end
+end
+
 function S.click(name, component)
+    if name == S.SEND then return S.click_send(component) end
+    if name == S.SELL then
+        if S.act.sell and not S.act.sell.off then return S.request("sell", S.focus) end
+        return
+    end
+    local okey = string.match(name, "^derpy_mr_order_([%w_]+)$")
+    if okey then
+        local a = S.act.orders[okey]
+        if a and not a.off then return S.request("order", okey) end
+        return
+    end
     local dir = string.match(name, "^derpy_mr_sw_(%a+)$")
     if dir then return S.click_switch(dir, component) end
     local bdir, mode = string.match(name, "^derpy_mr_all_(%a+)_(%a+)$")

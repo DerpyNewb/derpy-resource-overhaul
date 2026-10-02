@@ -3,3 +3,6 @@ key	localised_description	localised_title	bundle_target	priority	ui_icon	is_glob
 derpy_mr_well_fed	After eating, this settlement's stores still hold five turns of provisions.	Well fed	region	1	growth.png	true	false	true
 derpy_mr_garrison_stocked	War materials fill at least a quarter of one store's space in this settlement.	Garrison stocked	region	1	siege_defence.png	true	false	true
 derpy_mr_comforts	Luxuries fill at least a quarter of one store's space in this settlement.	Comforts	region	1	public_order_happy.png	true	false	true
+derpy_mr_order_festival	Paid for from your stores: public order +4 in every province.	Festival	faction	1	public_order_jubilant.png	true	false	true
+derpy_mr_order_muster	Paid for from your stores: recruit rank +1 for every unit.	Muster	faction	1	experience.png	true	false	true
+derpy_mr_order_great_works	Paid for from your stores: construction cost -20% for every building.	Great Works	faction	1	construction.png	true	false	true

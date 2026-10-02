@@ -239,6 +239,9 @@ function UIC:CurrentState() return self.state end
 function UIC:SetTooltipText(t) self.tip = t end
 function UIC:SetTextHAlign(a) self.halign = a end
 function UIC:SetOpacity(o) self.opacity = o end
+function UIC:SetDisabled(v) self.disabled = v end
+function UIC:ShaderTechniqueSet(t) self.shader = t end
+function UIC:ShaderVarsSet() end
 function UIC:SetImagePath(p, i) self.image = p; self.images = self.images or {}; self.images[i or 0] = p end
 function UIC:SetProperty(k, v) self[k] = v end
 function UIC:Layout() end
@@ -444,6 +447,11 @@ eq(S.last_line({ plundered_in = 40, plundered_out = 10, traded_out = 3 }),
    "Last turn: plundered +30, traded out -3", "plunder is netted, trade out shown on its own")
 eq(S.last_line({ made = 4, eaten_out = 6 }), "Last turn: made +4, eaten -6", "what the settlements ate")
 -- 7px a character: gen_mr_ui.CHAR_W, the same flat estimate check_text_fits uses
+eq(S.last_line({ moved_in = 10, moved_out = 12, spent_out = 200, sold_out = 120 }),
+   "Last turn: moved -2, spent -200, sold -120", "moving is netted (the loss), spending and selling shown")
+local busy = S.last_line({ made = 1234, raided_out = 1234, traded_in = 1234, traded_out = 1234,
+                           eaten_out = 1234, sold_out = 1234 })
+eq(#busy * 7 <= L.chart_line[3], true, "a busy turn's line fits: " .. busy)
 local widest = S.last_line({ made = 123456, raided_out = 123456, plundered_out = 123456,
                              traded_in = 123456, traded_out = 123456, eaten_out = 123456 })
 eq(#widest * 7 <= L.chart_line[3], true, "the widest last-turn line fits: " .. widest)
@@ -614,6 +622,77 @@ eq(find("hdr_3").halign, "right", "and the Goods tab's own alignment back")
 DERPY_MR_FLOWS = nil; click("derpy_mr_tab_trade")
 eq(switch(1, "export").visible, false, "without the flows script: no switches"); eq(#ERRORS, 0, "and no error")
 eq(bulk("import", "allow").visible, false, "nor all-at-once buttons")
+
+-- ---- phase 7: the panel's actions ------------------------------------------------------
+local REQ, PLAN, ORDER_ST, SALE, ACT_ON = {}, {}, {}, nil, true
+DERPY_MR_FLOWS = {
+    rates = function() return { actions = ACT_ON } end,
+    request = function(fk, ...) REQ[#REQ + 1] = fk .. "|" .. table.concat({ ... }, "|") end,
+    send_plan = function(f, _rk, stem) eq(f:name(), LOCAL, "the local faction's plan"); return PLAN[stem] end,
+    order_state = function(_, key) return ORDER_ST[key] end,
+    sale = function() return SALE end,
+    series = function() return {}, {} end,
+    last = function() return {} end,
+}
+local function act(name) return find(name) end
+local function slot(i) return pnl0.x + LL.bulk[1] + (i - 1) * (LL.bulk[3] + LL.BULK_GAP) end
+-- SEND HERE, on a settlement's drill-down: every row has one; one that cannot send is greyed and says why
+PLAN.coal = { from = B, n = 12, got = 10 }
+click("derpy_mr_tab_settlements"); click("derpy_mr_row_1")
+eq(find("sub_title").text, "Stores of Alpha", "Alpha's stores")
+local function sendb(i) return find_uicomponent(find("derpy_mr_row_" .. i), "derpy_mr_sendhere") end
+eq(sendb(1).visible, true, "a Send here button"); eq(sendb(1).text, "Send here", "labelled")
+eq(sendb(1).x, find("derpy_mr_row_1").x + LL.VIEWS.focus[5][1], "in the fifth column")
+eq(sendb(1).disabled, false, "live when something can come"); eq(sendb(1).shader, "normal_t0", "and drawn live")
+eq(sendb(1).tip, "Bring 12 Coal from Bravo: 10 arrive, 2 are lost on the way.", "the tooltip says what happens")
+eq(sendb(2).disabled, true, "Brimstone: nobody can send it"); eq(sendb(2).shader, "set_greyscale_t0", "and it looks it")
+eq(sendb(2).tip, "No other settlement of yours can send Brimstone.", "the tooltip says why")
+eq(S.send_tip(nil, { name = "Coal", full = true }), "This store of Coal is full.", "a full store says so")
+press(sendb(1)); eq(REQ[1], "fac_a|send|coal|reg_a", "a click asks for this resource into this settlement")
+press(sendb(2)); eq(#REQ, 1, "a greyed button asks for nothing")
+-- ORDERS, on the Resources tab's bottom line
+ORDER_ST.festival = { ok = true, have = 250, cost = 200, use = "luxuries" }
+ORDER_ST.muster = { ok = false, wait = 7, have = 300, cost = 200, use = "war" }
+ORDER_ST.great_works = { ok = false, have = 120, cost = 200, use = "building" }
+click("derpy_mr_tab_goods")
+for i, o in ipairs(DERPY_MR_STORES_ORDERS) do
+    local bt = act("derpy_mr_order_" .. o.key)
+    eq(bt.visible, true, o.label .. " shown"); eq(bt.text, o.label, "labelled")
+    eq(bt.x, slot(i + 1), "in bottom-line slot " .. (i + 1)); eq(bt.y, pnl0.y + LL.bulk[2], "on the bottom line")
+end
+local fest = act("derpy_mr_order_festival")
+eq(fest.disabled, false, "Festival can be bought")
+eq(string.find(fest.tip, "Spend 200 luxuries", 1, true) ~= nil, true, "the tooltip gives the price")
+eq(string.find(fest.tip, "public order +4 in every province, for 5 turns", 1, true) ~= nil, true, "and what it buys")
+eq(act("derpy_mr_order_muster").disabled, true, "Muster is waiting")
+eq(string.find(act("derpy_mr_order_muster").tip, "Ready again in 7 turns.", 1, true) ~= nil, true, "and says how long")
+eq(act("derpy_mr_order_great_works").disabled, true, "Great Works is short")
+eq(string.find(act("derpy_mr_order_great_works").tip, "Your stores hold 120 building materials.", 1, true) ~= nil, true,
+   "and says how short")
+eq(find("hint_text").x + #find("hint_text").text * 7 <= slot(2), true, "the hint ends before the orders")
+REQ = {}
+press(fest); eq(REQ[1], "fac_a|order|festival", "a click buys it")
+press(act("derpy_mr_order_muster")); eq(#REQ, 1, "a greyed order asks for nothing")
+eq(act("derpy_mr_sell").visible, false, "no Sell on the list")
+-- SELL, on a resource's drill-down
+SALE = { n = 120, gold = 840, price = 7 }
+click("derpy_mr_row_1"); eq(find("sub_title").text, "Where Coal is kept", "Coal's drill-down")
+local sell = act("derpy_mr_sell")
+eq(sell.visible, true, "a Sell button"); eq(sell.text, "Sell surplus", "labelled"); eq(sell.x, slot(4), "in slot 4")
+eq(sell.tip, "Sell 120 Coal for 840 gold: what your stores hold above half their space.", "priced in its tooltip")
+eq(act("derpy_mr_order_festival").visible, false, "no orders on a drill-down")
+press(sell); eq(REQ[2], "fac_a|sell|coal", "a click sells it")
+SALE = nil; click("derpy_mr_back"); click("derpy_mr_row_1")
+eq(act("derpy_mr_sell").disabled, true, "nothing to sell: greyed")
+eq(act("derpy_mr_sell").tip, "Nothing to sell: your stores of Coal are no more than half full.", "and says why")
+press(act("derpy_mr_sell")); eq(#REQ, 2, "a greyed Sell asks for nothing")
+-- the MCT switch, and no flows script: no buttons, no error
+ACT_ON = false; click("derpy_mr_back"); click("derpy_mr_row_1")
+eq(act("derpy_mr_sell").visible, false, "switched off: no Sell")
+click("derpy_mr_back"); eq(act("derpy_mr_order_festival").visible, false, "nor orders")
+DERPY_MR_FLOWS = nil; click("derpy_mr_tab_settlements"); click("derpy_mr_row_1")
+eq(sendb(1).visible, false, "without the flows script: no Send here"); eq(#ERRORS, 0, "and no error")
+click("derpy_mr_tab_goods")
 
 -- ---- the raid plate above a raiding army -----------------------------------------------
 local function fits(tip)

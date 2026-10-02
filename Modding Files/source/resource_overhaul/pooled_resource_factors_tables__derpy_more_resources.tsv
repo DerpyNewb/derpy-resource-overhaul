@@ -5,3 +5,6 @@ derpy_mr_raided	false
 derpy_mr_plundered	false
 derpy_mr_traded	false
 derpy_mr_eaten	false
+derpy_mr_moved	false
+derpy_mr_spent	false
+derpy_mr_sold	false

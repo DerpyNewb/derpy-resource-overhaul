@@ -398,25 +398,17 @@ function F.apply(fkey, dir, what)
     end
 end
 
--- A CLICK NEVER WRITES THE MODEL ITSELF IN MULTIPLAYER: it goes out as a UITrigger, which CA
--- delivers to every machine in one order, and the listener applies it everywhere at once.
-function F.send(fkey, dir, stem)
-    local mp = false
-    pcall(function() mp = cm:is_multiplayer() end)
-    if not mp then return F.apply(fkey, dir, stem) end
-    local f = cm:get_faction(fkey)
-    if not f or f:is_null_interface() then return end
-    CampaignUI.TriggerCampaignScriptEvent(f:command_queue_index(), F.TAG .. "|" .. dir .. "|" .. stem)
-end
+-- A trade switch: one resource's key, or ALL_STOP / ALL_ALLOW (F.request, below).
+function F.send(fkey, dir, stem) return F.request(fkey, dir, stem) end
 
 function F.on_ui_trigger(context)
-    local dir, stem = string.match(context:trigger(), "^" .. F.TAG .. "|(%a+)|([%w_]+)$")
-    if not dir then return end
+    local parts = F.parse(context:trigger())
+    if not parts then return end
     local cqi = context:faction_cqi()
     for _, k in ipairs(cm:get_human_factions()) do
         local f = cm:get_faction(k)
         if f and not f:is_null_interface() and f:command_queue_index() == cqi then
-            F.apply(k, dir, stem)
+            F.dispatch(k, parts)
             local S = DERPY_MR_STORES
             if S and S.refresh then pcall(S.refresh) end
             return
@@ -469,27 +461,38 @@ function F.use_total(held, use)
     return n
 end
 
--- THE DRAWING RULE (spec section 1): take n of a use, the fullest store first, then the next,
--- until n is taken or the stores are empty. A tie goes by key, so every machine takes alike.
--- `held` is updated as it goes. Returns what was taken.
-function F.draw(region, held, use, n, kind, fkey)
-    local stems = {}
-    for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
-        if g.use == use and (held[g.stem] or 0) > 0 then stems[#stems + 1] = g.stem end
+-- THE DRAWING RULE (spec section 1): take n from the stores `pick(good)` names, the fullest
+-- store first, then the next, until n is taken or they are empty. stocks = {{region, held}};
+-- each `held` is updated as it goes. A tie goes by region key, then by resource key, so every
+-- machine takes alike. Returns what was taken.
+function F.draw_realm(stocks, pick, n, kind, fkey)
+    local cands = {}
+    for _, s in ipairs(stocks) do
+        local rk = s.region:name()
+        for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+            if pick(g) and (s.held[g.stem] or 0) > 0 then cands[#cands + 1] = { s = s, stem = g.stem, rk = rk } end
+        end
     end
-    table.sort(stems, function(a, b)
-        if held[a] ~= held[b] then return held[a] > held[b] end
-        return a < b
+    table.sort(cands, function(a, b)
+        local ha, hb = a.s.held[a.stem], b.s.held[b.stem]
+        if ha ~= hb then return ha > hb end
+        if a.rk ~= b.rk then return a.rk < b.rk end
+        return a.stem < b.stem
     end)
     local taken = 0
-    for _, stem in ipairs(stems) do
+    for _, c in ipairs(cands) do
         if taken >= n then break end
-        local k = math.min(n - taken, held[stem])
-        F.move(region, nil, stem, k, kind, fkey, nil)
-        held[stem] = held[stem] - k
+        local k = math.min(n - taken, c.s.held[c.stem])
+        F.move(c.s.region, nil, c.stem, k, kind, fkey, nil)
+        c.s.held[c.stem] = c.s.held[c.stem] - k
         taken = taken + k
     end
     return taken
+end
+
+-- One settlement's stores of one use.
+function F.draw(region, held, use, n, kind, fkey)
+    return F.draw_realm({ { region = region, held = held } }, function(g) return g.use == use end, n, kind, fkey)
 end
 
 function F.bundle(rkey, region, use, on)
@@ -531,6 +534,171 @@ function F.upkeep(faction)
         local region = rl:item_at(i)
         if not region:is_null_interface() then F.upkeep_region(region, fkey, uses) end
     end
+end
+
+-- ---- the Stores panel's actions (spending spec section 5, phase 7) -------------------------
+-- Player only, and only through F.request: in multiplayer every action is a UITrigger.
+F.GOOD = {}
+for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do F.GOOD[g.stem] = g end
+F.SEND_LOSS_PCT = 10
+F.ORDER_COST, F.ORDER_TURNS, F.ORDER_COOLDOWN = DERPY_MR_FLOWS_ORDER[1], DERPY_MR_FLOWS_ORDER[2], DERPY_MR_FLOWS_ORDER[3]
+
+function F.stocks(faction)
+    local out = {}
+    local rl = faction:region_list()
+    for i = 0, rl:num_items() - 1 do
+        local r = rl:item_at(i)
+        if not r:is_null_interface() then out[#out + 1] = { region = r, held = (F.stock(r)) } end
+    end
+    return out
+end
+
+function F.owned(faction, rkey)
+    local rl = faction:region_list()
+    for i = 0, rl:num_items() - 1 do
+        local r = rl:item_at(i)
+        if not r:is_null_interface() and r:name() == rkey then return r end
+    end
+    return nil
+end
+
+function F.lost(n) return math.ceil(n * F.SEND_LOSS_PCT / 100) end
+
+-- SEND HERE: the fullest OTHER store of the resource sends the most whose arrival, after the
+-- loss on the road, still fits here. nil when nothing would arrive.
+function F.send_plan(faction, rkey, stem)
+    if not F.GOOD[stem] then return nil end
+    local to = F.owned(faction, rkey)
+    if not to then return nil end
+    local free = F.free(to, stem)
+    if free <= 0 then return nil end
+    local from, fh, fk = nil, 0, nil
+    local rl = faction:region_list()
+    for i = 0, rl:num_items() - 1 do
+        local r = rl:item_at(i)
+        local k = r:name()
+        if not r:is_null_interface() and k ~= rkey then
+            local h = F.held(r, stem)
+            if h > fh or (h == fh and h > 0 and k < fk) then from, fh, fk = r, h, k end
+        end
+    end
+    if not from then return nil end
+    -- an upper bound on what can fit, walked down: arrival is n less a tenth rounded up
+    local n = math.min(fh, free + math.ceil(free / 9) + 2)
+    while n > 0 and n - F.lost(n) > free do n = n - 1 end
+    local got = n - F.lost(n)
+    if got <= 0 then return nil end
+    return { from = from, to = to, n = n, got = got }
+end
+
+function F.send_here(faction, stem, rkey)
+    local p = F.send_plan(faction, rkey, stem)
+    if not p then return end
+    local fkey = faction:name()
+    F.move(p.from, nil, stem, p.n, KIND.move, fkey, nil)
+    F.move(nil, p.to, stem, p.got, KIND.move, nil, fkey)
+end
+
+-- ORDERS: a faction bundle bought with ORDER_COST of one use, drawn realm-wide; then a wait,
+-- kept in the faction's book (and so in the save) as the turn it was bought.
+function F.order_state(faction, key)
+    local o = DERPY_MR_FLOWS_ORDERS[key]
+    if not o then return nil end
+    local have = 0
+    for _, s in ipairs(F.stocks(faction)) do have = have + F.use_total(s.held, o.use) end
+    local st = { have = have, cost = F.ORDER_COST, use = o.use }
+    local b = F.state.factions[faction:name()]
+    local last = b and b.orders and b.orders[key]
+    local turn = cm:model():turn_number()
+    if last and turn - last < F.ORDER_COOLDOWN then st.wait = last + F.ORDER_COOLDOWN - turn end
+    st.ok = st.wait == nil and have >= F.ORDER_COST
+    return st
+end
+
+function F.order(faction, key)
+    local st = F.order_state(faction, key)
+    if not (st and st.ok) then return end
+    local o, fkey = DERPY_MR_FLOWS_ORDERS[key], faction:name()
+    F.draw_realm(F.stocks(faction), function(g) return g.use == o.use end, F.ORDER_COST, KIND.spend, fkey)
+    cm:apply_effect_bundle(o.bundle, fkey, F.ORDER_TURNS)
+    local b = F.book(fkey)
+    b.orders = b.orders or {}
+    b.orders[key] = cm:model():turn_number()
+end
+
+-- SELL: the Zharr Exchange's price a unit when it is loaded and answers, the fixed rate of the
+-- resource's use otherwise. The surplus is what the realm holds above half its space for it.
+function F.price(g)
+    if type(EX) == "table" and type(EX.sell_price) == "function" then
+        local ok, p = pcall(EX.sell_price, g.res)
+        if ok and type(p) == "number" and p > 0 then return p end
+    end
+    return DERPY_MR_FLOWS_SELL_RATE[g.use] or 0
+end
+
+function F.sale(faction, stem)
+    local g = F.GOOD[stem]
+    if not g then return nil end
+    local total, space = 0, 0
+    local rl = faction:region_list()
+    for i = 0, rl:num_items() - 1 do
+        local p = F.pool(rl:item_at(i), stem)
+        if p then total, space = total + p:value(), space + p:maximum_value() end
+    end
+    local n = total - math.floor(space / 2)
+    if n <= 0 then return nil end
+    local price = F.price(g)
+    local gold = math.floor(n * price)
+    if gold <= 0 then return nil end
+    return { n = n, price = price, gold = gold }
+end
+
+function F.sell(faction, stem)
+    local s = F.sale(faction, stem)
+    if not s then return end
+    local fkey = faction:name()
+    F.draw_realm(F.stocks(faction), function(g) return g.stem == stem end, s.n, KIND.sell, fkey)
+    cm:treasury_mod(fkey, s.gold)
+end
+
+-- THE ONE DOOR. parts = {action, args...}: a trade switch (export|import, stem), or an action
+-- with exactly its own count of parts. Humans only; the actions only with the MCT switch on.
+F.ACTIONS = { send = 3, order = 2, sell = 2 }
+function F.dispatch(fkey, parts)
+    if not F.is_human(fkey) then return end
+    local a = parts[1]
+    if F.DIRS[a] then
+        if #parts == 2 then F.apply(fkey, a, parts[2]) end
+        return
+    end
+    if F.ACTIONS[a] ~= #parts or not F.rates().actions then return end
+    local f = cm:get_faction(fkey)
+    if a == "send" then F.send_here(f, parts[2], parts[3])
+    elseif a == "order" then F.order(f, parts[2])
+    else F.sell(f, parts[2]) end
+end
+
+-- A CLICK NEVER WRITES THE MODEL ITSELF IN MULTIPLAYER: it goes out as a UITrigger, which CA
+-- delivers to every machine in one order, and the listener runs it everywhere at once.
+function F.request(fkey, ...)
+    local parts = { ... }
+    local mp = false
+    pcall(function() mp = cm:is_multiplayer() end)
+    if not mp then return F.dispatch(fkey, parts) end
+    local f = cm:get_faction(fkey)
+    if not f or f:is_null_interface() then return end
+    CampaignUI.TriggerCampaignScriptEvent(f:command_queue_index(), F.TAG .. "|" .. table.concat(parts, "|"))
+end
+
+-- "dmr1|a|b|c" -> {a, b, c}; nil for another mod's id or a part that is not [%w_]+.
+function F.parse(id)
+    if type(id) ~= "string" or string.sub(id, 1, #F.TAG + 1) ~= F.TAG .. "|" then return nil end
+    local parts = {}
+    for p in string.gmatch(string.sub(id, #F.TAG + 2), "[^|]+") do
+        if not string.match(p, "^[%w_]+$") then return nil end
+        parts[#parts + 1] = p
+    end
+    return parts
 end
 
 -- ---- history ------------------------------------------------------------------------------

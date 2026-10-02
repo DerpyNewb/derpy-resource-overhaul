@@ -370,7 +370,8 @@ def store_fx(stem):
 # is -max..0, _uncovered 0..max), and a raid books OUT of the victim and IN to the raider on the
 # same factor. CA ships 456 two-way junctions, 7 on REGION pools.
 FLOW_FACTORS = (("raided", "Raid spoils", "Raided"), ("plundered", "Plunder", "Plundered"),
-                ("traded", "Traded in", "Traded out"), ("eaten", "Eaten", "Eaten"))
+                ("traded", "Traded in", "Traded out"), ("eaten", "Eaten", "Eaten"),
+                ("moved", "Moved in", "Moved out"), ("spent", "Spent", "Spent"), ("sold", "Sold", "Sold"))
 
 # PHASE 4 (spending spec section 2): what well-stocked stores give a settlement, one region bundle
 # per use, applied and removed by the flows script each turn. Effects, scopes and values are CA's
@@ -390,6 +391,22 @@ USE_BUNDLES = (
      [("wh_main_effect_public_order_events", "region_to_province_own_unseen", 3)]),
 )
 BUNDLE_DONOR = "wh2_dlc15_hef_mist_of_yvresse_rite_empowered"   # global, not in 3D, owner only
+
+# PHASE 7 (spending spec section 5): the panel's three orders, each a faction bundle bought with
+# ORDER_COST of one use. (key, use, bundle, icon, title, what it does, [(effect, scope, value)])
+ORDER_COST, ORDER_TURNS, ORDER_COOLDOWN = 200, 5, 10
+ORDERS = (
+    ("festival", "luxuries", "derpy_mr_order_festival", "public_order_jubilant.png", "Festival",
+     "public order +4 in every province",
+     [("wh_main_effect_public_order_events", "faction_to_province_own", 4)]),
+    ("muster", "war", "derpy_mr_order_muster", "experience.png", "Muster",
+     "recruit rank +1 for every unit",
+     [("wh_main_effect_force_all_campaign_experience_base_all", "faction_to_force_own", 1)]),
+    ("great_works", "building", "derpy_mr_order_great_works", "construction.png", "Great Works",
+     "construction cost -20% for every building",
+     [("wh_main_effect_building_construction_cost_mod", "faction_to_region_own", -20)]),
+)
+ORDER_DONOR = "wh2_dlc09_bundle_tretch_treaty_broken"   # a faction bundle: global, not in 3D, owner only
 
 
 def flow_factor(kind):
@@ -588,7 +605,7 @@ def n_loc():
     chains = sum(len(rare_chains(g)) for g in RARE)
     return (LOC_PER_GOOD * len(GOODS) + 2 * len(UNITS) + LOC_PER_RARE_GOOD * len(RARE)
             + LOC_PER_CHAIN * chains + 5 * (len(GOODS) + len(CA_STEMS)) + 3 + 2 * len(FLOW_FACTORS)
-            + 2 * len(USE_BUNDLES))
+            + 2 * len(USE_BUNDLES) + 2 * len(ORDERS))
 
 # Owners with no living people to make or eat a good: daemons, the dead, and beasts with no towns
 # to sell in. Matched on the CHAIN key, so a special variant for one of them goes too.
@@ -1194,6 +1211,23 @@ def _bundles(add, loc):
                 "advancement_stage": "start_turn_completed"})
         loc += [("effect_bundles_localised_title_" + key, title),
                 ("effect_bundles_localised_description_" + key, desc)]
+    donor, = [r for r in db("effect_bundles_tables")[1] if r["key"] == ORDER_DONOR]
+    for _k, _use, key, icon_, title, what, fx in ORDERS:
+        desc = "Paid for from your stores: %s." % what
+        add("effect_bundles_tables", dict(donor, key=key, localised_title=title, localised_description=desc,
+                                          ui_icon=icon_))
+        for e, scope, v in fx:
+            add("effect_bundles_to_effects_junctions_tables", {
+                "effect_bundle_key": key, "effect_key": e, "effect_scope": scope, "value": float(v),
+                "advancement_stage": "start_turn_completed"})
+        loc += [("effect_bundles_localised_title_" + key, title),
+                ("effect_bundles_localised_description_" + key, desc)]
+
+
+def all_bundles():
+    """(target, key, icon, effects) of every bundle this pack mints."""
+    return [("region", k, i, fx) for _u, k, i, _t, _d, fx in USE_BUNDLES] + \
+           [("faction", k, i, fx) for _o, _u, k, i, _t, _w, fx in ORDERS]
 
 
 def check_bundles(t, loc):
@@ -1206,9 +1240,9 @@ def check_bundles(t, loc):
     scopes = {r["key"] for r in db("campaign_effect_scopes_tables")[1]}
     have = E._game_assets()
     fx = t["effect_bundles_to_effects_junctions_tables"][2]
-    for use, key, icon_, _t, _d, effects in USE_BUNDLES:
+    for target, key, icon_, effects in all_bundles():
         b = rows[key]
-        assert b["bundle_target"] == "region" and b["ui_icon"] == icon_, b
+        assert b["bundle_target"] == target and b["ui_icon"] == icon_, b
         assert "ui/campaign ui/effect_bundles/" + icon_ in have, "no such bundle icon: %s" % icon_
         for pre in ("effect_bundles_localised_title_", "effect_bundles_localised_description_"):
             assert keys.get(pre + key), pre + key
@@ -1218,7 +1252,7 @@ def check_bundles(t, loc):
             assert e in van_fx, "no CA effect %s" % e
             assert s in scopes, "no CA scope %s" % s
             assert (v > 0) == van_fx[e]["is_positive_value_good"], "%s %s is a penalty" % (key, e)
-    assert len(rows) == len(USE_BUNDLES), sorted(rows)
+    assert len(rows) == len(all_bundles()), sorted(rows)
 
 
 AUDIT = os.path.join(ROOT, "Modding Files", "reference", "resource_overhaul_building_audit.md")
@@ -1861,6 +1895,8 @@ def selftest():
     for breakit in (lambda t, l: t["effect_bundles_to_effects_junctions_tables"][2][0].update(value=-10.0),
                     lambda t, l: t["effect_bundles_to_effects_junctions_tables"][2][0].update(effect_scope="nowhere"),
                     lambda t, l: t["effect_bundles_tables"][2][0].update(bundle_target="faction"),
+                    lambda t, l: t["effect_bundles_tables"][2][-1].update(bundle_target="region"),
+                    lambda t, l: t["effect_bundles_to_effects_junctions_tables"][2][-1].update(value=20.0),
                     lambda t, l: t["effect_bundles_tables"][2][0].update(ui_icon="no_such.png"),
                     lambda t, l: l.remove([x for x in l if x[0].startswith("effect_bundles_localised_title_")][0])):
         bad, bloc = build()

@@ -846,3 +846,40 @@ Plan, with what was measured offline and the rulings: `superpowers/plans/2026-10
   - that the bundles show on the settlement;
   - that growth is counted with Well fed on;
   - the pass's cost over a round (booked to `F.cost.turn`).
+
+## 23. The Stores panel's actions (phase 7, 2026-10-02)
+
+Built, deployed to `data/`, **not yet seen in game**. Spec §5. Plan, with the offline
+measurements and the rulings: `superpowers/plans/2026-10-02-resource-overhaul-phase7-actions.md`.
+Built ahead of phase 5, at the user's choice, because phase 5's open questions need the game.
+
+- **Send here** (on each row of a settlement's drill-down):
+  - The fullest **other** store sends the most whose arrival still fits; ties go to the lower
+    region key.
+  - 10% is lost on the way, rounded up. Nothing is sent when nothing would arrive.
+  - A greyed row says why ("full", "no other settlement can send").
+- **Orders** (on the Resources tab's bottom line). Each costs 200 of one use, drawn from the
+  fullest stores realm-wide, lasts 5 turns, and has a 10-turn wait kept in the faction's book
+  (the save):
+  - **Festival**: luxuries; public order +4 in every province.
+  - **Muster**: war materials; recruit rank +1 for every unit.
+  - **Great Works**: building materials; construction cost -20%.
+- **Sell surplus** (on a resource's drill-down):
+  - Sells what the realm holds above half its space for that resource, fullest store first.
+  - Price: `EX.sell_price(res)` when the Zharr Exchange is loaded and answers above 0, otherwise
+    1-5 gold a unit by use.
+  - The Exchange's price is per unit, about 51 for Marble, so selling with the Exchange loaded
+    pays roughly 10-50 times the fixed rates.
+- **One door:** every action, and every trade switch, goes through `F.request`.
+  - In singleplayer it calls `F.dispatch` directly.
+  - In multiplayer it sends `dmr1|<action>|<args>` through the UITrigger. `F.parse` refuses
+    another mod's id and any part that is not a key; `F.dispatch` refuses a wrong part count, a
+    computer faction, and actions with the MCT switch "Stores panel actions" off.
+- **Booking:** three new two-way factors, `derpy_mr_moved`, `derpy_mr_spent` and `derpy_mr_sold`.
+  The last-turn line shows "moved" (net, which is the loss), "spent" and "sold".
+- **Greyed buttons** use `S.set_off`, which is `SetDisabled` plus the greyscale shader (the
+  Exchange's `EX.set_off`). The tooltip still says why.
+- **Measure in game:**
+  - the three faction bundles' effects;
+  - `treasury_mod` from a panel click;
+  - that the shader greys these text buttons.
