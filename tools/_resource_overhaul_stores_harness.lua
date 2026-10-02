@@ -222,6 +222,8 @@ function UIC:GetStateText() return self.texts[self.state] or "" end
 function UIC:SetState(s) self.state = s end
 function UIC:CurrentState() return self.state end
 function UIC:SetTooltipText(t) self.tip = t end
+function UIC:SetTextHAlign(a) self.halign = a end
+function UIC:SetOpacity(o) self.opacity = o end
 function UIC:SetImagePath(p, i) self.image = p; self.images = self.images or {}; self.images[i or 0] = p end
 function UIC:SetProperty(k, v) self[k] = v end
 function UIC:Layout() end
@@ -310,6 +312,10 @@ local p = find("derpy_mr_stores_panel")
 eq(p.visible, true, "open"); eq(p.interactive, true, "eats the mouse while open")
 eq(p.x, 530, "centred across"); eq(p.y, 220, "centred down")
 eq(find("title_text").text, "Stores", "title"); eq(find("hdr_2").text, "Held", "header")
+-- A RULE BETWEEN THE TITLE AND THE TABS (asked for 2026-10-02), with room each side
+local rule, ttl, tg = find("title_rule"), find("title_text"), find("derpy_mr_tab_goods")
+eq(rule.visible, true, "a rule under the title")
+eq(rule.y >= ttl.y + ttl.h + 2, true, "clear of the title"); eq(tg.y >= rule.y + rule.h + 6, true, "and of the tabs")
 for name, label in pairs({ derpy_mr_tab_goods = "Goods", derpy_mr_tab_settlements = "Settlements", derpy_mr_back = "Back" }) do
     local c = find(name); c:SetState("hover")
     eq(c:GetStateText(), label, name .. " keeps its label on hover"); c:SetState("standard")
@@ -339,7 +345,7 @@ eq(find("sub_title").text, "Where Coal is kept", "drill-down title")
 eq(find_uicomponent(find("derpy_mr_row_1"), "vline3").visible, true, "a line before a column with a header")
 eq(find_uicomponent(find("derpy_mr_row_1"), "vline4").visible, false, "none before a column without one")
 eq(find("hdr_line_5").visible, false, "nor in its header")
-eq(find("rows_holder").y, 358, "a new list starts at the top")
+eq(find("rows_holder").y, 220 + DERPY_MR_STORES_L.list[2], "a new list starts at the top")
 eq(shown_rows(), 2, "two settlements keep coal"); eq(cell(1, 1).text, "Bravo", "most held first")
 eq(find("derpy_mr_row_1").tip, S.FULL_TIP, "full tooltip"); eq(find("derpy_mr_back").visible, true, "Back shown")
 click("derpy_mr_back"); eq(cell(1, 1).text, "Coal", "back to the goods")
@@ -355,7 +361,7 @@ eq(icon(1, 1).image, good_icon("coal"), "Alpha's first icon: coal, made and held
 eq(icon(1, 2).image, good_icon("brimstone"), "then brimstone, made"); eq(icon(1, 2).visible, true, "shown")
 eq(icon(1, 3).visible, false, "no third good, no third icon")
 eq(icon(1, 2).x - icon(1, 1).x, L0.ICON_PITCH, "icons at the pitch")
-eq(cell(1, 1).x, find("derpy_mr_row_1").x + L0.cols[1][1] + L0.ICON_PITCH, "the name moves past the icons")
+eq(cell(1, 1).x, find("derpy_mr_row_1").x + L0.VIEWS.settlements[1][1] + L0.ICON_PITCH, "the name moves past the icons")
 eq(icon(3, 1).visible, false, "Charlie keeps nothing: no icon")
 eq(cell(3, 1).x, cell(1, 1).x, "and its name lines up with the rest (seen ragged in game 2026-10-02)")
 local alpha_cco = CCO["1"]
@@ -478,47 +484,78 @@ eq(lit("derpy_mr_tab_trade"), SEL, "the Trade tab is lit"); eq(lit("derpy_mr_tab
 local tt = find("derpy_mr_tab_trade"); tt:SetState("hover")
 eq(tt:GetStateText(), "Trade", "Trade keeps its label on hover"); tt:SetState("standard")
 eq(find("hdr_3").text, "Exports", "exports header"); eq(find("hdr_4").text, "Imports", "imports header")
-eq(shown_rows(), #DERPY_MR_STORES_GOODS, "every good is listed, held or not")
-eq(cell(1, 1).text, "Coal", "most held first"); eq(cell(1, 2).text, "100", "held (fac_a now holds Alpha alone)")
-eq(cell(1, 3).text, "", "the switch, not the cell, carries the word")
-eq(switch(1, "export").visible, true, "an export switch"); eq(switch(1, "export").text, "Allowed", "allowed by default")
-eq(switch(1, "import").visible, true, "an import switch")
--- RIGHT-ALIGNED UNDER THEIR HEADERS, which are right-aligned (seen off-line in game 2026-10-02)
 local LL = DERPY_MR_STORES_L
-eq(switch(1, "export").x + LL.switch[1], find("derpy_mr_row_1").x + LL.cols[3][1] + LL.cols[3][2],
-   "the export switch ends where the Exports header ends")
-eq(switch(1, "import").x + LL.switch[1], find("derpy_mr_row_1").x + LL.cols[4][1] + LL.cols[4][2],
-   "the import switch ends where the Imports header ends")
--- COLUMN LINES: one before each column from the second, through the header and every row
+local TC = LL.VIEWS.trade
+local pnl0 = find("derpy_mr_stores_panel")
+-- EACH TAB HAS ITS OWN COLUMNS (approved design 2026-10-02): sized to what they hold, aligned to it
+eq(find("hdr_3").x, pnl0.x + LL.list[1] + TC[3][1], "the Exports header sits on the Trade tab's own column")
+eq(find("hdr_3").halign, "centre", "a tick column's header is centred"); eq(find("hdr_5").halign, "left", "Last turn reads left")
+eq(cell(1, 5).halign, "left", "and so does its cell"); eq(cell(1, 2).halign, "right", "numbers stay right")
+eq(cell(1, 1).w, TC[1][2], "a cell takes its tab's width")
+-- the section row: your goods, then a band naming the rest
+eq(shown_rows(), #DERPY_MR_STORES_GOODS + 1, "every good is listed, held or not, and one section row")
+eq(cell(1, 1).text, "Coal", "most held first"); eq(cell(1, 2).text, "100", "held (fac_a now holds Alpha alone)")
+eq(cell(2, 1).text, "Brimstone", "a good you make but do not hold yet is not greyed")
+local others = #DERPY_MR_STORES_GOODS - 2
+eq(cell(3, 1).text, S.section("Goods you do not have (" .. others .. ")"), "a section row before the rest")
+eq(find_uicomponent(find("derpy_mr_row_3"), "section_band").visible, true, "on its own band")
+eq(switch(3, "import").visible, false, "with no switches"); eq(find_uicomponent(find("derpy_mr_row_3"), "icon").visible, false, "no icon")
+eq(find_uicomponent(find("derpy_mr_row_3"), "vline3").visible, false, "and no column lines")
+eq(find_uicomponent(find("derpy_mr_row_1"), "section_band").visible, false, "a good's row has no section band")
+-- rows banded in turn, so a wide row is easy to follow across
+eq(find_uicomponent(find("derpy_mr_row_1"), "band").visible, false, "row 1 plain")
+eq(find_uicomponent(find("derpy_mr_row_2"), "band").visible, true, "row 2 banded")
+-- CHECKBOXES, CA's own art: ticked is allowed, empty is stopped; the word is in the tooltip
+eq(switch(1, "export").visible, true, "an export box"); eq(switch(1, "import").visible, true, "an import box")
+eq(switch(1, "export").images[0], S.CHECK[true][1], "ticked: allowed by default")
+eq(switch(1, "export").images[1], S.CHECK[true][2], "and ticked on hover")
+eq(switch(1, "export").x, find("derpy_mr_row_1").x + TC[3][1] + math.floor((TC[3][2] - LL.CHECK) / 2),
+   "centred in its column, under its centred header")
+eq(switch(1, "export").opacity, 255, "your goods' boxes at full strength")
+-- GOODS YOU NEITHER HOLD NOR MAKE ARE GREYED, LAST: no export box, a dimmed import box
+eq(cell(4, 1).text, S.grey("Iron"), "the first good you neither hold nor make, greyed")
+eq(cell(4, 2).text, S.grey("0"), "its count too")
+eq(switch(4, "export").visible, false, "no export box: there is nothing to send")
+eq(switch(4, "import").visible, true, "an import box: you can still refuse it")
+eq(switch(4, "import").opacity < 255, true, "greyed with its row")
+eq(S.grey("x"), "[[col:ui_font_inactive_grey]]x[[/col]]", "CA's own inactive grey (ui_colours_tables)")
+-- COLUMN LINES: one in each gap from the second column, through the header and every row
 for j = 2, 5 do
     local vl = find_uicomponent(find("derpy_mr_row_1"), "vline" .. j)
+    local gap = math.floor((TC[j - 1][1] + TC[j - 1][2] + TC[j][1]) / 2)
     eq(vl.visible, true, "a column line before column " .. j)
-    eq(vl.x, find("derpy_mr_row_1").x + LL.cols[j][1] - LL.LINE_GAP, "between the columns")
+    eq(vl.x, find("derpy_mr_row_1").x + gap, "in the middle of the gap")
     eq(find("hdr_line_" .. j).visible, true, "and through the header")
     eq(find("hdr_line_" .. j).x, vl.x, "lined up with the rows'")
 end
 eq(cell(1, 5).text, "sent 15, received 2", "last turn's trade"); eq(cell(2, 5).text, "-", "no trade last turn")
--- GOODS YOU NEITHER HOLD NOR MAKE ARE GREYED, LAST: no export switch, but you can still refuse them
-eq(cell(2, 1).text, "Brimstone", "a good you make but do not hold yet is not greyed")
-eq(switch(2, "export").visible, true, "and can be exported")
-eq(cell(3, 1).text, S.grey("Iron"), "the first good you neither hold nor make, greyed")
-eq(cell(3, 2).text, S.grey("0"), "its count too")
-eq(switch(3, "export").visible, false, "no export switch: there is nothing to send")
-eq(switch(3, "import").visible, true, "an import switch: you can still refuse it")
-eq(S.grey("x"), "[[col:ui_font_inactive_grey]]x[[/col]]", "CA's own inactive grey (ui_colours_tables)")
 local brim = "pooled_resources_display_name_derpy_mr_store_brimstone"
 LOC[brim] = "Zz Brimstone"; click("derpy_mr_tab_trade")
 eq(cell(2, 1).text, "Zz Brimstone", "a good you make comes before every good you do not, whatever its name")
 LOC[brim] = "Brimstone"; click("derpy_mr_tab_trade")
 press(switch(1, "export"))
 eq(SENT[1], "fac_a|export|coal", "a click sends the local faction's switch")
-eq(switch(1, "export").text, S.STOPPED, "and the panel shows it at once")
+eq(switch(1, "export").images[0], S.CHECK[false][1], "and the box empties at once")
 eq(string.find(switch(1, "export").tip, "allow", 1, true) ~= nil, true, "the tooltip says a click allows it again")
 press(switch(2, "import")); eq(SENT[2], "fac_a|import|brimstone", "the row's own good (then by name)")
 press(find_uicomponent(find("derpy_mr_row_1"), "c3")); eq(#SENT, 2, "a cell named like ours elsewhere is not a switch")
 click("derpy_mr_row_1"); eq(find("sub_title").text, "What your settlements trade", "a Trade row opens nothing")
+click("derpy_mr_row_3"); eq(#ERRORS, 0, "nor does the section row")
+-- EVERY HEADER FITS ITS COLUMN, on every tab: a header that did not was shrunk by the engine
+-- (seen in game 2026-10-02: "Space per good" in 100px). HEAD_CHAR_W is calibrated from that.
+local saved_view, saved_focus = S.view, S.focus
+local alpha_realm = S.read_realm(FACTIONS.fac_a)
+for _, vf in ipairs({ { "goods" }, { "goods", "coal" }, { "settlements" }, { "settlements", "reg_a" }, { "trade" } }) do
+    S.view, S.focus = vf[1], vf[2]
+    local v = S.view_model(alpha_realm)
+    for j, h in ipairs(v.heads) do
+        eq(#h * LL.HEAD_CHAR_W <= v.cols[j][2], true, "header '" .. h .. "' fits its column on " .. vf[1])
+    end
+end
+S.view, S.focus = saved_view, saved_focus
 click("derpy_mr_tab_goods")
 eq(switch(1, "export").visible, false, "no switches off the Trade tab")
+eq(find("hdr_3").halign, "right", "and the Goods tab's own alignment back")
 DERPY_MR_FLOWS = nil; click("derpy_mr_tab_trade")
 eq(switch(1, "export").visible, false, "without the flows script: no switches"); eq(#ERRORS, 0, "and no error")
 

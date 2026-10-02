@@ -2,6 +2,8 @@
 
 ## 2026-10-02
 
+- Stores panel redesign: a line under the title, per-tab columns, Trade checkboxes, row bands.
+- Trade tab: a "Goods you do not have" heading over the greyed goods.
 - Stores panel: a Trade tab to stop each good's exports or imports.
 - Raiding army shows the goods its raid takes, with a tooltip per good.
 - Settlement Captured: Sack and Raze show the goods they take.

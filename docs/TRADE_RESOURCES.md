@@ -792,5 +792,19 @@ freezes them on one machine. A 500 ms poll keeps it up; the tooltip lists up to 
 **The gate** is `py tools/gen_mr_ui.py --selftest`. It runs both harnesses
 (`_resource_overhaul_stores_harness.lua` and `_resource_overhaul_flows_harness.lua`).
 
-**In game, still to see:** the Trade tab, the raid plate and the capture values' look; a raze
-after a battle.
+**The panel redesign (2026-10-02, approved off a mockup).**
+- A rule under the title separates it from the tabs; everything below moved down 4px.
+- Each view has its own columns, `DERPY_MR_STORES_L.VIEWS[S.view_key()]` as (x, w, align):
+  words left, numbers right, ticks centred. `SetTextHAlign` aligns the headers and cells at
+  runtime, and each cell is resized to its view's column. Both drill-downs share "focus".
+- Column lines sit in the middle of each gap (`S.line_x`).
+- Trade switches are CA's checkboxes (`S.CHECK`): ticked means allowed, empty means stopped. The
+  word is in the tooltip only.
+- Greyed goods sit under a "Goods you do not have (N)" section row. Their icons and checkboxes
+  draw at opacity 115.
+- Every other row is banded.
+- Headers renamed "Space each" and "Goods". The engine shrank "Space per good" in 100px; the
+  harness now checks every view's headers at `HEAD_CHAR_W` = 8.
+
+**In game, still to see:** the raid plate's per-good icons; the redesigned panel (checkbox
+art, header alignment, bands).

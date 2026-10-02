@@ -237,12 +237,18 @@ function S.chart_model(turns, totals, last)
 end
 
 -- ---- the Trade tab ----------------------------------------------------------------------
-S.STOPPED = "[[col:red]]Stopped[[/col]]"
-S.ALLOWED = "Allowed"
 S.DIRS = { "export", "import" }
 S.GREY = "ui_font_inactive_grey"       -- CA's own, out of db/ui_colours_tables (102,102,102)
+S.BEIGE = "ui_font_faded_grey_beige"   -- likewise (169,159,137): the section row's label
+S.DIM = 115                            -- a greyed row's icon and checkbox
+-- CA's checkbox art on image 0 (standard) and 1 (hover): ticked is allowed, empty is stopped
+S.CHECK = {
+    [true] = { "ui/skins/default/checkbox_selected.png", "ui/skins/default/checkbox_selected_hover.png" },
+    [false] = { "ui/skins/default/checkbox_active.png", "ui/skins/default/checkbox_hover.png" },
+}
 
 function S.grey(s) return "[[col:" .. S.GREY .. "]]" .. s .. "[[/col]]" end
+function S.section(s) return "[[col:" .. S.BEIGE .. "]]" .. s .. "[[/col]]" end
 
 -- The flows script's function `name`, or nil without it: the panel must not need it to open.
 function S.flows(name)
@@ -285,6 +291,12 @@ function S.switch_tip(dir, stopped, name)
     return "Your trade partners may send you " .. name .. ". Click to refuse it."
 end
 
+-- which of DERPY_MR_STORES_L.VIEWS the panel shows: both drill-downs share "focus"
+function S.view_key()
+    if S.focus then return "focus" end
+    return S.view
+end
+
 function S.rows_shown()
     if S.view == "goods" and S.focus then return L.CHART_ROWS end
     return L.ROWS
@@ -320,12 +332,22 @@ function S.view_model(realm)
         local stopped, last = S.flows("stopped"), S.flows("last")
         local fk = cm:get_local_faction_name(true)
         local switches = stopped ~= nil and S.flows("send") ~= nil
-        if switches then v.hint = "Click Exports or Imports to stop a good, or to allow it again." end
-        for _, g in ipairs(S.trade_rows(realm)) do
+        if switches then v.hint = "Tick or untick a good to let it travel by trade, or stop it." end
+        local rows = S.trade_rows(realm)
+        local others = 0
+        for _, g in ipairs(rows) do if not g.own then others = others + 1 end end
+        for _, g in ipairs(rows) do
+            -- A SECTION ROW before the goods you neither hold nor make, which are all last
+            if not g.own and others > 0 then
+                v.rows[#v.rows + 1] = { S.section("Goods you do not have (" .. others .. ")"), "", "", "", "",
+                                        section = true }
+                others = 0
+            end
             local row = { g.name, S.num(g.held), "", "", S.trade_line(last and last(fk, g.stem) or {}),
                           icon = g.icon, tip = S.good_tip(g), stem = g.stem }
             if not g.own then
                 for j = 1, 5 do row[j] = row[j] ~= "" and S.grey(row[j]) or "" end
+                row.dim = true
             end
             if switches then
                 -- nothing to send of a good you neither hold nor make: no export switch
@@ -351,7 +373,7 @@ function S.view_model(realm)
         end
     else
         v.title = "Every settlement you hold"
-        v.heads = { "Settlement", "Level", "Space per good", "Goods held", "Fullest store" }
+        v.heads = { "Settlement", "Level", "Space each", "Goods", "Fullest store" }
         v.hint = "Click a settlement to see its stores."
         for _, r in ipairs(S.settlement_rows(realm)) do
             local fullest = "-"
@@ -361,6 +383,7 @@ function S.view_model(realm)
         end
         v.empty = S.NO_REALM
     end
+    v.cols = L.VIEWS[S.view_key()]
     return v
 end
 
@@ -452,16 +475,22 @@ function S.layout(p)
     sized(p, L.W, L.H)
     p:MoveTo(math.floor((sw - L.W) / 2), math.floor((sh - L.H) / 2))
     local px, py = p:Position()
-    local boxes = { title_text = L.title, sub_title = L.sub_title, empty_text = L.empty,
-                    hint_text = L.hint }
+    local boxes = { title_text = L.title, title_rule = L.title_rule, sub_title = L.sub_title,
+                    empty_text = L.empty, hint_text = L.hint }
     boxes[S.CLOSE], boxes[S.BACK] = L.close, L.back
     boxes[S.TAB.goods], boxes[S.TAB.settlements] = L.tab_goods, L.tab_settlements
     boxes[S.TAB.trade] = L.tab_trade
     for name, box in pairs(boxes) do put(find_uicomponent(p, name), px, py, box) end
-    for j, col in ipairs(L.cols) do
-        put(find_uicomponent(p, "hdr_" .. j), px, py, { L.list[1] + col[1], L.head_y, col[2], 22 })
-        put(find_uicomponent(p, "hdr_line_" .. j), px, py, { L.list[1] + col[1] - L.LINE_GAP, L.head_y })
-    end
+end
+
+-- A COLUMN LINE in the middle of the gap before column j (j >= 2)
+function S.line_x(cols, j)
+    local prev = cols[j - 1]
+    return math.floor((prev[1] + prev[2] + cols[j][1]) / 2)
+end
+
+local function align(c, a)
+    if is_uicomponent(c) then c:SetTextHAlign(a) end
 end
 
 -- ---- the list, drawn whole (docs/CUSTOM_UI.md, Scrolling lists; EX.ensure_list) -----------
@@ -571,19 +600,22 @@ function S.row(holder, i)
     return find_uicomponent(holder, name)
 end
 
--- The Trade tab's two switches: shown where the row carries their state, which only a Trade row
--- does, and only with the flows script loaded.
-local function draw_switches(r, rc, rx, ry)
+-- The Trade tab's two checkboxes: shown where the row carries their state, which only a Trade
+-- row does, and only with the flows script loaded. Centred under their centred headers.
+local function draw_switches(r, rc, rx, ry, cols)
     for j, d in ipairs(S.DIRS) do
         local sw = find_uicomponent(r, S.SW .. d)
         if is_uicomponent(sw) then
             local show = rc[d] ~= nil
             sw:SetVisible(show)
             if show then
-                -- right-aligned, as its column's header is
-                local col = L.cols[2 + j]
-                sw:MoveTo(rx + col[1] + col[2] - L.switch[1], ry + 2)
-                label(sw, rc[d] and S.STOPPED or S.ALLOWED)
+                local col = cols[2 + j]
+                sw:MoveTo(rx + col[1] + math.floor((col[2] - L.CHECK) / 2),
+                          ry + math.floor((L.PITCH - L.CHECK) / 2))
+                local art = S.CHECK[not rc[d]]
+                sw:SetImagePath(art[1], 0)
+                sw:SetImagePath(art[2], 1)
+                sw:SetOpacity(rc.dim and S.DIM or 255, true)
                 sw:SetTooltipText(S.switch_tip(d, rc[d], rc[1]), true)
             end
         end
@@ -591,7 +623,7 @@ local function draw_switches(r, rc, rx, ry)
 end
 
 -- Rows are made once and kept; the ones past the end go hidden.
-function S.draw_rows(p, rows, heads)
+function S.draw_rows(p, rows, heads, cols)
     local holder = find_uicomponent(p, "rows_holder")
     if not is_uicomponent(holder) then return end
     local hx, hy = holder:Position()
@@ -607,29 +639,46 @@ function S.draw_rows(p, rows, heads)
             local rx, ry = hx, hy + (i - 1) * L.PITCH
             r:MoveTo(rx, ry)
             sized(r, L.list[3] - L.SLIDER_W, L.PITCH)
+            r:SetInteractive(not rc.section)
+            -- every other row banded; the section row has its own band
+            local band, sband = find_uicomponent(r, "band"), find_uicomponent(r, "section_band")
+            if is_uicomponent(band) then
+                band:MoveTo(rx, ry)
+                band:SetVisible(i % 2 == 0 and not rc.section)
+            end
+            if is_uicomponent(sband) then
+                sband:MoveTo(rx, ry)
+                sband:SetVisible(rc.section == true)
+            end
             local icons = rc.icons or { rc.icon }
             for k = 1, L.ICONS do
                 local ic = find_uicomponent(r, k == 1 and "icon" or "icon" .. k)
                 if is_uicomponent(ic) then
                     ic:MoveTo(rx + L.icon[1] + (k - 1) * L.ICON_PITCH, ry + L.icon[2])
                     ic:SetVisible(icons[k] ~= nil)
-                    if icons[k] then ic:SetImagePath(icons[k], 0) end
+                    if icons[k] then
+                        ic:SetImagePath(icons[k], 0)
+                        ic:SetOpacity(rc.dim and S.DIM or 255, true)
+                    end
                 end
             end
-            for j, col in ipairs(L.cols) do
+            for j, col in ipairs(cols) do
                 local c = find_uicomponent(r, "c" .. j)
                 if is_uicomponent(c) then
-                    c:MoveTo(rx + col[1] + (j == 1 and shift or 0), ry + 4)
+                    local dx = j == 1 and shift or 0
+                    c:MoveTo(rx + col[1] + dx, ry + 4)
+                    sized(c, col[2] - dx, 20)
+                    align(c, col[3])
                     set(c, rc[j])
                 end
             end
-            draw_switches(r, rc, rx, ry)
-            -- a column line before each column that has a header
-            for j, col in ipairs(L.cols) do
+            draw_switches(r, rc, rx, ry, cols)
+            -- a column line in each gap before a column that has a header; none on a section row
+            for j = 2, #cols do
                 local vl = find_uicomponent(r, "vline" .. j)
                 if is_uicomponent(vl) then
-                    vl:MoveTo(rx + col[1] - L.LINE_GAP, ry)
-                    vl:SetVisible((heads[j] or "") ~= "")
+                    vl:MoveTo(rx + S.line_x(cols, j), ry)
+                    vl:SetVisible((heads[j] or "") ~= "" and not rc.section)
                 end
             end
             local div = find_uicomponent(r, "divider")
@@ -682,10 +731,17 @@ function S.refresh()
     local v = S.view_model(realm)
     S.data = v.rows
     set(find_uicomponent(p, "sub_title"), v.title)
-    for j = 1, 5 do
-        set(find_uicomponent(p, "hdr_" .. j), v.heads[j])
+    local px, py = p:Position()
+    for j, col in ipairs(v.cols) do
+        local h = find_uicomponent(p, "hdr_" .. j)
+        put(h, px, py, { L.list[1] + col[1], L.head_y, col[2], 22 })
+        align(h, col[3])
+        set(h, v.heads[j])
         local hl = find_uicomponent(p, "hdr_line_" .. j)
-        if is_uicomponent(hl) then hl:SetVisible((v.heads[j] or "") ~= "") end
+        if is_uicomponent(hl) then
+            hl:MoveTo(px + L.list[1] + S.line_x(v.cols, j), py + L.head_y)
+            hl:SetVisible((v.heads[j] or "") ~= "")
+        end
     end
     set(find_uicomponent(p, "hint_text"), v.hint or "")
     local back = find_uicomponent(p, S.BACK)
@@ -704,14 +760,13 @@ function S.refresh()
         empty:SetVisible(#v.rows == 0)
     end
     -- THE HOLDER STARTS AT THE TOP; a kept list's poll puts it back where the bar is.
-    local px, py = p:Position()
     put(find_uicomponent(p, "rows_holder"), px, py, L.list)
     -- AS TALL AS WHAT IT HOLDS (docs/CUSTOM_UI.md, drawn whole, step 5): a row outside its
     -- parent's box is not known to take clicks or the wheel.
     local holder = find_uicomponent(p, "rows_holder")
     if is_uicomponent(holder) then sized(holder, L.list[3], math.max(S.rows_shown(), #v.rows) * L.PITCH) end
     S.ensure_list(p, #v.rows)
-    S.draw_rows(p, v.rows, v.heads)
+    S.draw_rows(p, v.rows, v.heads, v.cols)
     S.draw_chart(p, v.chart)
 end
 

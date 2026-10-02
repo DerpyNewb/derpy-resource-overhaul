@@ -67,27 +67,45 @@ L = {
     "W": 860, "H": 640, "PITCH": 28, "ROWS": 16, "SLIDER_W": 16, "HANDLE_H": 40,
     "BUTTON": 48, "GAP": 4,
     "title": (20, 14, 500, 28), "close": (818, 12, 30, 30),
-    "tab_goods": (20, 52, 140, 26), "tab_settlements": (168, 52, 140, 26),
-    "tab_trade": (316, 52, 140, 26),
-    # the Trade tab's two switches a row, at the left of the Exports and Imports columns
-    "switch": (92, 24),
-    "back": (720, 52, 120, 26), "sub_title": (20, 86, 820, 22), "head_y": 112,
-    "list": (20, 138, 820, 448), "empty": (20, 150, 820, 60), "hint": (20, 600, 820, 22),
+    # A RULE BETWEEN THE TITLE AND THE TABS (asked for 2026-10-02): the two read as one block
+    # without it.
+    "title_rule": (20, 46, 820, 2),
+    "tab_goods": (20, 56, 140, 26), "tab_settlements": (168, 56, 140, 26),
+    "tab_trade": (316, 56, 140, 26),
+    # the Trade tab's two checkboxes a row, square, centred in the Exports and Imports columns
+    "CHECK": 26,
+    "back": (720, 56, 120, 26), "sub_title": (20, 90, 820, 22), "head_y": 116,
+    "list": (20, 142, 820, 448), "empty": (20, 154, 820, 60), "hint": (20, 600, 820, 22),
     "icon": (6, 2, 24, 24),
     # A SETTLEMENTS ROW SHOWS UP TO ICONS GOODS before its name, ICON_PITCH apart; the name moves
     # right past them. ponytail: a long name with four icons runs toward the Level column, whose
     # right-aligned digits leave room; measure in game if one collides.
     "ICONS": 4, "ICON_PITCH": 26,
-    # A COLUMN LINE sits LINE_GAP left of each column from the second: in the gap between them.
-    "LINE_GAP": 2,
     # THE CHART (flows spec section 7), on a good's drill-down only: the list drops to CHART_ROWS
     # and twenty bars stand on one baseline under it.
     "CHART_ROWS": 9, "BARS": 20, "BAR_W": 33, "BAR_PITCH": 41, "BAR_MIN": 2,
     "chart_top": (20, 400, 300, 18), "bars": (20, 420, 820, 120),
     "chart_from": (20, 542, 200, 18), "chart_to": (640, 542, 200, 18),
     "chart_line": (20, 564, 820, 22),
-    "cols": ((36, 204), (244, 90), (338, 100), (442, 110), (556, 240)),
+    # EACH VIEW HAS ITS OWN COLUMNS (x, w, align) inside a row: sized to what they hold and
+    # aligned to it - words left, numbers right, ticks centred. One set for every view left the
+    # Trade tab's ticks under right-aligned headers and "Space per good" squeezed into 100px.
+    # "focus" is both drill-downs, a good's and a settlement's: the same five columns.
+    "VIEWS": {
+        "goods": ((36, 204, "left"), (244, 90, "right"), (338, 100, "right"), (442, 110, "right"),
+                  (556, 240, "right")),
+        "focus": ((36, 230, "left"), (276, 120, "right"), (406, 90, "right"), (506, 80, "left"),
+                  (596, 204, "left")),
+        "settlements": ((36, 230, "left"), (276, 46, "right"), (330, 90, "right"), (430, 60, "right"),
+                        (500, 300, "right")),
+        "trade": ((36, 230, "left"), (276, 60, "right"), (346, 90, "centre"), (446, 90, "centre"),
+                  (546, 254, "left")),
+    },
+    # ponytail: a flat glyph width for a size-12 header, calibrated from the one seen squeezed in
+    # game (14 letters in 100px). The harness checks every view's headers against it.
+    "HEAD_CHAR_W": 8,
 }
+COLS = L["VIEWS"]["goods"]      # what the .twui.xml is built with; the Lua resizes per view
 
 # CA's own icon for each of its 17 goods (the Exchange's EX.INFO). Five filenames do not match
 # the good: res_rom_lead is Salt, res_rom_glass is Dwarf Beer, res_rom_textiles is Pottery.
@@ -124,6 +142,10 @@ SND_SMALL = "UI_GBL_TMP_Round_Small_Button"
 MUTED = "#C8B48CFF"
 BAR_COLOUR = "#C8A060DD"
 ALIGN = ("Left", "Right", "Right", "Right", "Right")
+# CA's checkbox art: ticked is allowed, empty is stopped. The Lua swaps 0 and 1 as the tabs do.
+CHECK_ON, CHECK_ON_HOVER = "ui/skins/default/checkbox_selected.png", "ui/skins/default/checkbox_selected_hover.png"
+BAND_COLOUR = "#FFFFFF10"        # every other row, so a wide row is easy to follow across
+SECTION_COLOUR = "#3A2C1ECC"     # the band under "Goods you do not have"
 TIP_OPEN = "Stores||What each of your settlements keeps of every good, and how fast it fills."
 
 
@@ -150,6 +172,8 @@ def build_panel():
     root = E.C("root", L["W"], L["H"])
     p = root.add(E.C("derpy_mr_stores_panel", L["W"], L["H"], layers=PANEL_LAYERS, priority=60))
     p.add(_cell(E, "title_text", L["title"][2], L["title"][3], size=16))
+    p.add(E.C("title_rule", L["title_rule"][2], L["title_rule"][3], image=WHITE,
+              colour_img=DIVIDER_COLOUR))
     p.add(E.C("derpy_mr_close", 30, 30, interactive=True, sound=SND_SMALL, tooltip="Close",
               layers=_round("active", "ui/skins/default/icon_cross_small.png", 5, "small"),
               hover=_round("hover", "ui/skins/default/icon_cross_small.png", 5, "small")))
@@ -163,9 +187,9 @@ def build_panel():
         p.add(_cell(E, name, box[2], box[3], interactive=True, image=BTN_BG,
                     hover=[_flat(BTN_HOVER)], sound=SND_SMALL, align="Center", tooltip=tip))
     p.add(_cell(E, "sub_title", L["sub_title"][2], L["sub_title"][3], size=13, colour=MUTED))
-    for j, (_x, w) in enumerate(L["cols"], 1):
+    for j, (_x, w, _a) in enumerate(COLS, 1):
         p.add(_cell(E, "hdr_%d" % j, w, 22, size=12, colour=MUTED, align=ALIGN[j - 1]))
-    for j in range(2, len(L["cols"]) + 1):
+    for j in range(2, len(COLS) + 1):
         p.add(E.C("hdr_line_%d" % j, 1, 22, image=WHITE, colour_img=DIVIDER_COLOUR))
     p.add(E.C("rows_holder", L["list"][2], L["list"][3]))
     p.add(_cell(E, "empty_text", L["empty"][2], L["empty"][3], size=13))
@@ -189,18 +213,19 @@ def build_row():
     r = root.add(E.C("derpy_mr_stores_row", w, L["PITCH"], interactive=True,
                      layers=[_flat(WHITE, colour="#00000033")],
                      hover=[_flat(WHITE, colour="#FFFFFF22")]))
+    r.add(E.C("band", w, L["PITCH"], image=WHITE, colour_img=BAND_COLOUR))
+    r.add(E.C("section_band", w, L["PITCH"] - 2, image=WHITE, colour_img=SECTION_COLOUR))
     r.add(E.C("divider", w, 2, image=WHITE, colour_img=DIVIDER_COLOUR))
     r.add(E.C("icon", L["icon"][2], L["icon"][3], image=ICON_BG))
     for j in range(2, L["ICONS"] + 1):
         r.add(E.C("icon%d" % j, L["icon"][2], L["icon"][3], image=ICON_BG))
-    for j, (_x, cw) in enumerate(L["cols"], 1):
+    for j, (_x, cw, _a) in enumerate(COLS, 1):
         r.add(_cell(E, "c%d" % j, cw, 20, size=12, align=ALIGN[j - 1]))
-    for j in range(2, len(L["cols"]) + 1):
+    for j in range(2, len(COLS) + 1):
         r.add(E.C("vline%d" % j, 1, L["PITCH"], image=WHITE, colour_img=DIVIDER_COLOUR))
     for d in ("export", "import"):
-        r.add(_cell(E, "derpy_mr_sw_" + d, L["switch"][0], L["switch"][1], interactive=True,
-                    image=BTN_BG, hover=[_flat(BTN_HOVER)], sound=SND_SMALL, align="Center",
-                    size=12))
+        r.add(E.C("derpy_mr_sw_" + d, L["CHECK"], L["CHECK"], interactive=True, image=CHECK_ON,
+                  hover=[_flat(CHECK_ON_HOVER)], sound=SND_SMALL))
     E.assign(root, "MR02")
     return E.layout(root, "derpy: one row of the Stores panel, created per row into rows_holder. "
                     "Generated by tools/gen_mr_ui.py; do not hand-edit.")
@@ -312,6 +337,8 @@ def check_capture_kinds():
 
 
 def _lua(v):
+    if isinstance(v, dict):
+        return "{" + ", ".join("%s = %s" % (k, _lua(v[k])) for k in sorted(v)) + "}"
     if isinstance(v, (tuple, list)):
         return "{" + ", ".join(_lua(x) for x in v) + "}"
     if isinstance(v, str):
@@ -462,8 +489,8 @@ def check_layout():
     """Every box inside the panel; headers, list and hint in order; columns clear of each
     other and of the slider. A box that leaves the panel draws over the map."""
     W, H = L["W"], L["H"]
-    for k in ("title", "close", "tab_goods", "tab_settlements", "tab_trade", "back", "sub_title",
-              "list", "empty", "hint"):
+    for k in ("title", "title_rule", "close", "tab_goods", "tab_settlements", "tab_trade", "back",
+              "sub_title", "list", "empty", "hint"):
         x, y, w, h = L[k]
         assert 0 <= x and 0 <= y and x + w <= W and y + h <= H, "%s leaves the panel" % k
     lx, ly, lw, lh = L["list"]
@@ -471,15 +498,19 @@ def check_layout():
     assert L["head_y"] + 22 <= ly and ly + lh <= L["hint"][1], "headers, list and hint overlap"
     assert L["tab_trade"][0] >= L["tab_settlements"][0] + L["tab_settlements"][2], "the tabs overlap"
     assert L["back"][0] >= L["tab_trade"][0] + L["tab_trade"][2], "back overlaps a tab"
-    for j in (2, 3):                       # the switches sit in the Exports and Imports columns
-        assert L["switch"][0] <= L["cols"][j][1], "a switch is wider than its column"
-    assert L["switch"][1] <= L["PITCH"] - 2, "a switch is taller than a row"
-    end = L["icon"][0] + L["icon"][2]
-    for j, (x, w) in enumerate(L["cols"]):
-        assert x >= end, "the column at %d overlaps the one before it" % x
-        if j:
-            assert end <= x - L["LINE_GAP"], "no room for the line before the column at %d" % x
-        end = x + w
+    t, r = L["title"], L["title_rule"]
+    assert t[1] + t[3] + 2 <= r[1] and r[1] + r[3] + 6 <= L["tab_goods"][1], "the rule touches the title or the tabs"
+    for j in (2, 3):                       # the checkboxes sit in the Exports and Imports columns
+        assert L["CHECK"] <= L["VIEWS"]["trade"][j][1], "a checkbox is wider than its column"
+    assert L["CHECK"] <= L["PITCH"] - 2, "a checkbox is taller than a row"
+    for view, cols in L["VIEWS"].items():
+        assert len(cols) == 5, view
+        end = L["icon"][0] + L["icon"][2]
+        for j, (x, w, a) in enumerate(cols):
+            assert a in ("left", "centre", "right"), "%s: %r is not an alignment SetTextHAlign takes" % (view, a)
+            assert x >= end + (2 if j else 0), "%s: no gap for the line before the column at %d" % (view, x)
+            end = x + w
+        assert end <= lw - L["SLIDER_W"], "%s: the last column runs under the slider" % view
     for k in ("chart_top", "bars", "chart_from", "chart_to", "chart_line"):
         x, y, w, h = L[k]
         assert 0 <= x and 0 <= y and x + w <= W and y + h <= H, "%s leaves the panel" % k
@@ -491,7 +522,6 @@ def check_layout():
     assert L["chart_line"][1] + L["chart_line"][3] <= L["hint"][1], "the chart runs into the hint"
     assert (L["BARS"] - 1) * L["BAR_PITCH"] + L["BAR_W"] <= L["bars"][2], "twenty bars do not fit"
     assert L["BAR_MIN"] <= L["bars"][3], "a sliver taller than the chart"
-    assert end <= lw - L["SLIDER_W"], "the last column runs under the slider"
 
 
 # ponytail: a flat glyph-width estimate for body_12, not a font metric. The cells are "Never
@@ -500,21 +530,17 @@ CHAR_W = 7
 
 
 def check_text_fits():
-    """The longest good name fits the name column and, with " 100%", the Fullest store column;
-    every header the source writes fits its column; the widest Space sum fits column 4."""
+    """The longest good name fits every view's name column and, with " 100%", the Settlements
+    tab's Fullest store; the widest Space sum fits the Goods tab's. The headers are checked by
+    the harness, against what each view actually writes."""
     import gen_resource_overhaul as G
     longest = max((n for _r, _f, n in G.store_stems().values()), key=len)
-    widths = [w for _x, w in L["cols"]]
-    assert CHAR_W * len(longest) <= widths[0], "%r overflows the name column" % longest
-    assert CHAR_W * len(longest + " 100%") <= widths[4], "%r overflows Fullest store" % longest
-    assert CHAR_W * len("123456 / 200000") <= widths[3], "a realm-wide Space sum overflows"
-    with io.open(SRC, encoding="utf-8") as fh:
-        src = fh.read()
-    heads = re.findall(r"v\.heads = \{([^}]*)\}", src)
-    assert len(heads) == 5, "expected five views' headers, found %d" % len(heads)
-    for h in heads:
-        for j, label in enumerate(re.findall(r'"([^"]*)"', h)):
-            assert CHAR_W * len(label) <= widths[j], "header %r overflows column %d" % (label, j + 1)
+    V = L["VIEWS"]
+    for view, cols in V.items():
+        assert CHAR_W * len(longest) <= cols[0][1], "%r overflows %s's name column" % (longest, view)
+    assert CHAR_W * len(longest + " 100%") <= V["settlements"][4][1], "%r overflows Fullest store" % longest
+    assert CHAR_W * len("123456 / 200000") <= V["goods"][3][1], "a realm-wide Space sum overflows"
+    assert CHAR_W * len("123456 / 200000") <= V["focus"][1][1], "a drill-down's Held / Space overflows"
 
 
 def check_xml():
@@ -610,14 +636,14 @@ def preview(path=None, chart=False):
         box(L[k], label)
     lx, ly, lw, _lh = L["list"]
     rows = L["CHART_ROWS"] if chart else L["ROWS"]
-    for j, (x, w) in enumerate(L["cols"]):
+    for j, (x, w, _a) in enumerate(COLS):
         box((lx + x, L["head_y"], w, 22), SAMPLE_HEADS[j])
     for i in range(rows):
         y = ly + i * L["PITCH"]
         d.rectangle((lx, y, lx + lw - L["SLIDER_W"], y + L["PITCH"] - 2), fill=(30, 24, 16))
         ix, iy, iw, ih = L["icon"]
         d.rectangle((lx + ix, y + iy, lx + ix + iw, y + iy + ih), outline=(200, 160, 90))
-        for j, (x, w) in enumerate(L["cols"]):
+        for j, (x, w, _a) in enumerate(COLS):
             t = SAMPLE[i % len(SAMPLE)][j]
             tx = lx + x if ALIGN[j] == "Left" else lx + x + w - d.textlength(t)
             d.text((tx, y + 8), t, fill=ink)
