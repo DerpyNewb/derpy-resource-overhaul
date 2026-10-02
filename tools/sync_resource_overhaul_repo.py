@@ -34,7 +34,9 @@ _SRC = "Modding Files/source/resource_overhaul/"
 CA_CLONES = ("resources_tables", "resources_to_campaign_junctions_tables",
              "cai_personality_strategic_resource_values_tables", "effects_tables",
              "building_chains_tables", "building_levels_tables",
-             "building_culture_variants_tables")
+             "building_culture_variants_tables", "pooled_resources_tables")
+# Whole FILES that are CA rows with our key: the store twins of CA's production rows (2026-10-02).
+CA_CLONE_FILES = ("building_effects_junction_tables__derpy_more_resources_ca.tsv",)
 
 # Anything that is art, a built pack, a CA ui file or a binary game format never goes public.
 REFUSED_EXT = (".png", ".dds", ".jpg", ".jpeg", ".webp", ".tga", ".pack", ".bin",
@@ -46,7 +48,7 @@ def _tsvs(root=ROOT):
     if not os.path.isdir(d):
         return []
     return [_SRC + n for n in sorted(os.listdir(d))
-            if n.endswith(".tsv") and n.split("__")[0] not in CA_CLONES]
+            if n.endswith(".tsv") and n.split("__")[0] not in CA_CLONES and n not in CA_CLONE_FILES]
 
 
 def manifest(root=ROOT):
@@ -82,6 +84,8 @@ def refused(m):
             bad.append((src, "art, CA ui file or game binary"))
         elif low.endswith(".tsv") and os.path.basename(src).split("__")[0] in CA_CLONES:
             bad.append((src, "CA's rows cloned out of db.pack"))
+        elif os.path.basename(src) in CA_CLONE_FILES:
+            bad.append((src, "CA's rows cloned out of db.pack"))
     return bad
 
 
@@ -92,7 +96,9 @@ def _selftest():
         "our own production rows are missing from the manifest"
     assert not any("building_levels_tables" in s for s, _ in m), "a CA clone got in"
     for probe in ("ui/campaign ui/city_info_bar.twui.xml", "x/resource_derpy_amber.png",
-                  _SRC + "resources_tables__derpy_more_resources.tsv"):
+                  _SRC + "resources_tables__derpy_more_resources.tsv",
+                  _SRC + "building_effects_junction_tables__derpy_more_resources_ca.tsv",
+                  _SRC + "pooled_resources_tables__derpy_more_resources.tsv"):
         assert refused([(probe, probe)]), "refused() let %s through" % probe
     print("selftest ok: %d files, nothing refused" % len(m))
 

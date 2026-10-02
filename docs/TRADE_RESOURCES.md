@@ -554,3 +554,41 @@ the goods trade as CA's own.
   `derpy_effect_region_resource_` prefix, and CA's goods from its baked building map, so the extra
   Salt, Furs, Pottery and Wine do not move its prices.
 - **Not checked in game.**
+
+## 19. Settlement stores (2026-10-02)
+
+Every settlement now keeps a store of each of the 54 goods (the mod's 37 plus CA's 17). The store
+fills each turn with exactly what that settlement's buildings produce. Phase 1 has no UI: the
+"Stores" panel is phase 2. Spec: `superpowers/specs/2026-10-02-resource-overhaul-stores-design.md`.
+Plan: `superpowers/plans/2026-10-02-resource-overhaul-stores-phase1.md`.
+
+**Built by `gen_resource_overhaul.py` (`_stores()`):**
+- **54 REGION-scope pools**, `derpy_mr_store_<stem>`, cloned from CA's per-settlement
+  `wh3_dlc27_sla_thralls_region`. Base space 200; under `wh_main_feature_all`.
+- **Twin rows:** one per production row, on the same building level, with the same values and
+  lore condition. Each carries `derpy_mr_store_<stem>_stocked` at `region_to_region_own`, bound with
+  `base_amount` to a gain-only junction.
+  - 5,024 twins of the mod's rows.
+  - 820 twins of CA's rows, in their own table file (`..._derpy_more_resources_ca`), which the
+    public repo refuses as a CA clone.
+- **Space:** one `derpy_mr_store_capacity` effect bound with `maximum_mod` to all 54 pools. It sits
+  on 640 main-settlement levels at +200 per level, stopping at +800, so space is 200 to 1,000. A
+  damaged settlement keeps its space, so damage never destroys stock.
+
+**Measured in game** (new IEE campaign, Conclave, turns 1 and 2, through the bridge):
+
+| Question | Answer |
+|---|---|
+| Does a REGION pool fill from a building's twin row? | **Yes.** Falls of Doom made Coal 6 and Brimstone 6 and held 6/400 of each a turn later; Gash Kadrak 8 and 8 |
+| Does `maximum_mod` raise a REGION pool's space? | **Yes.** 400 at level 2, 600 at Zharr-Naggrund |
+| Does every owner have the stores? | **Yes.** The player and six AI factions (daemons, Nagash) |
+| Does the CCO read list what fills each store? | **Yes**, with lore gates applied |
+| What happens to stock on capture, raze or abandonment? | Not observed yet |
+| Does a save from before the stores get them? | Not measured yet |
+
+**A captured building keeps filling.** The Poxmakers of Nurgle filled Pearls and Salted Fish from
+a harbour built by the previous owner. Production already behaves this way, and the stores follow
+production.
+
+**Raiding does nothing to the stores.** Nothing in phase 1 handles it. Raiding and sacking are
+listed in the spec as ways stock is lost or taken, for the spending design.

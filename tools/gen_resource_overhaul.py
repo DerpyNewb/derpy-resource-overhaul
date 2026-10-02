@@ -337,6 +337,50 @@ def good_spec(good):
     return GOODS[good] if good in GOODS else CA_GOODS[good]
 
 
+# THE STORES (spec docs/superpowers/specs/2026-10-02-resource-overhaul-stores-design.md): every
+# settlement keeps a store of each good, filled each turn by exactly what its buildings make.
+# CA's 17 tradeable goods by stem - the display stem, so salt not lead, beer not glass, tusks not ivory.
+CA_STEMS = {"res_animals": "animals", "res_dyes": "dyes", "res_gems": "gems", "res_gold_idols": "gold_idols",
+            "res_ivory": "tusks", "res_medicine": "medicine", "res_obsidian": "obsidian", "res_rom_furs": "furs",
+            "res_rom_glass": "beer", "res_rom_iron": "iron", "res_rom_lead": "salt", "res_rom_marble": "marble",
+            "res_rom_textiles": "pottery", "res_rom_timber": "timber", "res_rom_wine": "wine",
+            "res_spices": "spices", "res_trinkets": "trinkets"}
+STORE_DONOR = "wh3_dlc27_sla_thralls_region"   # CA's per-settlement (REGION) pool
+STORE_FACTOR = "derpy_mr_stocked"
+STORE_CAP_FX = "derpy_mr_store_capacity"
+CAP_FX_DONOR = "wh2_dlc12_pooled_resource_nuke_cap"   # a CA maximum_mod effect row, cloned
+STORE_BASE, STORE_STEP, STORE_TOP = 200, 200, 4   # space 200 at level 1, +200 a level, to 1,000
+STORE_LOC = ("pooled_resources_display_name_", "pooled_resources_description_",
+             "pooled_resources_positive_factors_display_name_",
+             "pooled_resources_negative_factors_display_name_")
+
+
+def store(stem):
+    return "derpy_mr_store_" + stem
+
+
+def store_fx(stem):
+    """The store's feed effect AND its factor junction id (two tables, one name)."""
+    return "derpy_mr_store_%s_stocked" % stem
+
+
+@functools.lru_cache(None)
+def _ca_names():
+    import read_vanilla_loc as rvl
+    names = rvl.load("resources")
+    return {res: names["resources_onscreen_text_" + res] for res in CA_STEMS}
+
+
+def store_stems():
+    """stem -> (resource key, its production effect, its display name): ours, then CA's."""
+    out = {g: (key(g), effect(g), GOODS[g]["name"]) for g in GOODS}
+    prod = {r["resource"]: r["effect"] for r in db("effect_bonus_value_resource_junction_tables")[1]
+            if r["bonus_value_id"] == "production"}
+    for res, stem in CA_STEMS.items():
+        out[stem] = (res, prod[res], _ca_names()[res])
+    return out
+
+
 # Our units, beside CA's twelve (commodity_unit_names): key -> (singular, plural).
 UNITS = {"derpy_horses": ("horse", "horses"), "derpy_crates": ("crate", "crates"),
          "derpy_bolts": ("bolt", "bolts"), "derpy_flasks": ("flask", "flasks"),
@@ -507,7 +551,7 @@ def rare_cond(good):
 def n_loc():
     chains = sum(len(rare_chains(g)) for g in RARE)
     return (LOC_PER_GOOD * len(GOODS) + 2 * len(UNITS) + LOC_PER_RARE_GOOD * len(RARE)
-            + LOC_PER_CHAIN * chains)
+            + LOC_PER_CHAIN * chains + 5 * (len(GOODS) + len(CA_STEMS)) + 3)
 
 # Owners with no living people to make or eat a good: daemons, the dead, and beasts with no towns
 # to sell in. Matched on the CHAIN key, so a special variant for one of them goes too.
@@ -794,6 +838,15 @@ def pool_chains(pool):
     return {c: v for c, v in out.items() if not EXCLUDE.search(c)}
 
 
+@functools.lru_cache(None)
+def settlement_levels():
+    """Every main-settlement chain -> its levels in order. No EXCLUDE: a store is the settlement's
+    whoever owns it, and CA's own production fills Tomb Kings and Nagash stores too."""
+    _tr, perm, _cp, _t, _rc, sp = srm.load()
+    tpls = {r["slot_template"] for r in sp if r["slot_type"] == "primary"}
+    return _chain_levels(frozenset(c for t in tpls for c in perm.get(t, ()) if not SETTLE_SKIP.search(c)))
+
+
 def _kind(pool):
     return pool if isinstance(pool, str) else pool[0]
 
@@ -900,14 +953,77 @@ def cond_key(good, i):
     return "derpy_mr_%s_%s" % (good, i)
 
 
+def _table_frag(tk, frag):
+    """'building_effects_junction_tables:ca' -> ('building_effects_junction_tables', frag + '_ca')."""
+    table, _, part = tk.partition(":")
+    return table, frag + ("_" + part if part else "")
+
+
+def store_rows(t):
+    """Every store twin: the ones on our production rows, then the ones on CA's."""
+    return ([r for r in t["building_effects_junction_tables"][2]
+             if r["effect"].startswith("derpy_mr_store_") and r["effect"] != STORE_CAP_FX]
+            + list(t["building_effects_junction_tables:ca"][2]))
+
+
+def _stores(t, add, loc):
+    """The 54 stores: pools, factor, junctions, reach, feed effects and their bindings, loc."""
+    stems = store_stems()
+    donor, = [r for r in db("pooled_resources_tables")[1] if r["key"] == STORE_DONOR]
+    fx_rows = {r["effect"]: r for r in db("effects_tables")[1]}
+    fx_rows.update({r["effect"]: r for r in t["effects_tables"][2]})   # ours, built above
+    add("pooled_resource_factors_tables", {"key": STORE_FACTOR, "is_hidden": False})
+    loc += [("pooled_resource_factors_display_name_positive_" + STORE_FACTOR, "Stocked"),
+            ("pooled_resource_factors_display_name_negative_" + STORE_FACTOR, "Stocked")]
+    for stem, (_res, fx, name) in stems.items():
+        add("pooled_resources_tables", dict(donor, key=store(stem), maximum=STORE_BASE, minimum=0,
+                                            ai_ignored=True, default_factor="other", optional_icon_path="",
+                                            income_policy="END_OF_ROUND", scope="REGION"))
+        add("pooled_resource_factor_junctions_tables", {
+            "unique_id": store_fx(stem), "factor": STORE_FACTOR, "resource": store(stem),
+            "minimum": 0, "maximum": 2147483647, "specific_faction_set": "", "sort_order": 0})
+        add("campaign_group_pooled_resources_tables",
+            {"campaign_group": "wh_main_feature_all", "resource": store(stem), "initial_amount": 0})
+        add("effects_tables", dict(fx_rows[fx], effect=store_fx(stem)))
+        add("effect_bonus_value_pooled_resource_factor_junctions_tables",
+            {"bonus_value_id": "base_amount", "effect": store_fx(stem), "resource_factor": store_fx(stem)})
+        loc += [("pooled_resources_display_name_" + store(stem), name),
+                ("pooled_resources_description_" + store(stem),
+                 "%s kept in this settlement's stores. They fill each turn with what its buildings make." % name),
+                ("pooled_resources_positive_factors_display_name_" + store(stem), "Stocked"),
+                ("pooled_resources_negative_factors_display_name_" + store(stem), "Used"),
+                ("effects_description_" + store_fx(stem), "%s stocked: %%n" % name)]
+    by_fx = {fx: stem for stem, (_r, fx, _n) in stems.items()}
+    ours = [r for r in t["building_effects_junction_tables"][2] if r["effect"] in by_fx]
+    theirs = [r for r in db("building_effects_junction_tables")[1]
+              if r["effect"] in by_fx and r["effect_scope"] == "building_to_building_own"]
+    for part, src in (("", ours), ("ca", theirs)):
+        for r in src:   # same level, values and lore condition; the store is the settlement's own
+            add("building_effects_junction_tables",
+                dict(r, effect=store_fx(by_fx[r["effect"]]), effect_scope="region_to_region_own"), part)
+    cap, = [r for r in db("effects_tables")[1] if r["effect"] == CAP_FX_DONOR]
+    add("effects_tables", dict(cap, effect=STORE_CAP_FX))
+    for stem in stems:   # one effect raises all 54 (CA binds one effect to five pools the same way)
+        add("effect_bonus_value_pooled_resource_junctions_tables",
+            {"bonus_value_id": "maximum_mod", "effect": STORE_CAP_FX, "pooled_resource": store(stem)})
+    for _chain, levels in sorted(settlement_levels().items()):
+        for n, lvl in enumerate(levels):
+            v = float(STORE_STEP * min(n, STORE_TOP))
+            if v:   # damaged keeps the space: a shrinking store would destroy goods
+                add("building_effects_junction_tables", {
+                    "building": lvl, "effect": STORE_CAP_FX, "effect_scope": "region_to_region_own",
+                    "value": v, "value_damaged": v, "value_ruined": 0.0, "context_requirement": ""})
+    loc.append(("effects_description_" + STORE_CAP_FX, "Space in this settlement's stores: +%n of each good"))
+
+
 def build():
     t = {}
 
-    def add(table, row):
+    def add(table, row, part=""):
         ver, van = db(table)
         cols = list(van[0].keys())
         assert list(row) == cols, "%s columns %s != CA's %s" % (table, list(row), cols)
-        t.setdefault(table, (ver, cols, []))[2].append(row)
+        t.setdefault(table + (":" + part if part else ""), (ver, cols, []))[2].append(row)
 
     van_made = {(r["building"], r["effect"]) for r in db("building_effects_junction_tables")[1]}
 
@@ -1005,6 +1121,7 @@ def build():
         text = "%s %s Anywhere else it makes nothing." % (GOODS[good]["desc"], spec["where"])
         loc += [("building_short_description_texts_short_description_" + stem, text),
                 ("building_description_texts_long_description_" + stem, text)]
+    _stores(t, add, loc)
     return t, loc
 
 
@@ -1293,8 +1410,9 @@ def check(t, loc):
     seen = set()
     for r in t["building_effects_junction_tables"][2]:
         assert r["building"] in van_lvl or r["building"] in ours, r
-        assert not EXCLUDE.search(r["building"]), r
-        assert r["value_damaged"] == damaged(r["value"]), r
+        store_row = r["effect"].startswith("derpy_mr_store_")
+        assert store_row or not EXCLUDE.search(r["building"]), r   # stores follow CA's own rows
+        assert r["value_damaged"] == (r["value"] if r["effect"] == STORE_CAP_FX else damaged(r["value"])), r
         assert r["effect"] not in made or r["value"] >= 1, r
         assert not r["context_requirement"] or r["context_requirement"] in ctx, r
         assert (r["building"], r["effect"]) not in seen, "two sources give %s %s" % (r["building"], r["effect"])
@@ -1349,6 +1467,7 @@ def check(t, loc):
     hall = pool_chains(("settlement", "nor"))
     assert hall and all(race(c) == "nor" for c in hall), "Norscan mead hall pool"
     check_rare(t, ours)
+    check_stores(t, loc)
     assert len(loc) == n_loc() and len(dict(loc)) == len(loc), "loc count or duplicate loc key"
     return gone
 
@@ -1396,7 +1515,8 @@ def check_rare(t, ours):
     for r in rows:
         good, race_ = chains[chain_of[r["building"]]]
         assert r["context_requirement"] == cond_key(good, "bld"), "ungated rare building row %s" % r
-        assert r["effect"] in van_fx or r["effect"] == effect(good), "unknown effect %s" % r["effect"]
+        assert r["effect"] in van_fx or r["effect"] in (effect(good), store_fx(good)), \
+            "unknown effect %s" % r["effect"]   # its production, its store twin, or a CA bonus
         theirs = [w for w, _k, fx in BONUS[good] if fx == r["effect"]]
         assert not theirs or set(theirs) & {None, race_}, "%s carries another race's bonus %s" % (r["building"], r["effect"])
     for good in RARE:   # every race that can build it gets something of its own
@@ -1409,6 +1529,74 @@ def check_rare(t, ours):
     for good in RARE:
         loose = [g["region"] for g in _signals().values() if evaluate(rare_cond(good), g) and not rules[good](g)]
         assert not loose, "%s building reaches %d regions its lore does not, e.g. %s" % (good, len(loose), loose[:3])
+
+
+def check_stores(t, loc):
+    """The settlement stores (spec 2026-10-02-resource-overhaul-stores-design.md): 54 REGION pools,
+    each reachable by every owner, each with its gain-only junction, base_amount binding and loc."""
+    import read_vanilla_loc as rvl
+    stems = store_stems()
+    assert len(stems) == len(GOODS) + len(CA_STEMS) == 54, len(stems)
+    assert not set(CA_STEMS.values()) & set(GOODS), "a CA stem shadows one of our goods"
+    pools = {r["key"]: r for r in t["pooled_resources_tables"][2]}
+    assert set(pools) == {store(s) for s in stems}, set(pools) ^ {store(s) for s in stems}
+    for k, p in pools.items():
+        assert (p["scope"], p["maximum"], p["minimum"], p["income_policy"]) == \
+            ("REGION", STORE_BASE, 0, "END_OF_ROUND"), (k, p)
+    j = {r["unique_id"]: r for r in t["pooled_resource_factor_junctions_tables"][2]}
+    for s in stems:
+        jr = j[store_fx(s)]
+        assert jr["resource"] == store(s) and jr["factor"] == STORE_FACTOR, jr
+        assert jr["minimum"] == 0 < jr["maximum"], "store junction must be gain-only: %s" % jr
+    reach = {(r["campaign_group"], r["resource"]) for r in t["campaign_group_pooled_resources_tables"][2]}
+    assert {("wh_main_feature_all", store(s)) for s in stems} <= reach, "a store no owner can reach"
+    bind = {(r["effect"], r["resource_factor"]) for r in
+            t["effect_bonus_value_pooled_resource_factor_junctions_tables"][2] if r["bonus_value_id"] == "base_amount"}
+    assert bind == {(store_fx(s), store_fx(s)) for s in stems}, bind ^ {(store_fx(s), store_fx(s)) for s in stems}
+    # every loc prefix we write is one CA's own pools use (a misspelt prefix shows the raw key)
+    van = rvl.load("pooled_resources")
+    keys = dict(loc)
+    for pre in STORE_LOC:
+        assert any(k.startswith(pre) for k in van), "no CA pool uses loc prefix %s" % pre
+        for s in stems:
+            assert keys.get(pre + store(s)), pre + store(s)
+    for s in stems:
+        assert keys.get("effects_description_" + store_fx(s)), store_fx(s)
+    by_fx = {fx: s for s, (_r, fx, _n) in stems.items()}
+    rows = t["building_effects_junction_tables"][2]
+    prod = [r for r in rows if r["effect"] in by_fx] + \
+           [r for r in db("building_effects_junction_tables")[1]
+            if r["effect"] in by_fx and r["effect_scope"] == "building_to_building_own"]
+    twins = {(r["building"], r["effect"]): r for r in store_rows(t)}
+    assert len(twins) == len(store_rows(t)), "two twins on one building and store"
+    assert len(twins) == len(prod), "%d twins for %d production rows" % (len(twins), len(prod))
+    for p in prod:
+        tw = twins.get((p["building"], store_fx(by_fx[p["effect"]])))
+        assert tw, "production row with no store twin: %s %s" % (p["building"], p["effect"])
+        for c in ("value", "value_damaged", "value_ruined", "context_requirement"):
+            assert tw[c] == p[c], "%s %s: twin %s=%r, production %r" % (p["building"], p["effect"], c, tw[c], p[c])
+        assert tw["effect_scope"] == "region_to_region_own", tw
+    # CA's rows' twins live in their own file, so the public repo can refuse it
+    ca = {r["building"] for r in t["building_effects_junction_tables:ca"][2]}
+    van_lvl = {r["building"] for r in db("building_effects_junction_tables")[1] if r["effect"] in by_fx}
+    assert ca <= van_lvl, "a non-CA row in the _ca file"
+    capb = {r["pooled_resource"] for r in t["effect_bonus_value_pooled_resource_junctions_tables"][2]
+            if r["effect"] == STORE_CAP_FX and r["bonus_value_id"] == "maximum_mod"}
+    assert capb == {store(s) for s in stems}, "capacity effect must raise every store"
+    cap = {r["building"]: r for r in rows if r["effect"] == STORE_CAP_FX}
+    n_cap = 0
+    for chain, levels in settlement_levels().items():
+        for n, lvl in enumerate(levels):
+            want = float(STORE_STEP * min(n, STORE_TOP))
+            got = cap[lvl]["value"] if lvl in cap else 0.0
+            assert got == want, "%s (level index %d): space +%s, want +%s" % (lvl, n, got, want)
+            if lvl in cap:
+                n_cap += 1
+                assert cap[lvl]["value_damaged"] == want, "damage must not shrink a store: %s" % lvl
+                assert cap[lvl]["effect_scope"] == "region_to_region_own", cap[lvl]
+    assert n_cap == len(cap), "capacity on a level that is not a main settlement"
+    assert keys.get("effects_description_" + STORE_CAP_FX)
+    return len(stems)
 
 
 def build_submod(name):
@@ -1509,10 +1697,11 @@ def check_submod_reach(name):
 
 def write(t, loc, frag=FRAG):
     os.makedirs(OUT, exist_ok=True)
-    for table, (ver, cols, rows) in t.items():
-        with io.open(os.path.join(OUT, "%s__%s.tsv" % (table, frag)), "w",
+    for tk, (ver, cols, rows) in t.items():
+        table, ff = _table_frag(tk, frag)
+        with io.open(os.path.join(OUT, "%s__%s.tsv" % (table, ff)), "w",
                      encoding="utf-8", newline="\n") as fh:
-            fh.write("\t".join(cols) + "\n#%s;%d;db/%s/%s\n" % (table, ver, table, frag))
+            fh.write("\t".join(cols) + "\n#%s;%d;db/%s/%s\n" % (table, ver, table, ff))
             for r in rows:
                 fh.write("\t".join(_fmt(r[c]) for c in cols) + "\n")
     if frag != FRAG:
@@ -1562,7 +1751,21 @@ def selftest():
                              effect="wh2_main_effect_resource_recruitment_cost_reduction_emp_demigryphs")),
                     lambda t: t["building_effects_junction_tables"][2].append(   # onto CA's own furs row
                         dict(t["building_effects_junction_tables"][2][0], building="wh_dlc05_wef_growth_1",
-                             effect=CA_GOODS["furs"]["effect"]))):
+                             effect=CA_GOODS["furs"]["effect"])),
+                    lambda t: t["pooled_resources_tables"][2][0].update(scope="FACTION"),
+                    lambda t: t["pooled_resource_factor_junctions_tables"][2][0].update(maximum=0),
+                    lambda t: t["campaign_group_pooled_resources_tables"][2].pop(),
+                    lambda t: t["building_effects_junction_tables:ca"][2].pop(),
+                    lambda t: [r for r in t["building_effects_junction_tables"][2]
+                               if r["effect"].startswith("derpy_mr_store_")][0].update(value=999.0),
+                    lambda t: [r for r in t["building_effects_junction_tables"][2]
+                               if r["effect"].startswith("derpy_mr_store_") and r["context_requirement"]][0]
+                              .update(context_requirement=""),
+                    lambda t: t["building_effects_junction_tables"][2].remove(
+                        [r for r in t["building_effects_junction_tables"][2] if r["effect"] == STORE_CAP_FX][0]),
+                    lambda t: [r for r in t["building_effects_junction_tables"][2]
+                               if r["effect"] == STORE_CAP_FX][0].update(value_damaged=100.0),
+                    lambda t: t["effect_bonus_value_pooled_resource_junctions_tables"][2].pop()):
         bad, _ = build()
         breakit(bad)
         try:
@@ -1640,18 +1843,20 @@ def pack(t, frag=FRAG):
     import read_pack_index as rpi
     from import_house_ancillaries import call, check_keys
     call("set_game_selected", {"game_name": "warhammer_3", "rebuild_dependencies": False})
-    plan = [("db/%s/%s" % (tb, frag), {"DB": [frag, tb, ver]}, "%s__%s.tsv" % (tb, frag), OUT)
-            for tb, (ver, _c, _r) in sorted(t.items())]
+    plan = []
+    for tk, (ver, _c, _r) in sorted(t.items()):   # a "table:part" key is a second file of that table
+        table, ff = _table_frag(tk, frag)
+        plan.append(("db/%s/%s" % (table, ff), {"DB": [ff, table, ver]}, "%s__%s.tsv" % (table, ff), OUT, tk))
     main = frag == FRAG   # loc and icons ship once, in the main pack
     if main:
         plan.append(("text/db/%s.loc" % frag, {"Loc": frag}, "loc__%s.tsv" % frag, OUT))
-    for path, _n, tsv, _o in plan:   # the files on disk must be what build() makes
+    for path, _n, tsv, _o, *tk in plan:   # the files on disk must be what build() makes
         rows = sum(1 for _ in open(os.path.join(OUT, tsv), encoding="utf-8")) - 2
-        want = len(t[path.split("/")[1]][2]) if path.startswith("db/") else n_loc()
+        want = len(t[tk[0]][2]) if tk else n_loc()
         assert rows == want, "%s has %d rows, build() makes %d - run without --pack first" % (tsv, rows, want)
     check_keys(plan)
     key = call("new_pack", {})["String"]
-    for path, newfile, tsv, _o in plan:
+    for path, newfile, tsv, _o, *_tk in plan:
         call("new_packed_file", {"pack_key": key, "path": path, "new_file": json.dumps(newfile)})
         call("import_tsv", {"pack_key": key, "table_path": path, "tsv_path": os.path.join(OUT, tsv)})
     icons = ["%s/%s%s.png" % (ICON_DIR, icon(g), s)
@@ -1671,7 +1876,7 @@ def pack(t, frag=FRAG):
     # verify what was SAVED, not what was planned
     again = call("open_packfiles", {"paths": [out]})["StringContainerInfo"][0]
     tmp = tempfile.mkdtemp()
-    for path, _n, tsv, _o in plan:
+    for path, _n, tsv, _o, *_tk in plan:
         dst = os.path.join(tmp, tsv)
         call("export_tsv", {"pack_key": again, "table_path": path, "tsv_path": dst})
         got = sum(1 for l in io.open(dst, encoding="utf-8") if l.strip()) - 2

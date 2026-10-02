@@ -2,6 +2,9 @@
 
 ## 2026-10-02
 
+- Every settlement keeps a store of each good.
+- Stores fill each turn from its buildings.
+- Space grows with settlement level.
 - Renamed to Derpy Resource Overhaul. New pack names, same keys.
 - Salt, Furs, Pottery and Wine made common, on CA's own effects.
 - Wine only from Bretonnian, Empire and High Elf farms.
