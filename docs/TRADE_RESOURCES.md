@@ -806,5 +806,14 @@ freezes them on one machine. A 500 ms poll keeps it up; the tooltip lists up to 
 - Headers renamed "Space each" and "Goods". The engine shrank "Space per good" in 100px; the
   harness now checks every view's headers at `HEAD_CHAR_W` = 8.
 
+**Wording and trade shortcuts (2026-10-02).**
+- Player text says "resource", never "good": the panel, the MCT, the building tooltips and the
+  store-space effect. The first tab is "Resources". Code names keep `goods`.
+- Four buttons under the Trade list: Allow/Stop all exports/imports. Each sends
+  `F.ALL_STOP` / `F.ALL_ALLOW` in place of a resource key, through the same `F.send` and
+  UITrigger as one checkbox. `F.apply` sets every resource that way; it never toggles.
+- Clicking the "Resources you do not have" row folds them away (`S.folded`). The fold lasts
+  while the campaign runs and is not saved.
+
 **In game, still to see:** the raid plate's per-good icons; the redesigned panel (checkbox
 art, header alignment, bands).

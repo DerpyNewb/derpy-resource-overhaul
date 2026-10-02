@@ -2,6 +2,9 @@
 
 ## 2026-10-02
 
+- "Goods" renamed "Resources" everywhere the player reads it.
+- Trade tab: Allow all / Stop all buttons for exports and imports.
+- Trade tab: click "Resources you do not have" to hide or show them.
 - Stores panel redesign: a line under the title, per-tab columns, Trade checkboxes, row bands.
 - Trade tab: a "Goods you do not have" heading over the greyed goods.
 - Stores panel: a Trade tab to stop each good's exports or imports.

@@ -414,6 +414,30 @@ ui_trigger(SENT[1][1], SENT[1][2]); eq(F.stopped("tP", "export", "coal"), true, 
 ui_trigger(999, "dmr1|export|coal"); eq(F.stopped("tP", "export", "coal"), true, "a trigger from no human does nothing")
 ui_trigger(tP.cqi, "zx1|buy|coal"); eq(F.stopped("tP", "export", "coal"), true, "another mod's trigger is not ours")
 MP = false; F.toggle("tP", "export", "coal"); SENT = {}
+-- ALL AT ONCE: one click stops or allows every resource one way, and leaves the other way alone
+local function count(fk, dir)
+    local n = 0
+    for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do if F.stopped(fk, dir, g.stem) then n = n + 1 end end
+    return n
+end
+F.toggle("tP", "import", "iron")
+F.apply("tP", "export", F.ALL_STOP)
+eq(count("tP", "export"), #DERPY_MR_FLOWS_GOODS, "stop all: every resource's exports stopped")
+eq(count("tP", "import"), 1, "and the imports untouched")
+F.apply("tP", "export", F.ALL_STOP); eq(count("tP", "export"), #DERPY_MR_FLOWS_GOODS, "a second stop-all is not a toggle")
+F.apply("tP", "export", F.ALL_ALLOW); eq(count("tP", "export"), 0, "allow all: none stopped")
+eq(F.stopped("tP", "import", "iron"), true, "and the imports still untouched")
+F.apply("tQ", "export", F.ALL_STOP); eq(count("tQ", "export"), 0, "a computer-run faction has no switches")
+F.apply("tP", "sideways", F.ALL_STOP); eq(count("tP", "sideways"), 0, "an unknown direction is ignored")
+F.apply("tP", "export", "coal"); eq(F.stopped("tP", "export", "coal"), true, "a resource's key still toggles it")
+F.apply("tP", "export", "coal")
+F.send("tP", "export", F.ALL_STOP); eq(count("tP", "export"), #DERPY_MR_FLOWS_GOODS, "singleplayer: stop-all applies at once")
+F.send("tP", "export", F.ALL_ALLOW); eq(count("tP", "export"), 0, "and allow-all")
+MP = true
+F.send("tP", "import", F.ALL_ALLOW); eq(SENT[1][2], "dmr1|import|" .. F.ALL_ALLOW, "multiplayer: sent like one switch")
+eq(F.stopped("tP", "import", "iron"), true, "and changes nothing on its own")
+ui_trigger(SENT[1][1], SENT[1][2]); eq(count("tP", "import"), 0, "the trigger applies it")
+MP = false; SENT = {}
 tP.partners, tQ.partners = {}, {}
 
 -- ---- history ----------------------------------------------------------------------------

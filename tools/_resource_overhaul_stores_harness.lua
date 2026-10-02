@@ -316,7 +316,7 @@ eq(find("title_text").text, "Stores", "title"); eq(find("hdr_2").text, "Held", "
 local rule, ttl, tg = find("title_rule"), find("title_text"), find("derpy_mr_tab_goods")
 eq(rule.visible, true, "a rule under the title")
 eq(rule.y >= ttl.y + ttl.h + 2, true, "clear of the title"); eq(tg.y >= rule.y + rule.h + 6, true, "and of the tabs")
-for name, label in pairs({ derpy_mr_tab_goods = "Goods", derpy_mr_tab_settlements = "Settlements", derpy_mr_back = "Back" }) do
+for name, label in pairs({ derpy_mr_tab_goods = "Resources", derpy_mr_tab_settlements = "Settlements", derpy_mr_back = "Back" }) do
     local c = find(name); c:SetState("hover")
     eq(c:GetStateText(), label, name .. " keeps its label on hover"); c:SetState("standard")
     eq(c:GetStateText(), label, name .. " label")
@@ -436,7 +436,7 @@ end
 click("derpy_mr_close"); LOCAL = "fac_a"
 HIST.turns, HIST.total, HIST.last = { 3, 4, 5 }, { 0, 50, 100 }, { made = 12 }
 click("derpy_mr_stores_button")
-eq(find("hdr_1").text, "Good", "reopened on the Goods tab")
+eq(find("hdr_1").text, "Resource", "reopened on the Resources tab")
 eq(bars_shown(), 0, "no bars on a top view"); eq(find("chart_line").visible, false, "no chart on a top view")
 eq(find("derpy_mr_stores_list").h, L.ROWS * L.PITCH, "the full list on a top view")
 click("derpy_mr_row_1")
@@ -470,13 +470,18 @@ DERPY_MR_FLOWS = {
     end,
     send = function(fk, dir, stem)
         SENT[#SENT + 1] = fk .. "|" .. dir .. "|" .. stem
-        STOP[dir .. "|" .. stem] = not STOP[dir .. "|" .. stem]
+        if stem == "all_stop" or stem == "all_allow" then
+            for _, g in ipairs(DERPY_MR_STORES_GOODS) do STOP[dir .. "|" .. g.stem] = stem == "all_stop" end
+        else
+            STOP[dir .. "|" .. stem] = not STOP[dir .. "|" .. stem]
+        end
     end,
     last = function(_, stem)
         if stem == "coal" then return { traded_out = 15, traded_in = 2 } end
         return {}
     end,
     series = function() return {}, {} end,
+    ALL_STOP = "all_stop", ALL_ALLOW = "all_allow",     -- as flows.lua's F.ALL_STOP / F.ALL_ALLOW
 }
 local function switch(i, dir) return find_uicomponent(find("derpy_mr_row_" .. i), "derpy_mr_sw_" .. dir) end
 click("derpy_mr_close"); click("derpy_mr_stores_button"); click("derpy_mr_tab_trade")
@@ -497,7 +502,7 @@ eq(shown_rows(), #DERPY_MR_STORES_GOODS + 1, "every good is listed, held or not,
 eq(cell(1, 1).text, "Coal", "most held first"); eq(cell(1, 2).text, "100", "held (fac_a now holds Alpha alone)")
 eq(cell(2, 1).text, "Brimstone", "a good you make but do not hold yet is not greyed")
 local others = #DERPY_MR_STORES_GOODS - 2
-eq(cell(3, 1).text, S.section("Goods you do not have (" .. others .. ")"), "a section row before the rest")
+eq(cell(3, 1).text, S.section("Resources you do not have (" .. others .. ")"), "a section row before the rest")
 eq(find_uicomponent(find("derpy_mr_row_3"), "section_band").visible, true, "on its own band")
 eq(switch(3, "import").visible, false, "with no switches"); eq(find_uicomponent(find("derpy_mr_row_3"), "icon").visible, false, "no icon")
 eq(find_uicomponent(find("derpy_mr_row_3"), "vline3").visible, false, "and no column lines")
@@ -540,7 +545,31 @@ eq(string.find(switch(1, "export").tip, "allow", 1, true) ~= nil, true, "the too
 press(switch(2, "import")); eq(SENT[2], "fac_a|import|brimstone", "the row's own good (then by name)")
 press(find_uicomponent(find("derpy_mr_row_1"), "c3")); eq(#SENT, 2, "a cell named like ours elsewhere is not a switch")
 click("derpy_mr_row_1"); eq(find("sub_title").text, "What your settlements trade", "a Trade row opens nothing")
-click("derpy_mr_row_3"); eq(#ERRORS, 0, "nor does the section row")
+-- THE SECTION ROW FOLDS: a click hides the resources you do not have, another shows them again
+eq(find("derpy_mr_row_3").tip, S.FOLD_TIP[false], "the section row says a click hides them")
+click("derpy_mr_row_3"); eq(shown_rows(), 3, "folded: your two resources and the section row")
+eq(cell(3, 1).text, S.section("Resources you do not have (" .. others .. ")" .. S.FOLDED), "and it says so")
+eq(find("derpy_mr_row_3").tip, S.FOLD_TIP[true], "and that a click shows them")
+click("derpy_mr_close"); click("derpy_mr_stores_button"); eq(shown_rows(), 3, "kept folded while the campaign runs")
+click("derpy_mr_row_3"); eq(shown_rows(), #DERPY_MR_STORES_GOODS + 1, "unfolded again")
+-- ALL AT ONCE: four buttons under the list, on the Trade tab only
+local function bulk(dir, mode) return find("derpy_mr_all_" .. dir .. "_" .. mode) end
+for _, dm in ipairs({ { "export", "allow" }, { "export", "stop" }, { "import", "allow" }, { "import", "stop" } }) do
+    local bt = bulk(dm[1], dm[2])
+    eq(bt.visible, true, "a button to " .. dm[2] .. " every " .. dm[1])
+    eq(bt.y, pnl0.y + LL.bulk[2], "on the bottom line")
+    bt:SetState("hover"); eq(bt:GetStateText() ~= "", true, "labelled on hover"); bt:SetState("standard")
+end
+eq(bulk("export", "stop").text, "Stop all exports", "plain label")
+eq(bulk("export", "stop").x < bulk("import", "allow").x, true, "exports left of imports")
+eq(find("hint_text").x + #find("hint_text").text * 7 <= bulk("export", "allow").x, true, "the hint ends before the buttons")
+SENT = {}
+press(bulk("export", "stop")); eq(SENT[1], "fac_a|export|all_stop", "stop all exports, in one message")
+eq(switch(1, "export").images[0], S.CHECK[false][1], "every export box empties at once")
+eq(switch(2, "export").images[0], S.CHECK[false][1], "the second too")
+eq(switch(1, "import").images[0], S.CHECK[true][1], "the imports untouched")
+press(bulk("export", "allow")); eq(SENT[2], "fac_a|export|all_allow", "allow all exports")
+eq(switch(1, "export").images[0], S.CHECK[true][1], "ticked again")
 -- EVERY HEADER FITS ITS COLUMN, on every tab: a header that did not was shrunk by the engine
 -- (seen in game 2026-10-02: "Space per good" in 100px). HEAD_CHAR_W is calibrated from that.
 local saved_view, saved_focus = S.view, S.focus
@@ -555,9 +584,11 @@ end
 S.view, S.focus = saved_view, saved_focus
 click("derpy_mr_tab_goods")
 eq(switch(1, "export").visible, false, "no switches off the Trade tab")
+eq(bulk("export", "stop").visible, false, "and no all-at-once buttons")
 eq(find("hdr_3").halign, "right", "and the Goods tab's own alignment back")
 DERPY_MR_FLOWS = nil; click("derpy_mr_tab_trade")
 eq(switch(1, "export").visible, false, "without the flows script: no switches"); eq(#ERRORS, 0, "and no error")
+eq(bulk("import", "allow").visible, false, "nor all-at-once buttons")
 
 -- ---- the raid plate above a raiding army -----------------------------------------------
 local function fits(tip)

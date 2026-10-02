@@ -714,7 +714,7 @@ def label_id(good):
 
 def tooltip(good):
     g = GOODS[good]
-    return "%s||A building in this settlement produces %s, a trade good." % (g["name"], g["name"])
+    return "%s||A building in this settlement produces %s, a trade resource." % (g["name"], g["name"])
 
 
 def label_vanilla():
@@ -1049,7 +1049,7 @@ def _stores(t, add, loc):
             add("building_effects_junction_tables", {
                 "building": lvl, "effect": STORE_CAP_FX, "effect_scope": "region_to_region_own",
                 "value": v, "value_damaged": v, "value_ruined": 0.0, "context_requirement": ""})
-    loc.append(("effects_description_" + STORE_CAP_FX, "Space in this settlement's stores: +%n of each good"))
+    loc.append(("effects_description_" + STORE_CAP_FX, "Space in this settlement's stores: +%n of each resource"))
 
 
 def build():

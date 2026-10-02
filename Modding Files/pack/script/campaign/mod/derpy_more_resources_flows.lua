@@ -436,6 +436,8 @@ end
 -- Humans only: a computer-run faction has no panel to set them from.
 F.DIRS = { export = true, import = true }
 F.TAG = "dmr1"
+-- in place of a resource's key: every resource one way at once (the panel's four buttons)
+F.ALL_STOP, F.ALL_ALLOW = "all_stop", "all_allow"
 
 function F.stopped(fkey, dir, stem)
     local b = F.state.factions[fkey]
@@ -455,12 +457,24 @@ function F.toggle(fkey, dir, stem)
     if F.stopped(fkey, dir, stem) then b.stop[dir][stem] = nil else b.stop[dir][stem] = true end
 end
 
+-- `what` is a resource's key (toggle it) or ALL_STOP / ALL_ALLOW (set every one, not a toggle)
+function F.apply(fkey, dir, what)
+    if what ~= F.ALL_STOP and what ~= F.ALL_ALLOW then return F.toggle(fkey, dir, what) end
+    if not F.DIRS[dir] or not F.is_human(fkey) then return end
+    local b = F.book(fkey)
+    b.stop = b.stop or {}
+    b.stop[dir] = {}
+    if what == F.ALL_STOP then
+        for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do b.stop[dir][g.stem] = true end
+    end
+end
+
 -- A CLICK NEVER WRITES THE MODEL ITSELF IN MULTIPLAYER: it goes out as a UITrigger, which CA
--- delivers to every machine in one order, and the listener toggles it everywhere at once.
+-- delivers to every machine in one order, and the listener applies it everywhere at once.
 function F.send(fkey, dir, stem)
     local mp = false
     pcall(function() mp = cm:is_multiplayer() end)
-    if not mp then return F.toggle(fkey, dir, stem) end
+    if not mp then return F.apply(fkey, dir, stem) end
     local f = cm:get_faction(fkey)
     if not f or f:is_null_interface() then return end
     CampaignUI.TriggerCampaignScriptEvent(f:command_queue_index(), F.TAG .. "|" .. dir .. "|" .. stem)
@@ -473,7 +487,7 @@ function F.on_ui_trigger(context)
     for _, k in ipairs(cm:get_human_factions()) do
         local f = cm:get_faction(k)
         if f and not f:is_null_interface() and f:command_queue_index() == cqi then
-            F.toggle(k, dir, stem)
+            F.apply(k, dir, stem)
             local S = DERPY_MR_STORES
             if S and S.refresh then pcall(S.refresh) end
             return

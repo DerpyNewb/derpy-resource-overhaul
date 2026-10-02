@@ -42,21 +42,21 @@ MCT_REL = "Modding Files/pack/script/mct/settings/derpy_more_resources.lua"
 # flows script's defaults and the MCT sliders, so the two cannot disagree. Plain words: no "AI".
 RATES = (
     ("raid", "Raid share per turn",
-     "Each turn an army raids a settlement, it carries off this share of every good the settlement "
+     "Each turn an army raids a settlement, it carries off this share of every resource the settlement "
      "keeps, into its own nearest settlement as far as that has room. 0 turns this off.", 0, 50, 10),
     ("sack", "Sack share",
-     "Sacking a settlement carries off this share of every good it keeps, into the sacker's "
+     "Sacking a settlement carries off this share of every resource it keeps, into the sacker's "
      "nearest settlement as far as that has room. 0 turns this off.", 0, 100, 50),
     ("raze", "Raze share",
-     "Razing a settlement carries off this share of every good it keeps before it burns. "
+     "Razing a settlement carries off this share of every resource it keeps before it burns. "
      "0 turns this off.", 0, 100, 50),
     ("trade", "Trade share per turn",
-     "Each turn, every trade agreement sends this share of a good from the sender's fullest store "
-     "to the partner's capital, for each good the partner lacks. 0 turns this off.", 0, 25, 5),
+     "Each turn, every trade agreement sends this share of a resource from the sender's fullest store "
+     "to the partner's capital, for each resource the partner lacks. 0 turns this off.", 0, 25, 5),
 )
-AI_SWITCH = ("ai", "Goods move between other factions",
-             "Raids, sacks and trade between two factions no player controls move goods too. Off: "
-             "goods move only when a player's faction is one of the two, which makes turns faster on "
+AI_SWITCH = ("ai", "Resources move between other factions",
+             "Raids, sacks and trade between two factions no player controls move resources too. Off: "
+             "resources move only when a player's faction is one of the two, which makes turns faster on "
              "a slow machine.", True)
 # Which factor each kind of move books to: the junction is derpy_mr_store_<stem>_<kind>.
 FLOW_KIND = {"raid": "raided", "sack": "plundered", "raze": "plundered", "trade": "traded"}
@@ -76,6 +76,9 @@ L = {
     "CHECK": 26,
     "back": (720, 56, 120, 26), "sub_title": (20, 90, 820, 22), "head_y": 116,
     "list": (20, 142, 820, 448), "empty": (20, 154, 820, 60), "hint": (20, 600, 820, 22),
+    # THE TRADE TAB'S FOUR ALL-AT-ONCE BUTTONS, the first's box, then BULK_GAP apart to the right
+    # edge; the Trade tab's hint is short enough to end before them.
+    "bulk": (262, 598, 140, 26), "BULK_GAP": 6,
     "icon": (6, 2, 24, 24),
     # A SETTLEMENTS ROW SHOWS UP TO ICONS GOODS before its name, ICON_PITCH apart; the name moves
     # right past them. ponytail: a long name with four icons runs toward the Level column, whose
@@ -96,8 +99,8 @@ L = {
                   (556, 240, "right")),
         "focus": ((36, 230, "left"), (276, 120, "right"), (406, 90, "right"), (506, 80, "left"),
                   (596, 204, "left")),
-        "settlements": ((36, 230, "left"), (276, 46, "right"), (330, 90, "right"), (430, 60, "right"),
-                        (500, 300, "right")),
+        "settlements": ((36, 230, "left"), (276, 46, "right"), (330, 90, "right"), (430, 80, "right"),
+                        (520, 280, "right")),
         "trade": ((36, 230, "left"), (276, 60, "right"), (346, 90, "centre"), (446, 90, "centre"),
                   (546, 254, "left")),
     },
@@ -146,7 +149,7 @@ ALIGN = ("Left", "Right", "Right", "Right", "Right")
 CHECK_ON, CHECK_ON_HOVER = "ui/skins/default/checkbox_selected.png", "ui/skins/default/checkbox_selected_hover.png"
 BAND_COLOUR = "#FFFFFF10"        # every other row, so a wide row is easy to follow across
 SECTION_COLOUR = "#3A2C1ECC"     # the band under "Goods you do not have"
-TIP_OPEN = "Stores||What each of your settlements keeps of every good, and how fast it fills."
+TIP_OPEN = "Stores||What each of your settlements keeps of every resource, and how fast it fills."
 
 
 def _flat(path, colour=None, offset=(0, 0), dw=0, dh=0, dock=None):
@@ -178,11 +181,11 @@ def build_panel():
               layers=_round("active", "ui/skins/default/icon_cross_small.png", 5, "small"),
               hover=_round("hover", "ui/skins/default/icon_cross_small.png", 5, "small")))
     for name, box, tip in (
-            ("derpy_mr_tab_goods", L["tab_goods"], "Goods||Every good your settlements keep."),
+            ("derpy_mr_tab_goods", L["tab_goods"], "Resources||Every resource your settlements keep."),
             ("derpy_mr_tab_settlements", L["tab_settlements"],
              "Settlements||Every settlement you hold, and its stores."),
             ("derpy_mr_tab_trade", L["tab_trade"],
-             "Trade||Choose which goods your settlements send and take by trade."),
+             "Trade||Choose which resources your settlements send and take by trade."),
             ("derpy_mr_back", L["back"], "Back to the full list.")):
         p.add(_cell(E, name, box[2], box[3], interactive=True, image=BTN_BG,
                     hover=[_flat(BTN_HOVER)], sound=SND_SMALL, align="Center", tooltip=tip))
@@ -194,6 +197,10 @@ def build_panel():
     p.add(E.C("rows_holder", L["list"][2], L["list"][3]))
     p.add(_cell(E, "empty_text", L["empty"][2], L["empty"][3], size=13))
     p.add(_cell(E, "hint_text", L["hint"][2], L["hint"][3], size=12, colour=MUTED))
+    for d in ("export", "import"):
+        for m in ("allow", "stop"):
+            p.add(_cell(E, "derpy_mr_all_%s_%s" % (d, m), L["bulk"][2], L["bulk"][3], interactive=True,
+                        image=BTN_BG, hover=[_flat(BTN_HOVER)], sound=SND_SMALL, align="Center", size=12))
     p.add(_cell(E, "chart_top", L["chart_top"][2], L["chart_top"][3], size=12, colour=MUTED))
     p.add(_cell(E, "chart_from", L["chart_from"][2], L["chart_from"][3], size=12, colour=MUTED))
     p.add(_cell(E, "chart_to", L["chart_to"][2], L["chart_to"][3], size=12, colour=MUTED,
@@ -498,6 +505,10 @@ def check_layout():
     assert L["head_y"] + 22 <= ly and ly + lh <= L["hint"][1], "headers, list and hint overlap"
     assert L["tab_trade"][0] >= L["tab_settlements"][0] + L["tab_settlements"][2], "the tabs overlap"
     assert L["back"][0] >= L["tab_trade"][0] + L["tab_trade"][2], "back overlaps a tab"
+    bx, by, bw, bh = L["bulk"]
+    assert bx + 4 * bw + 3 * L["BULK_GAP"] <= W - 20, "the four buttons leave the panel's margin"
+    assert by >= ly + lh and by + bh <= H, "the buttons are not under the list"
+    assert CHAR_W * len("Allow all exports") <= bw, "a button's label does not fit"
     t, r = L["title"], L["title_rule"]
     assert t[1] + t[3] + 2 <= r[1] and r[1] + r[3] + 6 <= L["tab_goods"][1], "the rule touches the title or the tabs"
     for j in (2, 3):                       # the checkboxes sit in the Exports and Imports columns
@@ -604,7 +615,7 @@ def selftest():
     print("gen_mr_ui selftest: ok")
 
 
-SAMPLE_HEADS = ("Good", "Held", "Per turn", "Space", "Stored in")
+SAMPLE_HEADS = ("Resource", "Held", "Per turn", "Space", "Stored in")
 SAMPLE = (("Salted Fish", "1240", "+18", "1240 / 4000", "7 of 12"),
           ("Medicinal Plants", "300", "+6", "300 / 600", "2 of 12"),
           ("Iron", "0", "+4", "0 / 200", "1 of 12"))
@@ -631,8 +642,8 @@ def preview(path=None, chart=False):
     for k, label in (("title", "Stores"), ("close", "X"), ("tab_goods", "Goods"),
                      ("tab_settlements", "Settlements"), ("tab_trade", "Trade"), ("back", "Back"),
                      ("sub_title", "Where Salted Fish is kept" if chart else
-                      "Every good your settlements keep"),
-                     ("hint", "" if chart else "Click a good to see where it is kept.")):
+                      "Every resource your settlements keep"),
+                     ("hint", "" if chart else "Click a resource to see where it is kept.")):
         box(L[k], label)
     lx, ly, lw, _lh = L["list"]
     rows = L["CHART_ROWS"] if chart else L["ROWS"]

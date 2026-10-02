@@ -5,6 +5,7 @@ DERPY_MR_STORES_L = {
     BAR_MIN = 2,
     BAR_PITCH = 41,
     BAR_W = 33,
+    BULK_GAP = 6,
     BUTTON = 48,
     CHART_ROWS = 9,
     CHECK = 26,
@@ -17,10 +18,11 @@ DERPY_MR_STORES_L = {
     PITCH = 28,
     ROWS = 16,
     SLIDER_W = 16,
-    VIEWS = {focus = {{36, 230, "left"}, {276, 120, "right"}, {406, 90, "right"}, {506, 80, "left"}, {596, 204, "left"}}, goods = {{36, 204, "left"}, {244, 90, "right"}, {338, 100, "right"}, {442, 110, "right"}, {556, 240, "right"}}, settlements = {{36, 230, "left"}, {276, 46, "right"}, {330, 90, "right"}, {430, 60, "right"}, {500, 300, "right"}}, trade = {{36, 230, "left"}, {276, 60, "right"}, {346, 90, "centre"}, {446, 90, "centre"}, {546, 254, "left"}}},
+    VIEWS = {focus = {{36, 230, "left"}, {276, 120, "right"}, {406, 90, "right"}, {506, 80, "left"}, {596, 204, "left"}}, goods = {{36, 204, "left"}, {244, 90, "right"}, {338, 100, "right"}, {442, 110, "right"}, {556, 240, "right"}}, settlements = {{36, 230, "left"}, {276, 46, "right"}, {330, 90, "right"}, {430, 80, "right"}, {520, 280, "right"}}, trade = {{36, 230, "left"}, {276, 60, "right"}, {346, 90, "centre"}, {446, 90, "centre"}, {546, 254, "left"}}},
     W = 860,
     back = {720, 56, 120, 26},
     bars = {20, 420, 820, 120},
+    bulk = {262, 598, 140, 26},
     chart_from = {20, 542, 200, 18},
     chart_line = {20, 564, 820, 22},
     chart_to = {640, 542, 200, 18},
@@ -575,6 +577,24 @@ S.CHECK = {
 function S.grey(s) return "[[col:" .. S.GREY .. "]]" .. s .. "[[/col]]" end
 function S.section(s) return "[[col:" .. S.BEIGE .. "]]" .. s .. "[[/col]]" end
 
+-- THE SECTION ROW FOLDS: a click hides the resources you do not have. Kept while the campaign
+-- runs, not saved.
+S.folded = false
+S.FOLDED = " - hidden"
+S.FOLD_TIP = { [false] = "Click to hide the resources you do not have.",
+               [true] = "Click to show the resources you do not have." }
+
+-- ALL AT ONCE: one button per direction and mode, under the list on the Trade tab
+S.BULK = "derpy_mr_all_"
+S.BULK_ORDER = { { "export", "allow" }, { "export", "stop" }, { "import", "allow" }, { "import", "stop" } }
+S.BULK_LABEL = { allow = "Allow all ", stop = "Stop all " }
+S.BULK_TIP = {
+    export = { allow = "Let every resource leave your stores by trade.",
+               stop = "Keep every resource in your stores: none leaves by trade." },
+    import = { allow = "Take every resource your trade partners send.",
+               stop = "Refuse every resource your trade partners send." },
+}
+
 -- The flows script's function `name`, or nil without it: the panel must not need it to open.
 function S.flows(name)
     local F = DERPY_MR_FLOWS
@@ -642,9 +662,9 @@ function S.view_model(realm)
         end
         v.chart = S.chart_model(S.history(S.focus))
     elseif S.view == "goods" then
-        v.title = "Every good your settlements keep"
-        v.heads = { "Good", "Held", "Per turn", "Space", "Stored in" }
-        v.hint = "Click a good to see where it is kept."
+        v.title = "Every resource your settlements keep"
+        v.heads = { "Resource", "Held", "Per turn", "Space", "Stored in" }
+        v.hint = "Click a resource to see where it is kept."
         for _, g in ipairs(S.goods_rows(realm)) do
             v.rows[#v.rows + 1] = { g.name, S.num(g.held), per_turn(g.made),
                                     S.num(g.held) .. " / " .. S.num(g.cap), g.n .. " of " .. g.of,
@@ -653,21 +673,27 @@ function S.view_model(realm)
         if #realm == 0 then v.empty = S.NO_REALM end
     elseif S.view == "trade" then
         v.title = "What your settlements trade"
-        v.heads = { "Good", "Held", "Exports", "Imports", "Last turn" }
+        v.heads = { "Resource", "Held", "Exports", "Imports", "Last turn" }
         local stopped, last = S.flows("stopped"), S.flows("last")
         local fk = cm:get_local_faction_name(true)
         local switches = stopped ~= nil and S.flows("send") ~= nil
-        if switches then v.hint = "Tick or untick a good to let it travel by trade, or stop it." end
+        if switches then
+            v.hint = "Tick to allow, untick to stop."
+            v.bulk = true
+        end
         local rows = S.trade_rows(realm)
         local others = 0
         for _, g in ipairs(rows) do if not g.own then others = others + 1 end end
         for _, g in ipairs(rows) do
             -- A SECTION ROW before the goods you neither hold nor make, which are all last
             if not g.own and others > 0 then
-                v.rows[#v.rows + 1] = { S.section("Goods you do not have (" .. others .. ")"), "", "", "", "",
-                                        section = true }
+                local text = "Resources you do not have (" .. others .. ")"
+                if S.folded then text = text .. S.FOLDED end
+                v.rows[#v.rows + 1] = { S.section(text), "", "", "", "", section = true, fold = true,
+                                        tip = S.FOLD_TIP[S.folded] }
                 others = 0
             end
+            if not g.own and S.folded then break end
             local row = { g.name, S.num(g.held), "", "", S.trade_line(last and last(fk, g.stem) or {}),
                           icon = g.icon, tip = S.good_tip(g), stem = g.stem }
             if not g.own then
@@ -688,7 +714,7 @@ function S.view_model(realm)
             return S.view_model(realm)
         end
         v.title = "Stores of " .. s.name
-        v.heads = { "Good", "Held / Space", "Per turn", "", "" }
+        v.heads = { "Resource", "Held / Space", "Per turn", "", "" }
         for _, d in ipairs(S.settlement_detail(s)) do
             local tip = S.good_tip(d)
             if d.full then tip = S.FULL_TIP end
@@ -698,7 +724,7 @@ function S.view_model(realm)
         end
     else
         v.title = "Every settlement you hold"
-        v.heads = { "Settlement", "Level", "Space each", "Goods", "Fullest store" }
+        v.heads = { "Settlement", "Level", "Space each", "Resources", "Fullest store" }
         v.hint = "Click a settlement to see its stores."
         for _, r in ipairs(S.settlement_rows(realm)) do
             local fullest = "-"
@@ -781,7 +807,12 @@ function S.build()
     p:SetVisible(false)
     p:SetInteractive(false)
     set(find_uicomponent(p, "title_text"), "Stores")
-    label(find_uicomponent(p, S.TAB.goods), "Goods")
+    label(find_uicomponent(p, S.TAB.goods), "Resources")
+    for _, dm in ipairs(S.BULK_ORDER) do
+        local bt = find_uicomponent(p, S.BULK .. dm[1] .. "_" .. dm[2])
+        label(bt, S.BULK_LABEL[dm[2]] .. dm[1] .. "s")
+        if is_uicomponent(bt) then bt:SetTooltipText(S.BULK_TIP[dm[1]][dm[2]], true) end
+    end
     label(find_uicomponent(p, S.TAB.settlements), "Settlements")
     label(find_uicomponent(p, S.TAB.trade), "Trade")
     label(find_uicomponent(p, S.BACK), "Back")
@@ -806,6 +837,10 @@ function S.layout(p)
     boxes[S.TAB.goods], boxes[S.TAB.settlements] = L.tab_goods, L.tab_settlements
     boxes[S.TAB.trade] = L.tab_trade
     for name, box in pairs(boxes) do put(find_uicomponent(p, name), px, py, box) end
+    for i, dm in ipairs(S.BULK_ORDER) do
+        local x = L.bulk[1] + (i - 1) * (L.bulk[3] + L.BULK_GAP)
+        put(find_uicomponent(p, S.BULK .. dm[1] .. "_" .. dm[2]), px, py, { x, L.bulk[2], L.bulk[3], L.bulk[4] })
+    end
 end
 
 -- A COLUMN LINE in the middle of the gap before column j (j >= 2)
@@ -964,7 +999,6 @@ function S.draw_rows(p, rows, heads, cols)
             local rx, ry = hx, hy + (i - 1) * L.PITCH
             r:MoveTo(rx, ry)
             sized(r, L.list[3] - L.SLIDER_W, L.PITCH)
-            r:SetInteractive(not rc.section)
             -- every other row banded; the section row has its own band
             local band, sband = find_uicomponent(r, "band"), find_uicomponent(r, "section_band")
             if is_uicomponent(band) then
@@ -1069,6 +1103,10 @@ function S.refresh()
         end
     end
     set(find_uicomponent(p, "hint_text"), v.hint or "")
+    for _, dm in ipairs(S.BULK_ORDER) do
+        local bt = find_uicomponent(p, S.BULK .. dm[1] .. "_" .. dm[2])
+        if is_uicomponent(bt) then bt:SetVisible(v.bulk == true) end
+    end
     local back = find_uicomponent(p, S.BACK)
     if is_uicomponent(back) then back:SetVisible(S.focus ~= nil) end
     for view, name in pairs(S.TAB) do
@@ -1126,7 +1164,8 @@ end
 function S.is_mine(name)
     return type(name) == "string" and (name == S.BUTTON or name == S.CLOSE or name == S.BACK
         or name == S.TAB.goods or name == S.TAB.settlements or name == S.TAB.trade
-        or string.sub(name, 1, #S.ROW) == S.ROW or string.sub(name, 1, #S.SW) == S.SW)
+        or string.sub(name, 1, #S.ROW) == S.ROW or string.sub(name, 1, #S.SW) == S.SW
+        or string.sub(name, 1, #S.BULK) == S.BULK)
 end
 
 -- A SWITCH NAMES NO GOOD: its row does, so the row is read off the clicked component's parent.
@@ -1141,9 +1180,18 @@ function S.click_switch(dir, component)
     return S.refresh()
 end
 
+function S.click_bulk(dir, mode)
+    local send, what = S.flows("send"), S.flows(mode == "stop" and "ALL_STOP" or "ALL_ALLOW")
+    if not (send and what) then return end
+    send(cm:get_local_faction_name(true), dir, what)
+    return S.refresh()
+end
+
 function S.click(name, component)
     local dir = string.match(name, "^derpy_mr_sw_(%a+)$")
     if dir then return S.click_switch(dir, component) end
+    local bdir, mode = string.match(name, "^derpy_mr_all_(%a+)_(%a+)$")
+    if bdir then return S.click_bulk(bdir, mode) end
     if name == S.BUTTON then return S.show(not S.is_open()) end
     if name == S.CLOSE then return S.show(false) end
     if name == S.BACK then
@@ -1160,6 +1208,10 @@ function S.click(name, component)
     local row = i and S.data[i]
     if row and row.open then
         S.focus = row.open
+        return S.refresh()
+    end
+    if row and row.fold then
+        S.folded = not S.folded
         return S.refresh()
     end
 end
