@@ -64,8 +64,8 @@ UPKEEP_SWITCH = ("upkeep", "Settlements use their stores",
                  "Each turn every settlement eats provisions from its stores. Five turns of provisions left "
                  "make it Well fed; war materials and luxuries filling a quarter of one store's space give "
                  "Garrison stocked and Comforts. Off: stores are only kept, raided and traded.", True)
-ACTIONS_SWITCH = ("actions", "Stores panel actions",
-                  "The Stores panel can send a resource between your settlements, buy a Festival, Muster or "
+ACTIONS_SWITCH = ("actions", "Resource Vault actions",
+                  "The Resource Vault can send a resource between your settlements, buy a Festival, Muster or "
                   "Great Works with your stores, and sell what your stores hold above half their space. "
                   "Off: the panel only shows.", True)
 SWITCHES = (AI_SWITCH, UPKEEP_SWITCH, ACTIONS_SWITCH)
@@ -104,12 +104,14 @@ L = {
     # the Trade tab's two checkboxes a row, square, centred in the Exports and Imports columns
     "CHECK": 26,
     "back": (720, 56, 120, 26), "sub_title": (20, 90, 820, 22), "head_y": 116,
-    "list": (20, 142, 820, 448), "empty": (20, 154, 820, 60), "hint": (20, 600, 820, 22),
-    # THE TRADE TAB'S FOUR ALL-AT-ONCE BUTTONS, the first's box, then BULK_GAP apart to the right
-    # edge; the Trade tab's hint is short enough to end before them.
-    "bulk": (262, 598, 140, 26), "BULK_GAP": 6,
+    # THE HINT SHARES THE SUB-TITLE'S LINE, right-aligned, so the bottom line is the buttons'
+    "list": (20, 142, 820, 448), "empty": (20, 154, 820, 60), "hint": (20, 90, 820, 22),
+    # THE BOTTOM LINE'S FOUR BUTTON SLOTS, the first's box, then BULK_GAP apart across the full
+    # width: the Trade tab's all-at-once buttons, the orders (slots 2-4) and Sell (slot 4).
+    # Sized to CA's art's drawn face (BTN_FACE), not its component.
+    "bulk": (20, 598, 200, 30), "BULK_GAP": 6,
     # PHASE 7: a settlement drill-down row's Send here button, in the fifth column
-    "send": (110, 22),
+    "send": (130, 26),
     "icon": (6, 2, 24, 24),
     # A SETTLEMENTS ROW SHOWS UP TO ICONS GOODS before its name, ICON_PITCH apart; the name moves
     # right past them. ponytail: a long name with four icons runs toward the Level column, whose
@@ -182,7 +184,7 @@ ALIGN = ("Left", "Right", "Right", "Right", "Right")
 CHECK_ON, CHECK_ON_HOVER = "ui/skins/default/checkbox_selected.png", "ui/skins/default/checkbox_selected_hover.png"
 BAND_COLOUR = "#FFFFFF10"        # every other row, so a wide row is easy to follow across
 SECTION_COLOUR = "#3A2C1ECC"     # the band under "Goods you do not have"
-TIP_OPEN = "Stores||What each of your settlements keeps of every resource, and how fast it fills."
+TIP_OPEN = "Resource Vault||What each of your settlements keeps of every resource, and how fast it fills."
 
 
 def _flat(path, colour=None, offset=(0, 0), dw=0, dh=0, dock=None):
@@ -229,7 +231,7 @@ def build_panel():
         p.add(E.C("hdr_line_%d" % j, 1, 22, image=WHITE, colour_img=DIVIDER_COLOUR))
     p.add(E.C("rows_holder", L["list"][2], L["list"][3]))
     p.add(_cell(E, "empty_text", L["empty"][2], L["empty"][3], size=13))
-    p.add(_cell(E, "hint_text", L["hint"][2], L["hint"][3], size=12, colour=MUTED))
+    p.add(_cell(E, "hint_text", L["hint"][2], L["hint"][3], size=12, colour=MUTED, align="Right"))
     for d in ("export", "import"):
         for m in ("allow", "stop"):
             p.add(_cell(E, "derpy_mr_all_%s_%s" % (d, m), L["bulk"][2], L["bulk"][3], interactive=True,
@@ -586,7 +588,8 @@ def check_layout():
         assert 0 <= x and 0 <= y and x + w <= W and y + h <= H, "%s leaves the panel" % k
     lx, ly, lw, lh = L["list"]
     assert lh == L["ROWS"] * L["PITCH"], "the list is not ROWS rows tall"
-    assert L["head_y"] + 22 <= ly and ly + lh <= L["hint"][1], "headers, list and hint overlap"
+    assert L["head_y"] + 22 <= ly and ly + lh <= L["bulk"][1], "headers, list and buttons overlap"
+    assert L["hint"][:2] == L["sub_title"][:2], "the hint has left the sub-title's line"
     assert L["tab_trade"][0] >= L["tab_settlements"][0] + L["tab_settlements"][2], "the tabs overlap"
     assert L["back"][0] >= L["tab_trade"][0] + L["tab_trade"][2], "back overlaps a tab"
     bx, by, bw, bh = L["bulk"]
@@ -622,9 +625,36 @@ def check_layout():
     assert L["bars"][1] + L["bars"][3] <= L["chart_from"][1], "the bars run into the turn labels"
     assert L["chart_from"][0] + L["chart_from"][2] <= L["chart_to"][0], "the turn labels overlap"
     assert L["chart_from"][1] + L["chart_from"][3] <= L["chart_line"][1], "the turn labels overlap the line"
-    assert L["chart_line"][1] + L["chart_line"][3] <= L["hint"][1], "the chart runs into the hint"
+    assert L["chart_line"][1] + L["chart_line"][3] <= L["bulk"][1], "the chart runs into the buttons"
     assert (L["BARS"] - 1) * L["BAR_PITCH"] + L["BAR_W"] <= L["bars"][2], "twenty bars do not fit"
     assert L["BAR_MIN"] <= L["bars"][3], "a sliver taller than the chart"
+
+
+# CA'S BUTTON ART IS NOT ALL BUTTON: button_square_large_text_*.png is 339x51 and draws only
+# x 27-312, y 6-42 (its alpha, measured 2026-10-02). Stretched to a component, the face is that
+# share of it, so a label sized to the component overran the face in game ("Allow all exports"
+# on a 140px button, author's screenshot 2026-10-02).
+BTN_FACE = ((27, 312, 339), (6, 42, 51))
+BTN_PAD = 6          # each side of a label, inside the face
+
+
+def face(w, h):
+    (x0, x1, aw), (y0, y1, ah) = BTN_FACE
+    return w * (x1 - x0) / aw, h * (y1 - y0) / ah
+
+
+def check_button_faces():
+    """Every text button's longest label fits the drawn face of CA's art, not the component."""
+    import gen_resource_overhaul as G
+    buttons = [(L["tab_goods"], ("Resources",)), (L["tab_settlements"], ("Settlements",)),
+               (L["tab_trade"], ("Trade",)), (L["back"], ("Back",)),
+               (L["bulk"], ["Allow all exports", "Stop all imports", "Sell surplus"] + [o[4] for o in G.ORDERS]),
+               ((0, 0) + L["send"], ("Send here",))]
+    for (_x, _y, w, h), labels in buttons:
+        fw, fh = face(w, h)
+        for t in labels:
+            assert CHAR_W * len(t) + 2 * BTN_PAD <= fw, "%r overruns a %dpx button's %dpx face" % (t, w, fw)
+            assert 12 + 4 <= fh, "a %dpx-tall button's face is %dpx, under a 12pt line" % (h, fh)
 
 
 # ponytail: a flat glyph-width estimate for body_12, not a font metric. The cells are "Never
@@ -675,6 +705,7 @@ def check_xml():
 def selftest():
     check_layout()
     check_text_fits()
+    check_button_faces()
     check_xml()
     check_capture_kinds()
     check_uses()
@@ -732,7 +763,7 @@ def preview(path=None, chart=False):
         d.rectangle((x, y, x + w, y + h), outline=line)
         d.text((x + 4, y + 4), label, fill=ink)
 
-    for k, label in (("title", "Stores"), ("close", "X"), ("tab_goods", "Goods"),
+    for k, label in (("title", "Resource Vault"), ("close", "X"), ("tab_goods", "Goods"),
                      ("tab_settlements", "Settlements"), ("tab_trade", "Trade"), ("back", "Back"),
                      ("sub_title", "Where Salted Fish is kept" if chart else
                       "Every resource your settlements keep"),

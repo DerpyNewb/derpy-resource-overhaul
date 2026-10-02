@@ -883,3 +883,5 @@ Built ahead of phase 5, at the user's choice, because phase 5's open questions n
   - the three faction bundles' effects;
   - `treasury_mod` from a panel click;
   - that the shader greys these text buttons.
+
+**Resource Vault (2026-10-02, author's screenshot).** The panel is titled "Resource Vault" (title, hub label, opener tooltip, MCT switch). The bottom-line buttons are 200x30 across the full width: CA's `button_square_large_text_*` art draws only x 27-312, y 6-42 of 339x51, so a 140px button showed a 117px face and "Allow all exports" overran it. `gen_mr_ui.check_button_faces()` now sizes every text button against that face. The hints moved to the right end of the sub-title's line.

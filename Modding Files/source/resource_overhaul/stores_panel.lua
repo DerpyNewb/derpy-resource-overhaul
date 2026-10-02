@@ -589,7 +589,7 @@ function S.build()
     if not is_uicomponent(p) then return nil end
     p:SetVisible(false)
     p:SetInteractive(false)
-    set(find_uicomponent(p, "title_text"), "Stores")
+    set(find_uicomponent(p, "title_text"), "Resource Vault")
     label(find_uicomponent(p, S.TAB.goods), "Resources")
     for _, dm in ipairs(S.BULK_ORDER) do
         local bt = find_uicomponent(p, S.BULK .. dm[1] .. "_" .. dm[2])
@@ -620,6 +620,9 @@ function S.layout(p)
     boxes[S.TAB.goods], boxes[S.TAB.settlements] = L.tab_goods, L.tab_settlements
     boxes[S.TAB.trade] = L.tab_trade
     for name, box in pairs(boxes) do put(find_uicomponent(p, name), px, py, box) end
+    -- the hint sits at the right end of the sub-title's line
+    local hint = find_uicomponent(p, "hint_text")
+    if is_uicomponent(hint) then hint:SetTextHAlign("right") end
     for i, dm in ipairs(S.BULK_ORDER) do
         local x = L.bulk[1] + (i - 1) * (L.bulk[3] + L.BULK_GAP)
         put(find_uicomponent(p, S.BULK .. dm[1] .. "_" .. dm[2]), px, py, { x, L.bulk[2], L.bulk[3], L.bulk[4] })
@@ -1307,6 +1310,6 @@ cm:add_first_tick_callback(function() S.init() end)
 DERPY_HUB_QUEUE = DERPY_HUB_QUEUE or {}
 table.insert(DERPY_HUB_QUEUE, {
     key = S.HUB_KEY, button = S.BUTTON, order = 4,
-    label = function() return "Stores" end,
+    label = function() return "Resource Vault" end,
     live = function() return true end,
 })

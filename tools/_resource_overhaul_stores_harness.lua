@@ -320,7 +320,7 @@ eq(b.x, 1535, "and the button stays put"); bar.parent = UI_ROOT; UI_ROOT.kids[#U
 local hub
 for _, r in ipairs(DERPY_HUB_QUEUE) do if r.key == "mr" then hub = r end end
 eq(hub.button, "derpy_mr_stores_button", "hub entry"); eq(hub.order, 4, "fourth in the column")
-eq(hub.label(), "Stores", "hub label"); eq(hub.live(), true, "never greyed")
+eq(hub.label(), "Resource Vault", "hub label"); eq(hub.live(), true, "never greyed")
 DERPY_HUB = { manages = function(k) return k == "mr" end }
 bar.w = 1019; REPEATS.derpy_mr_follow_bar(); eq(b.x, 1535, "the hub owns its place"); DERPY_HUB = nil
 
@@ -329,7 +329,7 @@ click("derpy_mr_stores_button")
 local p = find("derpy_mr_stores_panel")
 eq(p.visible, true, "open"); eq(p.interactive, true, "eats the mouse while open")
 eq(p.x, 530, "centred across"); eq(p.y, 220, "centred down")
-eq(find("title_text").text, "Stores", "title"); eq(find("hdr_2").text, "Held", "header")
+eq(find("title_text").text, "Resource Vault", "title"); eq(find("hdr_2").text, "Held", "header")
 -- A RULE BETWEEN THE TITLE AND THE TABS (asked for 2026-10-02), with room each side
 local rule, ttl, tg = find("title_rule"), find("title_text"), find("derpy_mr_tab_goods")
 eq(rule.visible, true, "a rule under the title")
@@ -595,7 +595,10 @@ for _, dm in ipairs({ { "export", "allow" }, { "export", "stop" }, { "import", "
 end
 eq(bulk("export", "stop").text, "Stop all exports", "plain label")
 eq(bulk("export", "stop").x < bulk("import", "allow").x, true, "exports left of imports")
-eq(find("hint_text").x + #find("hint_text").text * 7 <= bulk("export", "allow").x, true, "the hint ends before the buttons")
+-- THE HINT SHARES THE SUB-TITLE'S LINE, at its right end, so the bottom line is the buttons' alone
+eq(find("hint_text").y, find("sub_title").y, "the hint is on the sub-title's line")
+eq(find("hint_text").halign, "right", "at its right end")
+eq(bulk("import", "stop").x + bulk("import", "stop").w <= pnl0.x + LL.W - 20, true, "the last button inside the margin")
 SENT = {}
 press(bulk("export", "stop")); eq(SENT[1], "fac_a|export|all_stop", "stop all exports, in one message")
 eq(switch(1, "export").images[0], S.CHECK[false][1], "every export box empties at once")
@@ -610,6 +613,8 @@ local alpha_realm = S.read_realm(FACTIONS.fac_a)
 for _, vf in ipairs({ { "goods" }, { "goods", "coal" }, { "settlements" }, { "settlements", "reg_a" }, { "trade" } }) do
     S.view, S.focus = vf[1], vf[2]
     local v = S.view_model(alpha_realm)
+    -- the sub-title and the hint share one line: together they must fit it
+    eq((#v.title + #(v.hint or "")) * 7 + 16 <= LL.sub_title[3], true, "title and hint fit one line on " .. vf[1])
     for j, h in ipairs(v.heads) do
         eq(#h * LL.HEAD_CHAR_W <= v.cols[j][2], true, "header '" .. h .. "' fits its column on " .. vf[1])
     end
@@ -669,7 +674,7 @@ eq(string.find(act("derpy_mr_order_muster").tip, "Ready again in 7 turns.", 1, t
 eq(act("derpy_mr_order_great_works").disabled, true, "Great Works is short")
 eq(string.find(act("derpy_mr_order_great_works").tip, "Your stores hold 120 building materials.", 1, true) ~= nil, true,
    "and says how short")
-eq(find("hint_text").x + #find("hint_text").text * 7 <= slot(2), true, "the hint ends before the orders")
+eq(find("hint_text").y < fest.y, true, "the hint is clear of the orders' line")
 REQ = {}
 press(fest); eq(REQ[1], "fac_a|order|festival", "a click buys it")
 press(act("derpy_mr_order_muster")); eq(#REQ, 1, "a greyed order asks for nothing")

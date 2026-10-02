@@ -2,6 +2,8 @@
 
 ## 2026-10-02
 
+- The Stores panel is now the Resource Vault.
+- Wider bottom-line buttons; hints moved beside the sub-title.
 - Stores panel: Send here moves a resource from another settlement (10% lost on the way).
 - Stores panel: Festival, Muster and Great Works orders, paid with 200 of your stores.
 - Stores panel: Sell surplus, at the Zharr Exchange's price when it is installed.

@@ -23,7 +23,7 @@ DERPY_MR_STORES_L = {
     W = 860,
     back = {720, 56, 120, 26},
     bars = {20, 420, 820, 120},
-    bulk = {262, 598, 140, 26},
+    bulk = {20, 598, 200, 30},
     chart_from = {20, 542, 200, 18},
     chart_line = {20, 564, 820, 22},
     chart_to = {640, 542, 200, 18},
@@ -31,10 +31,10 @@ DERPY_MR_STORES_L = {
     close = {818, 12, 30, 30},
     empty = {20, 154, 820, 60},
     head_y = 116,
-    hint = {20, 600, 820, 22},
+    hint = {20, 90, 820, 22},
     icon = {6, 2, 24, 24},
     list = {20, 142, 820, 448},
-    send = {110, 22},
+    send = {130, 26},
     sub_title = {20, 90, 820, 22},
     tab_goods = {20, 56, 140, 26},
     tab_settlements = {168, 56, 140, 26},
@@ -928,7 +928,7 @@ function S.build()
     if not is_uicomponent(p) then return nil end
     p:SetVisible(false)
     p:SetInteractive(false)
-    set(find_uicomponent(p, "title_text"), "Stores")
+    set(find_uicomponent(p, "title_text"), "Resource Vault")
     label(find_uicomponent(p, S.TAB.goods), "Resources")
     for _, dm in ipairs(S.BULK_ORDER) do
         local bt = find_uicomponent(p, S.BULK .. dm[1] .. "_" .. dm[2])
@@ -959,6 +959,9 @@ function S.layout(p)
     boxes[S.TAB.goods], boxes[S.TAB.settlements] = L.tab_goods, L.tab_settlements
     boxes[S.TAB.trade] = L.tab_trade
     for name, box in pairs(boxes) do put(find_uicomponent(p, name), px, py, box) end
+    -- the hint sits at the right end of the sub-title's line
+    local hint = find_uicomponent(p, "hint_text")
+    if is_uicomponent(hint) then hint:SetTextHAlign("right") end
     for i, dm in ipairs(S.BULK_ORDER) do
         local x = L.bulk[1] + (i - 1) * (L.bulk[3] + L.BULK_GAP)
         put(find_uicomponent(p, S.BULK .. dm[1] .. "_" .. dm[2]), px, py, { x, L.bulk[2], L.bulk[3], L.bulk[4] })
@@ -1646,6 +1649,6 @@ cm:add_first_tick_callback(function() S.init() end)
 DERPY_HUB_QUEUE = DERPY_HUB_QUEUE or {}
 table.insert(DERPY_HUB_QUEUE, {
     key = S.HUB_KEY, button = S.BUTTON, order = 4,
-    label = function() return "Stores" end,
+    label = function() return "Resource Vault" end,
     live = function() return true end,
 })
