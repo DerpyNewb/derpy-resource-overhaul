@@ -839,12 +839,23 @@ def pool_chains(pool):
 
 
 @functools.lru_cache(None)
-def settlement_levels():
-    """Every main-settlement chain -> its levels in order. No EXCLUDE: a store is the settlement's
-    whoever owns it, and CA's own production fills Tomb Kings and Nagash stores too."""
+def settlement_tiers():
+    """Every main-settlement level -> its tier (0 = the chain's first level), ranked by its LEVEL
+    NUMBER, not its place in the list: daemon chains carry two buildings per level (an _a variant)
+    and some chains list a level-0 _ruins first. Ruins get no tier. No EXCLUDE: a store is the
+    settlement's whoever owns it, and CA's own production fills Tomb Kings and Nagash stores too."""
     _tr, perm, _cp, _t, _rc, sp = srm.load()
     tpls = {r["slot_template"] for r in sp if r["slot_type"] == "primary"}
-    return _chain_levels(frozenset(c for t in tpls for c in perm.get(t, ()) if not SETTLE_SKIP.search(c)))
+    chains = {c for t in tpls for c in perm.get(t, ()) if not SETTLE_SKIP.search(c)}
+    by = collections.defaultdict(list)
+    for r in db("building_levels_tables")[1]:
+        if r["chain"] in chains and "ruin" not in r["level_name"]:
+            by[r["chain"]].append(r)
+    out = {}
+    for rows in by.values():
+        nums = sorted({r["level"] for r in rows})
+        out.update({r["level_name"]: nums.index(r["level"]) for r in rows})
+    return out
 
 
 def _kind(pool):
@@ -1006,13 +1017,12 @@ def _stores(t, add, loc):
     for stem in stems:   # one effect raises all 54 (CA binds one effect to five pools the same way)
         add("effect_bonus_value_pooled_resource_junctions_tables",
             {"bonus_value_id": "maximum_mod", "effect": STORE_CAP_FX, "pooled_resource": store(stem)})
-    for _chain, levels in sorted(settlement_levels().items()):
-        for n, lvl in enumerate(levels):
-            v = float(STORE_STEP * min(n, STORE_TOP))
-            if v:   # damaged keeps the space: a shrinking store would destroy goods
-                add("building_effects_junction_tables", {
-                    "building": lvl, "effect": STORE_CAP_FX, "effect_scope": "region_to_region_own",
-                    "value": v, "value_damaged": v, "value_ruined": 0.0, "context_requirement": ""})
+    for lvl, n in sorted(settlement_tiers().items()):
+        v = float(STORE_STEP * min(n, STORE_TOP))
+        if v:   # damaged keeps the space: a shrinking store would destroy goods
+            add("building_effects_junction_tables", {
+                "building": lvl, "effect": STORE_CAP_FX, "effect_scope": "region_to_region_own",
+                "value": v, "value_damaged": v, "value_ruined": 0.0, "context_requirement": ""})
     loc.append(("effects_description_" + STORE_CAP_FX, "Space in this settlement's stores: +%n of each good"))
 
 
@@ -1585,16 +1595,30 @@ def check_stores(t, loc):
     assert capb == {store(s) for s in stems}, "capacity effect must raise every store"
     cap = {r["building"]: r for r in rows if r["effect"] == STORE_CAP_FX}
     n_cap = 0
-    for chain, levels in settlement_levels().items():
-        for n, lvl in enumerate(levels):
-            want = float(STORE_STEP * min(n, STORE_TOP))
-            got = cap[lvl]["value"] if lvl in cap else 0.0
-            assert got == want, "%s (level index %d): space +%s, want +%s" % (lvl, n, got, want)
-            if lvl in cap:
-                n_cap += 1
-                assert cap[lvl]["value_damaged"] == want, "damage must not shrink a store: %s" % lvl
-                assert cap[lvl]["effect_scope"] == "region_to_region_own", cap[lvl]
+    for lvl, n in settlement_tiers().items():
+        want = float(STORE_STEP * min(n, STORE_TOP))
+        got = cap[lvl]["value"] if lvl in cap else 0.0
+        assert got == want, "%s (tier %d): space +%s, want +%s" % (lvl, n, got, want)
+        if lvl in cap:
+            n_cap += 1
+            assert cap[lvl]["value_damaged"] == want, "damage must not shrink a store: %s" % lvl
+            assert cap[lvl]["effect_scope"] == "region_to_region_own", cap[lvl]
     assert n_cap == len(cap), "capacity on a level that is not a main settlement"
+    # Space follows the LEVEL NUMBER, never list position: daemon chains carry two buildings per
+    # level (an _a variant) and some chains list a level-0 _ruins first (review, 2026-10-02).
+    lvl_no = {r["level_name"]: (r["chain"], r["level"]) for r in db("building_levels_tables")[1]}
+    by_no = collections.defaultdict(set)
+    for lvl, r in cap.items():
+        by_no[lvl_no[lvl]].add(r["value"])
+    assert all(len(v) == 1 for v in by_no.values()), "two buildings of one level get different space: %s" % \
+        sorted(k for k, v in by_no.items() if len(v) > 1)[:3]
+    for lvl, want in (("wh3_main_kho_settlement_major_3", 400.0), ("wh3_main_kho_settlement_major_3_a", 400.0),
+                      ("wh3_main_kho_settlement_major_5_a", 800.0), ("wh3_dlc27_sla_dec_palace_settlement_1", 0.0),
+                      ("wh3_dlc27_sla_dec_palace_settlement_5", 800.0), ("wh_main_emp_settlement_major_5", 800.0),
+                      ("wh_main_emp_settlement_major_2", 200.0)):
+        got = cap[lvl]["value"] if lvl in cap else 0.0
+        assert got == want, "%s: space +%s, want +%s" % (lvl, got, want)
+    assert not any("ruin" in l for l in cap), "space on a ruin level"
     assert keys.get("effects_description_" + STORE_CAP_FX)
     return len(stems)
 

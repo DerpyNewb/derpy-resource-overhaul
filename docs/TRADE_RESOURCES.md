@@ -572,7 +572,8 @@ Plan: `superpowers/plans/2026-10-02-resource-overhaul-stores-phase1.md`.
   - 820 twins of CA's rows, in their own table file (`..._derpy_more_resources_ca`), which the
     public repo refuses as a CA clone.
 - **Space:** one `derpy_mr_store_capacity` effect bound with `maximum_mod` to all 54 pools. It sits
-  on 640 main-settlement levels at +200 per level, stopping at +800, so space is 200 to 1,000. A
+  on 630 main-settlement levels at +200 per settlement tier (ranked by level number, so a daemon
+  chain's `_a` variant matches its twin and a level-0 `_ruins` entry gets none), stopping at +800, so space is 200 to 1,000. A
   damaged settlement keeps its space, so damage never destroys stock.
 
 **Measured in game** (new IEE campaign, Conclave, turns 1 and 2, through the bridge):
