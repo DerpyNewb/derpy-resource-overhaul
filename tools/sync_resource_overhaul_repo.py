@@ -66,8 +66,19 @@ def manifest(root=ROOT):
         "sync_guilds_repo.py",              # this file's copying
         "sync_resource_overhaul_repo.py",
         "_resource_overhaul_ai_harness.lua",   # the AI builder's test, run by --selftest
+        "gen_mr_ui.py",                     # the Stores panel's script and .twui.xml
+        "gen_mr_emitter.py",                # its own copy of the XML emitter
+        "_resource_overhaul_stores_harness.lua",   # the panel's test, run by gen_mr_ui --selftest
+        "sync_derpy_hub.py",                # writes this pack's Derpy HUD hub copy
+        "_hub_harness.lua",
+        "gen_guilds_emitter.py",            # sync_derpy_hub builds the hub's .twui.xml with it
+        "preview_guilds_panel.py",          # the .twui.xml reader both selftests use
     )] + ["Modding Files/reference/resource_overhaul_building_audit.md",
-          "Modding Files/pack/script/campaign/mod/derpy_more_resources_ai.lua"]
+          "Modding Files/pack/script/campaign/mod/derpy_more_resources_ai.lua",
+          "Modding Files/source/resource_overhaul/stores_panel.lua",
+          "Modding Files/pack/script/campaign/mod/derpy_more_resources_stores.lua",
+          "Modding Files/pack/script/campaign/mod/derpy_hub_mr.lua",
+          "Modding Files/source/derpy_hub/derpy_hud_hub.lua"]
     out = [(p, p) for p in same]
     out += [("docs/TRADE_RESOURCES.md", "docs/TRADE_RESOURCES.md"),
             ("docs/sessions/HANDOFF_20261001_COMMODITY_ICONS_AND_RESOURCE_MAP.md",

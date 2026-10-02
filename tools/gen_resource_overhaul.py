@@ -1740,6 +1740,8 @@ def write(t, loc, frag=FRAG):
         shutil.copyfile(os.path.join(ICONS, "large", good + ".png"), os.path.join(dst, icon(good) + "_large.png"))
     with io.open(AI_LUA, "w", encoding="utf-8", newline="\n") as fh:
         fh.write(ai_script())
+    import gen_mr_ui   # the Stores panel: its script and .twui.xml (tools/gen_mr_ui.py)
+    gen_mr_ui.write_all()
     out = label_patch(label_vanilla())
     label_verify(out)
     with io.open(os.path.join(PACK, *LABEL.split("/")), "w", encoding="utf-8", newline="") as fh:
@@ -1892,6 +1894,13 @@ def pack(t, frag=FRAG):
         with io.open(AI_LUA, encoding="utf-8") as fh:
             assert fh.read() == ai_script(), "stale %s - run without --pack first" % AI_LUA
         icons.append("script/campaign/mod/" + os.path.basename(AI_LUA))
+    if main:   # the Stores panel (gen_mr_ui.py) and this pack's Derpy HUD hub copy (sync_derpy_hub.py)
+        import gen_mr_ui
+        import sync_derpy_hub
+        drift = gen_mr_ui.stale() + sync_derpy_hub.check()
+        assert not drift, "stale - run py tools/gen_resource_overhaul.py and py tools/sync_derpy_hub.py: %s" % drift
+        gen_mr_ui.selftest()
+        icons += gen_mr_ui.pack_paths() + [d for _s, d in sync_derpy_hub.pack_files("mr")]
     for rel in icons:
         call("add_packed_files", {"pack_key": key, "source_paths": [os.path.join(PACK, *rel.split("/"))],
                                   "destination_paths": json.dumps([{"File": rel}])})

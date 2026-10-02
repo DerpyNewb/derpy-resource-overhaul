@@ -2,6 +2,7 @@
 
 ## 2026-10-02
 
+- A Stores panel: every settlement's stores, by good or by settlement.
 - Every settlement keeps a store of each good.
 - Stores fill each turn from its buildings.
 - Space grows with settlement level.

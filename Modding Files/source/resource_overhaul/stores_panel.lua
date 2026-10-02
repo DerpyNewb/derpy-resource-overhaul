@@ -1,0 +1,617 @@
+-- Derpy Resource Overhaul: the Stores panel. It shows what every settlement of the local
+-- faction holds of each good, what its buildings add each turn, and how much space it has.
+-- Read-only and local: nothing here writes the model, so it cannot desync multiplayer.
+-- Spec: docs/superpowers/specs/2026-10-02-resource-overhaul-stores-design.md, section 5.
+--
+-- THE SHIPPED FILE IS GENERATED. tools/gen_mr_ui.py puts DERPY_MR_STORES_L (the layout) and
+-- DERPY_MR_STORES_GOODS (the 54 goods) in front of this source. Edit this file, then run
+-- py tools/gen_mr_ui.py.
+
+DERPY_MR_STORES = DERPY_MR_STORES or {}
+local S = DERPY_MR_STORES
+local L = DERPY_MR_STORES_L
+
+S.PREFIX = "derpy_mr_store_"
+-- The measured route (docs/TRADE_RESOURCES.md section 19): it lists only the rows whose lore
+-- condition holds, at their real value. The capacity effect has no "_stocked" and is skipped.
+S.CCO = 'BuildingSlotList.JoinString(BuildingContext.EffectList.Filter(EffectKey.StartsWith("derpy_mr_store_")).JoinString(EffectKey + "=" + Value, ","), ",")'
+S.NOTHING = "Nothing is stored yet. Stores fill each turn with what your buildings make."
+S.NO_REALM = "You hold no settlements, so you have no stores."
+S.FULL_TIP = "This store is full. Anything produced here beyond its space is lost."
+S.view, S.focus = "goods", nil
+
+function S.say(msg)
+    pcall(out, "[derpy_mr_stores] " .. tostring(msg))
+end
+
+function S.num(n)
+    if n == math.floor(n) then return string.format("%d", n) end
+    return string.format("%.1f", n)
+end
+
+local function loc(key, fallback)
+    local s = common.get_localised_string(key)
+    if s == nil or s == "" then return fallback end
+    return s
+end
+
+function S.name(stem) return loc("pooled_resources_display_name_" .. S.PREFIX .. stem, stem) end
+function S.good_tip(g) return loc("resources_description_" .. g.res, "") end
+
+-- "derpy_mr_store_<stem>_stocked=<n>,..." -> {stem = n}, summed over every building.
+function S.parse_made(str)
+    local out = {}
+    for stem, v in string.gmatch(str or "", "derpy_mr_store_([%w_]-)_stocked=([%-%d%.]+)") do
+        out[stem] = (out[stem] or 0) + (tonumber(v) or 0)
+    end
+    return out
+end
+
+-- One settlement. A save from before the stores has no derpy_mr_store_ pools: space 0,
+-- nothing held, and the panel says so rather than failing.
+function S.read_settlement(region)
+    local key = region:name()
+    local s = { key = key, name = loc("regions_onscreen_" .. key, key), level = 0, cap = 0,
+                held = {}, made = {} }
+    local list = region:pooled_resource_manager():resources()
+    for i = 0, list:num_items() - 1 do
+        local p = list:item_at(i)
+        if not p:is_null_interface() then
+            local k = p:key()
+            if string.sub(k, 1, #S.PREFIX) == S.PREFIX then
+                s.held[string.sub(k, #S.PREFIX + 1)] = p:value()
+                if p:maximum_value() > s.cap then s.cap = p:maximum_value() end
+            end
+        end
+    end
+    local st = region:settlement()
+    if not st:is_null_interface() then
+        pcall(function() s.level = st:primary_slot():building():building_level() end)
+        local ok, str = pcall(common.get_context_value, "CcoCampaignSettlement",
+                              tostring(st:cqi()), S.CCO)
+        if ok and type(str) == "string" then s.made = S.parse_made(str) end
+    end
+    return s
+end
+
+function S.read_realm(faction)
+    local out = {}
+    if not faction or faction:is_null_interface() then return out end
+    local rl = faction:region_list()
+    for i = 0, rl:num_items() - 1 do
+        local r = rl:item_at(i)
+        if not r:is_null_interface() then out[#out + 1] = S.read_settlement(r) end
+    end
+    table.sort(out, function(a, b) return a.name < b.name end)
+    return out
+end
+
+-- A settlement keeps a good when it holds some or its buildings add some.
+local function keeps(s, stem)
+    return (s.held[stem] or 0) > 0 or (s.made[stem] or 0) > 0
+end
+
+function S.full(held, cap) return cap > 0 and held >= cap end
+
+local function by_held(a, b)
+    if a.held ~= b.held then return a.held > b.held end
+    return a.name < b.name
+end
+
+function S.goods_rows(realm)
+    local out = {}
+    for _, g in ipairs(DERPY_MR_STORES_GOODS) do
+        local r = { stem = g.stem, name = S.name(g.stem), icon = g.icon, res = g.res,
+                    held = 0, made = 0, cap = 0, n = 0, of = #realm }
+        for _, s in ipairs(realm) do
+            if keeps(s, g.stem) then
+                r.held = r.held + (s.held[g.stem] or 0)
+                r.made = r.made + (s.made[g.stem] or 0)
+                r.cap = r.cap + s.cap
+                r.n = r.n + 1
+            end
+        end
+        if r.n > 0 then out[#out + 1] = r end
+    end
+    table.sort(out, by_held)
+    return out
+end
+
+function S.good_detail(realm, stem)
+    local out = {}
+    for _, s in ipairs(realm) do
+        if keeps(s, stem) then
+            local held = s.held[stem] or 0
+            out[#out + 1] = { key = s.key, name = s.name, held = held, cap = s.cap,
+                              made = s.made[stem] or 0, full = S.full(held, s.cap) }
+        end
+    end
+    table.sort(out, by_held)
+    return out
+end
+
+function S.settlement_detail(s)
+    local out = {}
+    for _, g in ipairs(DERPY_MR_STORES_GOODS) do
+        if keeps(s, g.stem) then
+            local held = s.held[g.stem] or 0
+            out[#out + 1] = { stem = g.stem, name = S.name(g.stem), icon = g.icon, res = g.res,
+                              held = held, cap = s.cap, made = s.made[g.stem] or 0,
+                              full = S.full(held, s.cap) }
+        end
+    end
+    table.sort(out, by_held)
+    return out
+end
+
+function S.settlement_rows(realm)
+    local out = {}
+    for _, s in ipairs(realm) do
+        local r = { key = s.key, name = s.name, level = s.level, cap = s.cap, goods = 0,
+                    fullest = nil, pct = 0 }
+        for _, g in ipairs(DERPY_MR_STORES_GOODS) do
+            local held = s.held[g.stem] or 0
+            if held > 0 then
+                r.goods = r.goods + 1
+                local pct = 0
+                if s.cap > 0 then pct = math.floor(held * 100 / s.cap) end
+                if r.fullest == nil or pct > r.pct then r.fullest, r.pct = g.stem, pct end
+            end
+        end
+        out[#out + 1] = r
+    end
+    return out                      -- the realm is already in name order
+end
+
+function S.find_settlement(realm, key)
+    for _, s in ipairs(realm) do
+        if s.key == key then return s end
+    end
+    return nil
+end
+
+local function per_turn(n)
+    if n > 0 then return "+" .. S.num(n) end
+    return S.num(n)
+end
+
+local function full_mark(full)
+    if full then return "[[col:red]]Full[[/col]]" end
+    return ""
+end
+
+-- WHAT THE PANEL SHOWS NOW: a sub-title, five headers, and one table per row (its five cells,
+-- an icon, a tooltip, and what a click on it opens). Pure, so the harness reads it directly.
+function S.view_model(realm)
+    local v = { rows = {}, empty = S.NOTHING }
+    if S.view == "goods" and S.focus then
+        v.title = "Where " .. S.name(S.focus) .. " is kept"
+        v.heads = { "Settlement", "Held / Space", "Per turn", "", "" }
+        for _, d in ipairs(S.good_detail(realm, S.focus)) do
+            local tip = ""
+            if d.full then tip = S.FULL_TIP end
+            v.rows[#v.rows + 1] = { d.name, S.num(d.held) .. " / " .. S.num(d.cap),
+                                    per_turn(d.made), full_mark(d.full), "", tip = tip }
+        end
+    elseif S.view == "goods" then
+        v.title = "Every good your settlements keep"
+        v.heads = { "Good", "Held", "Per turn", "Space", "Stored in" }
+        v.hint = "Click a good to see where it is kept."
+        for _, g in ipairs(S.goods_rows(realm)) do
+            v.rows[#v.rows + 1] = { g.name, S.num(g.held), per_turn(g.made),
+                                    S.num(g.held) .. " / " .. S.num(g.cap), g.n .. " of " .. g.of,
+                                    icon = g.icon, tip = S.good_tip(g), open = g.stem }
+        end
+        if #realm == 0 then v.empty = S.NO_REALM end
+    elseif S.focus then
+        local s = S.find_settlement(realm, S.focus)
+        if not s then
+            S.focus = nil
+            return S.view_model(realm)
+        end
+        v.title = "Stores of " .. s.name
+        v.heads = { "Good", "Held / Space", "Per turn", "", "" }
+        for _, d in ipairs(S.settlement_detail(s)) do
+            local tip = S.good_tip(d)
+            if d.full then tip = S.FULL_TIP end
+            v.rows[#v.rows + 1] = { d.name, S.num(d.held) .. " / " .. S.num(d.cap),
+                                    per_turn(d.made), full_mark(d.full), "", icon = d.icon,
+                                    tip = tip }
+        end
+    else
+        v.title = "Every settlement you hold"
+        v.heads = { "Settlement", "Level", "Space per good", "Goods held", "Fullest store" }
+        v.hint = "Click a settlement to see its stores."
+        for _, r in ipairs(S.settlement_rows(realm)) do
+            local fullest = "-"
+            if r.fullest then fullest = S.name(r.fullest) .. " " .. r.pct .. "%" end
+            v.rows[#v.rows + 1] = { r.name, tostring(r.level), S.num(r.cap), tostring(r.goods),
+                                    fullest, open = r.key }
+        end
+        v.empty = S.NO_REALM
+    end
+    return v
+end
+
+-- ==========================================================================================
+-- THE UI. Built at runtime from ui/campaign ui/derpy_mr_stores_*.twui.xml (tools/gen_mr_ui.py).
+-- Runtime components ignore XML offsets, so every part is placed here from DERPY_MR_STORES_L.
+-- ==========================================================================================
+S.PATH = "ui/campaign ui/"
+S.BUTTON = "derpy_mr_stores_button"
+S.PANEL = "derpy_mr_stores_panel"
+S.CLOSE = "derpy_mr_close"
+S.BACK = "derpy_mr_back"
+S.TAB = { goods = "derpy_mr_tab_goods", settlements = "derpy_mr_tab_settlements" }
+S.ROW = "derpy_mr_row_"
+S.LIST = "derpy_mr_stores_list"
+S.SP = "derpy_mr_stores_sp"
+S.HUB_KEY = "mr"
+S.SCROLL_MS = 16            -- every frame: the rows trail the bar by up to one tick
+S.FOLLOW_MS = 300           -- the opener follows the strip's end a few times a second
+S.PLACE_TRIES = 150         -- x2.0s: the HUD is not built at first tick
+S.data = {}                 -- what each row shows, for the click handler
+
+function S.root() return core:get_ui_root() end
+function S.panel() return find_uicomponent(S.root(), S.PANEL) end
+
+local function sized(c, w, h)
+    c:SetCanResizeWidth(true)
+    c:SetCanResizeHeight(true)
+    c:Resize(w, h, false)    -- false: without its children
+end
+
+-- box = {x, y, w, h} relative to the panel's (px, py)
+local function put(c, px, py, box)
+    if not is_uicomponent(c) then return end
+    c:MoveTo(px + box[1], py + box[2])
+    if box[3] then sized(c, box[3], box[4]) end
+end
+
+local function set(c, s)
+    if is_uicomponent(c) then c:SetStateText(s or "") end
+end
+
+function S.build()
+    local root = S.root()
+    pcall(function() root:CreateComponent(S.PANEL, S.PATH .. "derpy_mr_stores_panel") end)
+    local p = S.panel()
+    if not is_uicomponent(p) then return nil end
+    p:SetVisible(false)
+    p:SetInteractive(false)
+    set(find_uicomponent(p, "title_text"), "Stores")
+    set(find_uicomponent(p, S.TAB.goods), "Goods")
+    set(find_uicomponent(p, S.TAB.settlements), "Settlements")
+    set(find_uicomponent(p, S.BACK), "Back")
+    return p
+end
+
+-- Centred on the screen, computed and never read back (the Exchange's lesson).
+function S.layout(p)
+    local sw, sh = core:get_screen_resolution()
+    sized(p, L.W, L.H)
+    p:MoveTo(math.floor((sw - L.W) / 2), math.floor((sh - L.H) / 2))
+    local px, py = p:Position()
+    local boxes = { title_text = L.title, sub_title = L.sub_title, empty_text = L.empty,
+                    hint_text = L.hint }
+    boxes[S.CLOSE], boxes[S.BACK] = L.close, L.back
+    boxes[S.TAB.goods], boxes[S.TAB.settlements] = L.tab_goods, L.tab_settlements
+    for name, box in pairs(boxes) do put(find_uicomponent(p, name), px, py, box) end
+    for j, col in ipairs(L.cols) do
+        put(find_uicomponent(p, "hdr_" .. j), px, py, { L.list[1] + col[1], L.head_y, col[2], 22 })
+    end
+end
+
+-- ---- the list, drawn whole (docs/CUSTOM_UI.md, Scrolling lists; EX.ensure_list) -----------
+-- THE HOLDER GOES HOME BEFORE ANY DESTROY: Destroy takes the children, and rows_holder's are
+-- every row. If it cannot be got out, the list stays unscrolled rather than losing the rows.
+function S.drop_list(p)
+    S.list_key = nil
+    local list = find_uicomponent(p, S.LIST)
+    if not is_uicomponent(list) then return end
+    local holder = find_uicomponent(p, "rows_holder")
+    if is_uicomponent(holder) and is_uicomponent(find_uicomponent(list, "rows_holder")) then
+        local hx, hy = holder:Position()
+        pcall(function()
+            p:Adopt(holder:Address())
+            holder:MoveTo(hx, hy)
+        end)
+    end
+    if not is_uicomponent(find_uicomponent(list, "rows_holder")) then
+        pcall(function() list:Destroy() end)
+    else
+        local slider = find_uicomponent(list, "vslider")
+        if is_uicomponent(slider) then slider:SetVisible(false) end
+        S.list_broken = true
+        S.say("the list could not hand its rows back - it draws unscrolled")
+    end
+end
+
+function S.ensure_list(p, n)
+    if S.list_broken then return end
+    local key = S.view .. "|" .. tostring(S.focus) .. "|" .. n
+    if key == S.list_key and is_uicomponent(find_uicomponent(p, S.LIST)) then
+        S.follow_list(p)
+        return
+    end
+    S.drop_list(p)
+    if S.list_broken then return end
+    local holder = find_uicomponent(p, "rows_holder")
+    if not is_uicomponent(holder) then return end
+    pcall(function() p:CreateComponent(S.LIST, S.PATH .. "derpy_mr_stores_list") end)
+    local list = find_uicomponent(p, S.LIST)
+    if not is_uicomponent(list) then return end
+    local x, y = holder:Position()
+    local w, h = L.list[3], L.ROWS * L.PITCH
+    list:MoveTo(x, y)
+    sized(list, w, h)
+    local clip = find_uicomponent(list, "list_clip")
+    local box = find_uicomponent(list, "list_box")
+    local slider = find_uicomponent(list, "vslider")
+    if not (is_uicomponent(clip) and is_uicomponent(box)) then return end
+    clip:MoveTo(x, y)
+    sized(clip, w, h)
+    if is_uicomponent(slider) then
+        slider:MoveTo(x + w - L.SLIDER_W, y)
+        sized(slider, L.SLIDER_W, h)
+        pcall(function() slider:SetProperty("maxValue", h - L.HANDLE_H) end)
+        local handle = find_uicomponent(slider, "handle")
+        if is_uicomponent(handle) then
+            pcall(function() handle:SetProperty("max_height", h - L.HANDLE_H) end)
+        end
+        slider:SetVisible(n > L.ROWS)
+    end
+    for i = 1, n do
+        local name = S.SP .. "_" .. i
+        pcall(function() box:CreateComponent(name, S.PATH .. "derpy_mr_stores_sp") end)
+        local sp = find_uicomponent(box, name)
+        if is_uicomponent(sp) then sized(sp, w, L.PITCH) end
+    end
+    pcall(function() box:Layout() end)
+    if not pcall(function()
+        clip:Adopt(holder:Address())
+        holder:MoveTo(x, y)
+    end) then
+        S.drop_list(p)
+        S.list_broken = true
+        S.say("the list could not take its rows - it draws unscrolled")
+        return
+    end
+    S.list_key = key
+end
+
+-- The engine scrolls list_box; rows_holder follows it, and its one MoveTo carries every row.
+function S.follow_list(p)
+    local list = find_uicomponent(p, S.LIST)
+    if not is_uicomponent(list) then return end
+    local clip = find_uicomponent(list, "list_clip")
+    if not is_uicomponent(clip) then return end
+    local box, holder = find_uicomponent(clip, "list_box"), find_uicomponent(clip, "rows_holder")
+    if not (is_uicomponent(box) and is_uicomponent(holder)) then return end
+    local hx, hy = holder:Position()
+    local _, by = box:Position()
+    if hy ~= by then holder:MoveTo(hx, by) end
+end
+
+function S.scroll_poll()
+    if not S.list_key then return end
+    local p = S.panel()
+    if not is_uicomponent(p) or not p:Visible() then return end
+    S.follow_list(p)
+end
+
+-- ---- rows ---------------------------------------------------------------------------------
+function S.row(holder, i)
+    local name = S.ROW .. i
+    local r = find_uicomponent(holder, name)
+    if is_uicomponent(r) then return r end
+    pcall(function() holder:CreateComponent(name, S.PATH .. "derpy_mr_stores_row") end)
+    return find_uicomponent(holder, name)
+end
+
+-- Rows are made once and kept; the ones past the end go hidden.
+function S.draw_rows(p, rows)
+    local holder = find_uicomponent(p, "rows_holder")
+    if not is_uicomponent(holder) then return end
+    local hx, hy = holder:Position()
+    local n = 0
+    for i, rc in ipairs(rows) do
+        local r = S.row(holder, i)
+        if is_uicomponent(r) then
+            n = i
+            local rx, ry = hx, hy + (i - 1) * L.PITCH
+            r:MoveTo(rx, ry)
+            sized(r, L.list[3] - L.SLIDER_W, L.PITCH)
+            local ic = find_uicomponent(r, "icon")
+            if is_uicomponent(ic) then
+                ic:MoveTo(rx + L.icon[1], ry + L.icon[2])
+                ic:SetVisible(rc.icon ~= nil)
+                if rc.icon then ic:SetImagePath(rc.icon, 0) end
+            end
+            for j, col in ipairs(L.cols) do
+                local c = find_uicomponent(r, "c" .. j)
+                if is_uicomponent(c) then
+                    c:MoveTo(rx + col[1], ry + 4)
+                    set(c, rc[j])
+                end
+            end
+            local div = find_uicomponent(r, "divider")
+            if is_uicomponent(div) then div:MoveTo(rx, ry + L.PITCH - 2) end
+            r:SetTooltipText(rc.tip or "", true)
+            r:SetVisible(true)
+        end
+    end
+    local i = n + 1
+    while true do
+        local r = find_uicomponent(holder, S.ROW .. i)
+        if not is_uicomponent(r) then break end
+        r:SetVisible(false)
+        i = i + 1
+    end
+end
+
+function S.refresh()
+    local p = S.panel()
+    if not is_uicomponent(p) or not p:Visible() then return end
+    local ok, f = pcall(function() return cm:get_faction(cm:get_local_faction_name(true)) end)
+    local realm = S.read_realm(ok and f or nil)
+    local v = S.view_model(realm)
+    S.data = v.rows
+    set(find_uicomponent(p, "sub_title"), v.title)
+    for j = 1, 5 do set(find_uicomponent(p, "hdr_" .. j), v.heads[j]) end
+    set(find_uicomponent(p, "hint_text"), v.hint or "")
+    local back = find_uicomponent(p, S.BACK)
+    if is_uicomponent(back) then back:SetVisible(S.focus ~= nil) end
+    local empty = find_uicomponent(p, "empty_text")
+    if is_uicomponent(empty) then
+        set(empty, v.empty)
+        empty:SetVisible(#v.rows == 0)
+    end
+    -- THE HOLDER STARTS AT THE TOP; a kept list's poll puts it back where the bar is.
+    local px, py = p:Position()
+    put(find_uicomponent(p, "rows_holder"), px, py, L.list)
+    S.ensure_list(p, #v.rows)
+    S.draw_rows(p, v.rows)
+end
+
+function S.is_open()
+    local p = S.panel()
+    return is_uicomponent(p) and p:Visible()
+end
+
+-- Reopening keeps the tab and drops the drill-down. Interactive only while visible: a hidden
+-- panel that still takes the mouse is a dead zone in the middle of the map.
+function S.show(on)
+    local p = S.panel()
+    if not is_uicomponent(p) then p = S.build() end
+    if not is_uicomponent(p) then return end
+    S.list_key = nil
+    if on then
+        S.focus = nil
+        p:SetVisible(true)
+        S.layout(p)
+        if not S.polling then
+            S.polling = true
+            cm:repeat_real_callback(function() pcall(S.scroll_poll) end, S.SCROLL_MS,
+                                    "derpy_mr_stores_scroll")
+        end
+        S.refresh()
+    else
+        p:SetVisible(false)
+    end
+    p:SetInteractive(on and true or false)
+end
+
+function S.is_mine(name)
+    return type(name) == "string" and (name == S.BUTTON or name == S.CLOSE or name == S.BACK
+        or name == S.TAB.goods or name == S.TAB.settlements
+        or string.sub(name, 1, #S.ROW) == S.ROW)
+end
+
+function S.click(name)
+    if name == S.BUTTON then return S.show(not S.is_open()) end
+    if name == S.CLOSE then return S.show(false) end
+    if name == S.BACK then
+        S.focus = nil
+        return S.refresh()
+    end
+    for view, tab in pairs(S.TAB) do
+        if name == tab then
+            S.view, S.focus = view, nil
+            return S.refresh()
+        end
+    end
+    local i = tonumber(string.match(name, "^derpy_mr_row_(%d+)$"))
+    local row = i and S.data[i]
+    if row and row.open then
+        S.focus = row.open
+        return S.refresh()
+    end
+end
+
+-- ---- the opener ---------------------------------------------------------------------------
+function S.hubbed()
+    return DERPY_HUB ~= nil and DERPY_HUB.manages ~= nil and DERPY_HUB.manages(S.HUB_KEY) == true
+end
+
+-- Right of resources_bar (the art, read with Dimensions), centred on it. Nil while the strip
+-- is absent, or so far off screen that it is sliding in or away.
+function S.anchor()
+    local bar = find_uicomponent(S.root(), "resources_bar")
+    if not is_uicomponent(bar) then return nil end
+    local bx, by = bar:Position()
+    local bw, bh = bar:Dimensions()
+    local x, y = bx + bw + L.GAP, by + math.floor((bh - L.BUTTON) / 2)
+    local sw, sh = core:get_screen_resolution()
+    if x < -L.BUTTON or y < -L.BUTTON or x > sw or y > sh then return nil end
+    return math.max(0, math.min(x, sw - L.BUTTON)), math.max(0, math.min(y, sh - L.BUTTON))
+end
+
+-- Created hidden, shown once placed. While the hub manages it, the hub places and shows it.
+function S.place_button(attempt)
+    local root = S.root()
+    local b = find_uicomponent(root, S.BUTTON)
+    if not is_uicomponent(b) then
+        pcall(function() root:CreateComponent(S.BUTTON, S.PATH .. "derpy_mr_stores_button") end)
+        b = find_uicomponent(root, S.BUTTON)
+        if is_uicomponent(b) then b:SetVisible(false) end
+    end
+    if is_uicomponent(b) then
+        if S.hubbed() then
+            S.placed = true
+            return
+        end
+        local x, y = S.anchor()
+        if x then
+            b:MoveTo(x, y)
+            b:SetVisible(true)
+            S.placed = true
+            return
+        end
+    end
+    if attempt < S.PLACE_TRIES then
+        cm:callback(function() S.place_button(attempt + 1) end, 2.0, "derpy_mr_place_" .. attempt)
+    end
+end
+
+-- The strip sizes to its content mid-turn, with no event for it, so the button follows.
+function S.follow_bar()
+    if not S.placed or S.hubbed() then return end
+    local b = find_uicomponent(S.root(), S.BUTTON)
+    if not is_uicomponent(b) then return end
+    local x, y = S.anchor()
+    if not x then return end
+    local ax, ay = b:Position()
+    if ax ~= x or ay ~= y then b:MoveTo(x, y) end
+    if not b:Visible() then b:SetVisible(true) end
+end
+
+function S.init()
+    if S.started then return end
+    S.started = true
+    local ok, err = pcall(S.place_button, 1)
+    if not ok then S.say(err) end
+    cm:repeat_real_callback(function() pcall(S.follow_bar) end, S.FOLLOW_MS, "derpy_mr_follow_bar")
+    core:add_listener("derpy_mr_stores_click", "ComponentLClickUp",
+        function(context) return S.is_mine(context.string) end,
+        function(context)
+            local done, e = pcall(S.click, context.string)
+            if not done then S.say(e) end
+        end, true)
+    core:add_listener("derpy_mr_stores_turn", "FactionTurnStart",
+        function(context) return context:faction():name() == cm:get_local_faction_name(true) end,
+        function()
+            local done, e = pcall(S.refresh)
+            if not done then S.say(e) end
+        end, true)
+end
+
+cm:add_first_tick_callback(function() S.init() end)
+
+-- THE HUB'S REGISTRATION: a plain table, so load order against the hub copies does not matter.
+DERPY_HUB_QUEUE = DERPY_HUB_QUEUE or {}
+table.insert(DERPY_HUB_QUEUE, {
+    key = S.HUB_KEY, button = S.BUTTON, order = 4,
+    label = function() return "Stores" end,
+    live = function() return true end,
+})

@@ -593,3 +593,52 @@ production.
 
 **Raiding does nothing to the stores.** Nothing in phase 1 handles it. Raiding and sacking are
 listed in the spec as ways stock is lost or taken, for the spending design.
+
+## 20. The Stores panel (2026-10-02)
+
+A read-only panel that shows the stores. It never shows a price; prices are the Exchange's job.
+Plan: `superpowers/plans/2026-10-02-resource-overhaul-stores-phase2.md`.
+
+**The opener.**
+- **The button:** `derpy_mr_stores_button`, beside `resources_bar`. It follows the strip's end
+  every 300 ms.
+- **The hub:** when another Derpy mod is installed, the button joins the Derpy HUD hub as entry
+  `mr`, order 4. The pack ships its own hub copy, `derpy_hub_mr.lua` (GUID prefixes DH07/DH08).
+
+**The panel.**
+- **Goods tab:** good | Held | Per turn | Space | Stored in.
+  - Click a good to see the settlements that keep it: Held / Space, Per turn and a red **Full**.
+- **Settlements tab:** settlement | Level | Space per good | Goods held | Fullest store.
+  - Click a settlement to see its stores.
+- **Lists are drawn whole:** every row is created once under `rows_holder`, which follows
+  `list_box`.
+
+**Where the numbers come from.**
+- **Held and space:** the region's pooled resources, read with
+  `region:pooled_resource_manager():resources()`.
+- **Per turn:** the §19 CCO read of the settlement's `derpy_mr_store_*_stocked` effects.
+- **Level:** `primary_slot():building():building_level()`.
+- **When it updates:** on opening, and at `FactionTurnStart` for the local faction while the panel
+  is open.
+
+**Files.**
+- `tools/gen_mr_ui.py` writes the five `ui/campaign ui/derpy_mr_stores_*.twui.xml` (GUID
+  prefixes MR01-MR05), using its own emitter copy, `tools/gen_mr_emitter.py`.
+- It also writes `script/campaign/mod/derpy_more_resources_stores.lua`: a generated layout and
+  goods header in front of `Modding Files/source/resource_overhaul/stores_panel.lua`.
+- **The gate is `py tools/gen_mr_ui.py --selftest`.** It checks the layout, GUIDs, art and
+  sounds against CA's packs, and runs TWUI Studio's reader. It then runs
+  `tools/_resource_overhaul_stores_harness.lua`, which drives the shipped script through a UI
+  stub built from the generated XML.
+- `gen_resource_overhaul.py --pack` refuses a stale file and runs that selftest before packing.
+
+**How it differs from the spec.**
+- **No backdrop picture.** CA's ui packs hold no storehouse or granary art, so the panel uses
+  CA's panel frame.
+- **File location:** the files are in `ui/campaign ui/`, not `ui/derpy_mr/`.
+- **Good tooltip:** it shows the description only; "what makes it" is the drill-down.
+- **Sort order:** settlements are listed by name.
+- **Reopening** keeps the tab and drops the drill-down.
+- **Level** is shown as `building_level()` returns it. Not yet measured in game; see below.
+
+**In game:** not yet checked (phase 2, Task 5).

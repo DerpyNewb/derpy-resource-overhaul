@@ -1,0 +1,413 @@
+"""Derpy Resource Overhaul: the Stores panel's UI files and its script.
+
+    py tools/gen_mr_ui.py             write the .twui.xml files and the stores script
+    py tools/gen_mr_ui.py --check     exit 1 if a shipped file differs from what this builds
+    py tools/gen_mr_ui.py --selftest  layout, XML and goods checks, then the Lua harness
+    py tools/gen_mr_ui.py --preview   draw the layout to .skilltree_cache/ui_preview/mr_stores.png
+
+The script ships as a generated header (DERPY_MR_STORES_L, the layout below, and
+DERPY_MR_STORES_GOODS, the 54 stores) in front of the hand-written
+Modding Files/source/resource_overhaul/stores_panel.lua, so every coordinate and the goods list
+have one source. gen_resource_overhaul.py's write() calls write_all() and its pack() refuses a
+stale() file. An unknown flag is refused: tools here have no --help.
+"""
+import io
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "tools"))
+SRC = os.path.join(ROOT, "Modding Files", "source", "resource_overhaul", "stores_panel.lua")
+LUA_REL = "Modding Files/pack/script/campaign/mod/derpy_more_resources_stores.lua"
+UI_REL = "Modding Files/pack/ui/campaign ui/"
+PACK_REL = "Modding Files/pack/"
+HARNESS = os.path.join(ROOT, "tools", "_resource_overhaul_stores_harness.lua")
+LUA_EXE = r"C:\Program Files (x86)\Lua\5.1\lua.exe"
+
+# THE LAYOUT, in panel coordinates: (x, y, w, h). The Lua MoveTo's every component from these;
+# the .twui.xml sizes are the same numbers. cols are (x, w) inside a row, which starts at list x.
+L = {
+    "W": 820, "H": 640, "PITCH": 28, "ROWS": 16, "SLIDER_W": 16, "HANDLE_H": 40,
+    "BUTTON": 48, "GAP": 4,
+    "title": (20, 14, 500, 28), "close": (778, 12, 30, 30),
+    "tab_goods": (20, 52, 140, 26), "tab_settlements": (168, 52, 140, 26),
+    "back": (680, 52, 120, 26), "sub_title": (20, 86, 780, 22), "head_y": 112,
+    "list": (20, 138, 780, 448), "empty": (20, 150, 780, 60), "hint": (20, 600, 780, 22),
+    "icon": (6, 2, 24, 24),
+    "cols": ((36, 230), (270, 110), (390, 110), (510, 130), (650, 110)),
+}
+
+# CA's own icon for each of its 17 goods (the Exchange's EX.INFO). Five filenames do not match
+# the good: res_rom_lead is Salt, res_rom_glass is Dwarf Beer, res_rom_textiles is Pottery.
+CA_ICONS = {
+    "res_animals": "resource_animals", "res_dyes": "resource_dyes", "res_gems": "resource_gemstones",
+    "res_gold_idols": "resource_gold_idols", "res_ivory": "resource_ivory",
+    "res_medicine": "resource_medicine", "res_obsidian": "resource_obsidian",
+    "res_rom_furs": "resource_furs", "res_rom_glass": "resource_dwarf_beer",
+    "res_rom_iron": "resource_iron", "res_rom_lead": "resource_salt",
+    "res_rom_marble": "resource_marble", "res_rom_textiles": "resource_pottery",
+    "res_rom_timber": "resource_timber", "res_rom_wine": "resource_wine",
+    "res_spices": "resource_spices", "res_trinkets": "resource_trinkets",
+}
+ICON_DIR = "ui/campaign ui/effect_bundles/"
+
+# Art, all CA's and all checked by check_xml() against the game's ui packs.
+PANEL_LAYERS = [   # CA's panel_frame recipe, as the Exchange's (gen_exchange_ui.PANEL_LAYERS)
+    {"path": "ui/skins/default/panel_back_tile.png",
+     "offset": (0, 0), "dw": 0, "dh": 0, "margin": 5, "tile": True, "dock": None},
+    {"path": "ui/skins/default/panel_back_border.png",
+     "offset": (0, 0), "dw": 0, "dh": 0, "margin": 30, "tile": True, "dock": None},
+]
+OPENER_ICON = "ui/campaign ui/technologies/wh2_hef_tech_marble_stockpiles.png"
+BTN_BG = "ui/skins/default/button_square_large_text_active.png"
+BTN_HOVER = "ui/skins/default/button_square_large_text_hover.png"
+WHITE = "ui/skins/default/1x1_blank_white.png"
+DIVIDER_COLOUR = "#6B583680"
+ICON_BG = "ui/campaign ui/effect_bundles/resource_gold.png"
+SLIDER_TRACK = "ui/skins/default/slider_vertical_mid.png"
+SLIDER_HANDLE = "ui/skins/default/slider_vertical_handle.png"
+SLIDER_HANDLE_UNDER = "ui/skins/default/slider_vertical_handle_underlay.png"
+SND_OPEN = "UI_GBL_TMP_Round_Medium_Button"
+SND_SMALL = "UI_GBL_TMP_Round_Small_Button"
+MUTED = "#C8B48CFF"
+ALIGN = ("Left", "Right", "Right", "Right", "Right")
+TIP_OPEN = "Stores||What each of your settlements keeps of every good, and how fast it fills."
+
+
+def _flat(path, colour=None, offset=(0, 0), dw=0, dh=0, dock=None):
+    return {"path": path, "offset": offset, "dw": dw, "dh": dh, "margin": 0, "dock": dock,
+            "colour": colour}
+
+
+def _round(state, icon, inset, size):
+    under = "small" if size == "small" else "medium"
+    out = [_flat("ui/skins/default/button_round_%s_%s.png" % (under, state))]
+    if size != "small":
+        out.insert(0, _flat("ui/skins/default/button_round_medium_underlay.png"))
+    out.append(_flat(icon, offset=(inset, inset), dw=-2 * inset, dh=-2 * inset, dock="Center"))
+    return out
+
+
+def _cell(E, name, w, h, **kw):
+    return E.C(name, w, h, text=True, tx="0.00,0.00", ty="0.00,0.00", **kw)
+
+
+def build_panel():
+    import gen_mr_emitter as E
+    root = E.C("root", L["W"], L["H"])
+    p = root.add(E.C("derpy_mr_stores_panel", L["W"], L["H"], layers=PANEL_LAYERS, priority=60))
+    p.add(_cell(E, "title_text", L["title"][2], L["title"][3], size=16))
+    p.add(E.C("derpy_mr_close", 30, 30, interactive=True, sound=SND_SMALL, tooltip="Close",
+              layers=_round("active", "ui/skins/default/icon_cross_small.png", 5, "small"),
+              hover=_round("hover", "ui/skins/default/icon_cross_small.png", 5, "small")))
+    for name, box, tip in (
+            ("derpy_mr_tab_goods", L["tab_goods"], "Goods||Every good your settlements keep."),
+            ("derpy_mr_tab_settlements", L["tab_settlements"],
+             "Settlements||Every settlement you hold, and its stores."),
+            ("derpy_mr_back", L["back"], "Back to the full list.")):
+        p.add(_cell(E, name, box[2], box[3], interactive=True, image=BTN_BG,
+                    hover=[_flat(BTN_HOVER)], sound=SND_SMALL, align="Center", tooltip=tip))
+    p.add(_cell(E, "sub_title", L["sub_title"][2], L["sub_title"][3], size=13, colour=MUTED))
+    for j, (_x, w) in enumerate(L["cols"], 1):
+        p.add(_cell(E, "hdr_%d" % j, w, 22, size=12, colour=MUTED, align=ALIGN[j - 1]))
+    p.add(E.C("rows_holder", L["list"][2], L["list"][3]))
+    p.add(_cell(E, "empty_text", L["empty"][2], L["empty"][3], size=13))
+    p.add(_cell(E, "hint_text", L["hint"][2], L["hint"][3], size=12, colour=MUTED))
+    E.assign(root, "MR01")
+    return E.layout(root, "derpy: Resource Overhaul's Stores panel. Created at runtime by "
+                    "script/campaign/mod/derpy_more_resources_stores.lua, which MoveTo's every "
+                    "child. Generated by tools/gen_mr_ui.py; do not hand-edit.")
+
+
+def build_row():
+    import gen_mr_emitter as E
+    w = L["list"][2] - L["SLIDER_W"]
+    root = E.C("root", w, L["PITCH"])
+    # A faint wash in both states: it gives the row something to click on, and the hover lifts it.
+    r = root.add(E.C("derpy_mr_stores_row", w, L["PITCH"], interactive=True,
+                     layers=[_flat(WHITE, colour="#00000033")],
+                     hover=[_flat(WHITE, colour="#FFFFFF22")]))
+    r.add(E.C("divider", w, 2, image=WHITE, colour_img=DIVIDER_COLOUR))
+    r.add(E.C("icon", L["icon"][2], L["icon"][3], image=ICON_BG))
+    for j, (_x, cw) in enumerate(L["cols"], 1):
+        r.add(_cell(E, "c%d" % j, cw, 20, size=12, align=ALIGN[j - 1]))
+    E.assign(root, "MR02")
+    return E.layout(root, "derpy: one row of the Stores panel, created per row into rows_holder. "
+                    "Generated by tools/gen_mr_ui.py; do not hand-edit.")
+
+
+def build_button():
+    import gen_mr_emitter as E
+    n = L["BUTTON"]
+    root = E.C("root", n, n)
+    root.add(E.C("derpy_mr_stores_button", n, n, interactive=True, sound=SND_OPEN,
+                 tooltip=TIP_OPEN, layers=_round("active", OPENER_ICON, 10, "medium"),
+                 hover=_round("hover", OPENER_ICON, 10, "medium")))
+    E.assign(root, "MR03")
+    return E.layout(root, "derpy: the button that opens the Stores panel. Generated by "
+                    "tools/gen_mr_ui.py; do not hand-edit.")
+
+
+def build_list():
+    """CA's listview, as gen_exchange_ui.build_list: the Lua sizes and places every part."""
+    import gen_mr_emitter as E
+    w, h = L["list"][2], L["ROWS"] * L["PITCH"]
+    root = E.C("root", w, h)
+    lst = root.add(E.C("listview", w, h, interactive=True, callbacks=["Listview"]))
+    clip = lst.add(E.C("list_clip", w, h, clipchildren=True, relativeresize=True,
+                       interactive=True))
+    clip.add(E.C("list_box", w, 1, interactive=True, callbacks=["List"], docking="Top Left",
+                 layoutengine={"type": "List", "sizetocontent": True, "margins": "0.00,0.00",
+                               "columns": [w]}))
+    vs = lst.add(E.C("vslider", L["SLIDER_W"], h, interactive=True, callbacks=["VSlider"],
+                     allowhresize=False,
+                     props={"Value": 0, "minValue": 0, "maxValue": h - L["HANDLE_H"]},
+                     layers=[{"path": SLIDER_TRACK, "offset": (0, 0), "dw": 0, "dh": 0,
+                              "margin": 0, "tile": True, "dock": None}]))
+    vs.add(E.C("handle", L["SLIDER_W"], L["HANDLE_H"], interactive=True,
+               callbacks=["VSliderHandle"], allowhresize=False, moveable="Movable XP",
+               props={"max_height": h - L["HANDLE_H"], "min_size": 10},
+               layers=[_flat(SLIDER_HANDLE_UNDER), _flat(SLIDER_HANDLE)]))
+    E.assign(root, "MR04")
+    return E.layout(root, "derpy: the Stores panel's scrolling list. rows_holder is adopted into "
+                    "list_clip. Generated by tools/gen_mr_ui.py; do not hand-edit.")
+
+
+def build_sp():
+    """ONE EMPTY ROW: no image, no text, no children - it gives the list its length."""
+    import gen_mr_emitter as E
+    w = L["list"][2]
+    root = E.C("root", w, L["PITCH"])
+    root.add(E.C("derpy_mr_stores_sp", w, L["PITCH"]))
+    E.assign(root, "MR05")
+    return E.layout(root, "derpy: one empty row of the Stores panel's list. Generated by "
+                    "tools/gen_mr_ui.py; do not hand-edit.")
+
+
+BUILDERS = (("derpy_mr_stores_panel", build_panel), ("derpy_mr_stores_row", build_row),
+            ("derpy_mr_stores_button", build_button), ("derpy_mr_stores_list", build_list),
+            ("derpy_mr_stores_sp", build_sp))
+
+
+def goods():
+    """[(stem, resource key, icon path)] in store_stems() order: the mod's 37, then CA's 17."""
+    import gen_resource_overhaul as G
+    out = []
+    for stem, (res, _fx, _name) in G.store_stems().items():
+        out.append((stem, res, ICON_DIR + (CA_ICONS.get(res) or G.icon(stem)) + ".png"))
+    return out
+
+
+def _lua(v):
+    if isinstance(v, (tuple, list)):
+        return "{" + ", ".join(_lua(x) for x in v) + "}"
+    if isinstance(v, str):
+        return '"%s"' % v
+    return str(v)
+
+
+def header():
+    lines = ["-- GENERATED by tools/gen_mr_ui.py from Modding Files/source/resource_overhaul/"
+             "stores_panel.lua.",
+             "-- Edit the source or the generator, never this file.",
+             "DERPY_MR_STORES_L = {"]
+    lines += ["    %s = %s," % (k, _lua(L[k])) for k in sorted(L)]
+    lines += ["}", "DERPY_MR_STORES_GOODS = {"]
+    lines += ['    {stem = "%s", res = "%s", icon = "%s"},' % g for g in goods()]
+    lines.append("}")
+    return "\n".join(lines) + "\n"
+
+
+def stores_lua():
+    with io.open(SRC, encoding="utf-8", newline="") as fh:
+        return header() + fh.read()
+
+
+def files():
+    out = {UI_REL + name + ".twui.xml": build() for name, build in BUILDERS}
+    out[LUA_REL] = stores_lua()
+    return out
+
+
+def write_all(root=ROOT):
+    for rel, text in files().items():
+        path = os.path.join(root, rel)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with io.open(path, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(text)
+
+
+def stale(root=ROOT):
+    """[rel] - every shipped file that is missing or differs from what this builds."""
+    out = []
+    for rel, text in files().items():
+        path = os.path.join(root, rel)
+        if not os.path.isfile(path):
+            out.append(rel)
+            continue
+        with io.open(path, encoding="utf-8", newline="") as fh:
+            if fh.read() != text:
+                out.append(rel)
+    return out
+
+
+def pack_paths():
+    return [rel[len(PACK_REL):] for rel in files()]
+
+
+def run_harness():
+    """The harness against the built files, from a temp folder: (returncode, output)."""
+    tmp = tempfile.mkdtemp()
+    try:
+        for rel, text in files().items():
+            with io.open(os.path.join(tmp, os.path.basename(rel)), "w", encoding="utf-8",
+                         newline="\n") as fh:
+                fh.write(text)
+        fwd = tmp.replace("\\", "/")
+        with io.open(HARNESS, encoding="utf-8") as fh:
+            h = fh.read().replace("__SCRIPT__", fwd + "/" + os.path.basename(LUA_REL))
+        h = h.replace("__UIDIR__", fwd)
+        hp = os.path.join(tmp, "harness.lua")
+        with io.open(hp, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(h)
+        got = subprocess.run([LUA_EXE, hp], capture_output=True, text=True)
+    finally:
+        shutil.rmtree(tmp)
+    return got.returncode, got.stdout + got.stderr
+
+
+def check_layout():
+    """Every box inside the panel; headers, list and hint in order; columns clear of each
+    other and of the slider. A box that leaves the panel draws over the map."""
+    W, H = L["W"], L["H"]
+    for k in ("title", "close", "tab_goods", "tab_settlements", "back", "sub_title", "list",
+              "empty", "hint"):
+        x, y, w, h = L[k]
+        assert 0 <= x and 0 <= y and x + w <= W and y + h <= H, "%s leaves the panel" % k
+    lx, ly, lw, lh = L["list"]
+    assert lh == L["ROWS"] * L["PITCH"], "the list is not ROWS rows tall"
+    assert L["head_y"] + 22 <= ly and ly + lh <= L["hint"][1], "headers, list and hint overlap"
+    assert L["back"][0] >= L["tab_settlements"][0] + L["tab_settlements"][2], "back overlaps a tab"
+    end = L["icon"][0] + L["icon"][2]
+    for x, w in L["cols"]:
+        assert x >= end, "the column at %d overlaps the one before it" % x
+        end = x + w
+    assert end <= lw - L["SLIDER_W"], "the last column runs under the slider"
+
+
+def check_xml():
+    """Five files; every GUID unique across them and linked; every image and sound real."""
+    import gen_mr_emitter as E
+    texts = {rel: t for rel, t in files().items() if rel.endswith(".twui.xml")}
+    assert len(texts) == 5, sorted(texts)
+    seen = {}
+    for rel, text in texts.items():
+        for g in set(re.findall(r'uniqueguid="([^"]+)"', text)):
+            assert g not in seen, "GUID %s in %s and %s" % (g, seen[g], rel)
+            seen[g] = rel
+            assert text.count(g) >= 2, "GUID %s appears once in %s" % (g, rel)
+    have = E._game_assets()
+    cats = E._game_sound_categories()
+    for rel, text in texts.items():
+        for p in re.findall(r'imagepath="([^"]+)"', text):
+            assert p in have, "%s: not in CA's ui packs: %s" % (rel, p)
+        for s in re.findall(r'soundcategory="([^"]+)"', text):
+            assert s in cats, "%s: a sound CA never uses: %s" % (rel, s)
+    for stem, _res, icon in goods():
+        assert icon in have or os.path.isfile(os.path.join(ROOT, PACK_REL, *icon.split("/"))), \
+            "no icon for %s: %s" % (stem, icon)
+
+
+def selftest():
+    check_layout()
+    check_xml()
+    import gen_resource_overhaul as G
+    g = goods()
+    assert [s for s, _r, _i in g] == list(G.store_stems()), "the panel's goods are not the stores"
+    assert len(g) == 54, len(g)
+    # stale() sees a hand edit, so pack() cannot ship one
+    tmp = tempfile.mkdtemp()
+    try:
+        write_all(tmp)
+        assert stale(tmp) == [], stale(tmp)
+        with io.open(os.path.join(tmp, LUA_REL), "a", encoding="utf-8", newline="\n") as fh:
+            fh.write("-- edited by hand\n")
+        assert stale(tmp) == [LUA_REL], stale(tmp)
+    finally:
+        shutil.rmtree(tmp)
+    assert os.path.isfile(LUA_EXE), "lua.exe is required for the harness"
+    code, out = run_harness()
+    assert code == 0 and "harness ok" in out, out
+    problems = stale()
+    assert not problems, "stale, run py tools/gen_mr_ui.py: %s" % problems
+    import preview_guilds_panel as PV
+    if os.path.isdir(PV.STUDIO):            # TWUI Studio: in the workspace, never in the repo
+        bad = PV.validate("derpy_mr_stores_")
+        assert not bad, "\n".join(bad)
+    print("gen_mr_ui selftest: ok")
+
+
+SAMPLE_HEADS = ("Good", "Held", "Per turn", "Space", "Stored in")
+SAMPLE = (("Salted Fish", "1240", "+18", "1240 / 4000", "7 of 12"),
+          ("Medicinal Plants", "300", "+6", "300 / 600", "2 of 12"),
+          ("Iron", "0", "+4", "0 / 200", "1 of 12"))
+
+
+def preview(path=None):
+    """The layout drawn from L, with sample rows: a design-review picture, not the engine."""
+    from PIL import Image, ImageDraw
+    path = path or os.path.join(ROOT, ".skilltree_cache", "ui_preview", "mr_stores.png")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    W, H = L["W"], L["H"]
+    im = Image.new("RGB", (W, H), (43, 33, 22))
+    d = ImageDraw.Draw(im)
+    d.rectangle((0, 0, W - 1, H - 1), outline=(200, 160, 90), width=3)
+    ink, line = (255, 248, 215), (107, 88, 54)
+
+    def box(b, label):
+        x, y, w, h = b
+        d.rectangle((x, y, x + w, y + h), outline=line)
+        d.text((x + 4, y + 4), label, fill=ink)
+
+    for k, label in (("title", "Stores"), ("close", "X"), ("tab_goods", "Goods"),
+                     ("tab_settlements", "Settlements"), ("back", "Back"),
+                     ("sub_title", "Every good your settlements keep"),
+                     ("hint", "Click a good to see where it is kept.")):
+        box(L[k], label)
+    lx, ly, lw, lh = L["list"]
+    for j, (x, w) in enumerate(L["cols"]):
+        box((lx + x, L["head_y"], w, 22), SAMPLE_HEADS[j])
+    for i in range(L["ROWS"]):
+        y = ly + i * L["PITCH"]
+        d.rectangle((lx, y, lx + lw - L["SLIDER_W"], y + L["PITCH"] - 2), fill=(30, 24, 16))
+        ix, iy, iw, ih = L["icon"]
+        d.rectangle((lx + ix, y + iy, lx + ix + iw, y + iy + ih), outline=(200, 160, 90))
+        for j, (x, w) in enumerate(L["cols"]):
+            t = SAMPLE[i % len(SAMPLE)][j]
+            tx = lx + x if ALIGN[j] == "Left" else lx + x + w - d.textlength(t)
+            d.text((tx, y + 8), t, fill=ink)
+    d.rectangle((lx + lw - L["SLIDER_W"], ly, lx + lw, ly + lh), outline=(200, 160, 90))
+    im.save(path)
+    return path
+
+
+if __name__ == "__main__":
+    args = sys.argv[1:]
+    if args == []:
+        write_all()
+        print("wrote %d files" % len(files()))
+    elif args == ["--check"]:
+        bad = stale()
+        for b in bad:
+            print("stale:", b)
+        sys.exit(1 if bad else 0)
+    elif args == ["--selftest"]:
+        selftest()
+    elif args == ["--preview"]:
+        print("wrote", preview())
+    else:
+        raise SystemExit("unknown arguments %r - see the docstring" % (args,))
