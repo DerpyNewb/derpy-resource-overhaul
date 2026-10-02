@@ -528,28 +528,33 @@ army_label("label_8"); army_label("label_town_3")
 local function char() return { is_null_interface = function() return false end } end
 local ch7, ch8 = char(), char()
 CHARS[7], CHARS[8] = ch7, ch8
-local function plates(holder)
+-- prefix: the plates made under `holder`; shown: those visible
+local function plates(holder, prefix, shown)
     local k = 0
-    for _, c in ipairs(holder.kids) do if c.name == S.PLATE then k = k + 1 end end
+    for _, c in ipairs(holder.kids) do
+        if string.sub(c.name, 1, #prefix) == prefix and (not shown or c.visible) then k = k + 1 end
+    end
     return k
 end
 REPEATS.derpy_mr_raid_plate()
-eq(plates(rh), 0, "no plate while the raid takes nothing")
+eq(plates(rh, S.PLATE), 0, "no plate while the raid takes nothing")
 PREVIEW[ch7] = { total = 10, parts = { { stem = "coal", n = 9 }, { stem = "iron", n = 1 } }, to = "reg_b" }
 REPEATS.derpy_mr_raid_plate()
-local plate = find_uicomponent(rh, S.PLATE)
-eq(plates(rh), 1, "a plate beside CA's raid values"); eq(plate.text, "10", "the goods the raid takes")
+local plate, plate2 = find_uicomponent(rh, S.PLATE .. 1), find_uicomponent(rh, S.PLATE .. 2)
+eq(plates(rh, S.PLATE), 2, "a value per good beside CA's raid values")
+eq(plate.text, "9", "most first: coal's share"); eq(plate.images[1], good_icon("coal"), "with coal's own icon")
+eq(plate2.text, "1", "then iron's"); eq(plate2.images[1], good_icon("iron"), "with iron's")
 eq(plate.visible, true, "shown even when copied from a hidden plate")
-eq(plate.images[1], S.PLATE_ICON, "with the stores icon")
+eq(plate2.tip, plate.tip, "every value carries the whole list")
 eq(string.find(plate.tip, "Coal 9", 1, true) ~= nil, true, "the tooltip lists each good")
 eq(string.find(plate.tip, "Bravo", 1, true) ~= nil, true, "and where it goes")
 PREVIEW[ch7].to = "reg_long"; REPEATS.derpy_mr_raid_plate(); fits(plate.tip)
 PREVIEW[ch7].to = "reg_b"
-REPEATS.derpy_mr_raid_plate(); eq(plates(rh), 1, "made once, not once a poll")
+REPEATS.derpy_mr_raid_plate(); eq(plates(rh, S.PLATE), 2, "made once, not once a poll")
 PREVIEW[ch7].to = nil; REPEATS.derpy_mr_raid_plate()
 eq(string.find(plate.tip, "no settlement", 1, true) ~= nil, true, "a horde's plate says the goods are lost")
 fits(plate.tip)
-PREVIEW[ch7] = nil; REPEATS.derpy_mr_raid_plate(); eq(plate.visible, false, "hidden when the raid stops")
+PREVIEW[ch7] = nil; REPEATS.derpy_mr_raid_plate(); eq(plates(rh, S.PLATE, true), 0, "all hidden when the raid stops")
 rh.visible = false; PREVIEW[ch7] = { total = 1, parts = { { stem = "coal", n = 1 } }, to = "reg_b" }
 REPEATS.derpy_mr_raid_plate(); eq(plate.visible, false, "nothing drawn while CA hides the raid values")
 rh.visible = true
@@ -558,6 +563,9 @@ for i = 1, 14 do many_parts[i] = { stem = "coal", n = 1 } end
 PREVIEW[ch7] = { total = 14, parts = many_parts, to = "reg_b" }
 REPEATS.derpy_mr_raid_plate()
 eq(string.find(plate.tip, "and 4 more", 1, true) ~= nil, true, "a long list is cut at ten")
+eq(plates(rh, S.PLATE, true), S.PLATES, "at most PLATES values; the tooltip has the rest")
+PREVIEW[ch7] = { total = 1, parts = { { stem = "coal", n = 1 } }, to = "reg_b" }
+REPEATS.derpy_mr_raid_plate(); eq(plates(rh, S.PLATE, true), 1, "a value left from a longer list is hidden")
 DERPY_MR_FLOWS = nil; REPEATS.derpy_mr_raid_plate(); eq(plate.visible, false, "without the flows script: no plate")
 
 -- ---- the capture panel: Sack and Raze show the goods they take -------------------------
@@ -583,21 +591,25 @@ DERPY_MR_FLOWS = { capture_preview = function(region, taker, kind)
     return CAP[kind]
 end }
 REPEATS.derpy_mr_raid_plate()
-local sg, rg = find_uicomponent(sack_ip, S.CAPTURE), find_uicomponent(raze_ip, S.CAPTURE)
-eq(sg ~= false, true, "Sack gets a goods value"); eq(sg.text, "50", "the goods a sack takes")
-eq(find_uicomponent(sg, "icon").images[0], S.PLATE_ICON, "with the stores icon")
+local sg, rg = find_uicomponent(sack_ip, S.CAPTURE .. 1), find_uicomponent(raze_ip, S.CAPTURE .. 1)
+eq(sg ~= false, true, "Sack gets a goods value"); eq(sg.text, "50", "the coal a sack takes")
+eq(find_uicomponent(sg, "icon").images[0], good_icon("coal"), "with coal's own icon")
+eq(find_uicomponent(rg, "icon").images[0], good_icon("iron"), "Raze's with iron's")
 eq(string.find(sg.tip, "Coal 50", 1, true) ~= nil, true, "the tooltip lists each good")
 eq(string.find(sg.tip, "Sacking", 1, true) ~= nil, true, "and names the choice")
 eq(find_uicomponent(sg, "icon").tip, sg.tip, "the icon says the same")
 eq(rg.text, "3", "Raze gets its own"); eq(string.find(rg.tip, "no settlement", 1, true) ~= nil, true, "a horde's goods are lost")
-local og = find_uicomponent(occ_ip, S.CAPTURE)
+local og = find_uicomponent(occ_ip, S.CAPTURE .. 1)
 eq(og.text, "51", "an occupy option shows the store it keeps")
 eq(string.find(og.tip, "keeps", 1, true) ~= nil, true, "and says it is kept, not taken")
 -- CA'S TOOLTIP WRAPS AT ABOUT 50 CHARACTERS (seen in game 2026-10-02: "into Zharr-" / "Naggrund:")
 for _, t in ipairs({ sg.tip, rg.tip, og.tip }) do fits(t) end
 eq(CALLS[1], "reg_b|fac_a|sack", "read for the panel's settlement and the local faction")
 REPEATS.derpy_mr_raid_plate(); eq(#sack_ip.kids, 2, "made once, not once a poll")
-CAP.sack = nil; REPEATS.derpy_mr_raid_plate(); eq(sg.visible, false, "hidden when the sack takes nothing")
+CAP.sack = { total = 55, parts = { { stem = "coal", n = 50 }, { stem = "iron", n = 5 } }, lost = false }
+REPEATS.derpy_mr_raid_plate(); eq(plates(sack_ip, S.CAPTURE, true), 2, "a value per good on a choice too")
+eq(find_uicomponent(sack_ip, S.CAPTURE .. 2).text, "5", "iron's beside coal's")
+CAP.sack = nil; REPEATS.derpy_mr_raid_plate(); eq(plates(sack_ip, S.CAPTURE, true), 0, "hidden when the sack takes nothing")
 sc.visible = false; CALLS = {}; REPEATS.derpy_mr_raid_plate(); eq(#CALLS, 0, "nothing read while the panel is closed")
 DERPY_MR_FLOWS = nil; sc.visible = true; REPEATS.derpy_mr_raid_plate(); eq(#ERRORS, 0, "without the flows script: no error")
 

@@ -780,6 +780,7 @@ freezes them on one machine. A 500 ms poll keeps it up; the tooltip lists up to 
   `DERPY_MR_CAPTURE_KIND` from CA's db.pack, and its check asserts the four ids read off the
   Chaos Dwarf panel.
 - Occupy and Loot-and-Occupy show the whole store as kept (`F.capture_preview(..., "occupy")`, 100%; rebels' included, since the store stays with the settlement). Occupy-and-vassal, resettle and colonise show nothing.
+- One value per good, each with the good's own icon, most first, up to `S.PLATES` (3); copies named `<prefix>1..3`, the tooltip lists every good. Same for the raid plate (icon in image 1).
 - Tooltip lines are held to `S.TIP_CHARS` (44): CA's tooltip wraps at about 50 and split "Zharr-" from "Naggrund".
 - A copy of `dy_income` (it keeps its `icon` child) holds the number; text, tooltip and icon
   persist. CA's row is full, so it wraps to a second line and the row moves up 13px.

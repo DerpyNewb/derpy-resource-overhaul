@@ -1152,9 +1152,11 @@ end
 -- ---- the raid plate: the goods a raid takes, beside CA's raid values above the army --------
 -- 3d_ui_parent > label_<character cqi> > list_parent > stance_holder > icon_stance > raid_holder,
 -- read in game 2026-10-02. A copy of CA's own plate keeps the look; its text persists (measured).
-S.PLATE = "raid_value_derpy_goods"
-S.PLATE_ICON = "ui/campaign ui/technologies/wh2_hef_tech_marble_stockpiles.png"
+S.PLATE = "raid_value_derpy_goods_"     -- .. k, one per good
+S.PLATES = 3                            -- values shown per army or choice; the tooltip has every good
 S.PLATE_MS = 500
+S.ICON = {}
+for _, g in ipairs(DERPY_MR_STORES_GOODS) do S.ICON[g.stem] = g.icon end
 S.PLATE_LINES = 10
 S.RAID_PATH = { "list_parent", "stance_holder", "icon_stance", "raid_holder" }
 
@@ -1182,37 +1184,52 @@ function S.plate_tip(pv)
     return tip_lines("Raiding takes, each turn:", pv.parts, foot)
 end
 
+-- ONE VALUE PER GOOD, each with that good's icon, most first, up to PLATES: copies of the first of
+-- CA's `sources` found under `holder`, named prefix .. k. set_icon(plate, icon, tip) puts the icon
+-- where that kind of plate keeps it. Values past the list, or all of them when parts is nil, hide.
+local function draw_values(holder, sources, prefix, parts, tip, set_icon)
+    for k = 1, S.PLATES do
+        local part = parts and parts[k]
+        local plate = find_uicomponent(holder, prefix .. k)
+        if part then
+            if not is_uicomponent(plate) then
+                local src = false
+                for _, name in ipairs(sources) do
+                    src = find_uicomponent(holder, name)
+                    if is_uicomponent(src) then break end
+                end
+                if not is_uicomponent(src) then return end
+                plate = UIComponent(src:CopyComponent(prefix .. k))
+            end
+            set(plate, S.num(part.n))
+            plate:SetTooltipText(tip, true)
+            set_icon(plate, S.ICON[part.stem], tip)
+            plate:SetVisible(true)
+        elseif is_uicomponent(plate) then
+            plate:SetVisible(false)
+        end
+    end
+end
+
 function S.plate(lab, cqi)
     local holder = find_uicomponent(lab, unpack(S.RAID_PATH))
     if not is_uicomponent(holder) then return end
-    local plate = find_uicomponent(holder, S.PLATE)
     local preview, pv = S.flows("raid_preview"), nil
     if preview and holder:Visible() then
         local ch = cm:get_character_by_cqi(cqi)
         if ch and not ch:is_null_interface() then pv = preview(ch) end
     end
-    if not pv then
-        if is_uicomponent(plate) then plate:SetVisible(false) end
-        return
-    end
-    if not is_uicomponent(plate) then
-        -- Labour's plate first: the one measured. Gold's is every race's, if Labour is absent.
-        local src = find_uicomponent(holder, "raid_value_labour")
-        if not is_uicomponent(src) then src = find_uicomponent(holder, "raid_value") end
-        if not is_uicomponent(src) then return end
-        plate = UIComponent(src:CopyComponent(S.PLATE))
-        plate:SetImagePath(S.PLATE_ICON, 1)
-    end
-    set(plate, tostring(pv.total))
-    plate:SetTooltipText(S.plate_tip(pv), true)
-    plate:SetVisible(true)
+    -- Labour's plate first: the one measured. Gold's is every race's, if Labour is absent.
+    -- A raid plate's icon is its image 1 (image 0 is the plate).
+    draw_values(holder, { "raid_value_labour", "raid_value" }, S.PLATE, pv and pv.parts,
+                pv and S.plate_tip(pv), function(plate, icon) plate:SetImagePath(icon, 1) end)
 end
 
 -- ---- the capture panel: Sack and Raze show the goods they take ---------------------------
 -- settlement_captured > button_parent > <option id> > frame > icon_parent, read in game
 -- 2026-10-02. A copy of CA's gold value (dy_income) wraps under CA's row; its text, tooltip and
 -- icon persist (measured). The option id says which decision it is: DERPY_MR_CAPTURE_KIND.
-S.CAPTURE = "derpy_mr_capture_goods"
+S.CAPTURE = "derpy_mr_capture_goods_"   -- .. k, one per good
 S.CAPTURE_VERB = { sack = "Sacking", raze = "Razing", occupy = "Occupying" }
 
 function S.capture_tip(pv, kind)
@@ -1224,28 +1241,19 @@ function S.capture_tip(pv, kind)
     return tip_lines(S.CAPTURE_VERB[kind] .. " takes:", pv.parts, foot)
 end
 
+-- dy_income's icon is its child `icon`, which carries its own tooltip.
+local function capture_icon(plate, icon, tip)
+    local ic = find_uicomponent(plate, "icon")
+    if not is_uicomponent(ic) then return end
+    ic:SetImagePath(icon, 0)
+    ic:SetTooltipText(tip, true)
+end
+
 function S.capture_plate(opt, pv, kind)
     local holder = find_uicomponent(opt, "frame", "icon_parent")
     if not is_uicomponent(holder) then return end
-    local plate = find_uicomponent(holder, S.CAPTURE)
-    if not pv then
-        if is_uicomponent(plate) then plate:SetVisible(false) end
-        return
-    end
-    if not is_uicomponent(plate) then
-        local src = find_uicomponent(holder, "dy_income")
-        if not is_uicomponent(src) then return end
-        plate = UIComponent(src:CopyComponent(S.CAPTURE))
-    end
-    local tip = S.capture_tip(pv, kind)
-    set(plate, tostring(pv.total))
-    plate:SetTooltipText(tip, true)
-    local icon = find_uicomponent(plate, "icon")
-    if is_uicomponent(icon) then
-        icon:SetImagePath(S.PLATE_ICON, 0)
-        icon:SetTooltipText(tip, true)
-    end
-    plate:SetVisible(true)
+    draw_values(holder, { "dy_income" }, S.CAPTURE, pv and pv.parts,
+                pv and S.capture_tip(pv, kind), capture_icon)
 end
 
 function S.capture_poll()
