@@ -545,7 +545,17 @@ eq(F.rates().ai, false, "an unticked box stays unticked")
 opt.raid.value = 40; eq(F.rates().raid, 30, "frozen: a later MCT change does not reach a running campaign")
 F.state = { factions = {} }; MP = true
 eq(F.rates().raid, 10, "multiplayer takes the defaults"); eq(F.rates().ai, true, "all of them")
-MP = false; get_mct = nil; F.state.rates = nil; F.rates()
+MP = false
+-- A SAVE FROM BEFORE A SWITCH EXISTED: its frozen rates lack the key, and nil read as "off"
+-- (measured live 2026-10-02: upkeep=nil, actions=nil, so phases 4 and 7 never ran in that save).
+-- The missing key takes its value now and is frozen; the keys already there do not move.
+opt.raid.value, opt.upkeep.value = 40, true
+F.state = { factions = {}, rates = { raid = 25, sack = 50, raze = 50, trade = 5, ai = true } }
+eq(F.rates().upkeep, true, "a switch added after the freeze takes its value")
+eq(F.rates().actions, true, "every one of them")
+eq(F.rates().raid, 25, "the frozen rates stay frozen")
+opt.upkeep.value = false; eq(F.rates().upkeep, true, "and the new one is frozen too")
+get_mct = nil; F.state.rates = nil; F.rates()
 
 -- ---- phase 4: settlements eat provisions; well-stocked stores give bonuses --------------
 eq(F.rates().upkeep, true, "on by default")

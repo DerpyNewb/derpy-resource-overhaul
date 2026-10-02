@@ -87,9 +87,25 @@ function F.read_rates()
     return r
 end
 
+-- A SAVE FROM BEFORE A SWITCH EXISTED has no key for it, and nil read as "off": phases 4 and 7
+-- never ran in such a save (measured live 2026-10-02). A missing key takes its value now and
+-- is frozen with the rest; the keys already frozen do not move.
 function F.rates()
-    if not F.state.rates then F.state.rates = F.read_rates() end
-    return F.state.rates
+    local r = F.state.rates
+    if not r then
+        r = F.read_rates()
+        F.state.rates = r
+    end
+    for k in pairs(DERPY_MR_FLOWS_DEFAULTS) do
+        if r[k] == nil then
+            local fresh = F.read_rates()
+            for k2, v in pairs(fresh) do
+                if r[k2] == nil then r[k2] = v end
+            end
+            break
+        end
+    end
+    return r
 end
 
 function F.is_human(fkey)

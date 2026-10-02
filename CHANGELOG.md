@@ -2,6 +2,7 @@
 
 ## 2026-10-02
 
+- Fixed: in a campaign started before this update, eating, bonuses and panel actions stayed off.
 - The Stores panel is now the Resource Vault.
 - Wider bottom-line buttons; hints moved beside the sub-title.
 - Stores panel: Send here moves a resource from another settlement (10% lost on the way).
