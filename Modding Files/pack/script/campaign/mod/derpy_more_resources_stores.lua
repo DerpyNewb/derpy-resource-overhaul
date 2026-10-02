@@ -28,8 +28,10 @@ DERPY_MR_STORES_L = {
     icon = {6, 2, 24, 24},
     list = {20, 138, 820, 448},
     sub_title = {20, 86, 820, 22},
+    switch = {92, 24},
     tab_goods = {20, 52, 140, 26},
     tab_settlements = {168, 52, 140, 26},
+    tab_trade = {316, 52, 140, 26},
     title = {20, 14, 500, 28},
 }
 DERPY_MR_STORES_GOODS = {
@@ -316,6 +318,45 @@ function S.chart_model(turns, totals, last)
     return c
 end
 
+-- ---- the Trade tab ----------------------------------------------------------------------
+S.STOPPED = "[[col:red]]Stopped[[/col]]"
+S.ALLOWED = "Allowed"
+S.DIRS = { "export", "import" }
+
+-- The flows script's function `name`, or nil without it: the panel must not need it to open.
+function S.flows(name)
+    local F = DERPY_MR_FLOWS
+    return F and F[name]
+end
+
+-- EVERY GOOD, held or not: refusing an import matters most for a good you have none of.
+function S.trade_rows(realm)
+    local out = {}
+    for _, g in ipairs(DERPY_MR_STORES_GOODS) do
+        local held = 0
+        for _, s in ipairs(realm) do held = held + (s.held[g.stem] or 0) end
+        out[#out + 1] = { stem = g.stem, name = S.name(g.stem), icon = g.icon, res = g.res,
+                          held = held }
+    end
+    table.sort(out, by_held)
+    return out
+end
+
+function S.trade_line(l)
+    local o, i = l.traded_out or 0, l.traded_in or 0
+    if o == 0 and i == 0 then return "-" end
+    return "sent " .. S.num(o) .. ", received " .. S.num(i)
+end
+
+function S.switch_tip(dir, stopped, name)
+    if dir == "export" then
+        if stopped then return name .. " stays in your stores. Click to allow it to leave by trade again." end
+        return name .. " may leave your stores by trade. Click to stop it leaving."
+    end
+    if stopped then return "Your trade partners send you no " .. name .. ". Click to allow it again." end
+    return "Your trade partners may send you " .. name .. ". Click to refuse it."
+end
+
 function S.rows_shown()
     if S.view == "goods" and S.focus then return L.CHART_ROWS end
     return L.ROWS
@@ -345,6 +386,21 @@ function S.view_model(realm)
                                     icon = g.icon, tip = S.good_tip(g), open = g.stem }
         end
         if #realm == 0 then v.empty = S.NO_REALM end
+    elseif S.view == "trade" then
+        v.title = "What your settlements trade"
+        v.heads = { "Good", "Held", "Exports", "Imports", "Last turn" }
+        local stopped, last = S.flows("stopped"), S.flows("last")
+        local fk = cm:get_local_faction_name(true)
+        local switches = stopped ~= nil and S.flows("send") ~= nil
+        if switches then v.hint = "Click Exports or Imports to stop a good, or to allow it again." end
+        for _, g in ipairs(S.trade_rows(realm)) do
+            local row = { g.name, S.num(g.held), "", "", S.trade_line(last and last(fk, g.stem) or {}),
+                          icon = g.icon, tip = S.good_tip(g), stem = g.stem }
+            if switches then
+                row.export, row.import = stopped(fk, "export", g.stem), stopped(fk, "import", g.stem)
+            end
+            v.rows[#v.rows + 1] = row
+        end
     elseif S.focus then
         local s = S.find_settlement(realm, S.focus)
         if not s then
@@ -384,7 +440,9 @@ S.BUTTON = "derpy_mr_stores_button"
 S.PANEL = "derpy_mr_stores_panel"
 S.CLOSE = "derpy_mr_close"
 S.BACK = "derpy_mr_back"
-S.TAB = { goods = "derpy_mr_tab_goods", settlements = "derpy_mr_tab_settlements" }
+S.TAB = { goods = "derpy_mr_tab_goods", settlements = "derpy_mr_tab_settlements",
+          trade = "derpy_mr_tab_trade" }
+S.SW = "derpy_mr_sw_"
 S.ROW = "derpy_mr_row_"
 S.LIST = "derpy_mr_stores_list"
 S.SP = "derpy_mr_stores_sp"
@@ -444,6 +502,7 @@ function S.build()
     set(find_uicomponent(p, "title_text"), "Stores")
     label(find_uicomponent(p, S.TAB.goods), "Goods")
     label(find_uicomponent(p, S.TAB.settlements), "Settlements")
+    label(find_uicomponent(p, S.TAB.trade), "Trade")
     label(find_uicomponent(p, S.BACK), "Back")
     -- the chart's twenty bars, made once and kept; draw_chart sizes, shows and hides them
     for i = 1, L.BARS do
@@ -464,6 +523,7 @@ function S.layout(p)
                     hint_text = L.hint }
     boxes[S.CLOSE], boxes[S.BACK] = L.close, L.back
     boxes[S.TAB.goods], boxes[S.TAB.settlements] = L.tab_goods, L.tab_settlements
+    boxes[S.TAB.trade] = L.tab_trade
     for name, box in pairs(boxes) do put(find_uicomponent(p, name), px, py, box) end
     for j, col in ipairs(L.cols) do
         put(find_uicomponent(p, "hdr_" .. j), px, py, { L.list[1] + col[1], L.head_y, col[2], 22 })
@@ -577,6 +637,23 @@ function S.row(holder, i)
     return find_uicomponent(holder, name)
 end
 
+-- The Trade tab's two switches: shown where the row carries their state, which only a Trade row
+-- does, and only with the flows script loaded.
+local function draw_switches(r, rc, rx, ry)
+    for j, d in ipairs(S.DIRS) do
+        local sw = find_uicomponent(r, S.SW .. d)
+        if is_uicomponent(sw) then
+            local show = rc[d] ~= nil
+            sw:SetVisible(show)
+            if show then
+                sw:MoveTo(rx + L.cols[2 + j][1], ry + 2)
+                label(sw, rc[d] and S.STOPPED or S.ALLOWED)
+                sw:SetTooltipText(S.switch_tip(d, rc[d], rc[1]), true)
+            end
+        end
+    end
+end
+
 -- Rows are made once and kept; the ones past the end go hidden.
 function S.draw_rows(p, rows)
     local holder = find_uicomponent(p, "rows_holder")
@@ -603,6 +680,7 @@ function S.draw_rows(p, rows)
                     set(c, rc[j])
                 end
             end
+            draw_switches(r, rc, rx, ry)
             local div = find_uicomponent(r, "divider")
             if is_uicomponent(div) then div:MoveTo(rx, ry + L.PITCH - 2) end
             r:SetTooltipText(rc.tip or "", true)
@@ -712,11 +790,25 @@ end
 
 function S.is_mine(name)
     return type(name) == "string" and (name == S.BUTTON or name == S.CLOSE or name == S.BACK
-        or name == S.TAB.goods or name == S.TAB.settlements
-        or string.sub(name, 1, #S.ROW) == S.ROW)
+        or name == S.TAB.goods or name == S.TAB.settlements or name == S.TAB.trade
+        or string.sub(name, 1, #S.ROW) == S.ROW or string.sub(name, 1, #S.SW) == S.SW)
 end
 
-function S.click(name)
+-- A SWITCH NAMES NO GOOD: its row does, so the row is read off the clicked component's parent.
+function S.click_switch(dir, component)
+    if not component then return end
+    local row = UIComponent(UIComponent(component):Parent())
+    local i = tonumber(string.match(row:Id() or "", "^derpy_mr_row_(%d+)$"))
+    local rc = i and S.data[i]
+    local send = S.flows("send")
+    if not (rc and rc.stem and send) then return end
+    send(cm:get_local_faction_name(true), dir, rc.stem)
+    return S.refresh()
+end
+
+function S.click(name, component)
+    local dir = string.match(name, "^derpy_mr_sw_(%a+)$")
+    if dir then return S.click_switch(dir, component) end
     if name == S.BUTTON then return S.show(not S.is_open()) end
     if name == S.CLOSE then return S.show(false) end
     if name == S.BACK then
@@ -794,16 +886,87 @@ function S.follow_bar()
     if not b:Visible() then b:SetVisible(true) end
 end
 
+-- ---- the raid plate: the goods a raid takes, beside CA's raid values above the army --------
+-- 3d_ui_parent > label_<character cqi> > list_parent > stance_holder > icon_stance > raid_holder,
+-- read in game 2026-10-02. A copy of CA's own plate keeps the look; its text persists (measured).
+S.PLATE = "raid_value_derpy_goods"
+S.PLATE_ICON = "ui/campaign ui/technologies/wh2_hef_tech_marble_stockpiles.png"
+S.PLATE_MS = 500
+S.PLATE_LINES = 10
+S.RAID_PATH = { "list_parent", "stance_holder", "icon_stance", "raid_holder" }
+
+function S.plate_tip(pv)
+    local lines = {}
+    if pv.to then
+        lines[1] = "Raiding carries these goods off each turn, into "
+                   .. loc("regions_onscreen_" .. pv.to, pv.to) .. ":"
+    else
+        lines[1] = "Raiding destroys these goods each turn - this army has no settlement to carry them to:"
+    end
+    for i, part in ipairs(pv.parts) do
+        if i > S.PLATE_LINES then
+            lines[#lines + 1] = "and " .. (#pv.parts - S.PLATE_LINES) .. " more"
+            break
+        end
+        lines[#lines + 1] = S.name(part.stem) .. " " .. S.num(part.n)
+    end
+    return table.concat(lines, "\n")
+end
+
+function S.plate(lab, cqi)
+    local holder = find_uicomponent(lab, unpack(S.RAID_PATH))
+    if not is_uicomponent(holder) then return end
+    local plate = find_uicomponent(holder, S.PLATE)
+    local preview, pv = S.flows("raid_preview"), nil
+    if preview and holder:Visible() then
+        local ch = cm:get_character_by_cqi(cqi)
+        if ch and not ch:is_null_interface() then pv = preview(ch) end
+    end
+    if not pv then
+        if is_uicomponent(plate) then plate:SetVisible(false) end
+        return
+    end
+    if not is_uicomponent(plate) then
+        -- Labour's plate first: the one measured. Gold's is every race's, if Labour is absent.
+        local src = find_uicomponent(holder, "raid_value_labour")
+        if not is_uicomponent(src) then src = find_uicomponent(holder, "raid_value") end
+        if not is_uicomponent(src) then return end
+        plate = UIComponent(src:CopyComponent(S.PLATE))
+        plate:SetImagePath(S.PLATE_ICON, 1)
+    end
+    set(plate, tostring(pv.total))
+    plate:SetTooltipText(S.plate_tip(pv), true)
+    plate:SetVisible(true)
+end
+
+function S.plate_poll()
+    local p3d = find_uicomponent(S.root(), "3d_ui_parent")
+    if not is_uicomponent(p3d) then return end
+    for i = 0, p3d:ChildCount() - 1 do
+        local lab = UIComponent(p3d:Find(i))
+        local cqi = tonumber(string.match(lab:Id() or "", "^label_(%d+)$"))
+        if cqi then S.plate(lab, cqi) end
+    end
+end
+
 function S.init()
     if S.started then return end
     S.started = true
     local ok, err = pcall(S.place_button, 1)
     if not ok then S.say(err) end
     cm:repeat_real_callback(function() pcall(S.follow_bar) end, S.FOLLOW_MS, "derpy_mr_follow_bar")
+    -- SAID ONCE: a fault here would otherwise fill the log twice a second
+    cm:repeat_real_callback(function()
+        local done, e = pcall(S.plate_poll)
+        if not done and not S.plate_said then
+            S.plate_said = true
+            S.say(e)
+        end
+    end, S.PLATE_MS, "derpy_mr_raid_plate")
     core:add_listener("derpy_mr_stores_click", "ComponentLClickUp",
         function(context) return S.is_mine(context.string) end,
         function(context)
-            local done, e = pcall(S.click, context.string)
+            local done, e = pcall(S.click, context.string, context.component)
             if not done then S.say(e) end
         end, true)
     core:add_listener("derpy_mr_stores_turn", "FactionTurnStart",

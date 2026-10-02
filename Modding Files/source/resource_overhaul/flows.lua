@@ -30,8 +30,10 @@ function F.say(msg)
     pcall(out, "[derpy_mr_flows] " .. tostring(msg))
 end
 
+-- AT LEAST 1 WHEN ANY IS HELD: floored alone, a store under 100/pct never loses anything.
 function F.share(held, pct)
-    return math.floor(held * pct / 100)
+    if held <= 0 or pct <= 0 then return 0 end
+    return math.max(1, math.floor(held * pct / 100))
 end
 
 function F.pool(region, stem)
@@ -124,11 +126,12 @@ end
 -- free space here, so what does not fit is lost by rule (spec section 2) rather than by whatever
 -- the engine does at the brim. The junction is two-way (gen_resource_overhaul.py FLOW_FACTORS),
 -- so one id books both ends. `to` nil (a taker with no settlements) destroys the stock.
+-- `from` nil is a source whose pools are already gone (a raze): nothing to book against it.
 function F.move(from, to, stem, n, kind, from_key, to_key)
-    n = math.min(n, F.held(from, stem))
+    if from then n = math.min(n, F.held(from, stem)) end
     if n <= 0 then return 0 end
     local j = F.PREFIX .. stem .. "_" .. kind
-    cm:entity_add_pooled_resource_transaction(from, j, -n)
+    if from then cm:entity_add_pooled_resource_transaction(from, j, -n) end
     local got = 0
     if to then
         got = math.min(n, F.free(to, stem))
@@ -157,14 +160,16 @@ end
 
 -- Every good in `region` with stock: pct of it to the taker's settlement nearest (x, y), the
 -- taking army's position (plan deviation 3: the settlement may already be null at a raze).
-function F.take(region, victim_key, taker, pct, kind, x, y)
+-- `held` (stem -> n) is the battle's reading when the region's pools are gone.
+function F.take(region, victim_key, taker, pct, kind, x, y, held)
     if pct <= 0 then return 0 end
     local to = F.nearest(taker, x, y)
+    local from = not held and region or nil
     local taken = 0
     for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
-        local n = F.share(F.held(region, g.stem), pct)
+        local n = F.share(held and held[g.stem] or F.held(region, g.stem), pct)
         if n > 0 then
-            F.move(region, to, g.stem, n, kind, victim_key, taker:name())
+            F.move(from, to, g.stem, n, kind, victim_key, taker:name())
             taken = taken + n
         end
     end
@@ -179,16 +184,48 @@ function F.victim(region, taker)
     return v
 end
 
-function F.on_character_turn_start(character)
-    if not character:has_military_force() then return end
-    if character:military_force():active_stance() ~= F.RAIDING then return end
+-- The raid this character makes: region, victim, taker; nil when it takes from nobody.
+function F.raid_target(character)
+    if not character:has_military_force() then return nil end
+    if character:military_force():active_stance() ~= F.RAIDING then return nil end
     local taker = character:faction()
     local region = character:region()
     local v = F.victim(region, taker)
-    if not v or not taker:at_war_with(v) then return end
-    if not F.allowed(taker:name(), v:name()) then return end
+    if not v then return nil end      -- NO WAR TEST: CA pays raid gold from any owner's land
+    if not F.allowed(taker:name(), v:name()) then return nil end
+    return region, v, taker
+end
+
+function F.on_character_turn_start(character)
+    local region, v, taker = F.raid_target(character)
+    if not region then return end
     F.take(region, v:name(), taker, F.rates().raid, KIND.raid,
            character:logical_position_x(), character:logical_position_y())
+end
+
+-- WHAT THE RAID TAKES NEXT TURN, for the army's plate: {total, parts = {{stem, n}}, to = region
+-- key or nil}, most first, or nil when nothing. Read only. Nothing before the rates are frozen:
+-- a UI read must not freeze them on one machine ahead of the turn start that does it everywhere.
+function F.raid_preview(character)
+    local rates = F.state.rates
+    if not rates or (rates.raid or 0) <= 0 then return nil end
+    local region, _, taker = F.raid_target(character)
+    if not region then return nil end
+    local parts, total = {}, 0
+    for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+        local n = F.share(F.held(region, g.stem), rates.raid)
+        if n > 0 then
+            parts[#parts + 1] = { stem = g.stem, n = n }
+            total = total + n
+        end
+    end
+    if total == 0 then return nil end
+    table.sort(parts, function(a, b)
+        if a.n ~= b.n then return a.n > b.n end
+        return a.stem < b.stem
+    end)
+    local to = F.nearest(taker, character:logical_position_x(), character:logical_position_y())
+    return { total = total, parts = parts, to = to and to:name() or nil }
 end
 
 function F.on_occupation(context)
@@ -200,13 +237,33 @@ function F.on_occupation(context)
     if victim == nil or victim == "" or victim == taker:name() then return end
     if not F.allowed(taker:name(), victim) then return end
     local region = context:garrison_residence():region()
-    if not F.pool(region, DERPY_MR_FLOWS_GOODS[1].stem) then
+    local at_battle = F.at_battle[region:name()]
+    F.at_battle[region:name()] = nil
+    if F.pool(region, DERPY_MR_FLOWS_GOODS[1].stem) then
+        at_battle = nil                            -- live stores win over the battle's reading
+    elseif not at_battle then
         F.say("the stores of " .. region:name() .. " could not be read at the " .. what
               .. " - nothing taken")
         return
     end
     F.take(region, victim, taker, F.rates()[what], KIND[what],
-           character:logical_position_x(), character:logical_position_y())
+           character:logical_position_x(), character:logical_position_y(), at_battle)
+end
+
+-- THE STORES AS THEY WERE AT THE BATTLE: the engine drops a razed region's pools before the
+-- occupation decision fires (measured 2026-10-02, Venom Glade). CA's Bloodgrounds caches the
+-- settlement the same way, on the same event. Not saved: the decision follows in the same session.
+F.at_battle = {}
+function F.on_battle(context)
+    local pb = context:pending_battle()
+    if not pb:has_contested_garrison() then return end
+    local region = pb:contested_garrison():region()
+    local t = {}
+    for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+        local h = F.held(region, g.stem)
+        if h > 0 then t[g.stem] = h end
+    end
+    F.at_battle[region:name()] = t
 end
 
 -- ---- trade --------------------------------------------------------------------------------
@@ -246,6 +303,7 @@ function F.trade(exporter)
     local pct = F.rates().trade
     if pct <= 0 then return end
     local partners = exporter:factions_trading_with()
+    if type(partners) == "boolean" then return end   -- measured 2026-10-02 for some faction
     local best = nil
     for i = 0, partners:num_items() - 1 do
         local partner = partners:item_at(i)
@@ -254,15 +312,68 @@ function F.trade(exporter)
             best = best or F.fullest(exporter)
             for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
                 local b = best[g.stem]
-                if b and F.lacks(partner, g) then
-                    -- ONLY WHAT FITS LEAVES: trade never destroys stock (spec section 3)
-                    local n = math.min(F.share(b.held, pct), F.free(to, g.stem))
+                if b and not F.stopped(exporter:name(), "export", g.stem)
+                        and not F.stopped(partner:name(), "import", g.stem) and F.lacks(partner, g) then
+                    -- ONLY WHAT FITS LEAVES: trade never destroys stock (spec section 3).
+                    -- SURPLUS ONLY, NOT F.share's at-least-1: with it a raided single unit left
+                    -- the same turn (measured 2026-10-02) and singles bounced between partners.
+                    local n = math.min(math.floor(b.held * pct / 100), F.free(to, g.stem))
                     if n > 0 then
                         F.move(b.region, to, g.stem, n, KIND.trade, exporter:name(), partner:name())
                         b.held = b.held - n
                     end
                 end
             end
+        end
+    end
+end
+
+-- ---- the player's trade switches (the Stores panel's Trade tab) ---------------------------
+-- Saved in the faction's book as stop[dir][stem] = true; everything allowed by default.
+-- Humans only: a computer-run faction has no panel to set them from.
+F.DIRS = { export = true, import = true }
+F.TAG = "dmr1"
+
+function F.stopped(fkey, dir, stem)
+    local b = F.state.factions[fkey]
+    return b ~= nil and b.stop ~= nil and b.stop[dir] ~= nil and b.stop[dir][stem] == true
+end
+
+function F.toggle(fkey, dir, stem)
+    if not F.DIRS[dir] or not F.is_human(fkey) then return end
+    local known = false
+    for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+        if g.stem == stem then known = true end
+    end
+    if not known then return end
+    local b = F.book(fkey)
+    b.stop = b.stop or {}
+    b.stop[dir] = b.stop[dir] or {}
+    if F.stopped(fkey, dir, stem) then b.stop[dir][stem] = nil else b.stop[dir][stem] = true end
+end
+
+-- A CLICK NEVER WRITES THE MODEL ITSELF IN MULTIPLAYER: it goes out as a UITrigger, which CA
+-- delivers to every machine in one order, and the listener toggles it everywhere at once.
+function F.send(fkey, dir, stem)
+    local mp = false
+    pcall(function() mp = cm:is_multiplayer() end)
+    if not mp then return F.toggle(fkey, dir, stem) end
+    local f = cm:get_faction(fkey)
+    if not f or f:is_null_interface() then return end
+    CampaignUI.TriggerCampaignScriptEvent(f:command_queue_index(), F.TAG .. "|" .. dir .. "|" .. stem)
+end
+
+function F.on_ui_trigger(context)
+    local dir, stem = string.match(context:trigger(), "^" .. F.TAG .. "|(%a+)|([%w_]+)$")
+    if not dir then return end
+    local cqi = context:faction_cqi()
+    for _, k in ipairs(cm:get_human_factions()) do
+        local f = cm:get_faction(k)
+        if f and not f:is_null_interface() and f:command_queue_index() == cqi then
+            F.toggle(k, dir, stem)
+            local S = DERPY_MR_STORES
+            if S and S.refresh then pcall(S.refresh) end
+            return
         end
     end
 end
@@ -337,6 +448,10 @@ function F.init()
         function(context) F.guard(F.on_character_turn_start, context:character(), "raid") end, true)
     core:add_listener("derpy_mr_flows_occupation", "CharacterPerformsSettlementOccupationDecision", true,
         function(context) F.guard(F.on_occupation, context) end, true)
+    core:add_listener("derpy_mr_flows_battle", "CharacterCompletedBattle", true,
+        function(context) F.guard(F.on_battle, context) end, true)
+    core:add_listener("derpy_mr_flows_ui", "UITrigger", true,
+        function(context) F.guard(F.on_ui_trigger, context) end, true)
     core:add_listener("derpy_mr_flows_turn", "FactionTurnStart", true,
         function(context) F.guard(F.on_faction_turn_start, context:faction(), "turn") end, true)
 end

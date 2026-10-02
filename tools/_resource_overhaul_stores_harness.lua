@@ -69,7 +69,9 @@ local FACTIONS = { fac_a = faction("fac_a", { C, B, A }), fac_empty = faction("f
 local LOCAL = "fac_a"
 
 local FIRST, REPEATS, LISTENERS = {}, {}, {}
+local CHARS = {}
 cm = {
+    get_character_by_cqi = function(_, cqi) return CHARS[cqi] or false end,
     add_first_tick_callback = function(_, fn) FIRST[#FIRST + 1] = fn end,
     callback = function() end,                      -- retries are not run
     repeat_real_callback = function(_, fn, _ms, name) REPEATS[name] = fn end,
@@ -224,16 +226,35 @@ function UIC:SetProperty(k, v) self[k] = v end
 function UIC:Layout() end
 function UIC:Adopt(c) unlink(c); c.parent = self; self.kids[#self.kids + 1] = c end
 function UIC:Destroy() unlink(self) end
-function find_uicomponent(c, name)
+local function find_one(c, name)
     if not is_uicomponent(c) then return false end
     for _, k in ipairs(c.kids) do
         if k.name == name then return k end
-        local d = find_uicomponent(k, name)
+        local d = find_one(k, name)
         if d then return d end
     end
     return false
 end
+-- CA's takes a path: each name is looked for under the one before it
+function find_uicomponent(c, ...)
+    for _, name in ipairs({ ... }) do
+        c = find_one(c, name)
+        if not c then return false end
+    end
+    return c
+end
 function is_uicomponent(c) return type(c) == "table" and c.__uic == true end
+function UIComponent(address) return address end
+function UIC:Parent() return self.parent end
+function UIC:ChildCount() return #self.kids end
+function UIC:Find(i) return self.kids[i + 1] end
+-- A sibling under the same parent, as the engine's: same images, same text, same visibility.
+function UIC:CopyComponent(name)
+    local c = new(name, self.parent)
+    c.images, c.text, c.visible = {}, self.text, self.visible
+    for i, p in pairs(self.images or {}) do c.images[i] = p end
+    return c
+end
 
 UI_ROOT = new("root")
 local bar = new("resources_bar", UI_ROOT)
@@ -247,6 +268,7 @@ local function fire(event, context)
     end
 end
 local function click(name) fire("ComponentLClickUp", { string = name }) end
+local function press(c) fire("ComponentLClickUp", { string = c.name, component = c }) end
 local function find(name) return find_uicomponent(UI_ROOT, name) end
 local function cell(i, j) return find_uicomponent(find("derpy_mr_row_" .. i), "c" .. j) end
 local function shown_rows()
@@ -409,6 +431,92 @@ eq(bars_shown(), 0, "no chart on a settlement's stores")
 DERPY_MR_FLOWS = nil
 click("derpy_mr_tab_goods"); click("derpy_mr_row_1")
 eq(find("chart_line").text, S.NO_HISTORY, "without the flows script: no history, no error")
+
+-- ---- the Trade tab: every good, and a switch each way ----------------------------------
+local STOP, SENT = {}, {}
+DERPY_MR_FLOWS = {
+    stopped = function(fk, dir, stem)
+        eq(fk, LOCAL, "the local faction's switches"); return STOP[dir .. "|" .. stem] == true
+    end,
+    send = function(fk, dir, stem)
+        SENT[#SENT + 1] = fk .. "|" .. dir .. "|" .. stem
+        STOP[dir .. "|" .. stem] = not STOP[dir .. "|" .. stem]
+    end,
+    last = function(_, stem)
+        if stem == "coal" then return { traded_out = 15, traded_in = 2 } end
+        return {}
+    end,
+    series = function() return {}, {} end,
+}
+local function switch(i, dir) return find_uicomponent(find("derpy_mr_row_" .. i), "derpy_mr_sw_" .. dir) end
+click("derpy_mr_close"); click("derpy_mr_stores_button"); click("derpy_mr_tab_trade")
+eq(lit("derpy_mr_tab_trade"), SEL, "the Trade tab is lit"); eq(lit("derpy_mr_tab_goods"), OFF, "Goods is not")
+local tt = find("derpy_mr_tab_trade"); tt:SetState("hover")
+eq(tt:GetStateText(), "Trade", "Trade keeps its label on hover"); tt:SetState("standard")
+eq(find("hdr_3").text, "Exports", "exports header"); eq(find("hdr_4").text, "Imports", "imports header")
+eq(shown_rows(), #DERPY_MR_STORES_GOODS, "every good is listed, held or not")
+eq(cell(1, 1).text, "Coal", "most held first"); eq(cell(1, 2).text, "100", "held (fac_a now holds Alpha alone)")
+eq(cell(1, 3).text, "", "the switch, not the cell, carries the word")
+eq(switch(1, "export").visible, true, "an export switch"); eq(switch(1, "export").text, "Allowed", "allowed by default")
+eq(switch(1, "import").visible, true, "an import switch")
+eq(switch(1, "export").x, find("derpy_mr_row_1").x + DERPY_MR_STORES_L.cols[3][1], "in the Exports column")
+eq(cell(1, 5).text, "sent 15, received 2", "last turn's trade"); eq(cell(2, 5).text, "-", "no trade last turn")
+press(switch(1, "export"))
+eq(SENT[1], "fac_a|export|coal", "a click sends the local faction's switch")
+eq(switch(1, "export").text, S.STOPPED, "and the panel shows it at once")
+eq(string.find(switch(1, "export").tip, "allow", 1, true) ~= nil, true, "the tooltip says a click allows it again")
+press(switch(2, "import")); eq(SENT[2], "fac_a|import|brimstone", "the row's own good (then by name)")
+press(find_uicomponent(find("derpy_mr_row_1"), "c3")); eq(#SENT, 2, "a cell named like ours elsewhere is not a switch")
+click("derpy_mr_row_1"); eq(find("sub_title").text, "What your settlements trade", "a Trade row opens nothing")
+click("derpy_mr_tab_goods")
+eq(switch(1, "export").visible, false, "no switches off the Trade tab")
+DERPY_MR_FLOWS = nil; click("derpy_mr_tab_trade")
+eq(switch(1, "export").visible, false, "without the flows script: no switches"); eq(#ERRORS, 0, "and no error")
+
+-- ---- the raid plate above a raiding army -----------------------------------------------
+local PREVIEW = {}
+DERPY_MR_FLOWS = { raid_preview = function(ch) return PREVIEW[ch] end }
+local p3d = new("3d_ui_parent", UI_ROOT)
+local function army_label(id)
+    local lab = new(id, p3d)
+    local rh = new("raid_holder", new("icon_stance", new("stance_holder", new("list_parent", lab))))
+    local gold = new("raid_value", rh); gold.images = { [1] = "icon_income_plus.png" }
+    local labour = new("raid_value_labour", rh); labour.visible = false
+    return rh
+end
+local rh = army_label("label_7")
+army_label("label_8"); army_label("label_town_3")
+local function char() return { is_null_interface = function() return false end } end
+local ch7, ch8 = char(), char()
+CHARS[7], CHARS[8] = ch7, ch8
+local function plates(holder)
+    local k = 0
+    for _, c in ipairs(holder.kids) do if c.name == S.PLATE then k = k + 1 end end
+    return k
+end
+REPEATS.derpy_mr_raid_plate()
+eq(plates(rh), 0, "no plate while the raid takes nothing")
+PREVIEW[ch7] = { total = 10, parts = { { stem = "coal", n = 9 }, { stem = "iron", n = 1 } }, to = "reg_b" }
+REPEATS.derpy_mr_raid_plate()
+local plate = find_uicomponent(rh, S.PLATE)
+eq(plates(rh), 1, "a plate beside CA's raid values"); eq(plate.text, "10", "the goods the raid takes")
+eq(plate.visible, true, "shown even when copied from a hidden plate")
+eq(plate.images[1], S.PLATE_ICON, "with the stores icon")
+eq(string.find(plate.tip, "Coal 9", 1, true) ~= nil, true, "the tooltip lists each good")
+eq(string.find(plate.tip, "Bravo", 1, true) ~= nil, true, "and where it goes")
+REPEATS.derpy_mr_raid_plate(); eq(plates(rh), 1, "made once, not once a poll")
+PREVIEW[ch7].to = nil; REPEATS.derpy_mr_raid_plate()
+eq(string.find(plate.tip, "no settlement", 1, true) ~= nil, true, "a horde's plate says the goods are lost")
+PREVIEW[ch7] = nil; REPEATS.derpy_mr_raid_plate(); eq(plate.visible, false, "hidden when the raid stops")
+rh.visible = false; PREVIEW[ch7] = { total = 1, parts = { { stem = "coal", n = 1 } }, to = "reg_b" }
+REPEATS.derpy_mr_raid_plate(); eq(plate.visible, false, "nothing drawn while CA hides the raid values")
+rh.visible = true
+local many_parts = {}
+for i = 1, 14 do many_parts[i] = { stem = "coal", n = 1 } end
+PREVIEW[ch7] = { total = 14, parts = many_parts, to = "reg_b" }
+REPEATS.derpy_mr_raid_plate()
+eq(string.find(plate.tip, "and 4 more", 1, true) ~= nil, true, "a long list is cut at ten")
+DERPY_MR_FLOWS = nil; REPEATS.derpy_mr_raid_plate(); eq(plate.visible, false, "without the flows script: no plate")
 
 eq(#ERRORS, 0, "script errors: " .. table.concat(ERRORS, "; "))
 print("harness ok")

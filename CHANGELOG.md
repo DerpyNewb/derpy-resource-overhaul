@@ -2,6 +2,13 @@
 
 ## 2026-10-02
 
+- Stores panel: a Trade tab to stop each good's exports or imports.
+- Raiding army shows the goods its raid takes, with a tooltip per good.
+- Raids take from any faction's land, not only at war.
+- Small stores lose at least 1 to a raid, sack or raze.
+- Trade sends only whole shares; single units no longer bounce between partners.
+- Fixed: razing took no goods.
+- Fixed: a trade error for some factions each turn.
 - Raids, sacks and razes carry off a share of a settlement's stores.
 - Trade agreements move goods a partner lacks into its capital each turn.
 - Stores panel: a 20-turn chart and last turn's changes for each good.

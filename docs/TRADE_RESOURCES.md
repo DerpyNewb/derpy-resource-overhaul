@@ -668,12 +668,17 @@ writes.
 
 | Flow | Event | Share | Lands in |
 |---|---|---|---|
-| Raid | `CharacterTurnStart`, army in `LAND_RAID`, on land of a faction it is at war with | 10% a turn | the raider's nearest settlement |
+| Raid | `CharacterTurnStart`, army in `LAND_RAID`, on any other faction's land (no war needed, as with CA's raid gold) | 10% a turn | the raider's nearest settlement |
 | Sack | `CharacterPerformsSettlementOccupationDecision`, `occupation_decision_sack` | 50% | the sacker's nearest settlement |
 | Raze | the same event, `occupation_decision_raze_without_occupy` | 50% | the razer's nearest settlement |
 | Trade | `FactionTurnStart`, each partner in `factions_trading_with()` | 5% a turn of the exporter's fullest store, per good the partner lacks | the partner's capital |
 
-A share is `floor(held * pct / 100)`, so a store too small to yield 1 gives nothing.
+A share is `floor(held * pct / 100)`, but at least 1 when any is held. Floored alone, a store
+under 10 never lost anything to a 10% raid: measured in game on 2026-10-02, when a raid on
+6 wyvern scales took nothing. That raid was also on a faction the raider was not at war with,
+which the first rule skipped while CA still paid gold. Both were changed the same day.
+**Trade keeps the plain floor** (surplus only): with at-least-1 it shipped that raided scale
+straight back out the same turn, since every partner's capital lacked it.
 
 **Cases where nothing is taken:**
 - the owner is a rebel, there is no owner, or the owner is the taker;
@@ -726,9 +731,41 @@ move runs only if a player's faction is on one side.
 
 **Rulings pending the in-game check** (plan Task 1 moved to run with Task 7):
 - `LACK_TEST = "capital"`: a partner lacks a good when its capital's store of it is empty.
-- `RAZE = "live"`: unreadable stores at a raze take nothing and log one line.
+
+**Measured in game, 2026-10-02 (IEE, Conclave, turns 3-4, script log and the bridge):**
+- **A raid moves stock.** Eagle Eyries showed `derpy_mr_raided = -1` and Zharr-Naggrund
+  `derpy_mr_raided = +1` on the pools' `factors()` the next turn, with `raided_in = 1` in the
+  ledger. `factors()` lists only the current turn's transactions.
+- **A raze reads nothing live.** "the stores of wh3_main_combi_region_venom_glade could not be
+  read at the raze". The engine drops the pools before `CharacterPerformsSettlementOccupationDecision`.
+  Fix: `F.on_battle` reads the contested settlement's stores on `CharacterCompletedBattle`
+  (`pending_battle():contested_garrison():region()`), as CA's Bloodgrounds caches the settlement
+  level on that event for the same decision. The raze then books only the receiver's side.
+  An unopposed capture has no battle and still takes nothing.
+- **`factions_trading_with()` returned a boolean** for some faction, once per round. Guarded.
+- **No war test on raids**, and **a share is at least 1** for raids, sacks and razes (above).
+  Trade keeps the plain floor.
+
+**The Trade tab** (third tab, `derpy_mr_tab_trade`):
+- Every good, most held first, with two switches per row (`derpy_mr_sw_export` /
+  `derpy_mr_sw_import`, in the row file MR02): Exports stopped keeps the good home; Imports
+  stopped means no partner sends it. Default everything allowed. Humans only.
+- Saved in the faction's book as `stop[dir][stem] = true`.
+- **A click never writes the model in multiplayer:** `F.send` sends
+  `CampaignUI.TriggerCampaignScriptEvent(cqi, "dmr1|<dir>|<stem>")`, and the `UITrigger`
+  listener toggles it on every machine. Singleplayer toggles directly.
+- The switch's row is read off `UIComponent(UIComponent(context.component):Parent()):Id()`,
+  CA's own idiom (`wh_campaign_setup.lua:2585`).
+
+**The raid plate:** a copy of CA's Labour raid plate (`CopyComponent`, measured: the text set on
+the copy persists and CA's horizontal layout places it) beside the raid values above a raiding
+army, `3d_ui_parent > label_<character cqi> > list_parent > stance_holder > icon_stance >
+raid_holder`. Image 1 is the icon (image 0 the plate); the stores icon replaces it.
+`F.raid_preview` gives the number from the same `F.raid_target` the raid uses, so the plate shows
+what the raid then takes; it shows nothing before the rates are frozen, so a UI read never
+freezes them on one machine. A 500 ms poll keeps it up; the tooltip lists up to ten goods.
 
 **The gate** is `py tools/gen_mr_ui.py --selftest`. It runs both harnesses
 (`_resource_overhaul_stores_harness.lua` and `_resource_overhaul_flows_harness.lua`).
 
-**In game:** not yet measured; see the session index line.
+**In game, still to see:** the Trade tab and the raid plate's look; a raze after a battle.

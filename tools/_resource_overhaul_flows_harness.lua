@@ -62,13 +62,16 @@ local function region(key, x, y, cap, held)
     REGIONS[key] = r
     return r
 end
+local NEXT_CQI = 0
 local function faction(name, opts)
     opts = opts or {}
+    NEXT_CQI = NEXT_CQI + 1
     local f = { name = name, human = opts.human or false, rebel = opts.rebel or false,
-                regions = {}, war = {}, partners = {}, has = opts.has or {}, home = nil }
+                regions = {}, war = {}, partners = {}, has = opts.has or {}, home = nil, cqi = NEXT_CQI }
     f.iface = {
         is_null_interface = function() return false end,
         name = function() return name end,
+        command_queue_index = function() return f.cqi end,
         is_human = function() return f.human end,
         is_rebel = function() return f.rebel end,
         is_dead = function() return false end,
@@ -125,6 +128,12 @@ cm = {
     repeat_real_callback = function() end,
     get_local_faction_name = function() return "hum" end,
     get_faction = function(_, k) return FACTIONS[k] and FACTIONS[k].iface or false end,
+    get_human_factions = function()
+        local t = {}
+        for k, f in pairs(FACTIONS) do if f.human then t[#t + 1] = k end end
+        table.sort(t)
+        return t
+    end,
     is_multiplayer = function() return MP end,
     model = function() return { turn_number = function() return TURN end } end,
     -- the engine clamps a pool to [0, its maximum]; this stub does the same
@@ -142,6 +151,8 @@ core = {
         LISTENERS[#LISTENERS + 1] = { event = event, cond = cond, fn = fn }
     end,
 }
+local SENT = {}
+CampaignUI = { TriggerCampaignScriptEvent = function(cqi, id) SENT[#SENT + 1] = { cqi, id } end }
 common = {
     get_localised_string = function() return "" end,
     get_context_value = function() return CCO_MADE end,
@@ -188,12 +199,13 @@ local ruin = region("ruin", 30, 30, 200, { coal = 50 })   -- no owner
 war(hum, ai1); war(horde, ai1); war(hum, reb)
 
 -- ---- raids ------------------------------------------------------------------------------
-eq(F.share(95, 10), 9, "a share is floored"); eq(F.share(9, 10), 0, "a small store yields nothing")
+eq(F.share(95, 10), 9, "a share is floored"); eq(F.share(9, 10), 1, "a small store still yields 1")
+eq(F.share(0, 10), 0, "an empty store yields nothing"); eq(F.share(9, 0), 0, "a zero share takes nothing")
 raid(army(hum, a1, 12, 0))
 eq(a1.held.coal, 86, "a raid takes 10% of the victim's coal")
 eq(h1.held.coal, 9, "into the raider's nearest settlement")
 eq(h2.held.coal, nil, "not the far one")
-eq(a1.held.iron, 9, "a store too small to yield 1 gives nothing")
+eq(a1.held.iron, 8, "a store too small for a whole share still gives 1")
 eq(LOG[1][2], "derpy_mr_store_coal_raided", "booked to the raided junction")
 h1.held.coal = 195
 raid(army(hum, a1, 12, 0))
@@ -202,7 +214,11 @@ eq(F.book("hum").now.coal.raided_in, 14, "the human raider's ledger counts what 
 eq(F.state.factions.ai1, nil, "a computer-run victim keeps no ledger")
 local n = #LOG
 raid(army(horde, a1, 12, 0))
-eq(a1.held.coal, 71, "a horde's raid still costs the victim"); eq(#LOG, n + 1, "and lands nowhere")
+eq(a1.held.coal, 71, "a horde's raid still costs the victim"); eq(#LOG, n + 2, "and lands nowhere (coal and iron, one transaction each)")
+h2.held.coal = 40                                -- ally and hum are not at war
+raid(army(ally, h2, 100, 0))
+eq(h2.held.coal, 36, "raiding a faction it is not at war with still takes, as CA's raid gold does")
+eq(b1.held.coal, 54, "into that raider's nearest")
 local before = {}
 for k, r in pairs(REGIONS) do before[k] = copy(r.held) end
 local function untouched(what)
@@ -211,7 +227,6 @@ local function untouched(what)
         for stem, v in pairs(r.held) do eq(v, before[k][stem], what .. " (" .. k .. " " .. stem .. ")") end
     end
 end
-raid(army(ally, h2, 100, 0)); untouched("raiding a faction it is not at war with takes nothing")
 raid(army(hum, h1, 0, 0)); untouched("raiding its own land takes nothing")
 raid(army(hum, rb1, 20, 20)); untouched("a rebel-held settlement gives nothing")
 raid(army(hum, ruin, 30, 30)); untouched("an abandoned region gives nothing")
@@ -225,6 +240,24 @@ h1.held = {}                                   -- room to receive, so the raider
 raid(army(hum, g1, 0, 50))
 eq(F.book("hum2").now.coal.raided_out, 10, "the human victim's ledger counts the loss")
 eq(F.book("hum").now.coal.raided_in, 24, "and the human raider's counts what arrived (14 + 10)")
+
+-- the army's plate: what its raid would take next turn, read only
+a1.held, h1.held, h2.held = { coal = 95, iron = 9 }, {}, {}
+n = #LOG
+local pv = F.raid_preview(army(hum, a1, 12, 0))
+eq(#LOG, n, "the preview moves nothing")
+eq(pv.total, 10, "the plate counts 9 coal and 1 iron"); eq(pv.parts[1].stem, "coal", "most first")
+eq(pv.parts[1].n, 9, "coal's share"); eq(pv.to, "h1", "into the raider's nearest")
+raid(army(hum, a1, 12, 0))
+eq(h1.held.coal + h1.held.iron, pv.total, "and the raid takes what the plate said")
+eq(F.raid_preview(army(hum, h1, 0, 0)), nil, "no plate on its own land")
+eq(F.raid_preview(army(hum, a1, 12, 0, "MILITARY_FORCE_ACTIVE_STANCE_TYPE_DEFAULT")), nil, "no plate when not raiding")
+eq(F.raid_preview(army(horde, a1, 12, 0)).to, nil, "a horde's plate names nowhere")
+eq(F.raid_preview(army(hum, ruin, 30, 30)), nil, "no plate over an abandoned region")
+local frozen = F.state.rates; F.state.rates = nil
+eq(F.raid_preview(army(hum, a1, 12, 0)), nil, "no plate before the rates are frozen")
+eq(F.state.rates, nil, "and the plate does not freeze them: that is the turn start's job")
+F.state.rates = frozen
 
 -- ---- sack and raze ----------------------------------------------------------------------
 a1.held, h1.held, h2.held = { coal = 100 }, {}, {}
@@ -241,6 +274,24 @@ a1.readable = false
 decide("occupation_decision_raze_without_occupy", a1, hum, "ai1")
 eq(#LOG, n, "a raze of unreadable stores moves nothing")
 eq(#ERRORS, 1, "and says so once"); ERRORS = {}
+a1.readable = true
+-- A RAZE READS THE STORES AS THEY WERE AT THE BATTLE: measured 2026-10-02, the engine drops a razed
+-- region's pools before the decision fires (Venom Glade). CA's Bloodgrounds caches the same way.
+local function battle_at(r)
+    fire("CharacterCompletedBattle", { pending_battle = function() return {
+        has_contested_garrison = function() return r ~= nil end,
+        contested_garrison = function() return r and { region = function() return r.iface end } or NULL end,
+    } end })
+end
+a1.held, h1.held = { coal = 100 }, {}
+battle_at(a1); battle_at(nil)                     -- a field battle beside it caches nothing
+a1.readable = false
+decide("occupation_decision_raze_without_occupy", a1, hum, "ai1")
+eq(h1.held.coal, 50, "a raze takes half of what the stores held at the battle")
+eq(a1.held.coal, 100, "and books nothing against the pools that are gone")
+eq(#ERRORS, 0, "without saying it could not read them")
+decide("occupation_decision_raze_without_occupy", a1, hum, "ai1")
+eq(h1.held.coal, 50, "the battle's reading is used once"); ERRORS = {}
 a1.readable = true
 
 -- ---- trade ------------------------------------------------------------------------------
@@ -273,6 +324,15 @@ tB1.held.coal = 0; turn_start(tA); eq(tB1.held.coal > 0, true, "capital rule: an
 tA.partners = { tC }; local c2 = tA2.held.coal
 turn_start(tA); eq(tA2.held.coal, c2, "a partner with no settlements leaves the exporter untouched")
 tA.partners = { tB, tC }
+-- trade sends surplus only: measured in game, a raided single wyvern scale left the same turn
+local tD, tE = faction("tD"), faction("tE")
+local tD1, tE1 = region("tD1", 900, 0, 600, { coal = 19 }), region("tE1", 950, 0, 600)
+own(tD, tD1, true); own(tE, tE1, true); tD.partners = { tE }
+turn_start(tD); eq(tD1.held.coal, 19, "a store under 20 at 5% trades nothing")
+tD1.held.coal = 20; turn_start(tD); eq(tD1.held.coal, 19, "at 20 it sends 1")
+-- measured 2026-10-02: for some faction factions_trading_with() hands back a boolean, not a list
+tD.iface.factions_trading_with = function() return false end
+ERRORS = {}; turn_start(tD); eq(#ERRORS, 0, "a trade list that comes back a boolean is skipped, not an error")
 
 -- ---- the switch: goods move between other factions -------------------------------------
 F.state.rates.ai = false
@@ -304,6 +364,38 @@ eq(tB1.held.salt, 5, "the human's exports still went out")
 eq(#ERRORS, 1, "and the snapshot's failure was logged"); ERRORS = {}
 hum.partners = {}
 
+-- ---- the player's trade switches (the Stores panel's Trade tab) ------------------------
+local tP = faction("tP", { human = true })
+local tP1 = region("tP1", 1200, 0, 600, { coal = 100 }); own(tP, tP1, true)
+local tQ = faction("tQ"); local tQ1 = region("tQ1", 1300, 0, 600, { iron = 100 }); own(tQ, tQ1, true)
+tP.partners = { tQ }; tQ.partners = { tP }
+F.toggle("tP", "export", "coal"); eq(F.stopped("tP", "export", "coal"), true, "a click stops a good's exports")
+turn_start(tP); eq(tP1.held.coal, 100, "a stopped export stays home"); eq(tQ1.held.coal, nil, "and never arrives")
+F.toggle("tP", "export", "coal"); eq(F.stopped("tP", "export", "coal"), false, "a second click allows it again")
+turn_start(tP); eq(tP1.held.coal, 95, "an allowed export leaves")
+F.toggle("tP", "import", "iron")
+turn_start(tQ); eq(tP1.held.iron, nil, "a refused import is not sent"); eq(tQ1.held.iron, 100, "and the partner keeps it")
+F.toggle("tP", "import", "iron"); turn_start(tQ); eq(tP1.held.iron, 5, "an accepted import arrives")
+F.toggle("tQ", "export", "iron"); eq(F.stopped("tQ", "export", "iron"), false, "a computer-run faction has no switches")
+F.toggle("tP", "sideways", "coal"); eq(F.stopped("tP", "sideways", "coal"), false, "an unknown direction is ignored")
+F.toggle("tP", "export", "no_such_good"); eq(F.stopped("tP", "export", "no_such_good"), false, "an unknown good is ignored")
+-- a click reaches the model through the network in multiplayer, never straight from the UI
+local function ui_trigger(cqi, id)
+    fire("UITrigger", { trigger = function() return id end, faction_cqi = function() return cqi end })
+end
+F.send("tP", "export", "coal"); eq(F.stopped("tP", "export", "coal"), true, "singleplayer: a click applies at once")
+eq(#SENT, 0, "and sends nothing"); F.toggle("tP", "export", "coal")
+MP = true
+F.send("tP", "export", "coal")
+eq(F.stopped("tP", "export", "coal"), false, "multiplayer: the click changes nothing on its own")
+eq(SENT[1][1], tP.cqi, "it goes out under the clicker's faction"); eq(SENT[1][2], "dmr1|export|coal", "as one short id")
+eq(#SENT[1][2] <= 100, true, "under the 100-character trigger limit")
+ui_trigger(SENT[1][1], SENT[1][2]); eq(F.stopped("tP", "export", "coal"), true, "the trigger applies it")
+ui_trigger(999, "dmr1|export|coal"); eq(F.stopped("tP", "export", "coal"), true, "a trigger from no human does nothing")
+ui_trigger(tP.cqi, "zx1|buy|coal"); eq(F.stopped("tP", "export", "coal"), true, "another mod's trigger is not ours")
+MP = false; F.toggle("tP", "export", "coal"); SENT = {}
+tP.partners, tQ.partners = {}, {}
+
 -- ---- history ----------------------------------------------------------------------------
 CCO_MADE = "derpy_mr_store_coal_stocked=6"
 F.state.factions.hum = nil
@@ -331,6 +423,7 @@ SAVED = {}
 pcall(function() for _, fn in ipairs(cm.saving_game_callbacks) do fn({}) end end)   -- CA's loop
 eq(SAVED.derpy_mr_flows ~= nil, true, "a mod that throws after us cannot stop our save")
 F.push(bk, 200, { coal = 7.6 }, { coal = 2.5 })   -- fractions in; none may reach the save
+F.toggle("tP", "import", "salt")
 local function whole(v, path)
     if type(v) == "number" then eq(math.floor(v), v, "every number saved is whole: " .. path)
     elseif type(v) == "table" then for k, x in pairs(v) do whole(x, path .. "." .. tostring(k)) end end
@@ -342,6 +435,7 @@ F.state = { factions = {} }
 cm.loading_game_callbacks[1]({})
 eq(F.state.factions.hum.turns[#F.state.factions.hum.turns], 200, "history survives a save and load")
 eq(F.state.rates.raid, 10, "and so do the rates")
+eq(F.stopped("tP", "import", "salt"), true, "and so do the trade switches")
 SAVED = {}
 cm.loading_game_callbacks[1]({})
 eq(next(F.state.factions), nil, "an old save starts an empty history"); eq(#ERRORS, 0, "without an error")
