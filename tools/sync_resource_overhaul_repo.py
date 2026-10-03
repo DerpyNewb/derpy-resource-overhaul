@@ -34,7 +34,8 @@ _SRC = "Modding Files/source/resource_overhaul/"
 CA_CLONES = ("resources_tables", "resources_to_campaign_junctions_tables",
              "cai_personality_strategic_resource_values_tables", "effects_tables",
              "building_chains_tables", "building_levels_tables",
-             "building_culture_variants_tables", "pooled_resources_tables")
+             "building_culture_variants_tables", "pooled_resources_tables",
+             "campaign_interactable_marker_infos_tables", "dilemmas_tables")
 # Whole FILES that are CA rows with our key: the store twins of CA's production rows (2026-10-02).
 CA_CLONE_FILES = ("building_effects_junction_tables__derpy_more_resources_ca.tsv",)
 
@@ -74,6 +75,7 @@ def manifest(root=ROOT):
         "_hub_harness.lua",
         "gen_guilds_emitter.py",            # sync_derpy_hub builds the hub's .twui.xml with it
         "preview_guilds_panel.py",          # the .twui.xml reader both selftests use
+        "preview_resource_vault.py",        # draws every Vault tab from the shipped Lua
     )] + ["Modding Files/reference/resource_overhaul_building_audit.md",
           "Modding Files/pack/script/campaign/mod/derpy_more_resources_ai.lua",
           "Modding Files/source/resource_overhaul/stores_panel.lua",

@@ -887,3 +887,377 @@ Built ahead of phase 5, at the user's choice, because phase 5's open questions n
 **Resource Vault (2026-10-02, author's screenshot).** The panel is titled "Resource Vault" (title, hub label, opener tooltip, MCT switch). The bottom-line buttons are 200x30 across the full width: CA's `button_square_large_text_*` art draws only x 27-312, y 6-42 of 339x51, so a 140px button showed a 117px face and "Allow all exports" overran it. `gen_mr_ui.check_button_faces()` now sizes every text button against that face. The hints moved to the right end of the sub-title's line.
 
 **Measured live 2026-10-02 (Conclave, turn 4, bridge).** Store trade runs. This turn the Conclave sent 5 Brimstone and 5 Coal, 1 of each to five partners' capitals, out of Gash Kadrak's store. CA's Trade Forecast is a separate gold layer that never consumes stock. Small stores send nothing: 5% floored needs a store of 20 for 1 unit, and a partner counts as lacking only while its capital holds 0. **Bug found and fixed:** a save whose rates were frozen before a switch existed had `upkeep=nil, actions=nil`, so phases 4 and 7 never ran in it. `F.rates()` now gives a missing key its value and freezes it.
+
+## 24. Caravans for province shipments: the test (2026-10-03)
+
+**The question.** Phase 5's per-province switches pay from the province capital's store, so
+goods have to travel from the minor settlements to the capital. The author asked whether that
+travel can use real caravans, the Chaos Dwarf convoy kind: on the map, moving, interceptable.
+Tested live through the bridge on IEE (Conclave, turn 2), with the throwaway pack
+`derpy_caravan_test.pack` (`tools/build_caravan_test.py`, `Modding Files/source/caravan_test/`).
+
+**CA's caravans: the DB side is open, the script side is not.**
+
+| Question | Answer |
+|---|---|
+| What defines a road? | Four tables, all DB: `campaign_map_route_nodes` (key, x, y), `campaign_map_route_segments` (from, to, network, a `region_groups` key for the regions crossed), `campaign_map_route_networks` (key, campaign), `campaign_caravan_networks` (campaign group, caravan master subtype, network, default contract, factor). No map file. |
+| Who gets a network? | A campaign group (`campaign_group_member_criteria_*`). A faction has ONE network: the group with the higher `priority` wins. CA's Bhashiva and OvN's Marienburg (`!scm_marienburg.pack`, priority 5, also Karl Franz and four other Empire factions at 0) both use this. |
+| Which campaign? | Networks are tied to a campaign key. IEE is `cr_combi_expanded`, with its own `convoy_road_combi_expanded` and `ivory_road_combi_expanded`. The test roads were declared for `wh3_main_combi`, so neither appeared in IEE. |
+| Node positions | The settlement's logical position, about 2 off: Zharr-Naggrund's node 943,630, settlement 943,628. |
+| Upkeep and caps | None. A script-recruited caravan is force type `CONVOY`, 1 unit, upkeep 0; faction upkeep unchanged (2,384). |
+| Recruit by script | Works: `cm:recruit_caravan(faction, item)` charged the item's 750 and left the caravan idle. |
+| Send by script | **Impossible.** `set_caravan_path`, `set_caravan_auto_path` and `clear_caravan_path` are in CA's docs and absent in game, on `cm` and on `cm.game_interface`. `can_start_caravan` was false for every cargo, contract and destination, and `cm:start_caravan` returned null. |
+| How the convoy panel sends one | UI context commands: `CcoCampaignCaravan.SetStartingNode` / `SetAutoPathTowardsNode(node, contract)`, then `CcoCampaignFactionCaravans.StartCaravan(caravan, contract, cargo)`. Local player only, and parameterised, the class that has hard-crashed the game from script. Not tried. |
+| Limits | The Conclave had 1 caravan and 1 start node (Zharr-Naggrund). The limit is bonus value `maximum_caravans_mod`, granted by `wh3_dlc23_effect_technology_chd_convoy_mod_active_convoys` at `faction_to_faction_own_unseen`. A caravan returns to its start after arriving. |
+
+**Ruling: CA's caravans cannot carry the shipments.** A script cannot route one, so neither
+"supply the capital" orders nor AI shipments are possible; AI caravans go where CA's AI sends
+them. A player-only version would need the crash-class UI calls, a caravan panel per race
+(only the Chaos Dwarfs and Cathay have one) and a fight with OvN over Empire factions.
+
+**What works instead: a scripted shipment drawn and triggered on the map.**
+- **Interception: measured.** `cm:add_interactable_campaign_marker(id, info_key, x, y, 2)` at
+  logical 939,664 (between Zharr-Naggrund and Sabre Mountain) drew CA's red marker with its
+  tooltip ("Chaos Dwarf Patrol", the borrowed `wh3_dlc25_malakai_adventures_battle_chaos_dwarfs`
+  info). Ghorth walking onto it fired `AreaEntered`, area key `derpy_ct_marker_1`, with the
+  character's faction, subtype, cqi and position. It fires for the owner's own army too, so the
+  listener has to check war.
+- **Look: not confirmed.** `cm:add_scripted_composite_scene_to_logical_position` with CA's
+  `cth_caravan` (Cathay's wagon circle, the only caravan scene in `campaign_composite_scenes`)
+  was placed at the same spot with both shroud flags true. Whether it drew, and at what size,
+  is still unanswered.
+- **Not measured:** whether `AreaEntered` fires for AI characters. The design does not depend
+  on it: AI interception is a proximity rule at turn start (an enemy army within a few hexes of
+  a shipment), and a friendly army next to it escorts it.
+
+**The shape this points to** (not yet designed or approved): each shipment is a save entry
+(goods, destination, arrival turn); each turn it moves one leg along settlement-to-settlement
+waypoints through adjacent regions, its marker and scene removed and re-added there; a player
+army entering an enemy shipment's marker takes part of its cargo; a cap on shipments per faction
+keeps the map readable. A real battle on interception, CA's caravan way (spawn a force,
+`force_attack_of_opportunity`), is possible later and not part of it.
+
+**Clean-up:** the test pack was deleted from `data/` and `Modpacks/` on 2026-10-03. Its builder
+(`tools/build_caravan_test.py`) and probe (`Modding Files/source/caravan_test/`) stay as the record
+and can rebuild it. The test campaign holds one idle Conclave convoy recruited by script.
+
+## 25. Store events (phase 6, part 1, 2026-10-03)
+
+Built, deployed to `data/`, **not yet seen in game**. Spec §4 (spending design). The capture
+option ("Occupy and restore") is part 2 and is not built: it needs the game measured first (below).
+
+| Event | Offered when | Spend | Reward |
+|---|---|---|---|
+| Feast | a settlement holds 100 provisions | 100 provisions there | `derpy_mr_event_feast`, public order +5 and growth +20 in its province, 5 turns |
+| Siege Stores | a settlement **under siege** holds 60 provisions | 60 provisions there | `derpy_mr_event_siege`, `..._siege_defend_attrition` -100 at `region_to_force_own`, 2 turns |
+| Tribute | the realm holds 50 luxuries and a neighbour is not at war with you | 50 luxuries, fullest stores first | `cm:apply_dilemma_diplomatic_bonus(you, them, 3)` |
+| Arsenal | the realm holds 50 war materials and you have an army | 50 war materials | `cm:add_experience_to_units_commanded_by_character`, +1 rank, the largest army |
+
+- **Dilemmas are DB rows**, `derpy_mr_dil_<event>`: FIRST spends and rewards, SECOND ("Keep the
+  stores") does nothing. No payload rows: a payload cannot charge a REGION pool, so the flows
+  script spends in `DilemmaChoiceMadeEvent`. A DB dilemma, triggered with
+  `cm:trigger_dilemma_with_targets` - **not** a script-built one, whose choice listener crashes the
+  game (memory). The text names its target with CA's tokens: `RegionTargetName`,
+  `FirstTargetFactionNameWithIcon`, `CharacterTargetName`; `check_dilemmas()` holds each text to
+  the target the script hands it.
+- **Which one:** a siege first; otherwise the qualifying event offered longest ago, ties in the
+  order feast, arsenal, tribute. The neighbour is the first by key, the army the largest that is
+  not a garrison or a convoy - both so every machine picks the same.
+- **Spacing:** one event per faction every 10 turns, counted from the offer (a decline starts it
+  too). Kept in the save as `F.state.events`; the unanswered offer as `F.state.pending`.
+- **Short at the answer** (the stores emptied between the offer and the click): nothing is taken
+  and nothing given.
+- **Computer-run factions:** no dilemma; the same deal on a 20-in-100 roll, under the "Other
+  factions use their stores" switch. A failed roll starts no gap.
+- **MCT:** a fourth switch, "Store events", in Using stores. Frozen like the rest.
+- **Checked by** the flows harness's phase 6 section and `check_dilemmas()` (four planted faults,
+  all caught). 14 mutants of the script, all caught: siege priority, the gap, decline paying, a
+  failed roll starting the gap, the AI switch, both short-store guards, a garrison or convoy
+  counted as an army, a neighbour at war, the bonus reversed, the switch, the pending offer not
+  cleared, another dilemma's answer.
+- **To see in game:** each dilemma's picture and text with its target named; the siege bundle
+  stopping siege attrition; the diplomatic bonus's size.
+
+**Part 2, the capture option, needs measuring first.** CA's Dechala row
+(`culture_settlement_occupation_options`, id 1218317010) charges through
+`captured_region_resource_transaction = wh3_dlc27_resource_cost_sla_thralls_occupation`, a
+`resource_costs` row whose junction amount is **+1000** on `wh3_dlc27_sla_thralls_region_occupation`.
+Unknown until measured: whether that column adds or takes, whether an option the captured store
+cannot pay is greyed, what `required_resources` gates, and which `group` value scopes a row to a
+culture. One row per building good per culture makes it ~150 rows of a 30-column table, so it is
+not built blind.
+
+## 26. Province supplies and shipments (phase 5, 2026-10-03)
+
+Built, deployed to `data/`, **not yet seen in game**. Spec §3 (spending design, the redesign
+approved 2026-10-03); plan `superpowers/plans/2026-10-03-resource-overhaul-phase5-supplies.md`.
+Replaces the per-build version of phase 5, which was never built.
+
+**Switches.** Three per province, on a province capital's drill-down (Settlements tab, open the
+capital), with "Supply the capital" as the fourth button. Lit when on.
+
+| Switch | Paid from the capital each turn | Bundle on every settlement held in the province |
+|---|---|---|
+| Materials on hand | 2 building materials per settlement held there | `derpy_mr_supply_materials`: `wh_main_effect_building_construction_cost_mod` -25, `region_to_region_own` |
+| Stable stocked | 2 mounts per settlement | `derpy_mr_supply_stable`: `..._recruitment_cost_cavalry` and `wh2_main_effect_lzd_monster_recruitment_cost_down` (unit set `monsters`) -15, `region_to_force_own` |
+| Arms stocked | 2 war materials per settlement | `derpy_mr_supply_arms`: `..._recruitment_cost_infantry` and `..._artillery` -15, `region_to_force_own` |
+
+- **Short:** the capital pays nothing, the switch turns itself off and the bundles go at once;
+  the button's tooltip says on which turn. A capital the faction no longer holds pays nothing
+  and its province loses the bundles.
+- **Fixed discounts:** a DB effect value cannot follow an MCT setting, so the spec's "MCT 0-50"
+  for construction was dropped.
+
+**Shipments.** Send here is now a shipment, and so is everything Supply the capital sends.
+- Taken from the sender at once, a tenth lost (as before), the rest arrives at the owner's
+  second turn start after. Send here counts what is already on the road to a store against its
+  free space.
+- **On the map:** `cm:add_interactable_campaign_marker(id, "derpy_mr_shipment", x, y, 2, "", "")`,
+  our row over CA's `food_merchant` prefab (Grom's cart), named "Shipment". First turn beside the
+  sender, second beside the destination, at the spot
+  `cm:find_valid_spawn_location_for_character_from_settlement(faction, region, false, true, 3)`
+  returns (CA's marker manager places its markers this way); the settlement's own position on
+  -1. The engine keeps markers in the save: CA never re-adds one after a load.
+- **Seized:** an army (not a garrison, not a hero alone) of a faction at war with the owner,
+  walking in (`AreaEntered`) or standing within 3 of it at the owner's turn start. The cargo goes
+  to the captor's settlement nearest it, booked as raided, as far as it has room; a captor with
+  none destroys it.
+- **Arrival at a lost destination:** the owner's settlement nearest it; none, and it is lost.
+- **How many:** "Shipments on the road" in MCT, 1-10, default 3; a computer-run faction 1. The
+  Resources tab's hint counts them; Send here's tooltip lists what is coming to that store.
+- A dead faction's shipments and markers are cleared at a player's turn start.
+
+**Supply the capital** (off by default per province): when the capital holds under 5 turns of a
+switched-on supply's cost, the province's other settlements send one shipment of that use's
+fullest good, enough for 10 turns; never while one is already on the road for that use.
+
+**Computer-run factions** (under "Other factions use their stores"): a supply goes on when its
+capital holds 10 turns of it, Supply the capital always runs, at most 1 shipment on the road.
+Their shipments are on the map too.
+
+**MCT:** "Province supplies" switch (Using stores), "Shipments on the road" slider (Stores).
+
+**Checked by** the flows harness's phase 5 section and the stores harness's shipment and supply
+block. 40 mutants of the two scripts, all caught. Three of the first run survived because their
+tests could not fail (the capital always held less than the sender; the capital could pay with
+or without the arrival; a "second settlement" that the harness faction did not have). The tests
+were fixed and a redundant busy check in `F.send_here` was deleted. A fresh review then found:
+a faction with no stores to use (daemons, the undead, Beastmen) was offered switches that never
+paid (now `F.supply_state` refuses it); Send here said "no other settlement can send" when
+shipments on the road already filled the store (now it says so); and two tests that could not
+fail (a horde's seizure, a computer-run faction's click). All four fixed test-first.
+
+**To see in game:**
+- the Food Merchant cart drawing at our marker, and its name and tooltip;
+- whether `AreaEntered` fires for an AI army (the turn-start rule covers it if not);
+- each bundle's discount in the build and recruit costs, in particular `region_to_force_own` on a
+  recruit cost (CA's own building uses `building_to_forces_own_regionwide`);
+- the four toggles' lit art and their tooltips.
+
+### 26b. The Spending tab (2026-10-03, asked for after phase 5)
+
+The author expected spending in its own place, not spread over the Resource Vault. It is now a
+fourth tab, **Spending**, and what it holds was **moved, not copied**:
+- **Province capitals:** one row per capital the player holds (`F.capitals`), sorted by name,
+  with four checkboxes: Materials, Stables, Arms, Supply capital. The capital drill-down's
+  bottom-line buttons are gone.
+- **On the road (n of most):** a section row, then one row per shipment of the local faction
+  (good and amount, from, to, arrival turn) with a **Show** button. It closes the panel and flies
+  the camera to the cart: `cm:log_to_dis`, then `cm:scroll_camera_from_current(false, 1, {x, y,
+  d, 0, h})` keeping the camera's distance and height, which is CA's recipe in
+  `wh3_dlc29_middenland_narrative.lua` and `wh_dlc08_monster_hunt.lua`. The Resources tab's
+  shipment hint is gone.
+- **Orders:** Festival, Muster, Great Works on its bottom line, moved off the Resources tab.
+- Send here stays on a settlement's resource rows, and Sell on a resource's drill-down.
+
+Checked by the stores harness's Spending block; 47 mutants of the two scripts, all caught.
+**Asked for, not built yet: a drawn map tab** with a picture of the campaign map and a dot per
+convoy. It needs a map image and a calibrated logical-to-pixel fit per campaign (Immortal
+Empires, IEE, Realm of Chaos), so it waits until the camera jump is seen in game.
+
+## 27. The Map tab and Restore on capture (2026-10-03)
+
+Both built, deployed to `data/`, **not yet seen in game**. With these, every part of the spending
+spec is built.
+
+**The Map tab** (the fifth tab; the tabs are now 120 wide to fit before Back):
+- Your settlements as tinted squares, sorted by name; a province capital's larger and named.
+  Every convoy of yours is CA's `ui/campaign ui/effect_bundles/convoy_icon.png` at its current
+  spot, on six dots from the settlement it left to the one it is going to.
+- **No picture of the map.** It is framed on what it draws: one scale for both axes, so nothing
+  is stretched, with a 40-unit minimum span so one settlement is not blown up. So it fits
+  Immortal Empires, IEE, Realm of Chaos and any map mod with no calibration. **North up:**
+  logical y grows northward (Kislev 789, Middenheim 720, Karak Eight Peaks 359 in CA's own
+  scripts), so the screen y is flipped.
+- A click on a convoy or a settlement flies the camera there (`S.look_at`, the Spending tab's
+  Show) and closes the panel.
+- Components: four new `.twui.xml` files (`derpy_mr_stores_mapdot` / `_mapcart` / `_mappath` /
+  `_maplabel`, GUID prefixes MR07-MR10), pooled in the panel and made the first time they are
+  needed; the ones past what is shown go hidden.
+
+**Restore on capture** (the spec's "Occupy and restore", phase 6 part 2), **built as a dilemma,
+not an occupation option.** Measured offline first:
+- CA's cost sign is negative (the Tower seat's -300, the Hell-Forge's prices), so Dechala's
+  +1000 in `captured_region_resource_transaction` ADDS thralls to the captured region, and
+  `captured_region_resource_building_level_multiplier` = 1.0 scales it by level.
+- An option row joins a culture through its `group`, a campaign group whose member carries a
+  `campaign_group_member_criteria_subcultures` row (`wh3_dlc23_chd_chaos_occupation_decision_occupy`
+  for the Chaos Dwarfs; 31 occupy groups in all). `required_resources` names a `resource_costs`
+  key and CA's rows name the same key as `resource_transaction`.
+- `CharacterPerformsSettlementOccupationDecision`'s `context:occupation_decision()` gives the
+  picked option's id.
+- **Why a dilemma:** whether `required_resources` reads the captured REGION's pool or the
+  faction's is still unmeasured, and one row per building good would mean five buttons on every
+  capture screen of 31 cultures. The dilemma reuses phase 6's machinery and is offered only when
+  the store can pay.
+
+What it does: occupying (`occupation_decision_occupy`) a settlement whose store holds 100
+building materials offers **Restore** (`derpy_mr_dil_restore`, CA's `civilisation_up` picture).
+Accepting spends the 100 from that store, fullest first, repairs every building there
+(`cm:region_slot_instantly_repair_building` on each slot with a building) and gives
+`derpy_mr_event_restore`, public order +5 for 5 turns. It keeps no gap and is not in the
+turn-start order. Computer-run factions take it on the events' 20% roll. It is under the
+"Store events" switch.
+
+**Pending offers are now one per faction and per event,** so a Restore offered on capture does
+not wipe a Feast still waiting for its answer. A save from before kept one per faction as
+`{key = ...}`; that shape is still read.
+
+**Checked by** the stores harness's Map block, the flows harness's Restore section, and 64 + 12
+mutants, all caught. Three of the phase 6 mutants had gone stale, because the guards they aimed
+at now appear in the new code too; they were narrowed to their own lines.
+
+**To see in game:**
+- the Map tab: dots and labels placed sensibly, a cart on its road, a click flying there;
+- Restore: offered on capture, the buildings repaired, the public order shown.
+
+### 27b. Seen in game: the tabs in the corner, and CA's map under the Map tab (2026-10-03)
+
+**What the first in-game look showed:** the Spending and Map tab buttons were drawn in the panel's
+top-left corner, over the title. `S.layout` named the first three tabs by hand and never placed
+the two new ones, and the engine ignores a runtime component's XML offsets. Every layout check had
+passed, because each one checked the box gen_mr_ui.py hands out and not where the Lua put the
+component. Nobody had looked at a picture.
+
+**Fixed, and now checked:**
+- **Tabs:** `S.layout` places every tab from `S.TAB`.
+- **The harness** asserts each tab's position on the panel. On every tab it also asserts that every
+  visible component directly under the panel was moved there by the script.
+- **`tools/preview_resource_vault.py`** draws every tab to `.skilltree_cache/ui_preview/mr_<view>.png`
+  from the shipped Lua. With `MR_DUMP` set, the harness writes each visible component's position,
+  size, text, alignment and runtime image. The preview rasterises CA's art over that, clipping
+  wherever a box has `clipchildren`. A preview drawn from the generator's coordinates alone would
+  have drawn the tabs correctly and missed the bug.
+
+**What the pictures showed next:**
+- **Shipment rows read as supply values.** They sat under the supply headers, so "Bravo" read as a
+  Materials value. The "On the road" row now carries its own headings (From / To / Arrives). With
+  no province capitals listed, the supply headers go blank.
+- **The map was too bare** (asked 2026-10-03: "can you not use the CA map graphic?").
+
+**CA's map under the Map tab.**
+- **The picture:** `campaign_maps/<map>/<name>_minimap.png`, CA's parchment map, is drawn under the
+  dots.
+- **Measured offline** by plotting settlement positions from CA's scripts:
+  - It is **one pixel per logical unit, y counted up from the bottom**, on all three maps.
+  - On vanilla Immortal Empires it is `wh3_main_combi_map_7` (1440x1120); on Realm of Chaos,
+    `wh3_main_chaos_map_4` (1108x834). These folders are `campaigns_tables.map_name`.
+  - On IEE it is `cr_combi_expanded_map_1` (1600x1120, from IEE's own pack). IEE keeps vanilla's
+    coordinates and only adds land to the east.
+  - CA's own `load_save_game.twui.xml` uses such a path as a twui imagepath.
+- **Choosing the picture:** `cm:model():campaign_name_key()`, the campaigns table key, which CA's
+  scripts compare. Any other map gets the plain black map, as before.
+- **Placement:**
+  - The picture sits in a `clipchildren` box the size of the map (`derpy_mr_stores_mapart`, MR11).
+    It is scaled and moved so that logical (x, y) lands exactly under its dot.
+  - It never zooms closer than 2 pixels per unit (`MAP_ART_ZOOM`); past that it is a blur.
+  - The view is kept on the picture, so there is no blank past its edge.
+  - The picture is dimmed to `#8C8C8C` so the panel's beige names read on it.
+- **Made with the panel:** the box is created when the panel is built, before any dot. The engine
+  draws in creation order, so CA's map is always beneath the dots.
+- **Labels and colours:**
+  - Every settlement is now named, province capitals first. A name that would overlap one already
+    placed is left off; the dot and its tooltip stay. A name that would run past the right edge
+    goes on its dot's left.
+  - Dots and road are red ink (`#E0553C`), which reads on parchment and on black.
+- **Checked by** the harness's map block, which covers:
+  - all three pictures and their paths;
+  - every dot on its pixel, with one scale;
+  - the box cut to the map, the picture filling it, drawn beneath, and gone on an unknown map;
+  - the zoom limit and the south-edge clamp;
+  - every name placed, collisions dropped, the right-edge flip.
+- **Mutation:** 13 mutants, all caught from a green baseline. Writing them found `MAP_ART_SPAN`
+  could never take effect under the zoom limit, so it was deleted.
+
+**To see in game:**
+- that `SetImagePath` on a runtime component takes a `campaign_maps/...` path;
+- the parchment's brightness under the names;
+- the dots on the right places on your own campaign.
+
+### 27c. Seen in game again: placement, drag, CA's markers, the pay icons (2026-10-03)
+
+**Reported:** the map does not move when grabbed; the dots should be settlement icons; the
+settlements sit in the wrong places; and the Spending tab does not show what resource each supply
+uses.
+
+**The placement, measured in the live campaign.** Measured through the wh3 bridge in the user's IEE
+game: `campaign_name_key()` is `cr_combi_expanded`.
+- **27b's frame was wrong vertically.** CA's minimap is drawn in **display** space, and display =
+  logical x (0.668, 0.772) there. So "one pixel per logical unit" holds across and is about 13% short
+  north to south, which put Zharr-Naggrund visibly south of the river it sits on.
+- **Why it slipped through:** the offline check plotted script coordinates whose own noise (about
+  20 units) hid the error.
+- **A false lead:** sampling CA's HUD radar against the camera was also about 22px off, because the
+  radar does not centre on the camera target.
+- **The exact answer is the engine's own:**
+  - `common.get_context_value("CampaignRadarPosition(ToVector(dx, 0, dy, 0)).x")` (and `.y`) gives
+    a display point's 0-1 place on the picture. A CCO world position is (display x, height,
+    display y).
+  - It agreed with `CcoCampaignSettlement:Position` to 1e-6.
+  - It is the function CA's own map panels place icons with (`ContextRadarIcon`).
+  - `S.map_frame` reads it at the world's westmost, eastmost, southmost and northmost settlements,
+    once a session, and the frame is linear.
+- **Every map is covered with no measured constants.** That includes Realm of Chaos and map mods
+  with a known picture. If the engine does not answer, the plain map is drawn.
+- **The plain map works in display units too**, so it keeps the real map's proportions.
+
+**Grab and drag.**
+- **The picture is draggable:** `derpy_mr_map_art` is `moveable="Movable XP"`, CA's value, used
+  209 times in ui3.pack.
+- **Everything moves with it:** the dots, names, road and carts are made as its children, so they
+  are drawn over it, cut with it and dragged with it.
+- **It stays on the picture:** `S.map_hold`, on the existing 16ms poll, puts it back where it still
+  covers the box.
+- **On a map with no picture,** the surface is CA's clear pixel, `1x1_transparent_white.png`. CA's
+  own twui files reference a `transparent_pixel.png` that is in none of its packs; the art check
+  caught it.
+
+**CA's markers.** `icon_marker_settlement.png` (24px) marks a settlement and `icon_offscreen_capital.png`
+marks a province capital, at 20 and 26px.
+
+**What each supply pays with.**
+- **The model:** `F.supply_state` also returns `pay[use] = {stem, n}`, the good the payment takes
+  first (the fullest, a tie by resource key, as `F.draw_realm` takes them).
+- **The tab:** the good's icon sits beside its box, the pair centred, greyed with the Exchange's
+  shader when the store cannot cover the price. Its tooltip reads "Paid from Coal first, the
+  fullest store." or "Nothing to pay with".
+- **A fault the preview caught:** every row carries these icons, and rows without supplies left
+  them showing at their default spot. The tests did not catch it.
+
+**Checked by:**
+- **Harness, map:** `CampaignRadarPosition` faked with unequal x and y scales, so a logical-frame
+  map fails. Dots on their places on all three maps; fallback when the engine is silent; one read a
+  session; drag clamped both ways with the dots following; the markers.
+- **Harness, Spending:** pay icons, greying, tooltips, and hidden on other rows. The flows harness
+  covers the fullest and the tie.
+- **Mutation:** 15 new mutants and 12 of 27b's, all caught; 27b's "art not flipped" target no longer
+  exists.
+- **Live:** the two-point frame was run against the live engine.
+
+**Seen in game:** placement and markers are right. The drag did nothing, and the moveable flag was
+not the cause: a live probe read `IsMoveable()` and `IsInteractive()` true on the picture. The
+scrolling list stayed built on the Map tab with no rows. It kept the map's exact box and was made
+after the map, so its interactive `list_clip` lay on top and took every grab. `S.draw` now drops the
+list on the Map tab. Harness: no list on the Map tab, and the Resources tab gets it back.
+
+**Still to see in game:** the drag itself, once nothing covers it.

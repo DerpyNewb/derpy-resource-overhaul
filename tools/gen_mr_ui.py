@@ -53,6 +53,10 @@ RATES = (
     ("trade", "Trade share per turn",
      "Each turn, every trade agreement sends this share of a resource from the sender's fullest store "
      "to the partner's capital, for each resource the partner lacks. 0 turns this off.", 0, 25, 5),
+    # PHASE 5: shipments are drawn on the map, so their number is held down
+    ("ships", "Shipments on the road",
+     "How many shipments of yours can be on the road at once. Sending a resource between your settlements "
+     "takes two turns, and an army at war with you can seize it on the way. Other factions keep one.", 1, 10, 3),
 )
 AI_SWITCH = ("ai", "Other factions use their stores",
              "Factions no player controls raid, sack, trade, eat and gain bonuses from their stores as a "
@@ -68,7 +72,17 @@ ACTIONS_SWITCH = ("actions", "Resource Vault actions",
                   "The Resource Vault can send a resource between your settlements, buy a Festival, Muster or "
                   "Great Works with your stores, and sell what your stores hold above half their space. "
                   "Off: the panel only shows.", True)
-SWITCHES = (AI_SWITCH, UPKEEP_SWITCH, ACTIONS_SWITCH)
+# PHASE 6 (spending spec section 4): a full store now and then offers a choice
+EVENTS_SWITCH = ("events", "Store events",
+                 "Now and then a full store offers a choice: a feast, opening the stores to a besieged "
+                 "garrison, a gift to a neighbour or re-arming an army. Accepting spends the resources. Other "
+                 "factions make the same choices on their own. Off: no events.", True)
+# PHASE 5 (spending spec section 3): a province capital pays for supplies across its province
+SUPPLY_SWITCH = ("supply", "Province supplies",
+                 "A province capital can pay from its stores each turn for Materials on hand, Stable stocked "
+                 "and Arms stocked in every settlement you hold in its province, and can send for goods from "
+                 "the province's other settlements. Off: no province supplies.", True)
+SWITCHES = (AI_SWITCH, UPKEEP_SWITCH, ACTIONS_SWITCH, EVENTS_SWITCH, SUPPLY_SWITCH)
 # THE FIVE USES (spending spec section 1): every store has exactly one; check_uses() asserts it.
 USES = {
     "provisions": ("grain", "salted_fish", "salted_meat", "olive_oil", "tea", "kvas", "mead", "rum", "beer",
@@ -99,8 +113,25 @@ L = {
     # A RULE BETWEEN THE TITLE AND THE TABS (asked for 2026-10-02): the two read as one block
     # without it.
     "title_rule": (20, 46, 820, 2),
-    "tab_goods": (20, 56, 140, 26), "tab_settlements": (168, 56, 140, 26),
-    "tab_trade": (316, 56, 140, 26),
+    # FIVE TABS, 120 wide and 6 apart, clear of Back at 720
+    "tab_goods": (20, 56, 120, 26), "tab_settlements": (146, 56, 120, 26),
+    "tab_trade": (272, 56, 120, 26), "tab_spending": (398, 56, 120, 26), "tab_map": (524, 56, 120, 26),
+    # THE MAP TAB: the list's own box, a pad inside it, and no picture of the map - it is framed on
+    # the dots it draws, so it fits any campaign. A capital's dot is larger and named; a convoy is
+    # CA's convoy icon on MAP_STEPS dots from where it left to where it goes. MAP_MIN_SPAN keeps one
+    # lone settlement from being blown up to fill the box.
+    "map": (20, 142, 820, 448), "MAP_PAD": 24, "MAP_DOT": 20, "MAP_CAP": 26, "MAP_PATH": 4,
+    "MAP_STEPS": 6, "MAP_CART_SIZE": 28, "MAP_MIN_SPAN": 40, "map_label": (160, 16),
+    # ON CA'S MINIMAP (one pixel to one logical unit): never closer than MAP_ART_ZOOM, past which
+    # the picture is a blur. MAP_CHAR_W is a name's width per letter at 11px, for spacing names.
+    "MAP_ART_ZOOM": 2, "MAP_CHAR_W": 6.5,
+    # CA's own map markers (asked 2026-10-03: "the icons can be settlement icons"): the 24px
+    # castle CA marks a settlement with, and its ringed capital marker for a province capital
+    "MAP_TOWN_ICON": "ui/skins/default/icon_marker_settlement.png",
+    "MAP_CAP_ICON": "ui/skins/default/icon_offscreen_capital.png",
+    # the Spending tab: a supply's box and the icon of the good it pays with, this far apart
+    "PAY_GAP": 4,
+    "MAP_CART": "ui/campaign ui/effect_bundles/convoy_icon.png",
     # the Trade tab's two checkboxes a row, square, centred in the Exports and Imports columns
     "CHECK": 26,
     "back": (720, 56, 120, 26), "sub_title": (20, 90, 820, 22), "head_y": 116,
@@ -138,6 +169,13 @@ L = {
                         (520, 280, "right")),
         "trade": ((36, 230, "left"), (276, 60, "right"), (346, 90, "centre"), (446, 90, "centre"),
                   (546, 254, "left")),
+        # the Spending tab: a capital's four supply boxes in 2-5; a shipment's from, to and turn in
+        # 2-4 and its Show button in 5
+        "spending": ((36, 230, "left"), (276, 126, "centre"), (408, 126, "centre"), (540, 126, "centre"),
+                     (672, 128, "centre")),
+        # no list on the Map tab: the Resources tab's columns, for headers it leaves blank
+        "map": ((36, 204, "left"), (244, 90, "right"), (338, 100, "right"), (442, 110, "right"),
+                (556, 240, "right")),
     },
     # ponytail: a flat glyph width for a size-12 header, calibrated from the one seen squeezed in
     # game (14 letters in 100px). The harness checks every view's headers against it.
@@ -221,6 +259,9 @@ def build_panel():
              "Settlements||Every settlement you hold, and its stores."),
             ("derpy_mr_tab_trade", L["tab_trade"],
              "Trade||Choose which resources your settlements send and take by trade."),
+            ("derpy_mr_tab_spending", L["tab_spending"],
+             "Spending||What your stores pay for: province supplies, shipments on the road, and orders."),
+            ("derpy_mr_tab_map", L["tab_map"], "Map||Where your settlements and convoys are."),
             ("derpy_mr_back", L["back"], "Back to the full list.")):
         p.add(_cell(E, name, box[2], box[3], interactive=True, image=BTN_BG,
                     hover=[_flat(BTN_HOVER)], sound=SND_SMALL, align="Center", tooltip=tip))
@@ -271,9 +312,14 @@ def build_row():
         r.add(_cell(E, "c%d" % j, cw, 20, size=12, align=ALIGN[j - 1]))
     for j in range(2, len(COLS) + 1):
         r.add(E.C("vline%d" % j, 1, L["PITCH"], image=WHITE, colour_img=DIVIDER_COLOUR))
-    for d in ("export", "import"):
+    # the Trade tab's two boxes, then the Spending tab's four supply boxes
+    for d in ("export", "import") + tuple(k for k, _l, _u in supply_buttons()):
         r.add(E.C("derpy_mr_sw_" + d, L["CHECK"], L["CHECK"], interactive=True, image=CHECK_ON,
                   hover=[_flat(CHECK_ON_HOVER)], sound=SND_SMALL))
+    # beside each supply that pays, the icon of the good it pays with (interactive: a tooltip)
+    for k, _l, use in supply_buttons():
+        if use:
+            r.add(E.C("derpy_mr_supic_" + k, L["icon"][2], L["icon"][3], interactive=True, image=ICON_BG))
     r.add(_cell(E, "derpy_mr_sendhere", L["send"][0], L["send"][1], interactive=True, image=BTN_BG,
                 hover=[_flat(BTN_HOVER)], sound=SND_SMALL, align="Center", size=12))
     E.assign(root, "MR02")
@@ -340,9 +386,78 @@ def build_bar():
                     "times into the panel. Generated by tools/gen_mr_ui.py; do not hand-edit.")
 
 
+MAP_DOT_COLOUR = "#E0553CFF"     # a settlement: red ink, read on CA's parchment and on black alike
+MAP_PATH_COLOUR = "#E0553CCC"    # the dotted road, the settlements' red, a little fainter
+MAP_ART_DIM = "#8C8C8CFF"        # CA's parchment, dimmed so the panel's beige names read on it
+
+
+def build_mapdot():
+    """A settlement on the Map tab: a tinted square the Lua sizes, with a tooltip and a click."""
+    import gen_mr_emitter as E
+    root = E.C("root", L["MAP_CAP"], L["MAP_CAP"])
+    root.add(E.C("derpy_mr_stores_mapdot", L["MAP_CAP"], L["MAP_CAP"], interactive=True,
+                 image=L["MAP_TOWN_ICON"], sound=SND_SMALL))
+    E.assign(root, "MR07")
+    return E.layout(root, "derpy: a settlement on the Stores panel's Map tab. Generated by "
+                    "tools/gen_mr_ui.py; do not hand-edit.")
+
+
+def build_mapcart():
+    """A convoy on the Map tab: CA's convoy icon, with a tooltip and a click."""
+    import gen_mr_emitter as E
+    s = L["MAP_CART_SIZE"]
+    root = E.C("root", s, s)
+    root.add(E.C("derpy_mr_stores_mapcart", s, s, interactive=True, image=L["MAP_CART"], sound=SND_SMALL))
+    E.assign(root, "MR08")
+    return E.layout(root, "derpy: a convoy on the Stores panel's Map tab. Generated by "
+                    "tools/gen_mr_ui.py; do not hand-edit.")
+
+
+def build_mappath():
+    """One dot of a convoy's road on the Map tab."""
+    import gen_mr_emitter as E
+    root = E.C("root", L["MAP_PATH"], L["MAP_PATH"])
+    root.add(E.C("derpy_mr_stores_mappath", L["MAP_PATH"], L["MAP_PATH"], image=WHITE,
+                 colour_img=MAP_PATH_COLOUR))
+    E.assign(root, "MR09")
+    return E.layout(root, "derpy: one dot of a convoy's road on the Stores panel's Map tab. Generated "
+                    "by tools/gen_mr_ui.py; do not hand-edit.")
+
+
+def build_maplabel():
+    """A province capital's name on the Map tab."""
+    import gen_mr_emitter as E
+    w, h = L["map_label"]
+    root = E.C("root", w, h)
+    root.add(_cell(E, "derpy_mr_stores_maplabel", w, h, size=11))
+    E.assign(root, "MR10")
+    return E.layout(root, "derpy: a province capital's name on the Stores panel's Map tab. Generated "
+                    "by tools/gen_mr_ui.py; do not hand-edit.")
+
+
+def build_mapart():
+    """CA's campaign minimap under the Map tab: a box that cuts it to the map, and the picture,
+    which the Lua points at the campaign's own minimap, sizes and moves."""
+    import gen_mr_emitter as E
+    w, h = L["map"][2], L["map"][3]
+    root = E.C("root", w, h)
+    clip = root.add(E.C("derpy_mr_stores_mapart", w, h, clipchildren=True))
+    # MOVEABLE: grab and drag to pan (asked 2026-10-03). CA's value, "Movable XP" (209 uses in
+    # ui3.pack). The Lua's 16ms poll keeps it covering the box; dots, names and carts are its
+    # children, so they go with it and are cut with it.
+    clip.add(E.C("derpy_mr_map_art", w, h, image=WHITE, colour_img=MAP_ART_DIM, interactive=True,
+                 moveable="Movable XP"))
+    E.assign(root, "MR11")
+    return E.layout(root, "derpy: CA's campaign minimap under the Stores panel's Map tab. Generated "
+                    "by tools/gen_mr_ui.py; do not hand-edit.")
+
+
 BUILDERS = (("derpy_mr_stores_panel", build_panel), ("derpy_mr_stores_row", build_row),
             ("derpy_mr_stores_button", build_button), ("derpy_mr_stores_list", build_list),
-            ("derpy_mr_stores_sp", build_sp), ("derpy_mr_stores_bar", build_bar))
+            ("derpy_mr_stores_sp", build_sp), ("derpy_mr_stores_bar", build_bar),
+            ("derpy_mr_stores_mapdot", build_mapdot), ("derpy_mr_stores_mapcart", build_mapcart),
+            ("derpy_mr_stores_mappath", build_mappath), ("derpy_mr_stores_maplabel", build_maplabel),
+            ("derpy_mr_stores_mapart", build_mapart))
 
 
 def goods():
@@ -432,8 +547,18 @@ def header():
     lines += ["}", "DERPY_MR_STORES_ORDERS = {"]
     lines += ['    {key = "%s", use = "%s", label = "%s", what = "%s", turns = %d},' % (k, u, t, w, G.ORDER_TURNS)
               for k, u, _b, _i, t, w, _f in G.ORDERS]
+    lines += ["}", "DERPY_MR_STORES_SUPPLY = {"]
+    lines += ['    {key = "%s", label = "%s", use = "%s", what = "%s"},' % (k, l, u, w)
+              for (k, l, u), w in zip(supply_buttons(), [s[5] for s in G.SUPPLY] + [""])]
     lines.append("}")
     return "\n".join(lines) + "\n"
+
+
+def supply_buttons():
+    """(key, label, use) of the four supply boxes on a Spending tab row: the three supplies, then
+    Supply the capital, which pays nothing itself."""
+    import gen_resource_overhaul as G
+    return [(k, t, u) for k, u, _b, _i, t, _w, _f in G.SUPPLY] + [("standing", "Supply the capital", "")]
 
 
 def stores_lua():
@@ -457,6 +582,21 @@ def flows_header():
     lines += ["}", "DERPY_MR_FLOWS_ORDER = {%d, %d, %d}   -- cost, turns, cooldown"
               % (G.ORDER_COST, G.ORDER_TURNS, G.ORDER_COOLDOWN),
               "DERPY_MR_FLOWS_SELL_RATE = {%s}" % ", ".join("%s = %d" % (u, SELL_RATE[u]) for u in sorted(SELL_RATE))]
+    lines += ["DERPY_MR_FLOWS_EVENT = {%d, %d}   -- gap in turns, a computer's chance in 100"
+              % (G.EVENT_GAP, G.EVENT_AI_PCT), "DERPY_MR_FLOWS_EVENTS = {"]
+    for e in G.EVENTS:
+        b = e["bundle"]
+        lines.append('    %s = {use = "%s", cost = %d, where = "%s", dilemma = "%s", bundle = %s, turns = %d},'
+                     % (e["key"], e["use"], e["cost"], e["where"], G.event_dilemma(e["key"]),
+                        '"%s"' % b[0] if b else "nil", b[3] if b else 0))
+    lines.append("}")
+    lines += ["DERPY_MR_FLOWS_SUPPLY = {"]
+    lines += ['    %s = {use = "%s", bundle = "%s"},' % (k, u, b) for k, u, b, *_r in G.SUPPLY]
+    lines += ["}", "DERPY_MR_FLOWS_SUPPLY_ORDER = {%s}" % ", ".join('"%s"' % s[0] for s in G.SUPPLY),
+              "DERPY_MR_FLOWS_SHIP = {per = %d, turns = %d, ai_cap = %d, stand = %d, ai_on = %d, radius = %d, "
+              'near = %d, spot = %d, info = "%s"}'
+              % (G.SUPPLY_PER, G.SHIP_TURNS, G.SHIP_AI_CAP, G.SHIP_STAND, G.SHIP_AI_ON, G.SHIP_RADIUS,
+                 G.SHIP_NEAR, G.SHIP_SPOT, G.SHIP_INFO)]
     lines += ["DERPY_MR_FLOWS_NO_STORES = {%s}" % ", ".join('"%s"' % t for t in NO_STORES),
               "DERPY_MR_FLOWS_BUNDLES = {"]
     lines += ['    %s = "%s",' % (u, k) for u, k, *_r in bundles()]
@@ -506,7 +646,8 @@ def mct_lua():
                   "o_%s:set_default_value(%d)" % (k, d),
                   'o_%s:set_assigned_section("stores")' % k]
     for (k, label, tip, d), section in ((AI_SWITCH, "stores"), (UPKEEP_SWITCH, "using"),
-                                        (ACTIONS_SWITCH, "using")):
+                                        (ACTIONS_SWITCH, "using"), (EVENTS_SWITCH, "using"),
+                                        (SUPPLY_SWITCH, "using")):
         if k == "upkeep":
             lines += ["", 'm:add_new_section("using", "Using stores")']
         lines += ["",
@@ -591,7 +732,12 @@ def check_layout():
     assert L["head_y"] + 22 <= ly and ly + lh <= L["bulk"][1], "headers, list and buttons overlap"
     assert L["hint"][:2] == L["sub_title"][:2], "the hint has left the sub-title's line"
     assert L["tab_trade"][0] >= L["tab_settlements"][0] + L["tab_settlements"][2], "the tabs overlap"
-    assert L["back"][0] >= L["tab_trade"][0] + L["tab_trade"][2], "back overlaps a tab"
+    tabs = [L[k] for k in ("tab_goods", "tab_settlements", "tab_trade", "tab_spending", "tab_map")]
+    for a, b in zip(tabs, tabs[1:]):
+        assert b[0] >= a[0] + a[2], "the tabs overlap"
+    assert L["back"][0] >= L["tab_map"][0] + L["tab_map"][2], "back overlaps a tab"
+    assert L["map"] == L["list"], "the map draws in the list's box"
+    assert 2 * L["MAP_PAD"] + L["MAP_CART_SIZE"] < min(L["map"][2], L["map"][3]), "the map's pad leaves no room"
     bx, by, bw, bh = L["bulk"]
     assert bx + 4 * bw + 3 * L["BULK_GAP"] <= W - 20, "the four buttons leave the panel's margin"
     assert by >= ly + lh and by + bh <= H, "the buttons are not under the list"
@@ -601,6 +747,10 @@ def check_layout():
     for o in G.ORDERS:
         assert CHAR_W * len(o[4]) <= bw, "order label %r does not fit" % o[4]
     assert CHAR_W * len("Sell surplus") <= bw, "Sell's label does not fit"
+    assert len(supply_buttons()) <= 4, "a Spending row has four box columns"
+    for j in (2, 3, 4, 5):
+        assert L["CHECK"] <= L["VIEWS"]["spending"][j - 1][1], "a supply box is wider than its column"
+    assert L["send"][0] <= L["VIEWS"]["spending"][4][1] + 4, "Show overruns the last column"
     fx, fw, _a = L["VIEWS"]["focus"][4]
     assert L["send"][0] <= fw and L["send"][1] <= L["PITCH"] - 2, "Send here does not fit its column"
     assert CHAR_W * len("Send here") <= L["send"][0], "Send here's label does not fit"
@@ -647,9 +797,10 @@ def check_button_faces():
     """Every text button's longest label fits the drawn face of CA's art, not the component."""
     import gen_resource_overhaul as G
     buttons = [(L["tab_goods"], ("Resources",)), (L["tab_settlements"], ("Settlements",)),
-               (L["tab_trade"], ("Trade",)), (L["back"], ("Back",)),
+               (L["tab_trade"], ("Trade",)), (L["tab_spending"], ("Spending",)), (L["tab_map"], ("Map",)),
+               (L["back"], ("Back",)),
                (L["bulk"], ["Allow all exports", "Stop all imports", "Sell surplus"] + [o[4] for o in G.ORDERS]),
-               ((0, 0) + L["send"], ("Send here",))]
+               ((0, 0) + L["send"], ("Send here", "Show"))]
     for (_x, _y, w, h), labels in buttons:
         fw, fh = face(w, h)
         for t in labels:
@@ -677,10 +828,10 @@ def check_text_fits():
 
 
 def check_xml():
-    """Six files; every GUID unique across them and linked; every image and sound real."""
+    """One file per builder; every GUID unique across them and linked; every image and sound real."""
     import gen_mr_emitter as E
     texts = {rel: t for rel, t in files().items() if rel.endswith(".twui.xml")}
-    assert len(texts) == 6, sorted(texts)
+    assert len(texts) == len(BUILDERS), sorted(texts)
     seen = {}
     for rel, text in texts.items():
         for g in set(re.findall(r'uniqueguid="([^"]+)"', text)):

@@ -28,7 +28,9 @@ local function pool(r, stem)
              maximum_value = function() return r.cap end }
 end
 local function region(key, x, y, cap, held)
-    local r = { key = key, x = x, y = y, cap = cap, held = held or {}, owner = nil, readable = true, level = 1 }
+    local r = { key = key, x = x, y = y, cap = cap, held = held or {}, owner = nil, readable = true, level = 1,
+                adj = {}, siege = false, prov = "prov_" .. key }
+    r.capital = r
     local settlement = {
         is_null_interface = function() return false end,
         cqi = function() return 0 end,
@@ -36,11 +38,21 @@ local function region(key, x, y, cap, held)
         logical_position_y = function() return r.y end,
         primary_slot = function() return { building = function()
             return { building_level = function() return r.level end } end } end,
+        slot_list = function() return list(r.slots or {}) end,
     }
     r.iface = {
         __r = r,
         is_null_interface = function() return false end,
         name = function() return key end,
+        cqi = function() return 900 + #key end,
+        province_name = function() return r.prov end,
+        province = function() return { capital_region = function() return r.capital.iface end } end,
+        garrison_residence = function() return { is_under_siege = function() return r.siege end } end,
+        adjacent_region_list = function()
+            local t = {}
+            for _, o in ipairs(r.adj) do t[#t + 1] = o.iface end
+            return list(t)
+        end,
         is_abandoned = function() return r.owner == nil end,
         has_effect_bundle = function(_, b) return BUNDLES[key] ~= nil and BUNDLES[key][b] ~= nil end,
         owning_faction = function() return r.owner and r.owner.iface or NULL end,
@@ -70,7 +82,8 @@ local function faction(name, opts)
     opts = opts or {}
     NEXT_CQI = NEXT_CQI + 1
     local f = { name = name, human = opts.human or false, rebel = opts.rebel or false,
-                regions = {}, war = {}, partners = {}, has = opts.has or {}, home = nil, cqi = NEXT_CQI }
+                regions = {}, war = {}, partners = {}, has = opts.has or {}, home = nil, cqi = NEXT_CQI,
+                armies = {} }
     f.iface = {
         is_null_interface = function() return false end,
         name = function() return name end,
@@ -78,7 +91,14 @@ local function faction(name, opts)
         is_human = function() return f.human end,
         subculture = function() return opts.sc or "wh_main_sc_emp_empire" end,
         is_rebel = function() return f.rebel end,
-        is_dead = function() return false end,
+        is_dead = function() return f.dead == true end,
+        factions_at_war_with = function()
+            local ks, t = {}, {}
+            for k in pairs(f.war) do ks[#ks + 1] = k end
+            table.sort(ks)
+            for _, k in ipairs(ks) do t[#t + 1] = FACTIONS[k].iface end
+            return list(t)
+        end,
         at_war_with = function(_, o) return f.war[o:name()] == true end,
         region_list = function()
             local t = {}
@@ -93,6 +113,7 @@ local function faction(name, opts)
             return list(t)
         end,
         trade_resource_exists = function(_, res) return f.has[res] == true end,
+        military_force_list = function() return list(f.armies) end,
     }
     FACTIONS[name] = f
     return f
@@ -103,6 +124,10 @@ local function own(f, r, home)
     if home then f.home = r end
 end
 local function war(a, b) a.war[b.name] = true; b.war[a.name] = true end
+local function lose(f, r)
+    for i, x in ipairs(f.regions) do if x == r then table.remove(f.regions, i) break end end
+    r.owner = nil
+end
 local function army(f, r, x, y, stance)
     return {
         has_military_force = function() return true end,
@@ -122,6 +147,9 @@ local function copy(v)
     return t
 end
 local SAVED, MP, TURN = {}, false, 1
+DILEMMAS, DIPLO, RANKS, ROLLS, ROLL = {}, {}, {}, {}, 100   -- ROLL 100: no computer-run event fires
+MARKERS, SPAWN_FAIL = {}, false
+REPAIRED = {}                     -- Restore: the slots cm repaired   -- phase 5: the shipment markers on the map; a spot CA cannot find
 local FIRST, LISTENERS = {}, {}
 cm = {
     saving_game_callbacks = {}, loading_game_callbacks = {},
@@ -132,6 +160,7 @@ cm = {
     repeat_real_callback = function() end,
     get_local_faction_name = function() return "hum" end,
     get_faction = function(_, k) return FACTIONS[k] and FACTIONS[k].iface or false end,
+    get_region = function(_, k) return REGIONS[k] and REGIONS[k].iface or false end,
     get_human_factions = function()
         local t = {}
         for k, f in pairs(FACTIONS) do if f.human then t[#t + 1] = k end end
@@ -159,6 +188,33 @@ cm = {
     treasury_mod = function(_, fk, n)
         if n <= 0 then error("treasury_mod takes a positive amount") end
         TREASURY[fk] = (TREASURY[fk] or 0) + n
+    end,
+    -- phase 6: what the events hand the engine, recorded
+    trigger_dilemma_with_targets = function(_, fcqi, key, tf, _sf, ch, mf, rg, st, cb)
+        if type(cb) ~= "function" then error("trigger_dilemma_with_targets takes its callback") end
+        DILEMMAS[#DILEMMAS + 1] = { fcqi = fcqi, key = key, faction = tf, character = ch, force = mf, region = rg }
+        return true
+    end,
+    apply_dilemma_diplomatic_bonus = function(_, a, b, n) DIPLO[#DIPLO + 1] = { a, b, n } end,
+    add_experience_to_units_commanded_by_character = function(_, lookup, n) RANKS[#RANKS + 1] = { lookup, n } end,
+    random_number = function(_, hi, lo) ROLLS[#ROLLS + 1] = { hi, lo }; return ROLL end,
+    -- phase 5: CA's spot beside a settlement is one step off it; -1, -1 when it finds none
+    find_valid_spawn_location_for_character_from_settlement = function(_, fk, rk, sea, same, dist)
+        if type(fk) ~= "string" or sea ~= false or same ~= true or type(dist) ~= "number" then
+            error("find_valid_spawn_location_for_character_from_settlement: bad arguments")
+        end
+        if SPAWN_FAIL then return -1, -1 end
+        return REGIONS[rk].x + 1, REGIONS[rk].y + 1
+    end,
+    add_interactable_campaign_marker = function(_, id, info, x, y, r, fk, sc)
+        if MARKERS[id] then error("a marker id used twice: " .. id) end
+        if r > 20 then error("a marker radius over 20") end
+        MARKERS[id] = { info = info, x = x, y = y, r = r, f = fk, sc = sc }
+    end,
+    remove_interactable_campaign_marker = function(_, id) MARKERS[id] = nil end,
+    region_slot_instantly_repair_building = function(_, slot)
+        if type(slot) ~= "table" or not slot.has_building then error("repair takes a slot interface") end
+        REPAIRED[#REPAIRED + 1] = slot
     end,
     save_named_value = function(_, k, v) SAVED[k] = copy(v) end,
     load_named_value = function(_, k, d) if SAVED[k] == nil then return d end return copy(SAVED[k]) end,
@@ -200,7 +256,7 @@ dofile("__FLOWS__")
 local F = DERPY_MR_FLOWS
 F.init()                     -- not FIRST: the stores script's first tick wants a UI
 -- THE MOVES ARE MEASURED ALONE: settlements eating provisions (phase 4) has its own section below
-F.rates(); F.state.rates.upkeep = false
+F.rates(); F.state.rates.upkeep = false; F.state.rates.events = false; F.state.rates.supply = false
 
 -- ---- the world for taking ---------------------------------------------------------------
 local hum = faction("hum", { human = true })
@@ -556,6 +612,9 @@ eq(F.rates().actions, true, "every one of them")
 eq(F.rates().raid, 25, "the frozen rates stay frozen")
 opt.upkeep.value = false; eq(F.rates().upkeep, true, "and the new one is frozen too")
 get_mct = nil; F.state.rates = nil; F.rates()
+-- THE EVENTS ARE MEASURED ALONE, in their own section below, as the moves are
+eq(F.rates().events, true, "events on by default"); F.state.rates.events = false
+eq(F.rates().supply, true, "province supplies on by default"); F.state.rates.supply = false
 
 -- ---- phase 4: settlements eat provisions; well-stocked stores give bonuses --------------
 eq(F.rates().upkeep, true, "on by default")
@@ -638,9 +697,14 @@ local p = F.send_plan(sP.iface, "s3", "coal")
 eq(p.from:name(), "s1", "from the fullest other store, never the target's own fuller one")
 eq(p.n, 12, "the most whose arrival fits: 12 sent")
 eq(p.got, 10, "12 less 2 lost (10% rounded up) = 10, the free space")
+TURN = 20
 F.request("sP", "send", "coal", "s3")
-eq(s1.held.coal, 38, "the source loses what was sent"); eq(s3.held.coal, 200, "the target gains what arrived")
-eq(F.book("sP").now.coal.moved_out, 12, "booked out"); eq(F.book("sP").now.coal.moved_in, 10, "and in")
+eq(s1.held.coal, 38, "the source loses what was sent at once"); eq(s3.held.coal, 190, "and nothing arrives yet")
+eq(F.book("sP").now.coal.moved_out, 12, "booked out")
+eq(F.send_plan(sP.iface, "s3", "coal"), nil, "what is on the road fills the free space: nothing more to send")
+TURN = 21; turn_start(sP); eq(s3.held.coal, 190, "a turn on the road")
+TURN = 22; turn_start(sP); eq(s3.held.coal, 200, "it arrives at the second turn start")
+eq(F.book("sP").now.coal.moved_in, 10, "booked in")
 eq(F.send_plan(sP.iface, "s3", "coal"), nil, "a full store: nothing to send")
 local s4 = region("s4", 6300, 0, 200, {}); own(sP, s4)
 s2.held.brass = 38
@@ -712,7 +776,7 @@ eq(SENT[1][2], "dmr1|sell|coal", "multiplayer: sent, not run"); eq(TREASURY.lP, 
 ui_trigger(SENT[1][1], SENT[1][2]); eq(TREASURY.lP, 60, "the trigger runs it")
 F.request("sP", "send", "brass", "s4"); eq(SENT[2][2], "dmr1|send|brass|s4", "a send carries the settlement")
 ui_trigger(lP.cqi, SENT[2][2]); eq(s4.held.brass or 0, 0, "another player's trigger cannot move my resources")
-ui_trigger(sP.cqi, SENT[2][2]); eq(s4.held.brass, 34, "my own does")
+ui_trigger(sP.cqi, SENT[2][2]); eq(s2.held.brass, 0, "my own does: it leaves for the road")
 s2.held.brass = 20
 ui_trigger(sP.cqi, "dmr1|send|brass|s4|extra|parts"); eq(s2.held.brass, 20, "a trigger with extra parts is ignored")
 ui_trigger(sP.cqi, "dmr1|send|brass"); eq(s2.held.brass, 20, "and one with too few")
@@ -727,6 +791,427 @@ l1.held.coal = 190; F.request("lP", "sell", "coal"); eq(TREASURY.lP, 60, "switch
 F.request("lP", "export", "coal"); eq(F.stopped("lP", "export", "coal"), true, "but trade switches still work")
 F.state.rates.actions = true
 eq(#ERRORS, 0, "no script errors in the actions")
+
+-- ---- phase 6: store events --------------------------------------------------------------
+-- A full store offers a choice at its owner's turn start: a player gets a dilemma and the spend
+-- and reward happen when it is answered; a computer-run faction takes the same deal on a roll.
+-- At most one per faction every EVENT_GAP turns.
+F.state.rates.events = true
+local EV = DERPY_MR_FLOWS_EVENTS
+local function answer(f, key, choice)
+    fire("DilemmaChoiceMadeEvent", { dilemma = function() return key end, choice_key = function() return choice end,
+                                     faction = function() return f.iface end })
+end
+local function only(key)
+    eq(#DILEMMAS, 1, "one dilemma"); eq(DILEMMAS[1].key, EV[key].dilemma, "the " .. key .. " dilemma")
+end
+-- FEAST: a settlement holding the cost in provisions
+TURN = 100; DILEMMAS = {}
+local vP = faction("vP", { human = true })
+local v1 = region("v1", 9000, 0, 400, { grain = 70, salt = 40 }); v1.level = 0; own(vP, v1, true)
+turn_start(vP)
+only("feast"); eq(DILEMMAS[1].fcqi, vP.cqi, "offered to its owner"); eq(DILEMMAS[1].region, v1.iface:cqi(), "naming the settlement")
+eq(v1.held.grain, 70, "nothing is spent before the answer")
+answer(vP, EV.feast.dilemma, "FIRST")
+eq(v1.held.grain + v1.held.salt, 110 - EV.feast.cost, "accepting spends the cost in provisions there")
+eq(v1.held.grain, 0, "fullest first")
+eq(BUNDLES.v1[EV.feast.bundle], EV.feast.turns, "and the feast's bundle for its turns")
+eq(F.book("vP").now.grain.spent_out, 70, "booked as spent")
+answer(vP, EV.feast.dilemma, "FIRST"); eq(v1.held.salt, 10, "an answer with nothing pending does nothing")
+-- the gap: conditions hold again, but not for EVENT_GAP turns
+v1.held.grain = 150; DILEMMAS = {}
+TURN = 100 + DERPY_MR_FLOWS_EVENT[1] - 1; turn_start(vP); eq(#DILEMMAS, 0, "no second event inside the gap")
+TURN = 100 + DERPY_MR_FLOWS_EVENT[1]; turn_start(vP); only("feast")
+answer(vP, EV.feast.dilemma, "SECOND")
+eq(v1.held.grain, 150, "declining spends nothing"); eq(BUNDLES.v1[EV.feast.bundle], EV.feast.turns, "and adds nothing new")
+-- the gap counts from the offer, answered or not
+DILEMMAS = {}; TURN = TURN + 1; turn_start(vP); eq(#DILEMMAS, 0, "a declined offer still starts the gap")
+-- SHORT AT THE ANSWER: whatever was spent meanwhile, a short store pays nothing and gets nothing
+TURN = 300; DILEMMAS = {}; turn_start(vP); only("feast")
+v1.held.grain, v1.held.salt = 30, 0; BUNDLES.v1 = {}
+answer(vP, EV.feast.dilemma, "FIRST")
+eq(v1.held.grain, 30, "short at the answer: nothing taken"); eq(BUNDLES.v1[EV.feast.bundle], nil, "nothing given")
+-- SIEGE STORES before anything else, for a settlement under siege
+TURN = 500; DILEMMAS = {}
+local v2 = region("v2", 9100, 0, 400, { grain = 200 }); v2.level = 0; own(vP, v2)
+v1.held.grain = 60; v1.siege = true
+turn_start(vP); only("siege"); eq(DILEMMAS[1].region, v1.iface:cqi(), "the besieged settlement, not the fuller one")
+answer(vP, EV.siege.dilemma, "FIRST")
+eq(v1.held.grain, 60 - EV.siege.cost, "its own provisions pay"); eq(BUNDLES.v1[EV.siege.bundle], EV.siege.turns, "for its turns")
+eq(v2.held.grain, 200, "the other settlement is untouched")
+v1.siege = false
+-- TRIBUTE: luxuries across the realm and a neighbour at peace, named in the dilemma
+local wP = faction("wP", { human = true })
+local nA = faction("nA"); local nB = faction("nB")
+local w1 = region("w1", 9500, 0, 400, { silk = 30 }); w1.level = 0; own(wP, w1, true)
+local w2 = region("w2", 9600, 0, 400, { jade = 30 }); w2.level = 0; own(wP, w2)
+local wa = region("wa", 9700, 0, 400, {}); own(nA, wa, true)
+local wb = region("wb", 9800, 0, 400, {}); own(nB, wb, true)
+w1.adj = { wb, w2 }; w2.adj = { wa, w1 }; war(wP, nA)
+TURN = 600; DILEMMAS = {}; turn_start(wP)
+only("tribute"); eq(DILEMMAS[1].faction, nB.cqi, "the neighbour at peace, not the one at war")
+answer(wP, EV.tribute.dilemma, "FIRST")
+eq(w1.held.silk + w2.held.jade, 60 - EV.tribute.cost, "spent from the realm's luxuries")
+eq(DIPLO[1][1], "wP", "the giver acts"); eq(DIPLO[1][2], "nB", "the neighbour's regard moves")
+eq(DIPLO[1][3] > 0, true, "upwards")
+w1.adj, w2.adj = {}, {}
+-- ARSENAL: war materials across the realm, for the largest army, by its general
+local function host(cqi, units, kind)
+    local mf = { is_armed_citizenry = function() return kind == "garrison" end,
+                 has_general = function() return true end,
+                 force_type = function() return { key = function() return kind or "ARMY" end } end,
+                 command_queue_index = function() return cqi + 1000 end,
+                 unit_list = function() return list(units) end,
+                 general_character = function() return { command_queue_index = function() return cqi end } end }
+    return mf
+end
+local xP = faction("xP", { human = true })
+local x1 = region("x1", 10000, 0, 400, { coal = 30, iron = 30 }); x1.level = 0; own(xP, x1, true)
+xP.armies = { host(71, { 1, 2, 3 }), host(72, { 1, 2, 3, 4, 5, 6, 7, 8 }, "garrison"),
+              host(73, { 1, 2, 3, 4, 5 }), host(74, { 1, 2, 3, 4, 5, 6, 7, 8, 9 }, "CONVOY") }
+TURN = 700; DILEMMAS = {}; turn_start(xP)
+only("arsenal"); eq(DILEMMAS[1].character, 73, "the largest army, never a garrison or a convoy")
+eq(DILEMMAS[1].force, 1073, "with its force")
+answer(xP, EV.arsenal.dilemma, "FIRST")
+eq(x1.held.coal + x1.held.iron, 60 - EV.arsenal.cost, "spent from war materials")
+eq(RANKS[1][1], "character_cqi:73", "its units gain"); eq(RANKS[1][2], 1, "one rank")
+-- NOTHING QUALIFIES: no dilemma, and no gap started
+local yP = faction("yP", { human = true })
+local y1 = region("y1", 11000, 0, 400, { grain = 99, coal = 49 }); y1.level = 0; own(yP, y1, true)
+TURN = 800; DILEMMAS = {}; turn_start(yP); eq(#DILEMMAS, 0, "99 provisions and 49 war materials: nothing")
+y1.held.grain = 100; turn_start(yP); only("feast")
+-- COMPUTER-RUN FACTIONS: no dilemma; the same deal on a roll of EVENT_AI_PCT or under
+local zA = faction("zA")
+local z1 = region("z1", 12000, 0, 400, { grain = 150 }); z1.level = 0; own(zA, z1, true)
+TURN = 900; DILEMMAS = {}; ROLL = DERPY_MR_FLOWS_EVENT[2] + 1; turn_start(zA)
+eq(#DILEMMAS, 0, "no dilemma for a computer"); eq(z1.held.grain, 150, "and a failed roll takes nothing")
+ROLL = DERPY_MR_FLOWS_EVENT[2]; turn_start(zA)
+eq(#DILEMMAS, 0, "still no dilemma"); eq(z1.held.grain, 150 - EV.feast.cost, "a winning roll spends")
+eq(BUNDLES.z1[EV.feast.bundle], EV.feast.turns, "and rewards")
+z1.held.grain = 150; turn_start(zA); eq(z1.held.grain, 150, "and starts the gap")
+eq(F.state.factions.zA, nil, "with no ledger: only a player's panel reads it")
+F.state.rates.ai = false; TURN = 2000; turn_start(zA); eq(z1.held.grain, 150, "the AI switch stops it")
+F.state.rates.ai = true
+-- THE SWITCH, and the save
+F.state.rates.events = false; TURN = 3000; DILEMMAS = {}; turn_start(yP); eq(#DILEMMAS, 0, "switched off: no events")
+F.state.rates.events = true; turn_start(yP); only("feast")
+cm.saving_game_callbacks[1]({})
+eq(SAVED.derpy_mr_flows.pending.yP.feast.key, "feast", "an unanswered offer is kept in the save")
+-- another mod's dilemma is not ours
+answer(yP, "someone_elses_dilemma", "FIRST"); eq(y1.held.grain, 100, "another dilemma's answer moves nothing")
+ROLL = 100
+F.state.rates.events = false
+eq(#ERRORS, 0, "no script errors in the events: " .. table.concat(ERRORS, "; "))
+
+-- ---- phase 5: province supplies and shipments -------------------------------------------
+-- Three switches per province, paid each turn from the province capital's store; Supply the
+-- capital ships the short use there; Send here is a two-turn shipment drawn as a map marker that
+-- an army at war with its owner can seize.
+F.state.rates.supply = true
+local SP, SH = DERPY_MR_FLOWS_SUPPLY, DERPY_MR_FLOWS_SHIP
+eq(F.rates().ships, 3, "three shipments on the road by default")
+local function inprov(pk, cap, ...)
+    for _, r in ipairs({ cap, ... }) do r.prov, r.capital = pk, cap end
+end
+local function ships_of(k)
+    local n = 0
+    for _, s in ipairs(F.state.ships or {}) do if s.f == k then n = n + 1 end end
+    return n
+end
+local function last_ship() return F.state.ships[#F.state.ships] end
+local function field(f, x, y, cqi, garrison)
+    return { is_armed_citizenry = function() return garrison == true end,
+             has_general = function() return true end,
+             force_type = function() return { key = function() return "ARMY" end } end,
+             command_queue_index = function() return cqi + 1000 end,
+             unit_list = function() return list({ 1 }) end,
+             general_character = function() return {
+                 command_queue_index = function() return cqi end,
+                 logical_position_x = function() return x end,
+                 logical_position_y = function() return y end } end }
+end
+local function enter(id, ch)
+    fire("AreaEntered", { area_key = function() return id end,
+                          family_member = function() return { character = function() return ch end } end })
+end
+local function walker(f, armed)
+    return { is_null_interface = function() return false end, faction = function() return f.iface end,
+             has_military_force = function() return armed end }
+end
+local function bundled(r, k) return BUNDLES[r.key] ~= nil and BUNDLES[r.key][SP[k].bundle] ~= nil end
+
+-- THE SWITCHES: 2 a turn for each settlement you hold in the province, from the capital only
+TURN = 4000
+local pP = faction("pP", { human = true })
+local pc = region("pc", 20000, 0, 400, { timber = 30, marble = 4 }); pc.level = 0
+local po = region("po", 20010, 0, 400, { timber = 100 }); po.level = 0
+local px = region("px", 20020, 0, 400, {}); px.level = 0
+local eP = faction("eP")
+own(pP, pc, true); own(pP, po); own(eP, px, true)
+inprov("prov_p", pc, po, px)
+eq(F.supply_state(pP.iface, "po"), nil, "only the province capital carries the switches")
+eq(table.concat(F.capitals(pP.iface), ","), "pc", "the Spending tab lists the capital, not the other settlement")
+local st5 = F.supply_state(pP.iface, "pc")
+eq(st5.cost, SH.per * 2, "2 for each of the 2 settlements you hold there, not the one you do not")
+eq(st5.on.materials, nil, "every switch starts off"); eq(st5.on.standing, nil, "and so does Supply the capital")
+-- WHAT EACH SUPPLY PAYS WITH (asked 2026-10-03): the good the payment takes first - the fullest,
+-- a tie by resource key, as F.draw_realm takes them - for the Spending tab's icon
+eq(st5.pay.building.stem, "timber", "Materials pays with the fullest building material")
+eq(st5.pay.building.n, 30, "and says how much of it there is")
+eq(st5.pay.mounts.n, 0, "a use the capital holds none of still names a good")
+eq(type(st5.pay.mounts.stem), "string", "so the tab has an icon to grey")
+pc.held.marble = 30
+eq(F.supply_state(pP.iface, "pc").pay.building.stem, "marble", "a tie goes by resource key, as the payment takes it")
+pc.held.marble = 4
+F.request("pP", "supply", "pc", "materials")
+eq(F.supply_state(pP.iface, "pc").on.materials, true, "a click turns it on")
+eq(pc.held.timber, 30, "and takes nothing before turn start")
+turn_start(pP)
+eq(pc.held.timber, 26, "paid from the capital's fullest building material")
+eq(pc.held.marble, 4, "only as far as needed"); eq(po.held.timber, 100, "never from another settlement")
+eq(bundled(pc, "materials"), true, "the capital gets Materials on hand")
+eq(BUNDLES.pc[SP.materials.bundle], F.BUNDLE_TURNS, "renewed each turn, like the stores' other bonuses")
+eq(bundled(po, "materials"), true, "so does every settlement you hold in the province")
+eq(bundled(px, "materials"), false, "not one you do not hold")
+eq(bundled(pc, "stable"), false, "and no switch that is off")
+eq(F.book("pP").now.timber.spent_out, 4, "booked as spent")
+-- SHORT: nothing taken, the switch turns itself off, and the turn is kept for the tooltip
+pc.held.timber, pc.held.marble = 3, 0
+TURN = 4001; turn_start(pP)
+eq(pc.held.timber, 3, "short: nothing taken")
+st5 = F.supply_state(pP.iface, "pc")
+eq(st5.on.materials, nil, "the switch turns itself off"); eq(st5.short.materials, 4001, "and says when")
+eq(bundled(pc, "materials"), false, "the bundle goes at once"); eq(bundled(po, "materials"), false, "everywhere")
+F.request("pP", "supply", "pc", "materials")
+eq(F.supply_state(pP.iface, "pc").short.materials, nil, "switching it on again clears the note")
+F.request("pP", "supply", "pc", "materials")
+eq(F.supply_state(pP.iface, "pc").on.materials, nil, "a second click turns it off")
+-- each switch pays its own use
+pc.held = { timber = 10, warhorses = 10, iron = 10 }
+for _, k in ipairs({ "materials", "stable", "arms" }) do F.request("pP", "supply", "pc", k) end
+TURN = 4002; turn_start(pP)
+eq(pc.held.timber, 6, "Materials on hand from building materials")
+eq(pc.held.warhorses, 6, "Stable stocked from mounts"); eq(pc.held.iron, 6, "Arms stocked from war materials")
+eq(bundled(po, "stable") and bundled(po, "arms"), true, "all three on every settlement")
+-- refusals
+F.request("pP", "supply", "po", "arms"); eq(F.state.supply.pP.prov_p.arms, true, "not a capital: changes nothing")
+F.request("pP", "supply", "pc", "nonsense"); eq(#ERRORS, 0, "an unknown switch is ignored")
+F.request("pP", "supply", "px", "arms"); eq(F.state.supply.pP.prov_p.arms, true, "a capital that is not yours: nothing")
+local ex = region("ex", 20030, 0, 400, { iron = 50 }); own(eP, ex)
+eq(F.supply_state(eP.iface, "ex") ~= nil, true, "the computer's own capital has switches")
+F.dispatch("eP", { "supply", "ex", "arms" }); eq(F.state.supply.eP, nil, "but a computer-run faction has no panel")
+-- no stores to use (daemons, the undead, Beastmen): no switches at all
+local kP = faction("kP", { human = true, sc = "wh3_main_sc_kho_khorne" })
+local k1 = region("k1", 20040, 0, 400, { timber = 100 }); own(kP, k1, true)
+eq(F.supply_state(kP.iface, "k1"), nil, "Khorne keeps no stores to supply from: no switches")
+eq(#F.capitals(kP.iface), 0, "and no Spending tab rows")
+F.request("kP", "supply", "k1", "materials"); eq(F.state.supply.kP, nil, "and a click changes nothing")
+-- the capital lost: nothing paid, the bundles go
+lose(pP, pc); own(eP, pc)
+po.held.iron = 50
+TURN = 4003; turn_start(pP)
+eq(bundled(po, "arms"), false, "the capital lost: no bundle left in the province")
+eq(po.held.iron, 50, "and nothing paid from elsewhere")
+lose(eP, pc); own(pP, pc)
+F.request("pP", "supply", "pc", "stable"); F.request("pP", "supply", "pc", "arms")
+
+-- SUPPLY THE CAPITAL: under five turns of a switched-on cost, the fullest other settlement in the
+-- province ships enough for ten
+pc.held = { timber = 15 }; po.held = { timber = 100, marble = 50 }
+F.request("pP", "supply", "pc", "standing")
+TURN = 4010; turn_start(pP)
+local s5 = last_ship()
+eq(ships_of("pP"), 1, "a shipment leaves"); eq(s5.from, "po", "from the other settlement")
+eq(s5.to, "pc", "to the capital"); eq(s5.stem, "timber", "its fullest building material")
+eq(s5.due, 4010 + SH.turns, "due two turns on, for the panel")
+eq(po.held.timber, 75, "25 sent at once: ten turns of 4, less the 15 held")
+eq(s5.n, 22, "22 on the road: a tenth of 25, rounded up, is lost")
+eq(pc.held.timber, 11, "the capital still pays this turn")
+eq(MARKERS[s5.id].info, SH.info, "drawn as a shipment marker"); eq(MARKERS[s5.id].r, SH.radius, "of its radius")
+eq(MARKERS[s5.id].x, po.x + 1, "beside the sender, where CA finds a spot")
+eq(MARKERS[s5.id].f, "", "any faction can walk into it")
+TURN = 4011; turn_start(pP)
+eq(ships_of("pP"), 1, "one already on the road for it: no second")
+eq(MARKERS[s5.id].x, pc.x + 1, "the second turn: beside the capital")
+eq(s5.x, pc.x + 1, "and the shipment is where its marker is"); eq(pc.held.timber, 7, "paid")
+pc.held.timber = 2
+TURN = 4012; turn_start(pP)
+eq(ships_of("pP"), 0, "arrived"); eq(MARKERS[s5.id], nil, "its marker gone")
+eq(pc.held.timber, 2 + 22 - 4, "it arrives before the turn's payment, which 2 alone could not make")
+eq(F.supply_state(pP.iface, "pc").on.materials, true, "so the supply stays on")
+eq(F.book("pP").now.timber.moved_in, 22, "booked as moved in")
+-- the order is the player's: off, nothing ships
+pc.held.timber = 15; F.request("pP", "supply", "pc", "standing")
+TURN = 4020; turn_start(pP); eq(ships_of("pP"), 0, "Supply the capital off: nothing ships")
+-- the fullest of the OTHER settlements, never the capital's own store however full it is
+pc.held = { timber = 15 }; po.held = { marble = 10 }
+F.request("pP", "supply", "pc", "standing")
+TURN = 4030; turn_start(pP)
+eq(last_ship().from, "po", "never from the capital itself"); eq(last_ship().stem, "marble", "the other's marble")
+F.request("pP", "supply", "pc", "standing")
+
+-- THE CAP: at most F.rates().ships on the road for a player
+local cP = faction("cP", { human = true })
+local c1 = region("c1", 21000, 0, 400, { coal = 10, iron = 10, brass = 10 }); own(cP, c1, true)
+local c2 = region("c2", 21010, 0, 400, {}); own(cP, c2)
+F.state.rates.ships = 2
+TURN = 4100
+F.request("cP", "send", "coal", "c2"); F.request("cP", "send", "iron", "c2")
+eq(ships_of("cP"), 2, "two on the road")
+eq(F.send_plan(cP.iface, "c2", "brass").busy, true, "the third is refused, and the plan says why")
+F.request("cP", "send", "brass", "c2"); eq(c1.held.brass, 10, "and nothing leaves")
+eq(#F.ships_to("cP", "c2", "coal"), 1, "the store can list what is coming to it")
+F.state.rates.ships = 3
+
+-- SEIZED AT TURN START: an army of a faction at war with the owner, within reach of the marker
+local gP = faction("gP", { human = true })
+local g1 = region("g1", 22000, 0, 400, { coal = 50 }); own(gP, g1, true)
+local g2 = region("g2", 22100, 0, 400, {}); own(gP, g2)
+local rA = faction("rA"); local rr = region("rr", 22200, 0, 400, {}); own(rA, rr, true)
+local fA = faction("fA")
+war(gP, rA)
+TURN = 5000; F.request("gP", "send", "coal", "g2")
+local gs = last_ship()
+fA.armies = { field(fA, gs.x, gs.y, 501) }
+rA.armies = { field(rA, gs.x + SH.near + 1, gs.y, 502), field(rA, gs.x, gs.y, 503, true) }
+TURN = 5001; turn_start(gP)
+eq(ships_of("gP"), 1, "nobody at war in reach, and a garrison does not ride out: on its way")
+rA.armies = { field(rA, gs.x, gs.y + SH.near, 504) }
+TURN = 5002; turn_start(gP)
+eq(ships_of("gP"), 0, "seized"); eq(g2.held.coal or 0, 0, "it never arrives")
+eq(rr.held.coal, 45, "the captor's nearest settlement gets the cargo")
+eq(MARKERS[gs.id], nil, "the marker goes"); eq(F.state.factions.rA, nil, "a computer keeps no ledger")
+rA.armies = {}
+-- SEIZED BY WALKING IN: AreaEntered, an army only, at war only
+g1.held.coal = 50; TURN = 5100; F.request("gP", "send", "coal", "g2"); gs = last_ship()
+enter(gs.id, walker(gP, true)); eq(ships_of("gP"), 1, "its owner's own army passes")
+enter(gs.id, walker(fA, true)); eq(ships_of("gP"), 1, "a faction at peace passes")
+enter(gs.id, walker(rA, false)); eq(ships_of("gP"), 1, "a hero alone does not seize")
+enter("someone_elses_marker", walker(rA, true)); eq(ships_of("gP"), 1, "another marker is not ours")
+enter(gs.id, walker(rA, true)); eq(ships_of("gP"), 0, "an army at war seizes it")
+eq(rr.held.coal, 90, "into the captor's settlement"); eq(MARKERS[gs.id], nil, "and the marker goes")
+-- a captor with no settlement destroys it
+local hB = faction("hB"); war(gP, hB)
+g1.held.coal = 50; F.request("gP", "send", "coal", "g2"); gs = last_ship()
+local coal_before = g1.held.coal + (g2.held.coal or 0) + rr.held.coal
+enter(gs.id, walker(hB, true)); eq(ships_of("gP"), 0, "a horde seizes it")
+eq(g1.held.coal + (g2.held.coal or 0) + rr.held.coal, coal_before, "and it is lost: no refund, nobody else gets it")
+eq(#ERRORS, 0, "no error from a captor with no settlement")
+-- THE DESTINATION LOST: the owner's settlement nearest it takes the cargo
+g1.held.coal = 50; TURN = 5200; F.request("gP", "send", "coal", "g2")
+lose(gP, g2)
+TURN = 5202; turn_start(gP)
+eq(g1.held.coal, 45, "back to the nearest settlement still held"); own(gP, g2)
+-- CA FINDS NO SPOT: the settlement's own position
+SPAWN_FAIL = true; g1.held.coal = 50; TURN = 5300; F.request("gP", "send", "coal", "g2"); gs = last_ship()
+eq(MARKERS[gs.id].x, g1.x, "on the settlement itself"); SPAWN_FAIL = false
+-- A DEAD OWNER: its shipment is cleared at a player's turn start
+local dP = faction("dP", { human = true })
+local d5 = region("d5", 24000, 0, 400, { coal = 50 }); own(dP, d5, true)
+local d6 = region("d6", 24010, 0, 400, {}); own(dP, d6)
+F.request("dP", "send", "coal", "d6"); local ds = last_ship()
+dP.dead = true; dP.human = false
+TURN = 5302; turn_start(gP)
+eq(ships_of("dP"), 0, "a dead faction's shipment is cleared"); eq(MARKERS[ds.id], nil, "with its marker")
+
+-- COMPUTER-RUN FACTIONS: a switch goes on with ten turns of its cost in the capital, Supply the
+-- capital always runs, and at most 1 shipment is on the road
+local qA = faction("qA")
+local q1 = region("q1", 23000, 0, 400, { timber = 39 }); q1.level = 0
+local q2 = region("q2", 23010, 0, 400, { timber = 200, warhorses = 200 }); q2.level = 0
+own(qA, q1, true); own(qA, q2); inprov("prov_q", q1, q2)
+TURN = 6000; turn_start(qA)
+eq(q1.held.timber, 39, "under ten turns of 4: not switched on")
+q1.held.timber, q1.held.warhorses = SH.ai_on * 4, SH.ai_on * 4
+TURN = 6001; turn_start(qA)
+eq(q1.held.timber, SH.ai_on * 4 - 4, "ten turns of it: switched on and paid")
+eq(bundled(q2, "materials"), true, "on every settlement it holds there")
+q1.held.timber, q1.held.warhorses = 15, 15
+TURN = 6002; turn_start(qA)
+eq(ships_of("qA"), 1, "short of five turns: one shipment, and only one on the road")
+eq(last_ship().stem, "timber", "the first short use in switch order")
+F.state.rates.ai = false; q1.held.timber = 100
+TURN = 6003; turn_start(qA); eq(q1.held.timber, 100, "the switch for other factions stops it")
+F.state.rates.ai = true
+
+-- MULTIPLAYER: a switch is a UITrigger like every other action
+MP = true; SENT = {}
+F.request("pP", "supply", "pc", "arms")
+eq(SENT[1][2], "dmr1|supply|pc|arms", "sent, not run")
+MP = false; SENT = {}
+-- THE MCT SWITCH: off, nothing toggles and nothing is paid
+F.state.rates.supply = false
+local before5 = F.supply_state(pP.iface, "pc").on.arms
+F.request("pP", "supply", "pc", "arms"); eq(F.supply_state(pP.iface, "pc").on.arms, before5, "off: no toggle")
+pc.held.iron = 50; TURN = 7000; turn_start(pP); eq(pc.held.iron, 50, "and nothing paid")
+F.state.rates.supply = true
+-- THE SAVE
+g1.held.coal = 50; F.request("gP", "send", "coal", "g2")
+cm.saving_game_callbacks[1]({})
+eq(SAVED.derpy_mr_flows.supply.pP.prov_p.materials, true, "the switches are kept in the save")
+eq(SAVED.derpy_mr_flows.ships[#SAVED.derpy_mr_flows.ships].f, "gP", "and the shipments on the road")
+F.state.rates.supply = false
+eq(#ERRORS, 0, "no script errors in phase 5: " .. table.concat(ERRORS, "; "))
+
+-- ---- phase 6, part 2: Restore on capture ------------------------------------------------
+-- Occupying a settlement whose captured stores hold the cost in building materials offers a
+-- choice: spend them to repair every building there, with a spell of public order. A dilemma,
+-- not an occupation option (TRADE_RESOURCES.md 27).
+F.state.rates.events = true
+local RS = DERPY_MR_FLOWS_EVENTS.restore
+local function slot() return { has_building = function() return true end } end
+local oP = faction("oPr", { human = true })
+local o0 = region("o0", 30000, 0, 400, {}); own(oP, o0, true)
+local oV = faction("oVr")
+local ot = region("ot", 30010, 0, 400, { timber = 70, marble = 40, coal = 50 }); own(oV, ot, true)
+ot.slots = { slot(), slot(), slot() }
+war(oP, oV)
+TURN = 8000; DILEMMAS = {}; REPAIRED = {}
+lose(oV, ot); own(oP, ot)                             -- the engine hands it over, then the event fires
+decide("occupation_decision_occupy", ot, oP, "oVr")
+eq(#DILEMMAS, 1, "occupying a settlement with the cost in building materials offers Restore")
+eq(DILEMMAS[1].key, RS.dilemma, "the Restore dilemma"); eq(DILEMMAS[1].region, ot.iface:cqi(), "naming the settlement")
+eq(DILEMMAS[1].fcqi, oP.cqi, "to the one who took it"); eq(ot.held.timber, 70, "nothing spent before the answer")
+answer(oP, RS.dilemma, "FIRST")
+eq(ot.held.timber + ot.held.marble, 110 - RS.cost, "accepting spends the cost from that settlement's building materials")
+eq(ot.held.coal, 50, "and nothing else")
+eq(#REPAIRED, 3, "every building there is repaired")
+eq(BUNDLES.ot[RS.bundle], RS.turns, "and its public order rises for a spell")
+-- declined: nothing
+ot.held.timber, ot.held.marble = 100, 0; REPAIRED = {}; BUNDLES.ot = {}; DILEMMAS = {}
+decide("occupation_decision_occupy", ot, oP, "oVr"); answer(oP, RS.dilemma, "SECOND")
+eq(ot.held.timber, 100, "declining spends nothing"); eq(#REPAIRED, 0, "and repairs nothing")
+-- short: no offer
+ot.held.timber = RS.cost - 1; DILEMMAS = {}
+decide("occupation_decision_occupy", ot, oP, "oVr"); eq(#DILEMMAS, 0, "short of the cost: no offer")
+-- only an occupation: a sack or a raze takes its share and offers nothing
+ot.held.timber = 200; DILEMMAS = {}
+decide("occupation_decision_sack", ot, oP, "oVr"); eq(#DILEMMAS, 0, "a sack offers no Restore")
+-- a pending store event is not lost to a Restore offered over it
+ot.held.timber = 200; DILEMMAS = {}
+F.state.pending = { oPr = { feast = { key = "feast", region = "o0" } } }
+o0.held.grain = 150
+decide("occupation_decision_occupy", ot, oP, "oVr")
+answer(oP, EV.feast.dilemma, "FIRST"); eq(o0.held.grain, 150 - EV.feast.cost, "the feast offered before still pays out")
+answer(oP, RS.dilemma, "FIRST"); eq(ot.held.timber, 200 - RS.cost, "and so does the Restore")
+-- A SAVE FROM BEFORE: one pending offer per faction, not one per event
+F.state.pending = { oPr = { key = "feast", region = "o0" } }; o0.held.grain = 150
+answer(oP, EV.feast.dilemma, "FIRST"); eq(o0.held.grain, 150 - EV.feast.cost, "an old save's offer still pays out")
+-- computer-run factions: the same deal on the events' roll, under the switch
+local oA = faction("oAr"); local oa = region("oa", 30020, 0, 400, {}); own(oA, oa, true)
+lose(oP, ot); own(oA, ot); ot.held.timber = 200; DILEMMAS = {}; REPAIRED = {}
+ROLL = DERPY_MR_FLOWS_EVENT[2] + 1; decide("occupation_decision_occupy", ot, oA, "oPr")
+eq(ot.held.timber, 200, "a computer's failed roll spends nothing")
+ROLL = DERPY_MR_FLOWS_EVENT[2]; decide("occupation_decision_occupy", ot, oA, "oPr")
+eq(#DILEMMAS, 0, "no dilemma for a computer"); eq(ot.held.timber, 200 - RS.cost, "a winning roll spends")
+eq(#REPAIRED, 3, "and repairs")
+F.state.rates.ai = false; ot.held.timber = 200
+decide("occupation_decision_occupy", ot, oA, "oPr"); eq(ot.held.timber, 200, "the switch for other factions stops it")
+F.state.rates.ai = true; ROLL = 100
+-- the events switch
+lose(oA, ot); own(oP, ot); F.state.rates.events = false; DILEMMAS = {}
+decide("occupation_decision_occupy", ot, oP, "oVr"); eq(#DILEMMAS, 0, "store events off: no Restore")
+eq(#ERRORS, 0, "no script errors in Restore: " .. table.concat(ERRORS, "; "))
 
 -- ---- the run-cost counter (Task 7 reads it) --------------------------------------------
 local counters = F.cost

@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-03
+
+- Province supplies: Materials on hand, Stable stocked, Arms stocked, paid each turn from the capital.
+- Supply the capital: a standing order per province, off by default.
+- Send here is now a shipment: two turns on the road, a cart on the map, can be seized by enemy armies.
+- Store events: Feast, Siege Stores, Tribute, Arsenal.
+- Restore on capture: spend building materials to repair a captured settlement.
+- Resource Vault: a Spending tab with the province supplies, shipments on the road and the orders.
+- Spending tab: each supply shows the resource it pays with, greyed when the capital cannot pay.
+- Resource Vault: a Map tab with CA's campaign map, settlement markers and convoys; click to fly there.
+- Map tab: drag to move the map.
+- Fixed: Spending and Map tab buttons drawn over the title.
+- Fixed: settlements placed too far south on the Map tab.
+- Fixed: the Map tab could not be dragged.
+
 ## 2026-10-02
 
 - Fixed: in a campaign started before this update, eating, bonuses and panel actions stayed off.

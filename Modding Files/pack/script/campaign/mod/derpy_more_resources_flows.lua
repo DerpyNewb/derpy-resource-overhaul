@@ -5,9 +5,12 @@ DERPY_MR_FLOWS_DEFAULTS = {
     sack = 50,
     raze = 50,
     trade = 5,
+    ships = 3,
     ai = true,
     upkeep = true,
     actions = true,
+    events = true,
+    supply = true,
 }
 DERPY_MR_FLOWS_KIND = {
     eat = "eaten",
@@ -82,6 +85,21 @@ DERPY_MR_FLOWS_ORDERS = {
 }
 DERPY_MR_FLOWS_ORDER = {200, 5, 10}   -- cost, turns, cooldown
 DERPY_MR_FLOWS_SELL_RATE = {building = 2, luxuries = 5, mounts = 4, provisions = 1, war = 3}
+DERPY_MR_FLOWS_EVENT = {10, 20}   -- gap in turns, a computer's chance in 100
+DERPY_MR_FLOWS_EVENTS = {
+    feast = {use = "provisions", cost = 100, where = "region", dilemma = "derpy_mr_dil_feast", bundle = "derpy_mr_event_feast", turns = 5},
+    siege = {use = "provisions", cost = 60, where = "region", dilemma = "derpy_mr_dil_siege", bundle = "derpy_mr_event_siege", turns = 2},
+    tribute = {use = "luxuries", cost = 50, where = "realm", dilemma = "derpy_mr_dil_tribute", bundle = nil, turns = 0},
+    arsenal = {use = "war", cost = 50, where = "realm", dilemma = "derpy_mr_dil_arsenal", bundle = nil, turns = 0},
+    restore = {use = "building", cost = 100, where = "region", dilemma = "derpy_mr_dil_restore", bundle = "derpy_mr_event_restore", turns = 5},
+}
+DERPY_MR_FLOWS_SUPPLY = {
+    materials = {use = "building", bundle = "derpy_mr_supply_materials"},
+    stable = {use = "mounts", bundle = "derpy_mr_supply_stable"},
+    arms = {use = "war", bundle = "derpy_mr_supply_arms"},
+}
+DERPY_MR_FLOWS_SUPPLY_ORDER = {"materials", "stable", "arms"}
+DERPY_MR_FLOWS_SHIP = {per = 2, turns = 2, ai_cap = 1, stand = 5, ai_on = 10, radius = 2, near = 3, spot = 3, info = "derpy_mr_shipment"}
 DERPY_MR_FLOWS_NO_STORES = {"dae", "kho", "nur", "sla", "tze", "tmb", "nag", "bst"}
 DERPY_MR_FLOWS_BUNDLES = {
     provisions = "derpy_mr_well_fed",
@@ -97,8 +115,9 @@ DERPY_MR_FLOWS_BUNDLES = {
 -- DERPY_MR_FLOWS_KIND (the factor each move books to) and DERPY_MR_FLOWS_GOODS (the 54 goods) in
 -- front of this source. Edit this file, then run py tools/gen_mr_ui.py.
 --
--- MULTIPLAYER: every change here happens inside a model event (turn start, occupation decision),
--- none from a click, so every machine runs the same moves.
+-- MULTIPLAYER: every change here happens inside a model event (turn start, occupation decision,
+-- an army walking into a shipment's marker) or comes from a click through F.request, a UITrigger
+-- every machine runs alike.
 
 DERPY_MR_FLOWS = DERPY_MR_FLOWS or {}
 local F = DERPY_MR_FLOWS
@@ -671,12 +690,13 @@ end
 function F.lost(n) return math.ceil(n * F.SEND_LOSS_PCT / 100) end
 
 -- SEND HERE: the fullest OTHER store of the resource sends the most whose arrival, after the
--- loss on the road, still fits here. nil when nothing would arrive.
+-- loss on the road, still fits here beside what is already on the road to it. nil when nothing
+-- would arrive; busy = true when the faction has its full number of shipments on the road.
 function F.send_plan(faction, rkey, stem)
     if not F.GOOD[stem] then return nil end
     local to = F.owned(faction, rkey)
     if not to then return nil end
-    local free = F.free(to, stem)
+    local free = F.free(to, stem) - F.incoming(faction:name(), rkey, stem)
     if free <= 0 then return nil end
     local from, fh, fk = nil, 0, nil
     local rl = faction:region_list()
@@ -694,15 +714,15 @@ function F.send_plan(faction, rkey, stem)
     while n > 0 and n - F.lost(n) > free do n = n - 1 end
     local got = n - F.lost(n)
     if got <= 0 then return nil end
-    return { from = from, to = to, n = n, got = got }
+    return { from = from, to = to, n = n, got = got,
+             busy = F.ship_count(faction:name()) >= F.ship_cap(faction) or nil }
 end
 
+-- A SHIPMENT, since phase 5: it leaves now and arrives in two turns, if nobody seizes it.
 function F.send_here(faction, stem, rkey)
     local p = F.send_plan(faction, rkey, stem)
     if not p then return end
-    local fkey = faction:name()
-    F.move(p.from, nil, stem, p.n, KIND.move, fkey, nil)
-    F.move(nil, p.to, stem, p.got, KIND.move, nil, fkey)
+    F.ship(faction, p.from, p.to, stem, p.n)       -- F.ship refuses past the number on the road
 end
 
 -- ORDERS: a faction bundle bought with ORDER_COST of one use, drawn realm-wide; then a wait,
@@ -769,7 +789,7 @@ end
 
 -- THE ONE DOOR. parts = {action, args...}: a trade switch (export|import, stem), or an action
 -- with exactly its own count of parts. Humans only; the actions only with the MCT switch on.
-F.ACTIONS = { send = 3, order = 2, sell = 2 }
+F.ACTIONS = { send = 3, order = 2, sell = 2, supply = 3 }
 function F.dispatch(fkey, parts)
     if not F.is_human(fkey) then return end
     local a = parts[1]
@@ -777,9 +797,11 @@ function F.dispatch(fkey, parts)
         if #parts == 2 then F.apply(fkey, a, parts[2]) end
         return
     end
-    if F.ACTIONS[a] ~= #parts or not F.rates().actions then return end
+    if F.ACTIONS[a] ~= #parts then return end
+    if not F.rates()[a == "supply" and "supply" or "actions"] then return end
     local f = cm:get_faction(fkey)
     if a == "send" then F.send_here(f, parts[2], parts[3])
+    elseif a == "supply" then F.toggle_supply(f, parts[2], parts[3])
     elseif a == "order" then F.order(f, parts[2])
     else F.sell(f, parts[2]) end
 end
@@ -805,6 +827,576 @@ function F.parse(id)
         parts[#parts + 1] = p
     end
     return parts
+end
+
+-- ---- store events (spending spec section 4, phase 6) --------------------------------------
+-- A full store offers a choice at its owner's turn start. A player gets the event's DB dilemma
+-- (FIRST spends and rewards, SECOND declines) and the spend happens here when it is answered: a
+-- dilemma payload cannot charge a REGION pool. A computer-run faction takes the same deal on a
+-- roll. At most one event per faction every EVENT_GAP turns, counted from the offer.
+F.EVENT_GAP, F.EVENT_AI_PCT = DERPY_MR_FLOWS_EVENT[1], DERPY_MR_FLOWS_EVENT[2]
+F.EVENT_ORDER = { "siege", "feast", "arsenal", "tribute" }   -- a siege cannot wait; the rest take turns
+F.DIPLO_BONUS = 3                                            -- CA's change type, -6..+6
+F.EVENT_BY_DILEMMA = {}
+for k, e in pairs(DERPY_MR_FLOWS_EVENTS) do F.EVENT_BY_DILEMMA[e.dilemma] = k end
+
+-- The settlement holding the most of a use, at least `cost`; ties by key. `siege`: only a
+-- settlement under siege counts.
+function F.event_region(stocks, use, cost, siege)
+    local best, bh = nil, nil
+    for _, s in ipairs(stocks) do
+        local h = F.use_total(s.held, use)
+        if h >= cost and (not siege or s.region:garrison_residence():is_under_siege())
+                and (bh == nil or h > bh or (h == bh and s.region:name() < best:name())) then
+            best, bh = s.region, h
+        end
+    end
+    return best
+end
+
+-- A neighbour at peace: the owner of a region next to one of ours, not us, not rebels, not at
+-- war with us. The first by key, so every machine names the same one.
+function F.event_neighbour(faction)
+    local best = nil
+    local rl = faction:region_list()
+    for i = 0, rl:num_items() - 1 do
+        local adj = rl:item_at(i):adjacent_region_list()
+        for j = 0, adj:num_items() - 1 do
+            local o = adj:item_at(j):owning_faction()
+            if not o:is_null_interface() and o:name() ~= faction:name() and not o:is_rebel()
+                    and not faction:at_war_with(o) and (best == nil or o:name() < best:name()) then
+                best = o
+            end
+        end
+    end
+    return best
+end
+
+-- The largest army in the field: never a garrison or a convoy; ties by the general's cqi.
+function F.event_army(faction)
+    local best, bn, bc = nil, nil, nil
+    local list = faction:military_force_list()
+    for i = 0, list:num_items() - 1 do
+        local mf = list:item_at(i)
+        if not mf:is_armed_citizenry() and mf:has_general() and mf:force_type():key() ~= "CONVOY" then
+            local n, c = mf:unit_list():num_items(), mf:general_character():command_queue_index()
+            if bn == nil or n > bn or (n == bn and c < bc) then best, bn, bc = mf, n, c end
+        end
+    end
+    return best
+end
+
+-- What `key` would be offered now: {key, region, target, char, force}, or nil.
+function F.event_offer(faction, key, stocks)
+    local e = DERPY_MR_FLOWS_EVENTS[key]
+    if e.where == "region" then
+        local r = F.event_region(stocks, e.use, e.cost, key == "siege")
+        return r and { key = key, region = r:name() } or nil
+    end
+    local have = 0
+    for _, s in ipairs(stocks) do have = have + F.use_total(s.held, e.use) end
+    if have < e.cost then return nil end
+    if key == "tribute" then
+        local n = F.event_neighbour(faction)
+        return n and { key = key, target = n:name() } or nil
+    elseif key == "arsenal" then
+        local mf = F.event_army(faction)
+        return mf and { key = key, char = mf:general_character():command_queue_index(),
+                        force = mf:command_queue_index() } or nil
+    end
+    return { key = key }
+end
+
+function F.event_book(fkey)
+    F.state.events = F.state.events or {}
+    local b = F.state.events[fkey]
+    if not b then b = { at = -1000000, seen = {} }; F.state.events[fkey] = b end
+    return b
+end
+
+-- A siege first; otherwise the qualifying event offered longest ago, ties in EVENT_ORDER.
+function F.event_pick(faction, b)
+    local stocks, best, bt = F.stocks(faction), nil, nil
+    for _, key in ipairs(F.EVENT_ORDER) do
+        local o = F.event_offer(faction, key, stocks)
+        if o and key == "siege" then return o end
+        local t = b.seen[key] or -1000000
+        if o and (bt == nil or t < bt) then best, bt = o, t end
+    end
+    return best
+end
+
+-- The spend and the reward. A store short of the cost when this runs pays nothing and gets nothing.
+function F.event_apply(faction, p)
+    local e, fkey = DERPY_MR_FLOWS_EVENTS[p.key], faction:name()
+    local pick = function(g) return g.use == e.use end
+    if e.where == "region" then
+        local r = F.owned(faction, p.region)
+        if not r then return end
+        local held = F.stock(r)
+        if F.use_total(held, e.use) < e.cost then return end
+        F.draw(r, held, e.use, e.cost, KIND.spend, fkey)
+        cm:apply_effect_bundle_to_region(e.bundle, p.region, e.turns)
+        if p.key == "restore" then F.repair(r) end
+        return
+    end
+    local stocks, have = F.stocks(faction), 0
+    for _, s in ipairs(stocks) do have = have + F.use_total(s.held, e.use) end
+    if have < e.cost then return end
+    F.draw_realm(stocks, pick, e.cost, KIND.spend, fkey)
+    if p.key == "tribute" then
+        cm:apply_dilemma_diplomatic_bonus(fkey, p.target, F.DIPLO_BONUS)   -- the giver acts, the neighbour's regard moves
+    elseif p.key == "arsenal" then
+        cm:add_experience_to_units_commanded_by_character("character_cqi:" .. p.char, 1)
+    end
+end
+
+function F.events(faction)
+    local r = F.rates()
+    if not r.events or not F.uses_stores(faction) then return end
+    local human = faction:is_human()
+    if not (human or r.ai) then return end
+    local fkey, turn = faction:name(), cm:model():turn_number()
+    local b = F.event_book(fkey)
+    if turn - b.at < F.EVENT_GAP then return end
+    local o = F.event_pick(faction, b)
+    if not o then return end
+    if human then
+        local e = DERPY_MR_FLOWS_EVENTS[o.key]
+        local tf = o.target and cm:get_faction(o.target):command_queue_index() or 0
+        local rg = o.region and cm:get_region(o.region):cqi() or 0
+        F.set_pending(fkey, o)
+        cm:trigger_dilemma_with_targets(faction:command_queue_index(), e.dilemma, tf, 0, o.char or 0,
+                                        o.force or 0, rg, 0, function() end)
+    else
+        if cm:random_number(100, 1) > F.EVENT_AI_PCT then return end   -- a failed roll starts no gap
+        F.event_apply(faction, o)
+    end
+    b.at, b.seen[o.key] = turn, turn
+end
+
+function F.on_dilemma(context)
+    local faction = context:faction()
+    local fkey, key = faction:name(), F.EVENT_BY_DILEMMA[context:dilemma()]
+    local p = key and F.pending(fkey, key)
+    if not p then return end
+    F.clear_pending(fkey, key)
+    if context:choice_key() == "FIRST" then F.event_apply(faction, p) end
+end
+
+-- AN UNANSWERED OFFER, one per faction and event: a Restore offered on capture must not wipe a
+-- store event still waiting for its answer. A save from before kept one per faction, {key = ...}.
+function F.pending(fkey, key)
+    local p = F.state.pending and F.state.pending[fkey]
+    if not p then return nil end
+    if p.key then return p.key == key and p or nil end
+    return p[key]
+end
+
+function F.set_pending(fkey, o)
+    F.state.pending = F.state.pending or {}
+    local p = F.state.pending[fkey]
+    if not p or p.key then
+        p = {}
+        F.state.pending[fkey] = p
+    end
+    p[o.key] = o
+end
+
+function F.clear_pending(fkey, key)
+    local p = F.state.pending and F.state.pending[fkey]
+    if not p then return end
+    if p.key then F.state.pending[fkey] = nil else p[key] = nil end
+end
+
+-- Every building in the settlement mended.
+function F.repair(region)
+    local sl = region:settlement():slot_list()
+    for i = 0, sl:num_items() - 1 do
+        local slot = sl:item_at(i)
+        if slot:has_building() then cm:region_slot_instantly_repair_building(slot) end
+    end
+end
+
+-- RESTORE ON CAPTURE (spending spec section 4, part 2): occupying a settlement whose captured
+-- stores hold the cost in building materials offers Restore, a store event's dilemma; a
+-- computer-run faction takes it on the events' roll. Under the store events switch.
+F.RESTORE_ON = { occupation_decision_occupy = true }
+function F.on_restore(context)
+    if not F.RESTORE_ON[context:occupation_decision_type()] then return end
+    local r, faction = F.rates(), context:character():faction()
+    if not r.events or not F.uses_stores(faction) then return end
+    local human = faction:is_human()
+    if not (human or r.ai) then return end
+    local region = context:garrison_residence():region()
+    local e = DERPY_MR_FLOWS_EVENTS.restore
+    if F.use_total(F.stock(region), e.use) < e.cost then return end
+    local o = { key = "restore", region = region:name() }
+    if human then
+        F.set_pending(faction:name(), o)
+        cm:trigger_dilemma_with_targets(faction:command_queue_index(), e.dilemma, 0, 0, 0, 0, region:cqi(), 0,
+                                        function() end)
+    elseif cm:random_number(100, 1) <= F.EVENT_AI_PCT then
+        F.event_apply(faction, o)
+    end
+end
+
+-- ---- province supplies and shipments (spending spec section 3, phase 5) -------------------
+-- Three switches per province, paid each turn from the province capital's store, each put a
+-- region bundle on every settlement the faction holds in the province. Goods reach a store by
+-- shipment: SHIP.turns on the road, drawn as a map marker, seized by an army of a faction at war
+-- with the owner that walks in (AreaEntered) or stands within SHIP.near of it at the owner's
+-- turn start. CA's own caravans cannot be sent anywhere by script (docs/TRADE_RESOURCES.md 24).
+F.SHIP = DERPY_MR_FLOWS_SHIP
+F.SHIP_PREFIX = "derpy_mr_ship_"
+F.SUPPLY_KEYS = { standing = true }       -- the three supplies, and Supply the capital
+for k in pairs(DERPY_MR_FLOWS_SUPPLY) do F.SUPPLY_KEYS[k] = true end
+
+-- The settlements a faction holds, by province: {pk = {regions, capital}}, capital nil unless the
+-- faction holds it; and the province keys in order, so every machine walks them alike.
+function F.provinces(faction)
+    local out, keys = {}, {}
+    local rl = faction:region_list()
+    for i = 0, rl:num_items() - 1 do
+        local r = rl:item_at(i)
+        if not r:is_null_interface() then
+            local pk = r:province_name()
+            if not out[pk] then
+                out[pk] = { regions = {} }
+                keys[#keys + 1] = pk
+            end
+            out[pk].regions[#out[pk].regions + 1] = r
+        end
+    end
+    for _, pk in ipairs(keys) do
+        local p = out[pk]
+        local cap = p.regions[1]:province():capital_region()
+        if cap and not cap:is_null_interface() then
+            local o = cap:owning_faction()
+            if not o:is_null_interface() and o:name() == faction:name() then p.capital = cap end
+        end
+    end
+    table.sort(keys)
+    return out, keys
+end
+
+-- One province's switches, kept in the save: {materials, stable, arms, standing = true, short =
+-- {key = the turn it ran short}}. Made only when asked to.
+function F.supply_book(fkey, pk, make)
+    F.state.supply = F.state.supply or {}
+    local f = F.state.supply[fkey]
+    if not f and make then f = {}; F.state.supply[fkey] = f end
+    local b = f and f[pk]
+    if not b and make then b = { short = {} }; f[pk] = b end
+    return b
+end
+
+-- WHAT A PROVINCE CAPITAL'S DRILL-DOWN SHOWS: nil unless rkey is the faction's own capital of a
+-- province. {cost a turn of each supply, on = {key = true}, short = {key = turn}, have = {use = n}}
+function F.supply_state(faction, rkey)
+    if not F.uses_stores(faction) then return nil end   -- F.supply would never pay: offer nothing
+    local r = F.owned(faction, rkey)
+    if not r then return nil end
+    local p = (F.provinces(faction))[r:province_name()]
+    if not (p and p.capital and p.capital:name() == rkey) then return nil end
+    local b = F.supply_book(faction:name(), r:province_name(), false) or {}
+    local st = { cost = F.SHIP.per * #p.regions, on = {}, short = {}, have = {} }
+    for k in pairs(F.SUPPLY_KEYS) do
+        if b[k] then st.on[k] = true end
+        if b.short and b.short[k] then st.short[k] = b.short[k] end
+    end
+    local held = F.stock(p.capital)
+    st.pay = {}
+    for _, s in pairs(DERPY_MR_FLOWS_SUPPLY) do
+        st.have[s.use] = F.use_total(held, s.use)
+        -- what the payment takes first: the fullest, a tie by resource key (F.draw_realm's order)
+        local best
+        for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+            if g.use == s.use then
+                local n = held[g.stem] or 0
+                if not best or n > best.n or (n == best.n and g.res < best.res) then
+                    best = { stem = g.stem, n = n, res = g.res }
+                end
+            end
+        end
+        if best then st.pay[s.use] = { stem = best.stem, n = best.n } end
+    end
+    return st
+end
+
+-- The capitals of the provinces a faction can supply, by province key: the Spending tab's rows.
+function F.capitals(faction)
+    local out = {}
+    if not F.uses_stores(faction) then return out end
+    local provs, keys = F.provinces(faction)
+    for _, pk in ipairs(keys) do
+        if provs[pk].capital then out[#out + 1] = provs[pk].capital:name() end
+    end
+    return out
+end
+
+function F.toggle_supply(faction, rkey, k)
+    if not F.SUPPLY_KEYS[k] or not F.supply_state(faction, rkey) then return end
+    local b = F.supply_book(faction:name(), F.owned(faction, rkey):province_name(), true)
+    if b[k] then
+        b[k] = nil
+    else
+        b[k], b.short[k] = true, nil
+    end
+end
+
+-- ---- shipments ----
+function F.ships()
+    F.state.ships = F.state.ships or {}
+    return F.state.ships
+end
+
+function F.ship_count(fkey)
+    local n = 0
+    for _, s in ipairs(F.ships()) do
+        if s.f == fkey then n = n + 1 end
+    end
+    return n
+end
+
+function F.ship_cap(faction)
+    if faction:is_human() then return F.rates().ships end
+    return F.SHIP.ai_cap
+end
+
+-- What is on the road to a store, in the order it left; every good when stem is nil.
+function F.ships_to(fkey, rkey, stem)
+    local out = {}
+    for _, s in ipairs(F.ships()) do
+        if s.f == fkey and s.to == rkey and (stem == nil or s.stem == stem) then out[#out + 1] = s end
+    end
+    return out
+end
+
+function F.incoming(fkey, rkey, stem)
+    local n = 0
+    for _, s in ipairs(F.ships_to(fkey, rkey, stem)) do n = n + s.n end
+    return n
+end
+
+-- CA'S OWN SPOT BESIDE A SETTLEMENT, passable land, the way its marker manager places markers; the
+-- settlement itself when it finds none (-1, -1). Whole numbers: a fraction does not cross the save.
+function F.spot(fkey, region)
+    local x, y = cm:find_valid_spawn_location_for_character_from_settlement(fkey, region:name(), false, true,
+                                                                            F.SHIP.spot)
+    if not x or x < 0 then
+        local st = region:settlement()
+        x, y = st:logical_position_x(), st:logical_position_y()
+    end
+    return math.floor(x + 0.5), math.floor(y + 0.5)
+end
+
+-- NO FACTION FILTER: any army may walk in; F.on_area decides who seizes.
+function F.mark(s)
+    cm:add_interactable_campaign_marker(s.id, F.SHIP.info, s.x, s.y, F.SHIP.radius, "", "")
+end
+
+-- Send n of a good from one of the faction's settlements to another: taken at once, a tenth lost
+-- on the road, the rest arriving SHIP.turns later. nil when the faction has its full number of
+-- shipments on the road, or nothing would arrive.
+function F.ship(faction, from, to, stem, n)
+    local fkey = faction:name()
+    if F.ship_count(fkey) >= F.ship_cap(faction) then return nil end
+    n = math.min(n, F.held(from, stem))
+    local got = n - F.lost(n)
+    if got <= 0 then return nil end
+    F.move(from, nil, stem, n, KIND.move, fkey, nil)
+    F.state.ship_seq = (F.state.ship_seq or 0) + 1
+    local s = { id = F.SHIP_PREFIX .. F.state.ship_seq, f = fkey, stem = stem, n = got, from = from:name(),
+                to = to:name(), at = cm:model():turn_number(), leg = 1 }
+    s.due = s.at + F.SHIP.turns
+    s.x, s.y = F.spot(fkey, from)
+    local list = F.ships()
+    list[#list + 1] = s
+    F.mark(s)
+    return s
+end
+
+function F.drop(s)
+    local list = F.ships()
+    for i, x in ipairs(list) do
+        if x == s then table.remove(list, i) break end
+    end
+    cm:remove_interactable_campaign_marker(s.id)
+end
+
+-- SEIZED: the cargo goes to the captor's settlement nearest the shipment, as far as it has room;
+-- a captor with no settlement destroys it.
+function F.seize(s, captor)
+    F.drop(s)
+    F.move(nil, F.nearest(captor, s.x, s.y), s.stem, s.n, KIND.raid, nil, captor:name())
+end
+
+-- An army in the field (no garrison) of a faction at war with the owner, within SHIP.near.
+function F.captor(owner, s)
+    local wars = owner:factions_at_war_with()
+    if type(wars) ~= "table" and type(wars) ~= "userdata" then return nil end
+    local r2 = F.SHIP.near * F.SHIP.near
+    for i = 0, wars:num_items() - 1 do
+        local o = wars:item_at(i)
+        local mfl = o:military_force_list()
+        for j = 0, mfl:num_items() - 1 do
+            local mf = mfl:item_at(j)
+            if not mf:is_armed_citizenry() and mf:has_general() then
+                local ch = mf:general_character()
+                local dx, dy = ch:logical_position_x() - s.x, ch:logical_position_y() - s.y
+                if dx * dx + dy * dy <= r2 then return o end
+            end
+        end
+    end
+    return nil
+end
+
+-- ARRIVED: into the destination as far as it has room; a destination lost meanwhile sends it to
+-- the owner's settlement nearest it, and an owner with none loses it.
+function F.arrive(owner, s)
+    F.drop(s)
+    local to = F.owned(owner, s.to)
+    if not to then
+        local r = cm:get_region(s.to)
+        local st = r and r:settlement()
+        if st and not st:is_null_interface() then
+            to = F.nearest(owner, st:logical_position_x(), st:logical_position_y())
+        end
+    end
+    F.move(nil, to, s.stem, s.n, KIND.move, nil, owner:name())
+end
+
+-- At its owner's turn start each shipment is seized, arrives, or moves to its second spot.
+function F.ships_turn(faction)
+    local fkey, turn = faction:name(), cm:model():turn_number()
+    local mine = {}
+    for _, s in ipairs(F.ships()) do
+        if s.f == fkey then mine[#mine + 1] = s end
+    end
+    for _, s in ipairs(mine) do
+        local captor = F.captor(faction, s)
+        if captor then
+            F.seize(s, captor)
+        elseif turn - s.at >= F.SHIP.turns then
+            F.arrive(faction, s)
+        elseif turn - s.at >= 1 and s.leg == 1 then
+            cm:remove_interactable_campaign_marker(s.id)
+            local to = F.owned(faction, s.to) or cm:get_region(s.to)
+            if to then s.x, s.y = F.spot(fkey, to) end
+            s.leg = 2
+            F.mark(s)
+        end
+    end
+end
+
+-- A dead faction's turn never starts: its shipments are cleared at a player's.
+function F.sweep()
+    local list = F.ships()
+    for i = #list, 1, -1 do
+        local f = cm:get_faction(list[i].f)
+        if not f or f:is_null_interface() or f:is_dead() then
+            cm:remove_interactable_campaign_marker(list[i].id)
+            table.remove(list, i)
+        end
+    end
+end
+
+-- WALKED IN: only an army, and only of a faction at war with the owner. Its own armies and its
+-- friends pass by, as does a hero alone.
+function F.on_area(context)
+    local id, s = context:area_key(), nil
+    for _, x in ipairs(F.ships()) do
+        if x.id == id then s = x end
+    end
+    if not s then return end
+    local ch = context:family_member():character()
+    if ch:is_null_interface() or not ch:has_military_force() then return end
+    local owner, captor = cm:get_faction(s.f), ch:faction()
+    if not owner or owner:is_null_interface() or not captor:at_war_with(owner) then return end
+    F.seize(s, captor)
+end
+
+-- SUPPLY THE CAPITAL: a switched-on use the capital holds under SHIP.stand turns of gets one
+-- shipment, enough for SHIP.ai_on turns, of the fullest good of that use in the province's other
+-- settlements; none while one is already on the road for that use.
+function F.standing(faction, p, b, cost)
+    local fkey, cap = faction:name(), p.capital
+    for _, k in ipairs(DERPY_MR_FLOWS_SUPPLY_ORDER) do
+        local use = DERPY_MR_FLOWS_SUPPLY[k].use
+        local have = b[k] and F.use_total(F.stock(cap), use) or 0
+        local coming = false
+        for _, s in ipairs(F.ships_to(fkey, cap:name())) do
+            if F.GOOD[s.stem].use == use then coming = true end
+        end
+        if b[k] and have < F.SHIP.stand * cost and not coming then
+            local from, stem, fh = nil, nil, 0
+            for _, r in ipairs(p.regions) do
+                if r:name() ~= cap:name() then
+                    local held = F.stock(r)
+                    for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+                        local h = held[g.stem] or 0
+                        if g.use == use and h > fh then from, stem, fh = r, g.stem, h end
+                    end
+                end
+            end
+            if from then F.ship(faction, from, cap, stem, F.SHIP.ai_on * cost - have) end
+        end
+    end
+end
+
+-- A computer-run faction switches a supply on at SHIP.ai_on turns of it, and always supplies its
+-- capitals; it is switched off again by running short, as a player's is.
+function F.ai_supply(b, capital, cost)
+    b.standing = true
+    local held = F.stock(capital)
+    for _, k in ipairs(DERPY_MR_FLOWS_SUPPLY_ORDER) do
+        if not b[k] and F.use_total(held, DERPY_MR_FLOWS_SUPPLY[k].use) >= F.SHIP.ai_on * cost then
+            b[k] = true
+        end
+    end
+end
+
+-- PAID FROM THE CAPITAL, OR OFF: a capital short of a whole turn's cost pays nothing, and the
+-- switch turns itself off and keeps the turn for its tooltip. Every settlement held in the
+-- province gets the bundles paid for, and loses the others at once.
+function F.supply(faction)
+    local r = F.rates()
+    if not r.supply or not F.uses_stores(faction) then return end
+    local human = faction:is_human()
+    if not (human or r.ai) then return end
+    local fkey, turn = faction:name(), cm:model():turn_number()
+    local provs, keys = F.provinces(faction)
+    for _, pk in ipairs(keys) do
+        local p, paid = provs[pk], {}
+        local b = F.supply_book(fkey, pk, not human and p.capital ~= nil)
+        if b and p.capital then
+            local cost = F.SHIP.per * #p.regions
+            if not human then F.ai_supply(b, p.capital, cost) end
+            if b.standing then F.standing(faction, p, b, cost) end
+            for _, k in ipairs(DERPY_MR_FLOWS_SUPPLY_ORDER) do
+                if b[k] then
+                    local use, held = DERPY_MR_FLOWS_SUPPLY[k].use, F.stock(p.capital)
+                    if F.use_total(held, use) < cost then
+                        b[k], b.short[k] = nil, turn
+                    else
+                        F.draw(p.capital, held, use, cost, KIND.spend, fkey)
+                        paid[k] = true
+                    end
+                end
+            end
+        end
+        for _, region in ipairs(p.regions) do
+            for _, k in ipairs(DERPY_MR_FLOWS_SUPPLY_ORDER) do
+                local bk, rk = DERPY_MR_FLOWS_SUPPLY[k].bundle, region:name()
+                if paid[k] then
+                    cm:apply_effect_bundle_to_region(bk, rk, F.BUNDLE_TURNS)
+                elseif region:has_effect_bundle(bk) then
+                    cm:remove_effect_bundle_from_region(bk, rk)
+                end
+            end
+        end
+    end
 end
 
 -- ---- history ------------------------------------------------------------------------------
@@ -859,11 +1451,17 @@ function F.on_faction_turn_start(faction)
         -- not skip the trade below, which is model state every machine has to run alike
         F.guard(F.snapshot, faction)
         F.round_cost, F.cost = F.cost, { raid = 0, turn = 0 }
+        F.guard(F.sweep)
     end
     -- eat before trading, so a partner is sent what is left; its own guard, so a throw in one
     -- settlement cannot stop the trade every machine must run alike
     F.guard(F.upkeep, faction)
     F.trade(faction)
+    -- shipments before supplies, so an arrival is in the capital before the turn's payment
+    F.guard(F.ships_turn, faction)
+    F.guard(F.supply, faction)
+    -- last, on what eating and trading left; its own guard, as an offer is model state too
+    F.guard(F.events, faction)
 end
 
 function F.guard(fn, a, slot)
@@ -879,11 +1477,18 @@ function F.init()
     core:add_listener("derpy_mr_flows_raid", "CharacterTurnStart", true,
         function(context) F.guard(F.on_character_turn_start, context:character(), "raid") end, true)
     core:add_listener("derpy_mr_flows_occupation", "CharacterPerformsSettlementOccupationDecision", true,
-        function(context) F.guard(F.on_occupation, context) end, true)
+        function(context) F.guard(F.on_occupation, context); F.guard(F.on_restore, context) end, true)
     core:add_listener("derpy_mr_flows_battle", "CharacterCompletedBattle", true,
         function(context) F.guard(F.on_battle, context) end, true)
     core:add_listener("derpy_mr_flows_ui", "UITrigger", true,
         function(context) F.guard(F.on_ui_trigger, context) end, true)
+    -- a DB dilemma, not a scripted one: matching a scripted dilemma here crashes the game
+    core:add_listener("derpy_mr_flows_dilemma", "DilemmaChoiceMadeEvent",
+        function(context) return F.EVENT_BY_DILEMMA[context:dilemma()] ~= nil end,
+        function(context) F.guard(F.on_dilemma, context) end, true)
+    core:add_listener("derpy_mr_flows_ship", "AreaEntered",
+        function(context) return string.sub(context:area_key(), 1, #F.SHIP_PREFIX) == F.SHIP_PREFIX end,
+        function(context) F.guard(F.on_area, context) end, true)
     core:add_listener("derpy_mr_flows_turn", "FactionTurnStart", true,
         function(context) F.guard(F.on_faction_turn_start, context:faction(), "turn") end, true)
 end

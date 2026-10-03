@@ -22,7 +22,11 @@ local LOC = {
 local CCO = {}
 common = {
     get_localised_string = function(k) return LOC[k] or "" end,
-    get_context_value = function(_type, cqi, _expr) return CCO[cqi] end,
+    -- one argument is an expression: the Map tab's CampaignRadarPosition, faked as RADAR below
+    get_context_value = function(a, cqi, expr)
+        if cqi == nil and expr == nil then return RADAR_EVAL(a) end
+        return CCO[cqi]
+    end,
 }
 
 local function list(items)
@@ -38,6 +42,20 @@ end
 -- pools: stem -> held, every store at the settlement's space `cap`; nil = a save from before
 -- the stores. cco: what the settlement's buildings list, or nil when the read gives nothing.
 BUNDLED = {}                 -- region key -> {bundle = true}: what region:has_effect_bundle answers
+POS = {}                     -- region key -> {x, y}: the settlement's logical position (the Map tab)
+CAMPAIGN = "some_mod_map"    -- cm:model():campaign_name_key(): a map with no known picture until set
+-- THE ENGINE'S MINIMAP FRAME, faked: a display point's 0-1 place on the picture, from the left and
+-- from the top, clamped as the engine's is. Deliberately NOT the logical frame - x and y scale
+-- differently - so a map drawn from logical co-ordinates misses. RADAR_OFF: the engine says nothing.
+RADAR, RADAR_CALLS, RADAR_OFF = { w = 2400, h = 1800 }, 0, false
+function RADAR_EVAL(e)
+    RADAR_CALLS = RADAR_CALLS + 1
+    if RADAR_OFF then return nil end
+    local dx, dy, axis = string.match(e, "^CampaignRadarPosition%(ToVector%(([%-%d%.e]+), 0, ([%-%d%.e]+), 0%)%)%.([xy])$")
+    if not dx then return nil end
+    local v = axis == "x" and tonumber(dx) / RADAR.w or 1 - tonumber(dy) / RADAR.h
+    return math.max(0, math.min(1, v))
+end
 local function region(key, cqi, level, cap, pools, cco, extra)
     local items = {}
     for stem, v in pairs(pools or {}) do items[#items + 1] = pool("derpy_mr_store_" .. stem, v, cap) end
@@ -46,6 +64,11 @@ local function region(key, cqi, level, cap, pools, cco, extra)
     local settlement = {
         is_null_interface = function() return false end,
         cqi = function() return cqi end,
+        logical_position_x = function() return (POS[key] or { 0, 0 })[1] end,
+        logical_position_y = function() return (POS[key] or { 0, 0 })[2] end,
+        -- display co-ordinates are twice the logical ones here, as cm:log_to_dis below
+        display_position_x = function() return 2 * (POS[key] or { 0, 0 })[1] end,
+        display_position_y = function() return 2 * (POS[key] or { 0, 0 })[2] end,
         primary_slot = function() return { building = function()
             return { building_level = function() return level end } end } end,
     }
@@ -68,6 +91,7 @@ local A = region("reg_a", 1, 2, 400, { coal = 100, brimstone = 0, iron = 0 },
 local B = region("reg_b", 2, 1, 200, { coal = 200, iron = 50 }, "")
 local C = region("reg_c", 3, 1, 0, nil, nil)
 local FACTIONS = { fac_a = faction("fac_a", { C, B, A }), fac_empty = faction("fac_empty", {}) }
+WORLD = { A, B }             -- every settlement on the map: the Map tab reads its frame off the extremes
 local LOCAL = "fac_a"
 
 local FIRST, REPEATS, LISTENERS = {}, {}, {}
@@ -80,6 +104,16 @@ cm = {
     repeat_real_callback = function(_, fn, _ms, name) REPEATS[name] = fn end,
     get_local_faction_name = function() return LOCAL end,
     get_faction = function(_, name) return FACTIONS[name] end,
+    model = function() return { campaign_name_key = function() return CAMPAIGN end,
+        world = function() return { region_manager = function() return {
+            region_list = function() return list(WORLD) end } end } end } end,
+    -- the Spending tab's Show button: display co-ordinates are twice the logical ones here
+    log_to_dis = function(_, x, y) return x * 2, y * 2 end,
+    get_camera_position = function() return 0, 0, 15, 0.3, 12 end,
+    scroll_camera_from_current = function(_, correct, t, pos)
+        if correct ~= false or type(t) ~= "number" then error("scroll_camera_from_current: bad arguments") end
+        CAMERA = pos
+    end,
 }
 core = {
     get_ui_root = function() return UI_ROOT end,
@@ -205,9 +239,10 @@ local function new(name, parent)
     if parent then parent.kids[#parent.kids + 1] = c end
     return c
 end
-local function build(node, parent, name)
+local function build(node, parent, name, file)
     local c = new(name or node.name, parent)
-    for _, k in ipairs(node.kids) do build(k, c) end
+    c.xid, c.file = node.name, file                -- which XML component it is, for MR_DUMP
+    for _, k in ipairs(node.kids) do build(k, c, nil, file) end
     return c
 end
 local function unlink(c)
@@ -219,13 +254,13 @@ local function shift(c, dx, dy)
     c.x, c.y = c.x + dx, c.y + dy
     for _, k in ipairs(c.kids) do shift(k, dx, dy) end
 end
-function UIC:CreateComponent(name, path) return build(template(path), self, name) end
+function UIC:CreateComponent(name, path) return build(template(path), self, name, path:match("([^/]+)$")) end
 function UIC:Id() return self.name end
 function UIC:Address() return self end
-function UIC:MoveTo(x, y) shift(self, x - self.x, y - self.y) end
+function UIC:MoveTo(x, y) self.moved = true; shift(self, x - self.x, y - self.y) end
 function UIC:Position() return self.x, self.y end
 function UIC:Dimensions() return self.w, self.h end
-function UIC:Resize(w, h) self.w, self.h = w, h end
+function UIC:Resize(w, h) self.w, self.h, self.sized = w, h, true end
 function UIC:SetCanResizeWidth() end
 function UIC:SetCanResizeHeight() end
 function UIC:SetVisible(v) self.visible = v and true or false end
@@ -305,6 +340,27 @@ local function shown_rows()
     return n
 end
 
+-- MR_DUMP (tools/preview_resource_vault.py): every component the panel shows, in drawing order,
+-- written where a tab has its most telling contents. A size the script never set is "nil": the
+-- preview takes the XML's.
+local DUMP = os.getenv("MR_DUMP")
+local function dump(tag)
+    if not DUMP then return end
+    local f = assert(io.open(DUMP .. "/" .. tag .. ".tsv", "w"))
+    local function clean(s) return (tostring(s or ""):gsub("[\t\r\n]", " ")) end
+    local function walk(c, depth)
+        if not c.visible then return end
+        f:write(table.concat({ depth, c.file or "", c.xid or "", c.name, c.x, c.y,
+                               c.sized and c.w or "nil", c.sized and c.h or "nil", clean(c.text),
+                               clean((c.images or {})[0]), clean(c.tip), c.parent and c.parent.name or "",
+                               c.halign or "" },
+                             "\t"), "\n")
+        for _, k in ipairs(c.kids) do walk(k, depth + 1) end
+    end
+    walk(find("derpy_mr_stores_panel"), 0)
+    f:close()
+end
+
 -- the opener: made at first tick, right of the resource strip and centred on it
 for _, fn in ipairs(FIRST) do fn() end
 local b = find("derpy_mr_stores_button")
@@ -351,6 +407,7 @@ eq(lit("derpy_mr_tab_goods"), SEL, "the open tab is lit")
 eq(find("derpy_mr_tab_goods").images[1], "ui/skins/default/button_square_large_text_selected_hover.png", "and lit on hover")
 eq(lit("derpy_mr_tab_settlements"), OFF, "the other is not")
 eq(find("empty_text").visible, false, "no empty text over rows")
+dump("goods")
 -- the list: rows_holder inside the clip, no slider for three rows; a scroll carries every row
 eq(find_uicomponent(find("list_clip"), "rows_holder") ~= false, true, "rows inside the list")
 eq(find("vslider").visible, false, "no slider for three rows")
@@ -369,6 +426,7 @@ eq(find("derpy_mr_row_1").tip, S.FULL_TIP, "full tooltip"); eq(find("derpy_mr_ba
 click("derpy_mr_back"); eq(cell(1, 1).text, "Coal", "back to the goods")
 -- the Settlements tab, then one settlement's stores
 click("derpy_mr_tab_settlements"); eq(shown_rows(), 3, "three settlements")
+dump("settlements")
 eq(lit("derpy_mr_tab_settlements"), SEL, "the clicked tab is lit"); eq(lit("derpy_mr_tab_goods"), OFF, "the old one is not")
 eq(cell(2, 5).text, "Coal 100%", "fullest store")
 -- the goods each settlement keeps, as icons before its name: most made first, then most held
@@ -519,6 +577,7 @@ DERPY_MR_FLOWS = {
 local function switch(i, dir) return find_uicomponent(find("derpy_mr_row_" .. i), "derpy_mr_sw_" .. dir) end
 click("derpy_mr_close"); click("derpy_mr_stores_button"); click("derpy_mr_tab_trade")
 eq(lit("derpy_mr_tab_trade"), SEL, "the Trade tab is lit"); eq(lit("derpy_mr_tab_goods"), OFF, "Goods is not")
+dump("trade")
 local tt = find("derpy_mr_tab_trade"); tt:SetState("hover")
 eq(tt:GetStateText(), "Trade", "Trade keeps its label on hover"); tt:SetState("standard")
 eq(find("hdr_3").text, "Exports", "exports header"); eq(find("hdr_4").text, "Imports", "imports header")
@@ -610,7 +669,8 @@ eq(switch(1, "export").images[0], S.CHECK[true][1], "ticked again")
 -- (seen in game 2026-10-02: "Space per good" in 100px). HEAD_CHAR_W is calibrated from that.
 local saved_view, saved_focus = S.view, S.focus
 local alpha_realm = S.read_realm(FACTIONS.fac_a)
-for _, vf in ipairs({ { "goods" }, { "goods", "coal" }, { "settlements" }, { "settlements", "reg_a" }, { "trade" } }) do
+for _, vf in ipairs({ { "goods" }, { "goods", "coal" }, { "settlements" }, { "settlements", "reg_a" }, { "trade" },
+                     { "spending" }, { "map" } }) do
     S.view, S.focus = vf[1], vf[2]
     local v = S.view_model(alpha_realm)
     -- the sub-title and the hint share one line: together they must fit it
@@ -630,8 +690,17 @@ eq(bulk("import", "allow").visible, false, "nor all-at-once buttons")
 
 -- ---- phase 7: the panel's actions ------------------------------------------------------
 local REQ, PLAN, ORDER_ST, SALE, ACT_ON = {}, {}, {}, nil, true
+local SUP_ON, SUPPLY_ST, SHIPS_TO, SHIP_N = true, nil, {}, 0
+CAPS, SHIPS = {}, {}
 DERPY_MR_FLOWS = {
-    rates = function() return { actions = ACT_ON } end,
+    capitals = function(f) eq(f:name(), LOCAL, "the local faction's capitals"); return CAPS end,
+    ships = function() return SHIPS end,
+    rates = function() return { actions = ACT_ON, supply = SUP_ON } end,
+    SHIP = { turns = 2 },
+    ship_count = function(fk) eq(fk, LOCAL, "the local faction's shipments"); return SHIP_N end,
+    ship_cap = function(f) eq(f:name(), LOCAL, "the local faction's number"); return 3 end,
+    ships_to = function(_fk, rk, stem) return (rk == "reg_a" and SHIPS_TO[stem]) or {} end,
+    supply_state = function(_f, rk) if rk == "reg_a" then return SUPPLY_ST end return nil end,
     request = function(fk, ...) REQ[#REQ + 1] = fk .. "|" .. table.concat({ ... }, "|") end,
     send_plan = function(f, _rk, stem) eq(f:name(), LOCAL, "the local faction's plan"); return PLAN[stem] end,
     order_state = function(_, key) return ORDER_ST[key] end,
@@ -649,17 +718,319 @@ local function sendb(i) return find_uicomponent(find("derpy_mr_row_" .. i), "der
 eq(sendb(1).visible, true, "a Send here button"); eq(sendb(1).text, "Send here", "labelled")
 eq(sendb(1).x, find("derpy_mr_row_1").x + LL.VIEWS.focus[5][1], "in the fifth column")
 eq(sendb(1).disabled, false, "live when something can come"); eq(sendb(1).shader, "normal_t0", "and drawn live")
-eq(sendb(1).tip, "Bring 12 Coal from Bravo: 10 arrive, 2 are lost on the way.", "the tooltip says what happens")
+eq(sendb(1).tip, "Ship 12 Coal from Bravo: 10 arrive in 2 turns, 2 are lost on the way. An army at war "
+   .. "with you can seize it on the road.", "the tooltip says what happens")
 eq(sendb(2).disabled, true, "Brimstone: nobody can send it"); eq(sendb(2).shader, "set_greyscale_t0", "and it looks it")
 eq(sendb(2).tip, "No other settlement of yours can send Brimstone.", "the tooltip says why")
 eq(S.send_tip(nil, { name = "Coal", full = true }), "This store of Coal is full.", "a full store says so")
 press(sendb(1)); eq(REQ[1], "fac_a|send|coal|reg_a", "a click asks for this resource into this settlement")
 press(sendb(2)); eq(#REQ, 1, "a greyed button asks for nothing")
--- ORDERS, on the Resources tab's bottom line
+-- SHIPMENTS (phase 5): the most on the road greys every Send here, and what is coming is listed
+PLAN.coal.busy = true; SHIPS_TO.coal = { { n = 34, due = 52 }, { n = 5, due = 53 } }
+click("derpy_mr_back"); click("derpy_mr_row_1")
+eq(sendb(1).disabled, true, "the most shipments on the road: greyed")
+eq(sendb(1).tip, "You have 3 shipments on the road already, the most you can have.\nOn the road here: 34, "
+   .. "arriving on turn 52.\nOn the road here: 5, arriving on turn 53.", "says why, and what is coming")
+press(sendb(1)); eq(#REQ, 1, "and asks for nothing")
+PLAN.coal.busy, SHIPS_TO.coal = nil, nil
+-- what is on the road fills the store: that is why nothing more can be sent, not a lack of senders
+PLAN.coal, SHIPS_TO.coal = nil, { { n = 300, due = 60 } }
+click("derpy_mr_back"); click("derpy_mr_row_1")
+eq(string.find(sendb(1).tip, "What is already on the road will fill this store of Coal.", 1, true), 1,
+   "says the road fills it")
+PLAN.coal, SHIPS_TO.coal = { from = B, n = 12, got = 10 }, nil
+-- ORDERS, on the Spending tab's bottom line
 ORDER_ST.festival = { ok = true, have = 250, cost = 200, use = "luxuries" }
 ORDER_ST.muster = { ok = false, wait = 7, have = 300, cost = 200, use = "war" }
 ORDER_ST.great_works = { ok = false, have = 120, cost = 200, use = "building" }
+-- THE SPENDING TAB (asked for 2026-10-03): every province capital you hold with its four supply
+-- boxes, the shipments on the road with a Show button each, and the three orders
+CAPS = { "reg_a" }
+SUPPLY_ST = { cost = 4, on = { materials = true }, short = { arms = 37 }, have = { building = 26, mounts = 0, war = 3 },
+              pay = { building = { stem = "coal", n = 26 }, mounts = { stem = "iron", n = 0 }, war = { stem = "brimstone", n = 3 } } }
+SHIPS = { { id = "derpy_mr_ship_1", f = LOCAL, stem = "coal", n = 22, from = "reg_b", to = "reg_a", due = 52, leg = 1,
+            x = 40, y = 50 },
+          { id = "derpy_mr_ship_2", f = "someone_else", stem = "coal", n = 9, from = "reg_b", to = "reg_a", due = 52,
+            leg = 1, x = 1, y = 1 } }
+SHIP_N = 1
+click("derpy_mr_tab_spending")
+eq(find("derpy_mr_tab_spending").text, "Spending", "a fourth tab")
+eq(find("derpy_mr_tab_spending").images[0], S.TAB_ART[true][1], "lit when open")
+eq(find("sub_title").text, "What your stores pay for", "its own title")
+eq(cell(1, 1).text, "Alpha", "a row for each province capital you hold")
+local function box(i, k) return find_uicomponent(find("derpy_mr_row_" .. i), "derpy_mr_sw_" .. k) end
+local SC = LL.VIEWS.spending
+-- WHAT EACH SUPPLY PAYS WITH (asked 2026-10-03): the good the payment takes first, as an icon
+-- beside its box, greyed when the store cannot cover the price; Supply the capital ships, not pays
+local function payic(i, k) return find_uicomponent(find("derpy_mr_row_" .. i), "derpy_mr_supic_" .. k) end
+for i, sp in ipairs(DERPY_MR_STORES_SUPPLY) do
+    eq(box(1, sp.key).visible, true, sp.label .. " box")
+    local col = find("derpy_mr_row_1").x + SC[1 + i][1]
+    if sp.use ~= "" then
+        local ic = payic(1, sp.key)
+        eq(ic.visible, true, sp.label .. ": the good it pays with")
+        local pair = LL.CHECK + LL.PAY_GAP + LL.icon[3]   -- the icon's XML width
+        eq(box(1, sp.key).x, col + math.floor((SC[1 + i][2] - pair) / 2), "box and icon centred as a pair in column " .. (1 + i))
+        eq(ic.x, box(1, sp.key).x + LL.CHECK + LL.PAY_GAP, "the icon just right of the box")
+    else
+        eq(not payic(1, sp.key), true, "Supply the capital has no single good, so no icon")
+        eq(box(1, sp.key).x, col + math.floor((SC[1 + i][2] - LL.CHECK) / 2), "its box centred alone")
+    end
+end
+eq(payic(1, "materials").images[0], good_icon("coal"), "Materials pays with the capital's fullest: coal here")
+eq(payic(1, "stable").images[0], good_icon("iron"), "a use with none held still shows its good")
+eq(payic(1, "materials").shader ~= "set_greyscale_t0", true, "26 covers the 4 a turn: in colour")
+eq(payic(1, "stable").shader, "set_greyscale_t0", "none held: greyed")
+eq(payic(1, "arms").shader, "set_greyscale_t0", "3 is short of 4: greyed")
+eq(string.find(payic(1, "materials").tip, "Paid from Coal first, the fullest store.", 1, true) ~= nil, true,
+   "the icon says what pays and why that one")
+eq(string.find(payic(1, "stable").tip, "Nothing to pay with: the stores of Alpha hold none.", 1, true) ~= nil, true,
+   "and when there is nothing to pay with")
+eq(box(1, "materials").images[0], S.CHECK[true][1], "a supply that is on is ticked")
+eq(box(1, "arms").images[0], S.CHECK[false][1], "one that is off is not")
+eq(box(1, "export").visible, false, "no trade boxes here")
+local mtip, atip = box(1, "materials").tip, box(1, "arms").tip
+eq(string.find(mtip, "Pay 4 building materials a turn from the stores of Alpha", 1, true) ~= nil, true, "the price")
+eq(string.find(mtip, "construction cost -25% in every settlement you hold in this province", 1, true) ~= nil, true,
+   "what it buys, and where")
+eq(string.find(mtip, "The stores of Alpha hold 26.", 1, true) ~= nil, true, "what the capital holds")
+eq(string.find(mtip, "On. Click to stop it.", 1, true) ~= nil, true, "and what a click does")
+eq(string.find(atip, "Turned off on turn 37: the stores of Alpha ran short.", 1, true) ~= nil, true,
+   "a supply that ran short says when")
+eq(string.find(box(1, "standing").tip, "Off. Click to start it.", 1, true) ~= nil, true, "Supply the capital, off")
+REQ = {}
+press(box(1, "materials")); eq(REQ[1], "fac_a|supply|reg_a|materials", "a click toggles that capital's supply")
+-- the shipments: a section row, then one row each, the local faction's only
+eq(cell(2, 1).text, S.section("On the road (1 of 3)"), "a section row counting them against the most there can be")
+eq(cell(2, 2).text, S.section("From"), "the road has its own headings, not the supplies'")
+eq(cell(2, 3).text, S.section("To"), "to"); eq(cell(2, 4).text, S.section("Arrives"), "and when")
+eq(cell(3, 1).text, "22 Coal", "what and how much"); eq(cell(3, 2).text, "Bravo", "from")
+eq(cell(3, 3).text, "Alpha", "to"); eq(cell(3, 4).text, "turn 52", "and when it arrives")
+eq(shown_rows(), 3, "another faction's shipment is not listed")
+dump("spending")
+local show = find_uicomponent(find("derpy_mr_row_3"), "derpy_mr_sendhere")
+eq(show.visible, true, "a Show button"); eq(show.text, "Show", "labelled")
+eq(string.find(show.tip, "beside Bravo", 1, true) ~= nil, true, "the tooltip says where it is now")
+eq(box(3, "materials").visible, false, "no boxes on a shipment row")
+for _, k in ipairs({ "materials", "stable", "arms" }) do
+    eq(payic(2, k).visible, false, "no pay icon on the road's section row (seen in the preview, 2026-10-03)")
+    eq(payic(3, k).visible, false, "nor on a shipment row")
+end
+press(show)
+eq(CAMERA[1], 40 * 2, "the camera goes to the cart's display x"); eq(CAMERA[2], 50 * 2, "and y")
+eq(CAMERA[3], 15, "keeping its distance"); eq(CAMERA[5], 12, "and height")
+eq(find("derpy_mr_stores_panel").visible, false, "and the panel closes to show it")
+eq(#REQ, 1, "Show asks the model for nothing")
+click("derpy_mr_stores_button"); click("derpy_mr_tab_spending")
+-- nothing on the road
+SHIPS = {}
+click("derpy_mr_tab_goods"); click("derpy_mr_tab_spending")
+eq(cell(2, 1).text, S.section("On the road (0 of 3)"), "the count with nothing on the road")
+eq(cell(3, 1).text, S.NO_SHIPS, "and a line saying how to send one")
+-- the supplies switched off: no capitals listed, the road still is
+SUP_ON = false; click("derpy_mr_tab_goods"); click("derpy_mr_tab_spending")
+eq(cell(1, 1).text, S.section("On the road (0 of 3)"), "province supplies off: the road comes first")
+eq(find("hdr_2").text, "", "and no supply headings stand over it")
+SUP_ON = true
+-- moved, not copied: the toggles and orders are nowhere else
+click("derpy_mr_tab_settlements"); click("derpy_mr_row_1")
+eq(not act("derpy_mr_supply_materials"), true, "no supply buttons on a capital's drill-down any more")
 click("derpy_mr_tab_goods")
+eq(act("derpy_mr_order_festival").visible, false, "no orders on the Resources tab any more")
+eq(find("hint_text").text, "Click a resource to see where it is kept.", "and no shipments in its hint")
+-- THE MAP TAB (asked for 2026-10-03): your settlements as dots, north up, the province capitals
+-- larger and named, and every convoy of yours as a cart on a dotted line from where it left to
+-- where it goes. Framed on what it shows, so it fits any campaign map with no picture of it.
+FACTIONS.fac_a = faction("fac_a", { A, B })
+POS.reg_a, POS.reg_b = { 100, 300 }, { 300, 100 }
+CAPS = { "reg_a" }
+SHIPS = { { id = "derpy_mr_ship_1", f = LOCAL, stem = "coal", n = 22, from = "reg_b", to = "reg_a", due = 52, leg = 2,
+            x = 110, y = 290 } }
+click("derpy_mr_tab_map")
+eq(find("derpy_mr_tab_map").text, "Map", "a fifth tab")
+eq(find("sub_title").text, "Where your convoys are", "its own title")
+eq(shown_rows(), 0, "no list rows on the map")
+eq(find("empty_text").visible, false, "and no empty-list text over it")
+local function mapc(kind, i) return find("derpy_mr_map" .. kind .. "_" .. i) end
+local box = LL.map
+local function inside(c)
+    return c.x >= pnl0.x + box[1] and c.y >= pnl0.y + box[2]
+        and c.x + c.w <= pnl0.x + box[1] + box[3] and c.y + c.h <= pnl0.y + box[2] + box[4]
+end
+-- dots, in the realm's order (Alpha, then Bravo by name)
+local da, db = mapc("dot", 1), mapc("dot", 2)
+eq(da.visible and db.visible, true, "a dot for each settlement")
+eq(string.find(da.tip, "Alpha", 1, true) ~= nil, true, "named in its tooltip")
+eq(inside(da) and inside(db), true, "both inside the map's box")
+eq(da.y < db.y, true, "north up: Alpha, further north, is drawn higher")
+eq(da.x < db.x, true, "and west to the left")
+eq(da.w > db.w, true, "a province capital's dot is larger")
+eq(da.images[0], LL.MAP_CAP_ICON, "a province capital wears CA's capital marker")
+eq(db.images[0], LL.MAP_TOWN_ICON, "another settlement CA's settlement marker")
+eq(mapc("label", 1).visible, true, "and named on the map"); eq(mapc("label", 1).text, "Alpha", "by its name")
+eq(mapc("label", 2).visible, true, "every settlement is named"); eq(mapc("label", 2).text, "Bravo", "Bravo too")
+-- one scale for both axes: the map is not stretched
+eq(math.abs((db.x - da.x) - (db.y - da.y)) <= 1, true, "equal distances north and east draw equal")
+-- the convoy
+local cart = mapc("cart", 1)
+eq(cart.visible, true, "a cart for the convoy")
+dump("map")
+eq(inside(cart), true, "inside the box")
+eq(math.abs(cart.x + cart.w / 2 - (da.x + da.w / 2)) < 40, true, "near Alpha, where it is now")
+eq(string.find(cart.tip, "22 Coal from Bravo to Alpha", 1, true) ~= nil, true, "what it carries, from and to")
+eq(string.find(cart.tip, "turn 52", 1, true) ~= nil, true, "and when it arrives")
+local path = 0
+for i = 1, 50 do
+    local c = mapc("path", i)
+    if c and c.visible then
+        path = path + 1
+        eq(c.x > da.x and c.x < db.x + db.w, true, "a path dot between the two settlements")
+    end
+end
+eq(path, LL.MAP_STEPS, "a dotted line from where it left to where it goes")
+press(cart)
+eq(CAMERA[1], 110 * 2, "a click on the cart flies the camera to it"); eq(CAMERA[2], 290 * 2, "both co-ordinates")
+eq(find("derpy_mr_stores_panel").visible, false, "and closes the panel")
+click("derpy_mr_stores_button"); click("derpy_mr_tab_map")
+press(mapc("dot", 2)); eq(CAMERA[1], 300 * 2, "a click on a settlement flies there too")
+click("derpy_mr_stores_button"); click("derpy_mr_tab_map")
+-- NAMES THAT WOULD COLLIDE ARE DROPPED, capitals kept first; the dot and its tooltip stay
+local C3 = region("reg_c3", 33, 1, 0, nil, nil)
+LOC["regions_onscreen_reg_c3"] = "Charlie"
+FACTIONS.fac_a = faction("fac_a", { A, B, C3 }); POS.reg_c3 = { 103, 297 }
+click("derpy_mr_tab_goods"); click("derpy_mr_tab_map")
+local function labels()
+    local out, i = {}, 1
+    while mapc("label", i) do
+        if mapc("label", i).visible then out[#out + 1] = mapc("label", i) end
+        i = i + 1
+    end
+    return out
+end
+local function meets(a, b)
+    local aw, bw = S.label_w(a.text), S.label_w(b.text)
+    local ax = a.halign == "right" and a.x + a.w - aw or a.x
+    local bx = b.halign == "right" and b.x + b.w - bw or b.x
+    return ax < bx + bw and bx < ax + aw and a.y < b.y + b.h and b.y < a.y + a.h
+end
+local ls = labels()
+eq(#ls, 2, "three settlements, two names: Charlie's would sit on Alpha's")
+eq(ls[1].text, "Alpha", "the capital keeps its name"); eq(ls[2].text, "Bravo", "Bravo, clear of both, keeps its")
+eq(mapc("dot", 3).visible, true, "Charlie is still drawn")
+eq(string.find(mapc("dot", 3).tip, "Charlie", 1, true) ~= nil, true, "and named in its tooltip")
+eq(meets(ls[1], ls[2]), false, "no two names overlap")
+-- A NAME AT THE RIGHT EDGE GOES ON THE DOT'S LEFT, inside the map
+POS.reg_c3 = { 520, 200 }
+click("derpy_mr_tab_goods"); click("derpy_mr_tab_map")
+for _, l in ipairs(labels()) do
+    eq(l.x >= pnl0.x + box[1] and l.x + l.w <= pnl0.x + box[1] + box[3], true, l.text .. "'s name inside the map")
+end
+local east = labels()[3]
+eq(east.text, "Charlie", "the eastmost is named"); eq(east.halign, "right", "on its dot's left, set against it")
+eq(east.x + east.w <= mapc("dot", 3).x, true, "ending before the dot")
+POS.reg_c3 = nil
+-- CA'S MAP UNDER IT (asked for 2026-10-03, "too bare bones"; placement corrected the same day):
+-- every point goes through the ENGINE'S frame, CampaignRadarPosition, read once a session off the
+-- world's extreme settlements. Measured in game: the picture is drawn in display space, so the
+-- logical frame put Zharr-Naggrund visibly south of its place.
+FACTIONS.fac_a = faction("fac_a", { A, B }); WORLD = { A, B }; S.frame = nil
+local function art() return find("derpy_mr_map_art") end
+local function radar(k)
+    local dx, dy = 2 * POS[k][1], 2 * POS[k][2]
+    return math.max(0, math.min(1, dx / RADAR.w)), math.max(0, math.min(1, 1 - dy / RADAR.h))
+end
+local function on_place(a, d, k, what)
+    local fx, fy = radar(k)
+    eq(math.abs(d.x + d.w / 2 - (a.x + a.w * fx)) <= 1.5, true, what .. " sits on its place in the picture, across")
+    eq(math.abs(d.y + d.h / 2 - (a.y + a.h * fy)) <= 1.5, true, what .. " and down")
+end
+eq(find("derpy_mr_map_clip").visible, true, "a map with no known picture still has its surface")
+eq(art().images[0], S.NO_ART, "but no picture on it")
+local WANT = { wh3_main_combi = { "campaign_maps/wh3_main_combi_map_7/wh3_main_combi_map_minimap.png", 1440, 1120 },
+               cr_combi_expanded = { "campaign_maps/cr_combi_expanded_map_1/cr_combi_expanded_map_minimap.png", 1600, 1120 },
+               wh3_main_chaos = { "campaign_maps/wh3_main_chaos_map_4/wh3_main_chaos_map_minimap.png", 1108, 834 } }
+for _, key in ipairs({ "wh3_main_combi", "cr_combi_expanded", "wh3_main_chaos" }) do
+    CAMPAIGN = key; click("derpy_mr_tab_goods"); click("derpy_mr_tab_map")
+    local a, w = art(), WANT[key]
+    eq(a.visible and find("derpy_mr_map_clip").visible, true, key .. " draws its map"); eq(a.images[0], w[1], key .. "'s own minimap")
+    local sc = a.w / w[2]
+    eq(math.abs(a.h / w[3] - sc) < 0.01, true, "the picture is not stretched")
+    eq(sc <= LL.MAP_ART_ZOOM + 1e-9, true, "zoomed no closer than the picture has detail for")
+    on_place(a, mapc("dot", 1), "reg_a", key .. ": Alpha"); on_place(a, mapc("dot", 2), "reg_b", key .. ": Bravo")
+    local clip = find("derpy_mr_map_clip")
+    eq(clip.x, pnl0.x + box[1], "the picture is cut to the map's box"); eq(clip.y, pnl0.y + box[2], "down")
+    eq(clip.w, box[3], "its width"); eq(clip.h, box[4], "its height")
+    eq(find_uicomponent(clip, "derpy_mr_map_art") ~= false, true, "inside the box that cuts it")
+    -- EVERYTHING ON THE PICTURE IS IN IT: drawn over it, cut with it, and dragged with it
+    for _, kind in ipairs({ "dot", "label", "path", "cart" }) do
+        if mapc(kind, 1) then eq(find_uicomponent(a, "derpy_mr_map" .. kind .. "_1") ~= false, true, "the " .. kind .. "s ride on the picture") end
+    end
+    eq(a.x <= clip.x and a.x + a.w >= clip.x + clip.w, true, "the picture fills the box across, no blank past its edge")
+    eq(a.y <= clip.y and a.y + a.h >= clip.y + clip.h, true, "and down")
+    dump("map_" .. key)
+end
+eq(mapc("cart", 1).visible, true, "the convoy is drawn on the picture")
+-- THE FRAME IS READ ONCE: not a CampaignRadarPosition per settlement per draw
+local calls = RADAR_CALLS
+click("derpy_mr_tab_goods"); click("derpy_mr_tab_map")
+eq(RADAR_CALLS, calls, "a second draw asks the engine nothing")
+-- NOTHING LIES OVER THE MAP (seen in game 2026-10-03): the empty scrolling list kept the map's
+-- box, and made after it, it took every grab meant for the picture
+eq(find("derpy_mr_stores_list"), false, "the map tab has no list over the map")
+click("derpy_mr_tab_goods")
+eq(find("derpy_mr_stores_list") ~= false, true, "and the goods tab gets its list back")
+click("derpy_mr_tab_map")
+-- GRAB AND DRAG (asked 2026-10-03): the picture moves with the mouse, everything on it with it,
+-- and a 16ms poll keeps it covering the box
+do
+    local a, clip = art(), find("derpy_mr_map_clip")
+    local d1 = mapc("dot", 1)
+    local off = d1.x - a.x
+    a:MoveTo(a.x - 5000, a.y - 5000); REPEATS.derpy_mr_stores_scroll()
+    eq(a.x, clip.x + clip.w - a.w, "dragged too far west, it stops at the picture's east edge")
+    eq(a.y, clip.y + clip.h - a.h, "too far north, at its south edge")
+    eq(mapc("dot", 1).x - a.x, off, "the settlements move with it")
+    a:MoveTo(a.x + 30, a.y + 20); REPEATS.derpy_mr_stores_scroll()
+    eq(a.x, clip.x + clip.w - a.w + 30, "a drag that stays on the picture is kept")
+    eq(a.y, clip.y + clip.h - a.h + 20, "both ways")
+    a:MoveTo(clip.x + 5000, clip.y + 5000); REPEATS.derpy_mr_stores_scroll()
+    eq(a.x, clip.x, "dragged too far east, it stops at its west edge"); eq(a.y, clip.y, "and its north")
+end
+-- NO ANSWER FROM THE ENGINE: the plain map, never a picture in the wrong frame
+RADAR_OFF, S.frame = true, nil
+click("derpy_mr_tab_goods"); click("derpy_mr_tab_map")
+eq(art().images[0], S.NO_ART, "no frame, no picture"); eq(mapc("dot", 1).visible, true, "the settlements still drawn")
+RADAR_OFF, S.frame = false, nil
+-- TWO SETTLEMENTS CLOSE TOGETHER BY THE MAP'S SOUTH EDGE: zoomed only as far as the picture has
+-- detail for, and the view kept on the picture rather than showing the blank below it
+POS.reg_a, POS.reg_b = { 600, 30 }, { 612, 22 }
+local ships0 = SHIPS; SHIPS = {}
+CAMPAIGN = "wh3_main_combi"; S.frame = nil; click("derpy_mr_tab_goods"); click("derpy_mr_tab_map")
+local ea, eclip = art(), find("derpy_mr_map_clip")
+eq(ea.w, 1440 * LL.MAP_ART_ZOOM, "a tight cluster is drawn at the closest zoom, no closer")
+eq(ea.y + ea.h >= eclip.y + eclip.h, true, "and the picture still reaches the box's foot")
+eq(ea.y + ea.h - (eclip.y + eclip.h) <= 1, true, "its own foot on the box's: the view went no further south")
+on_place(ea, mapc("dot", 2), "reg_b", "by the edge, Bravo")
+POS.reg_a, POS.reg_b = { 100, 300 }, { 300, 100 }
+SHIPS = ships0; S.frame = nil
+CAMPAIGN = "some_mod_map"; click("derpy_mr_tab_goods"); click("derpy_mr_tab_map")
+eq(art().images[0], S.NO_ART, "back on an unknown map, the picture goes")
+CAMPAIGN = "wh3_main_combi"; click("derpy_mr_tab_goods")
+eq(find("derpy_mr_map_clip").visible, false, "and off the Map tab")
+CAMPAIGN = "some_mod_map"
+-- a single settlement and no convoy: framed on that one, nothing stretched to a point
+FACTIONS.fac_a = faction("fac_a", { A }); SHIPS = {}
+click("derpy_mr_tab_goods"); click("derpy_mr_tab_map")
+eq(mapc("dot", 1).visible, true, "one settlement still draws"); eq(inside(mapc("dot", 1)), true, "inside the box")
+eq(mapc("dot", 2).visible, false, "the second dot is hidden, not left behind")
+eq(mapc("cart", 1).visible, false, "no convoy, no cart"); eq(mapc("path", 1).visible, false, "and no path")
+eq(#ERRORS, 0, "no errors drawing the map")
+-- leaving the map hides it all
+click("derpy_mr_tab_goods")
+eq(mapc("dot", 1).visible, false, "off the Map tab, no dots")
+eq(shown_rows() > 0, true, "and the list is back")
+POS.reg_a, POS.reg_b = nil, nil
+click("derpy_mr_tab_spending")
 for i, o in ipairs(DERPY_MR_STORES_ORDERS) do
     local bt = act("derpy_mr_order_" .. o.key)
     eq(bt.visible, true, o.label .. " shown"); eq(bt.text, o.label, "labelled")
@@ -678,10 +1049,10 @@ eq(find("hint_text").y < fest.y, true, "the hint is clear of the orders' line")
 REQ = {}
 press(fest); eq(REQ[1], "fac_a|order|festival", "a click buys it")
 press(act("derpy_mr_order_muster")); eq(#REQ, 1, "a greyed order asks for nothing")
-eq(act("derpy_mr_sell").visible, false, "no Sell on the list")
+eq(act("derpy_mr_sell").visible, false, "no Sell on the Spending tab")
 -- SELL, on a resource's drill-down
 SALE = { n = 120, gold = 840, price = 7 }
-click("derpy_mr_row_1"); eq(find("sub_title").text, "Where Coal is kept", "Coal's drill-down")
+click("derpy_mr_tab_goods"); click("derpy_mr_row_1"); eq(find("sub_title").text, "Where Coal is kept", "Coal's drill-down")
 local sell = act("derpy_mr_sell")
 eq(sell.visible, true, "a Sell button"); eq(sell.text, "Sell surplus", "labelled"); eq(sell.x, slot(4), "in slot 4")
 eq(sell.tip, "Sell 120 Coal for 840 gold: what your stores hold above half their space.", "priced in its tooltip")
@@ -694,7 +1065,7 @@ press(act("derpy_mr_sell")); eq(#REQ, 2, "a greyed Sell asks for nothing")
 -- the MCT switch, and no flows script: no buttons, no error
 ACT_ON = false; click("derpy_mr_back"); click("derpy_mr_row_1")
 eq(act("derpy_mr_sell").visible, false, "switched off: no Sell")
-click("derpy_mr_back"); eq(act("derpy_mr_order_festival").visible, false, "nor orders")
+click("derpy_mr_tab_spending"); eq(act("derpy_mr_order_festival").visible, false, "nor orders")
 DERPY_MR_FLOWS = nil; click("derpy_mr_tab_settlements"); click("derpy_mr_row_1")
 eq(sendb(1).visible, false, "without the flows script: no Send here"); eq(#ERRORS, 0, "and no error")
 click("derpy_mr_tab_goods")
@@ -805,6 +1176,23 @@ eq(find_uicomponent(sack_ip, S.CAPTURE .. 2).text, "5", "iron's beside coal's")
 CAP.sack = nil; REPEATS.derpy_mr_raid_plate(); eq(plates(sack_ip, S.CAPTURE, true), 0, "hidden when the sack takes nothing")
 sc.visible = false; CALLS = {}; REPEATS.derpy_mr_raid_plate(); eq(#CALLS, 0, "nothing read while the panel is closed")
 DERPY_MR_FLOWS = nil; sc.visible = true; REPEATS.derpy_mr_raid_plate(); eq(#ERRORS, 0, "without the flows script: no error")
+
+-- EVERY TAB IS PLACED (seen in game 2026-10-03: Spending and Map sat in the panel's top corner,
+-- because the layout named three tabs by hand), and every component directly under the panel was
+-- moved there by the script on every tab: the engine ignores a runtime component's XML offsets.
+click("derpy_mr_close"); click("derpy_mr_stores_button")
+local pv = find("derpy_mr_stores_panel")
+eq(pv.visible, true, "open for the placement check")
+for view, name in pairs(S.TAB) do
+    local tc, tb = find(name), L0["tab_" .. view]
+    eq(tc.x - pv.x, tb[1], name .. " placed across"); eq(tc.y - pv.y, tb[2], name .. " placed down")
+end
+for view, name in pairs(S.TAB) do
+    click(name)
+    for _, k in ipairs(pv.kids) do
+        if k.visible and not k.moved then eq(k.name, "a placed component", "left at the XML's place on " .. view) end
+    end
+end
 
 eq(#ERRORS, 0, "script errors: " .. table.concat(ERRORS, "; "))
 print("harness ok")

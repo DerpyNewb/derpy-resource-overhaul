@@ -408,6 +408,98 @@ ORDERS = (
 )
 ORDER_DONOR = "wh2_dlc09_bundle_tretch_treaty_broken"   # a faction bundle: global, not in 3D, owner only
 
+# PHASE 6 (spending spec section 4): four store events. A player is offered a DB dilemma at turn
+# start (FIRST spends and rewards, SECOND declines); the flows script takes the spend from the
+# stores when it is answered, since a payload cannot charge a REGION pool. A computer-run faction
+# takes the same deal on a roll of EVENT_AI_PCT. At most one event per faction every EVENT_GAP
+# turns. Feast and Siege stores reward with a region bundle; Tribute with CA's dilemma diplomatic
+# bonus; Arsenal with a rank for one army's units. `where`: "region" pays from that settlement,
+# "realm" from the fullest stores realm-wide. The dilemma text names its target with CA's own
+# {{CcoCampaignEventDilemma:...}} tokens.
+EVENT_GAP, EVENT_AI_PCT = 10, 20
+EVENT_DONOR = "wh2_dlc08_nor_confederate_generic"
+_RT = "{{CcoCampaignEventDilemma:RegionTargetName}}"
+EVENTS = (
+    dict(key="feast", use="provisions", cost=100, where="region", image="celebration",
+         title="A Feast", text="The stores of %s overflow with provisions. The people would gladly see "
+         "them set out on the tables." % _RT,
+         accept=("Hold the feast", "Spend 100 provisions: public order +5 and growth +20 there for 5 turns."),
+         bundle=("derpy_mr_event_feast", "public_order_jubilant.png", "Feast", 5,
+                 "A feast paid for from this settlement's stores: public order and growth are up.",
+                 [("wh_main_effect_public_order_events", "region_to_province_own_unseen", 5),
+                  ("wh_main_effect_province_growth_events", "region_to_province_own_unseen", 20)])),
+    dict(key="siege", use="provisions", cost=60, where="region", image="food_merchant",
+         title="Siege Stores", text="%s is under siege, and its stores still hold provisions. Open them "
+         "to the garrison and it can hold out without starving." % _RT,
+         accept=("Open the stores", "Spend 60 provisions: the garrison suffers no siege attrition for 2 turns."),
+         bundle=("derpy_mr_event_siege", "siege_defence.png", "Siege Stores", 2,
+                 "This settlement's stores feed its besieged garrison.",
+                 [("wh_main_effect_force_army_campaign_siege_defend_attrition", "region_to_force_own", -100)])),
+    dict(key="tribute", use="luxuries", cost=50, where="realm", image="diplomacy",
+         title="Tribute", text="{{CcoCampaignEventDilemma:FirstTargetFactionNameWithIcon}} shares a border "
+         "with you and is not at war with you. A gift of luxuries from your stores would be remembered.",
+         accept=("Send the gift", "Spend 50 luxuries: they think better of you."), bundle=None),
+    dict(key="arsenal", use="war", cost=50, where="realm", image="army_morale_up",
+         title="Arsenal", text="Your stores hold war materials enough to re-arm a whole army. "
+         "{{CcoCampaignEventDilemma:CharacterTargetName}}'s army would make good use of them.",
+         accept=("Re-arm the army", "Spend 50 war materials: every unit in that army gains a rank."), bundle=None),
+    # PHASE 6 PART 2: offered on capture, not at turn start (flows.lua F.on_restore), so it is not
+    # in the turn-start order and keeps no gap. The spec's occupation option, as a dilemma: an
+    # option row's required_resources may not read a REGION pool, and five building goods would
+    # mean five buttons on every capture screen (TRADE_RESOURCES.md 27).
+    dict(key="restore", use="building", cost=100, where="region", image="civilisation_up",
+         title="Restore", text="The stores of %s hold building materials enough to mend what the fighting "
+         "broke." % _RT,
+         accept=("Restore it", "Spend 100 building materials there: every building is repaired, and public "
+                 "order +5 for 5 turns."),
+         bundle=("derpy_mr_event_restore", "public_order_happy.png", "Restored", 5,
+                 "Repaired from this settlement's own stores: public order is up.",
+                 [("wh_main_effect_public_order_events", "region_to_province_own_unseen", 5)])),
+)
+EVENT_DECLINE = ("Keep the stores", "Nothing is spent.")
+
+# PHASE 5 (spending spec section 3): three switches per province, paid each turn from the province
+# capital's store, SUPPLY_PER for each settlement held there, and each puts its region bundle on
+# every one of them. A DB value cannot follow an MCT setting, so the discounts are fixed. Effects
+# are CA's: construction cost the way its region bundles carry it, recruit cost with CA's own
+# per-class effects (unit sets cavalry_units, monsters, infantry_units, all_land_artillery).
+# (key, use, bundle, icon, title, what it does, [(effect, scope, value)])
+SUPPLY_PER = 2
+SUPPLY = (
+    ("materials", "building", "derpy_mr_supply_materials", "construction.png", "Materials on hand",
+     "construction cost -25%",
+     [("wh_main_effect_building_construction_cost_mod", "region_to_region_own", -25)]),
+    ("stable", "mounts", "derpy_mr_supply_stable", "mount.png", "Stable stocked",
+     "recruit cost -15% for cavalry and monsters",
+     [("wh_main_effect_force_army_campaign_recruitment_cost_cavalry", "region_to_force_own", -15),
+      ("wh2_main_effect_lzd_monster_recruitment_cost_down", "region_to_force_own", -15)]),
+    ("arms", "war", "derpy_mr_supply_arms", "weapon_damage.png", "Arms stocked",
+     "recruit cost -15% for infantry and artillery",
+     [("wh_main_effect_force_army_campaign_recruitment_cost_infantry", "region_to_force_own", -15),
+      ("wh_main_effect_force_army_campaign_recruitment_cost_artillery", "region_to_force_own", -15)]),
+)
+# SHIPMENTS: Send here and Supply the capital move goods on the map for SHIP_TURNS turns, drawn as
+# a marker an army at war with the owner can seize. CA's own Food Merchant cart, under our row.
+# A computer-run faction keeps at most SHIP_AI_CAP on the road; Supply the capital ships when the
+# capital holds under SHIP_STAND turns of a switched-on cost, enough for SHIP_AI_ON; a computer
+# switches a supply on at SHIP_AI_ON turns of it. SHIP_NEAR: how close an enemy army must stand at
+# the owner's turn start to seize one; SHIP_SPOT: CA's preferred distance from the settlement.
+SHIP_TURNS, SHIP_AI_CAP, SHIP_STAND, SHIP_AI_ON = 2, 1, 5, 10
+SHIP_RADIUS, SHIP_NEAR, SHIP_SPOT = 2, 3, 3
+SHIP_INFO, SHIP_MARKER = "derpy_mr_shipment", "food_merchant"
+SHIP_NAME = "Shipment"
+SHIP_TIP = ("Goods on the road between two settlements. An army at war with their owner can seize "
+            "them by marching in.")
+
+
+def event_dilemma(key):
+    return "derpy_mr_dil_" + key
+
+
+def event_bundles():
+    """(key, icon, title, turns, description, effects) of the events that leave a region bundle."""
+    return [e["bundle"] for e in EVENTS if e["bundle"]]
+
 
 def flow_factor(kind):
     return "derpy_mr_" + kind
@@ -605,7 +697,8 @@ def n_loc():
     chains = sum(len(rare_chains(g)) for g in RARE)
     return (LOC_PER_GOOD * len(GOODS) + 2 * len(UNITS) + LOC_PER_RARE_GOOD * len(RARE)
             + LOC_PER_CHAIN * chains + 5 * (len(GOODS) + len(CA_STEMS)) + 3 + 2 * len(FLOW_FACTORS)
-            + 2 * len(USE_BUNDLES) + 2 * len(ORDERS))
+            + 2 * len(USE_BUNDLES) + 2 * len(ORDERS) + 2 * len(event_bundles()) + 6 * len(EVENTS)
+            + 2 * len(SUPPLY) + 2)
 
 # Owners with no living people to make or eat a good: daemons, the dead, and beasts with no towns
 # to sell in. Matched on the CHAIN key, so a special variant for one of them goes too.
@@ -1196,13 +1289,53 @@ def build():
                 ("building_description_texts_long_description_" + stem, text)]
     _stores(t, add, loc)
     _bundles(add, loc)
+    _dilemmas(add, loc)
+    _shipments(add, loc)
     return t, loc
+
+
+def _shipments(add, loc):
+    """Phase 5's map marker: CA's Food Merchant cart under our own key, with our name and tooltip."""
+    donor, = [r for r in db("campaign_interactable_marker_infos_tables")[1] if r["key"] == SHIP_MARKER]
+    add("campaign_interactable_marker_infos_tables", dict(donor, key=SHIP_INFO, marker_type=SHIP_MARKER))
+    loc += [("campaign_interactable_marker_infos_name_" + SHIP_INFO, SHIP_NAME),
+            ("campaign_interactable_marker_infos_tooltip_" + SHIP_INFO, SHIP_TIP)]
+
+
+def check_shipments(t, loc):
+    """The marker row draws a prefab CA ships, and carries its name and tooltip."""
+    rows = t["campaign_interactable_marker_infos_tables"][2]
+    assert [r["key"] for r in rows] == [SHIP_INFO], rows
+    types = {r["marker_type"] for r in db("campaign_interactable_marker_infos_tables")[1]}
+    assert rows[0]["marker_type"] in types, "no CA marker prefab %s" % rows[0]["marker_type"]
+    keys = dict(loc)
+    for pre in ("campaign_interactable_marker_infos_name_", "campaign_interactable_marker_infos_tooltip_"):
+        assert keys.get(pre + SHIP_INFO), pre + SHIP_INFO
 
 
 def _bundles(add, loc):
     """Phase 4's three region bundles, their effects and loc."""
     donor, = [r for r in db("effect_bundles_tables")[1] if r["key"] == BUNDLE_DONOR]
     for _use, key, icon_, title, desc, fx in USE_BUNDLES:
+        add("effect_bundles_tables", dict(donor, key=key, localised_title=title, localised_description=desc,
+                                          ui_icon=icon_))
+        for e, scope, v in fx:
+            add("effect_bundles_to_effects_junctions_tables", {
+                "effect_bundle_key": key, "effect_key": e, "effect_scope": scope, "value": float(v),
+                "advancement_stage": "start_turn_completed"})
+        loc += [("effect_bundles_localised_title_" + key, title),
+                ("effect_bundles_localised_description_" + key, desc)]
+    for key, icon_, title, _turns, desc, fx in event_bundles():   # phase 6, region bundles like phase 4's
+        add("effect_bundles_tables", dict(donor, key=key, localised_title=title, localised_description=desc,
+                                          ui_icon=icon_))
+        for e, scope, v in fx:
+            add("effect_bundles_to_effects_junctions_tables", {
+                "effect_bundle_key": key, "effect_key": e, "effect_scope": scope, "value": float(v),
+                "advancement_stage": "start_turn_completed"})
+        loc += [("effect_bundles_localised_title_" + key, title),
+                ("effect_bundles_localised_description_" + key, desc)]
+    for _k, _use, key, icon_, title, what, fx in SUPPLY:   # phase 5, region bundles like phase 4's
+        desc = "Supplied from the province capital's stores each turn: %s." % what
         add("effect_bundles_tables", dict(donor, key=key, localised_title=title, localised_description=desc,
                                           ui_icon=icon_))
         for e, scope, v in fx:
@@ -1227,7 +1360,50 @@ def _bundles(add, loc):
 def all_bundles():
     """(target, key, icon, effects) of every bundle this pack mints."""
     return [("region", k, i, fx) for _u, k, i, _t, _d, fx in USE_BUNDLES] + \
+           [("region", k, i, fx) for k, i, _t, _n, _d, fx in event_bundles()] + \
+           [("region", k, i, fx) for _k, _u, k, i, _t, _w, fx in SUPPLY] + \
            [("faction", k, i, fx) for _o, _u, k, i, _t, _w, fx in ORDERS]
+
+
+def _dilemmas(add, loc):
+    """Phase 6's four dilemmas: two choices each, no payload - the flows script spends and rewards."""
+    donor, = [r for r in db("dilemmas_tables")[1] if r["key"] == EVENT_DONOR]
+    for e in EVENTS:
+        k = event_dilemma(e["key"])
+        add("dilemmas_tables", dict(donor, key=k, localised_title=e["title"], localised_description=e["text"],
+                                    ui_image=e["image"], sound_popup_override="", sound_click_override="",
+                                    override_icon="", generate=False, prioritized=False, event_category="Event",
+                                    is_large_dilemma=False))
+        loc += [("dilemmas_localised_title_" + k, e["title"]), ("dilemmas_localised_description_" + k, e["text"])]
+        for choice, (label, line) in (("FIRST", e["accept"]), ("SECOND", EVENT_DECLINE)):
+            add("cdir_events_dilemma_choice_details_tables",
+                {"choice_key": choice, "dilemma_key": k, "audio_event_hover": "", "audio_choice_vo": ""})
+            pre = "cdir_events_dilemma_choice_details_localised_choice_"
+            loc += [(pre + "label_" + k + choice, label), (pre + "title_" + k + choice, line)]
+
+
+def check_dilemmas(t, loc):
+    """Each event's dilemma exists with two choices and every loc line; its image is one CA uses;
+    its text names only targets the script hands it."""
+    keys = dict(loc)
+    images = {r["ui_image"] for r in db("dilemmas_tables")[1]}
+    rows = {r["key"]: r for r in t["dilemmas_tables"][2]}
+    choices = t["cdir_events_dilemma_choice_details_tables"][2]
+    target = {"region": "RegionTargetName", "tribute": "FirstTargetFactionNameWithIcon",
+              "arsenal": "CharacterTargetName"}
+    for e in EVENTS:
+        k = event_dilemma(e["key"])
+        assert rows[k]["ui_image"] in images, "no CA dilemma image %s" % rows[k]["ui_image"]
+        assert sorted(c["choice_key"] for c in choices if c["dilemma_key"] == k) == ["FIRST", "SECOND"], k
+        for pre in ("dilemmas_localised_title_", "dilemmas_localised_description_"):
+            assert keys.get(pre + k), pre + k
+        for c in ("FIRST", "SECOND"):
+            for part in ("label_", "title_"):
+                assert keys.get("cdir_events_dilemma_choice_details_localised_choice_" + part + k + c), (k, c, part)
+        tokens = set(re.findall(r"\{\{CcoCampaignEventDilemma:(\w+)\}\}", e["text"]))
+        want = target["region"] if e["where"] == "region" else target.get(e["key"])
+        assert tokens <= {want}, "%s names %s, the script hands it %s" % (k, tokens, want)
+    assert len(rows) == len(EVENTS)
 
 
 def check_bundles(t, loc):
@@ -1511,6 +1687,8 @@ def reach_table():
 def check(t, loc):
     """Fail on anything that would load wrong or silently do nothing."""
     check_bundles(t, loc)
+    check_dilemmas(t, loc)
+    check_shipments(t, loc)
     import guess_region_commodities as grc
     import gen_commodity_icons
     # every good has an icon, a lore rule, and is one of the 26
@@ -1906,6 +2084,29 @@ def selftest():
         except AssertionError:
             continue
         raise SystemExit("selftest: a broken bundle passed check_bundles()")
+    for breakit in (lambda t, l: t["cdir_events_dilemma_choice_details_tables"][2].pop(),
+                    lambda t, l: t["dilemmas_tables"][2][0].update(ui_image="no_such_image"),
+                    lambda t, l: l.remove([x for x in l if x[0].startswith("cdir_events_dilemma_choice_details")][0]),
+                    lambda t, l: EVENTS[2].update(text=EVENTS[2]["text"] + " {{CcoCampaignEventDilemma:RegionTargetName}}")):
+        saved = dict(EVENTS[2])
+        bad, bloc = build()
+        breakit(bad, bloc)
+        try:
+            check_dilemmas(bad, bloc)
+        except AssertionError:
+            continue
+        finally:
+            EVENTS[2].clear(); EVENTS[2].update(saved)
+        raise SystemExit("selftest: a broken dilemma passed check_dilemmas()")
+    for breakit in (lambda t, l: t["campaign_interactable_marker_infos_tables"][2][0].update(marker_type="no_cart"),
+                    lambda t, l: l.remove([x for x in l if x[0].startswith("campaign_interactable_marker_infos_tooltip_")][0])):
+        bad, bloc = build()
+        breakit(bad, bloc)
+        try:
+            check_shipments(bad, bloc)
+        except AssertionError:
+            continue
+        raise SystemExit("selftest: a broken marker passed check_shipments()")
     # a bad row must be caught, or the check proves nothing
     for breakit in (lambda t: t["building_effects_junction_tables"][2].append(
                         dict(t["building_effects_junction_tables"][2][0], building="wh3_main_dae_port_1")),

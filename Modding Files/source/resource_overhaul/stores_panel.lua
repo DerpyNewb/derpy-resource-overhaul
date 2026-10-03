@@ -328,6 +328,9 @@ end
 S.SEND = "derpy_mr_sendhere"
 S.ORDER = "derpy_mr_order_"
 S.SELL = "derpy_mr_sell"
+S.NO_SHIPS = "Nothing on the road. Send here, on a settlement's resources, sends a shipment."
+S.SUPPLY_KEY = {}
+for _, sp in ipairs(DERPY_MR_STORES_SUPPLY) do S.SUPPLY_KEY[sp.key] = true end
 S.USE_WORD = { provisions = "provisions", building = "building materials", war = "war materials",
                mounts = "mounts", luxuries = "luxuries" }
 S.act = { orders = {} }      -- what the shown action buttons do, for the click handler
@@ -361,14 +364,63 @@ local function turns(n)
     return n .. " turns"
 end
 
-function S.send_tip(plan, d)
-    if plan then
+function S.coming_total(coming)
+    local n = 0
+    for _, s in ipairs(coming or {}) do n = n + s.n end
+    return n
+end
+
+-- A SHIPMENT since phase 5: it says how long, what is lost and the risk, and lists what is
+-- already on the road to this store (`coming`, the flows script's ships_to).
+function S.send_tip(plan, d, coming)
+    local out
+    if plan and plan.busy then
+        local f = S.local_faction()
+        out = "You have " .. S.num((f and S.ask("ship_cap", f)) or 0)
+            .. " shipments on the road already, the most you can have."
+    elseif plan then
         local from = loc("regions_onscreen_" .. plan.from:name(), plan.from:name())
-        return "Bring " .. S.num(plan.n) .. " " .. d.name .. " from " .. from .. ": " .. S.num(plan.got)
-            .. " arrive, " .. S.num(plan.n - plan.got) .. " are lost on the way."
+        local sh = S.flows("SHIP")
+        out = "Ship " .. S.num(plan.n) .. " " .. d.name .. " from " .. from .. ": " .. S.num(plan.got)
+            .. " arrive in " .. turns(sh and sh.turns or 2) .. ", " .. S.num(plan.n - plan.got)
+            .. " are lost on the way. An army at war with you can seize it on the road."
+    elseif d.full then
+        out = "This store of " .. d.name .. " is full."
+    elseif d.cap > 0 and d.held + S.coming_total(coming) >= d.cap then
+        out = "What is already on the road will fill this store of " .. d.name .. "."
+    else
+        out = "No other settlement of yours can send " .. d.name .. "."
     end
-    if d.full then return "This store of " .. d.name .. " is full." end
-    return "No other settlement of yours can send " .. d.name .. "."
+    for _, s in ipairs(coming or {}) do
+        out = out .. "\nOn the road here: " .. S.num(s.n) .. ", arriving on turn " .. s.due .. "."
+    end
+    return out
+end
+
+-- Province supplies (phase 5): only with the flows script loaded and its MCT switch on.
+function S.supply_on()
+    local rates = S.flows("rates")
+    if not (rates and S.flows("request")) then return false end
+    local ok, r = pcall(rates)
+    return ok and type(r) == "table" and r.supply == true
+end
+
+function S.supply_tip(sp, st, name)
+    local stores = "the stores of " .. name
+    local out = sp.label .. "\n"
+    if sp.use == "" then
+        out = out .. "When " .. stores .. " run low on a supply that is on, the other settlements you hold "
+            .. "in this province send more by shipment.\n"
+    else
+        out = out .. "Pay " .. S.num(st.cost) .. " " .. (S.USE_WORD[sp.use] or sp.use) .. " a turn from "
+            .. stores .. ": " .. sp.what .. " in every settlement you hold in this province.\n"
+            .. "The stores of " .. name .. " hold " .. S.num(st.have[sp.use] or 0) .. ".\n"
+        if st.short[sp.key] then
+            out = out .. "Turned off on turn " .. st.short[sp.key] .. ": " .. stores .. " ran short.\n"
+        end
+    end
+    if st.on[sp.key] then return out .. "On. Click to stop it." end
+    return out .. "Off. Click to start it."
 end
 
 function S.order_tip(o, st)
@@ -432,15 +484,15 @@ function S.view_model(realm)
                                     S.num(g.held) .. " / " .. S.num(g.cap), g.n .. " of " .. g.of,
                                     icon = g.icon, tip = S.good_tip(g), open = g.stem }
         end
-        if S.actions_on() then
-            local f = S.local_faction()
-            v.orders = {}
-            for i, o in ipairs(DERPY_MR_STORES_ORDERS) do
-                local st = f and S.ask("order_state", f, o.key)
-                if st then v.orders[i] = { key = o.key, tip = S.order_tip(o, st), off = not st.ok } end
-            end
-        end
         if #realm == 0 then v.empty = S.NO_REALM end
+    elseif S.view == "spending" then
+        S.spending(v)
+    elseif S.view == "map" then
+        v.title = "Where your convoys are"
+        v.heads = { "", "", "", "", "" }
+        v.hint = "Click a convoy or a settlement to fly there."
+        local f = S.local_faction()
+        if f then v.map = S.map_model(f) end
     elseif S.view == "trade" then
         v.title = "What your settlements trade"
         v.heads = { "Resource", "Held", "Exports", "Imports", "Last turn" }
@@ -494,7 +546,8 @@ function S.view_model(realm)
                           tip = tip, stem = d.stem }
             if f then
                 local plan = S.ask("send_plan", f, s.key, d.stem)
-                row.send = { tip = S.send_tip(plan, d), off = plan == nil }
+                row.send = { tip = S.send_tip(plan, d, S.ask("ships_to", f:name(), s.key, d.stem)),
+                             off = plan == nil or plan.busy == true }
             end
             v.rows[#v.rows + 1] = row
         end
@@ -521,6 +574,246 @@ function S.view_model(realm)
     return v
 end
 
+-- THE SPENDING TAB (asked for 2026-10-03): every province capital you hold with its four supply
+-- boxes, then the shipments on the road with a Show button each, then the orders on the bottom line.
+function S.place(key) return loc("regions_onscreen_" .. key, key) end
+
+function S.icon_of(stem)
+    for _, g in ipairs(DERPY_MR_STORES_GOODS) do
+        if g.stem == stem then return g.icon end
+    end
+end
+
+-- CA's greyscale (the Exchange's EX.set_off shader): greyed and faded, or back in colour
+function S.shade(c, off)
+    pcall(function()
+        c:ShaderTechniqueSet(off and "set_greyscale_t0" or "normal_t0", true, true)
+        if off then c:ShaderVarsSet(1, 0.6, 0, 0, true, true) end
+    end)
+end
+S.PAYIC = "derpy_mr_supic_"   -- a Spending row's icon of the good a supply pays with
+
+function S.spending(v)
+    v.title = "What your stores pay for"
+    v.heads = { "Province capital", "Materials", "Stables", "Arms", "Supply capital" }
+    v.hint = "Tick a supply to pay for it each turn."
+    local f = S.local_faction()
+    if not f then return end
+    if S.supply_on() then
+        local caps = {}
+        for _, k in ipairs(S.ask("capitals", f) or {}) do
+            local st = S.ask("supply_state", f, k)
+            if st then caps[#caps + 1] = { key = k, name = S.place(k), st = st } end
+        end
+        table.sort(caps, function(a, b) return a.name < b.name end)
+        for _, c in ipairs(caps) do
+            local row = { c.name, "", "", "", "", capital = c.key, supply = {},
+                          tip = "Each supply costs " .. S.num(c.st.cost) .. " a turn from the stores of " .. c.name
+                              .. ", 2 for each settlement you hold in its province." }
+            for _, sp in ipairs(DERPY_MR_STORES_SUPPLY) do
+                row.supply[sp.key] = { on = c.st.on[sp.key] == true, tip = S.supply_tip(sp, c.st, c.name) }
+                local pay = sp.use ~= "" and c.st.pay and c.st.pay[sp.use]
+                if pay then
+                    row.supply[sp.key].pay = {
+                        icon = S.icon_of(pay.stem), short = pay.n < c.st.cost,
+                        tip = sp.label .. "\n" .. (pay.n > 0 and ("Paid from " .. S.name(pay.stem) .. " first, the fullest store.")
+                            or ("Nothing to pay with: the stores of " .. c.name .. " hold none.")) }
+                end
+            end
+            v.rows[#v.rows + 1] = row
+        end
+    end
+    local ships = S.ask("ships")
+    if ships then
+        local mine = {}
+        for _, s in ipairs(ships) do
+            if s.f == f:name() then mine[#mine + 1] = s end
+        end
+        -- the road's own headings, on its section row: the panel's are the supplies'
+        v.rows[#v.rows + 1] = { S.section("On the road (" .. #mine .. " of " .. S.num(S.ask("ship_cap", f) or 0) .. ")"),
+                                S.section("From"), S.section("To"), S.section("Arrives"), "", section = true }
+        if #mine == 0 then v.rows[#v.rows + 1] = { S.NO_SHIPS, "", "", "", "" } end
+        for _, s in ipairs(mine) do
+            local from, to = S.place(s.from), S.place(s.to)
+            local icon
+            for _, g in ipairs(DERPY_MR_STORES_GOODS) do
+                if g.stem == s.stem then icon = g.icon end
+            end
+            v.rows[#v.rows + 1] = { S.num(s.n) .. " " .. S.name(s.stem), from, to, "turn " .. s.due, "", icon = icon,
+                                    send = { label = "Show", look = { s.x, s.y },
+                                             tip = "Now beside " .. (s.leg == 2 and to or from) .. ". It reaches " .. to
+                                                 .. " on turn " .. s.due .. ". Click to see it on the map." } }
+        end
+    end
+    if #v.rows == 0 or v.rows[1].section then v.heads = { "", "", "", "", "" } end
+    if S.actions_on() then
+        v.orders = {}
+        for i, o in ipairs(DERPY_MR_STORES_ORDERS) do
+            local st = S.ask("order_state", f, o.key)
+            if st then v.orders[i] = { key = o.key, tip = S.order_tip(o, st), off = not st.ok } end
+        end
+    end
+end
+
+-- THE MAP TAB: where each settlement and convoy is, in panel pixels relative to the map's box.
+-- One scale for both axes and north up (logical y grows northward: Kislev 789, Middenheim 720,
+-- Karak Eight Peaks 359 in CA's own scripts). Pure, so the harness reads it.
+-- CA'S MINIMAP for each campaign, by cm:model():campaign_name_key() (the campaigns table's key,
+-- which CA's own scripts compare). The folders are campaigns_tables' map_name (IEE's from its own
+-- pack); CA's save-game panel draws campaign_maps/wh3_main_combi_map_2's the same way. w and h are
+-- the pictures' own sizes. Any other map draws the plain one.
+S.MAP_ART = {
+    wh3_main_combi = { path = "campaign_maps/wh3_main_combi_map_7/wh3_main_combi_map_minimap.png", w = 1440, h = 1120 },
+    cr_combi_expanded = { path = "campaign_maps/cr_combi_expanded_map_1/cr_combi_expanded_map_minimap.png",
+                          w = 1600, h = 1120 },
+    wh3_main_chaos = { path = "campaign_maps/wh3_main_chaos_map_4/wh3_main_chaos_map_minimap.png", w = 1108, h = 834 },
+}
+S.NO_ART = "ui/skins/default/1x1_transparent_white.png"   -- the plain map's surface: CA's clear pixel
+function S.map_art()
+    local ok, key = pcall(function() return cm:model():campaign_name_key() end)
+    return ok and S.MAP_ART[key] or nil
+end
+
+-- WHERE A POINT FALLS ON THE PICTURE. Measured in game 2026-10-03 (IEE): CA's minimap is drawn in
+-- DISPLAY space, so a logical frame put Zharr-Naggrund visibly south of its place. The engine's
+-- own CampaignRadarPosition answers exactly, on any map: the 0-1 fraction of the picture, from the
+-- left and from the top, that CA's map panels place icons with (ContextRadarIcon). A world
+-- position is (display x, height, display y), built from numbers with ToVector. It is linear, so
+-- two reads give the frame: the world's westmost and eastmost settlements, its southmost and
+-- northmost (points on the picture: off it the answer clamps). Read once a session; false when
+-- the engine will not answer, and the plain map is drawn instead.
+S.frame = nil
+function S.radar(dx, dy)
+    local ok, x, y = pcall(function()
+        local e = "CampaignRadarPosition(ToVector(" .. dx .. ", 0, " .. dy .. ", 0))"
+        return common.get_context_value(e .. ".x"), common.get_context_value(e .. ".y")
+    end)
+    if ok and type(x) == "number" and type(y) == "number" then return x, y end
+end
+function S.map_frame()
+    if S.frame == nil then
+        S.frame = false
+        local ok, f = pcall(function()
+            local rl = cm:model():world():region_manager():region_list()
+            local w, e, s, n
+            for i = 0, rl:num_items() - 1 do
+                local st = rl:item_at(i):settlement()
+                if st and not st:is_null_interface() then
+                    local x, y = st:display_position_x(), st:display_position_y()
+                    if not w or x < w[1] then w = { x, y } end
+                    if not e or x > e[1] then e = { x, y } end
+                    if not s or y < s[2] then s = { x, y } end
+                    if not n or y > n[2] then n = { x, y } end
+                end
+            end
+            if not w or e[1] - w[1] < 1 or n[2] - s[2] < 1 then return nil end
+            local wx = S.radar(w[1], w[2])
+            local ex = S.radar(e[1], e[2])
+            local _, sy = S.radar(s[1], s[2])
+            local _, ny = S.radar(n[1], n[2])
+            if not (wx and ex and sy and ny) or ex == wx or ny == sy then return nil end
+            local bx, by = (ex - wx) / (e[1] - w[1]), (ny - sy) / (n[2] - s[2])
+            return { bx = bx, ax = wx - bx * w[1], by = by, ay = sy - by * s[2] }
+        end)
+        if ok and f then S.frame = f end
+    end
+    return S.frame or nil
+end
+
+-- A name's width on the map, near enough to keep two from overlapping
+function S.label_w(s) return math.ceil(string.len(s or "") * L.MAP_CHAR_W) end
+
+-- THE MAP TAB'S MODEL. Every point in map units: the picture's own pixels (y down) when there is
+-- a picture and a frame, else display units with north up - display, not logical, so the plain
+-- map keeps the real map's proportions too. Framed on what is drawn, in the map's box, one scale.
+function S.map_model(faction)
+    local m = { dots = {}, carts = {}, path = {}, art = S.map_art() }
+    local fr = m.art and S.map_frame()
+    if not fr then m.art = nil end
+    local function u(dx, dy)
+        if fr then return m.art.w * (fr.ax + fr.bx * dx), m.art.h * (fr.ay + fr.by * dy) end
+        return dx, -dy
+    end
+    local caps, at = {}, {}
+    for _, k in ipairs(S.ask("capitals", faction) or {}) do caps[k] = true end
+    local rl = faction:region_list()
+    for i = 0, rl:num_items() - 1 do
+        local r = rl:item_at(i)
+        local st = not r:is_null_interface() and r:settlement()
+        if st and not st:is_null_interface() then
+            local k = r:name()
+            local d = { lx = st:logical_position_x(), ly = st:logical_position_y(), name = S.place(k), cap = caps[k] == true }
+            d.ux, d.uy = u(st:display_position_x(), st:display_position_y())
+            m.dots[#m.dots + 1] = d
+            at[k] = d
+        end
+    end
+    table.sort(m.dots, function(a, b) return a.name < b.name end)
+    for _, s in ipairs(S.ask("ships") or {}) do
+        if s.f == faction:name() then
+            local c = { lx = s.x, ly = s.y, s = s, a = at[s.from], b = at[s.to] }
+            c.ux, c.uy = u(cm:log_to_dis(s.x, s.y))
+            m.carts[#m.carts + 1] = c
+        end
+    end
+    -- the frame: every point drawn, its centre, and one scale that fits the padded box
+    local x0, y0, x1, y1
+    local function grow(x, y)
+        x0, y0 = math.min(x0 or x, x), math.min(y0 or y, y)
+        x1, y1 = math.max(x1 or x, x), math.max(y1 or y, y)
+    end
+    for _, d in ipairs(m.dots) do grow(d.ux, d.uy) end
+    for _, c in ipairs(m.carts) do grow(c.ux, c.uy) end
+    if not x0 then return m end
+    local w, h = L.map[3] - 2 * L.MAP_PAD, L.map[4] - 2 * L.MAP_PAD
+    local scale = math.min(w / math.max(x1 - x0, L.MAP_MIN_SPAN), h / math.max(y1 - y0, L.MAP_MIN_SPAN))
+    local cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    local a = m.art
+    if a then
+        -- no closer than the picture has detail for, and kept on it: no blank past its edge
+        scale = math.min(scale, L.MAP_ART_ZOOM)
+        local hw, hh = L.map[3] / 2 / scale, L.map[4] / 2 / scale
+        if a.w >= 2 * hw then cx = math.max(hw, math.min(a.w - hw, cx)) end
+        if a.h >= 2 * hh then cy = math.max(hh, math.min(a.h - hh, cy)) end
+    end
+    local function px(x, y)
+        return math.floor(L.map[3] / 2 + (x - cx) * scale + 0.5), math.floor(L.map[4] / 2 + (y - cy) * scale + 0.5)
+    end
+    for _, d in ipairs(m.dots) do d.x, d.y = px(d.ux, d.uy) end
+    -- THE SURFACE everything rides on, in the map's box: the picture, or the box itself
+    if a then
+        local ax, ay = px(0, 0)
+        m.surface = { ax, ay, math.floor(a.w * scale + 0.5), math.floor(a.h * scale + 0.5) }
+    else
+        m.surface = { 0, 0, L.map[3], L.map[4] }
+    end
+    for _, c in ipairs(m.carts) do
+        c.x, c.y = px(c.ux, c.uy)
+        if c.a and c.b then
+            for k = 1, L.MAP_STEPS do
+                local f = k / (L.MAP_STEPS + 1)
+                local x, y = px(c.a.ux + (c.b.ux - c.a.ux) * f, c.a.uy + (c.b.uy - c.a.uy) * f)
+                m.path[#m.path + 1] = { x = x, y = y }
+            end
+        end
+    end
+    return m
+end
+
+function S.ship_tip(s)
+    return S.num(s.n) .. " " .. S.name(s.stem) .. " from " .. S.place(s.from) .. " to " .. S.place(s.to)
+        .. ", arriving on turn " .. s.due .. ".\nClick to fly there."
+end
+
+-- SHOW: the camera flies to a shipment's cart, CA's way (wh3_dlc29_middenland_narrative), keeping
+-- its distance and height; the panel closes so the map can be seen. A camera move, not the model.
+function S.look_at(x, y)
+    local dx, dy = cm:log_to_dis(x, y)
+    local _cx, _cy, d, _b, h = cm:get_camera_position()
+    cm:scroll_camera_from_current(false, 1, { dx, dy, d, 0, h })
+    S.show(false)
+end
+
 -- ==========================================================================================
 -- THE UI. Built at runtime from ui/campaign ui/derpy_mr_stores_*.twui.xml (tools/gen_mr_ui.py).
 -- Runtime components ignore XML offsets, so every part is placed here from DERPY_MR_STORES_L.
@@ -531,7 +824,13 @@ S.PANEL = "derpy_mr_stores_panel"
 S.CLOSE = "derpy_mr_close"
 S.BACK = "derpy_mr_back"
 S.TAB = { goods = "derpy_mr_tab_goods", settlements = "derpy_mr_tab_settlements",
-          trade = "derpy_mr_tab_trade" }
+          trade = "derpy_mr_tab_trade", spending = "derpy_mr_tab_spending", map = "derpy_mr_tab_map" }
+S.MAP = { dot = "derpy_mr_mapdot_", cart = "derpy_mr_mapcart_", path = "derpy_mr_mappath_",
+          label = "derpy_mr_maplabel_" }
+S.MAP_FILE = { dot = "derpy_mr_stores_mapdot", cart = "derpy_mr_stores_mapcart", path = "derpy_mr_stores_mappath",
+               label = "derpy_mr_stores_maplabel" }
+S.map_made = { dot = 0, cart = 0, path = 0, label = 0 }   -- how many of each the panel holds
+S.map_hits = {}                                           -- a map component's name -> where a click flies
 S.SW = "derpy_mr_sw_"
 S.ROW = "derpy_mr_row_"
 S.LIST = "derpy_mr_stores_list"
@@ -598,6 +897,8 @@ function S.build()
     end
     label(find_uicomponent(p, S.TAB.settlements), "Settlements")
     label(find_uicomponent(p, S.TAB.trade), "Trade")
+    label(find_uicomponent(p, S.TAB.spending), "Spending")
+    label(find_uicomponent(p, S.TAB.map), "Map")
     label(find_uicomponent(p, S.BACK), "Back")
     -- the chart's twenty bars, made once and kept; draw_chart sizes, shows and hides them
     for i = 1, L.BARS do
@@ -605,6 +906,9 @@ function S.build()
         local b = find_uicomponent(p, S.BAR .. i)
         if is_uicomponent(b) then b:SetVisible(false) end
     end
+    -- the box for CA's map, made before any map dot so the engine draws it beneath them
+    local clip = S.map_clip(p)
+    if clip then clip:SetVisible(false) end
     return p
 end
 
@@ -617,8 +921,7 @@ function S.layout(p)
     local boxes = { title_text = L.title, title_rule = L.title_rule, sub_title = L.sub_title,
                     empty_text = L.empty, hint_text = L.hint }
     boxes[S.CLOSE], boxes[S.BACK] = L.close, L.back
-    boxes[S.TAB.goods], boxes[S.TAB.settlements] = L.tab_goods, L.tab_settlements
-    boxes[S.TAB.trade] = L.tab_trade
+    for view, name in pairs(S.TAB) do boxes[name] = L["tab_" .. view] end
     for name, box in pairs(boxes) do put(find_uicomponent(p, name), px, py, box) end
     -- the hint sits at the right end of the sub-title's line
     local hint = find_uicomponent(p, "hint_text")
@@ -731,10 +1034,30 @@ function S.follow_list(p)
 end
 
 function S.scroll_poll()
-    if not S.list_key then return end
     local p = S.panel()
     if not is_uicomponent(p) or not p:Visible() then return end
+    if S.view == "map" then S.map_hold(p) end
+    if not S.list_key then return end
     S.follow_list(p)
+end
+
+-- A DRAGGED MAP STAYS ON THE PICTURE: wherever the mouse leaves it, it is put back so it still
+-- covers the map's box (a picture smaller than the box stays where it was drawn). Everything on
+-- it is its child and comes along.
+function S.map_hold(p)
+    local clip = find_uicomponent(p, S.MAP_CLIP)
+    local art = S.map_surface(p)
+    if not (is_uicomponent(clip) and clip:Visible() and art) then return end
+    local cx, cy = clip:Position()
+    local cw, ch = clip:Dimensions()
+    local ax, ay = art:Position()
+    local aw, ah = art:Dimensions()
+    local function hold(a, c, aw_, cw_)
+        if aw_ < cw_ then return a end
+        return math.max(c + cw_ - aw_, math.min(c, a))
+    end
+    local nx, ny = hold(ax, cx, aw, cw), hold(ay, cy, ah, ch)
+    if nx ~= ax or ny ~= ay then art:MoveTo(nx, ny) end
 end
 
 -- ---- rows ---------------------------------------------------------------------------------
@@ -818,12 +1141,43 @@ function S.draw_rows(p, rows, heads, cols)
                 end
             end
             draw_switches(r, rc, rx, ry, cols)
+            -- the Spending tab's supply boxes, in columns 2-5
+            for k, sp in ipairs(DERPY_MR_STORES_SUPPLY) do
+                local sw, b = find_uicomponent(r, S.SW .. sp.key), rc.supply and rc.supply[sp.key]
+                -- every row has the pay icons: hidden unless this row's supply pays with something
+                local pic = find_uicomponent(r, S.PAYIC .. sp.key)
+                if is_uicomponent(pic) then pic:SetVisible(b ~= nil and b.pay ~= nil) end
+                if is_uicomponent(sw) then
+                    sw:SetVisible(b ~= nil)
+                    if b then
+                        local col = cols[1 + k]
+                        -- the box alone, or the box and its good's icon as a centred pair
+                        local wide = b.pay and (L.CHECK + L.PAY_GAP + L.icon[3]) or L.CHECK
+                        local bx = rx + col[1] + math.floor((col[2] - wide) / 2)
+                        sw:MoveTo(bx, ry + math.floor((L.PITCH - L.CHECK) / 2))
+                        local ic = find_uicomponent(r, S.PAYIC .. sp.key)
+                        if is_uicomponent(ic) then
+                            if b.pay then
+                                ic:MoveTo(bx + L.CHECK + L.PAY_GAP, ry + math.floor((L.PITCH - L.icon[4]) / 2))
+                                ic:SetImagePath(b.pay.icon, 0)
+                                ic:SetTooltipText(b.pay.tip, true)
+                                S.shade(ic, b.pay.short)
+                            end
+                        end
+                        local art = S.CHECK[b.on]
+                        sw:SetImagePath(art[1], 0)
+                        sw:SetImagePath(art[2], 1)
+                        sw:SetTooltipText(b.tip, true)
+                    end
+                end
+            end
+            -- Send here on a settlement's resources; Show on a Spending tab shipment
             local sb = find_uicomponent(r, S.SEND)
             if is_uicomponent(sb) then
                 sb:SetVisible(rc.send ~= nil)
                 if rc.send then
                     sb:MoveTo(rx + cols[5][1], ry + math.floor((L.PITCH - L.send[2]) / 2))
-                    label(sb, "Send here")
+                    label(sb, rc.send.label or "Send here")
                     sb:SetTooltipText(rc.send.tip, true)
                     S.set_off(sb, rc.send.off)
                 end
@@ -864,6 +1218,127 @@ function S.draw_rows(p, rows, heads, cols)
 end
 
 -- c nil: every chart part hidden. c without bars: the one line saying why.
+-- The pool's i-th component of a kind, made the first time it is wanted and kept.
+-- The box that cuts CA's map to the Map tab's, and the picture in it: made once, on first need.
+S.MAP_CLIP = "derpy_mr_map_clip"
+function S.map_clip(p)
+    local c = find_uicomponent(p, S.MAP_CLIP)
+    if is_uicomponent(c) then return c end
+    pcall(function() p:CreateComponent(S.MAP_CLIP, S.PATH .. "derpy_mr_stores_mapart") end)
+    c = find_uicomponent(p, S.MAP_CLIP)
+    return is_uicomponent(c) and c or nil
+end
+
+-- EVERY SETTLEMENT NAMED, the province capitals first; a name that would overlap one already
+-- placed is left off (its dot and tooltip stay), and one that would run past the map's right
+-- edge goes on its dot's left, set against it.
+function S.map_names(p, m, bx, by, shown)
+    local order = {}
+    for _, d in ipairs(m.dots) do if d.cap then order[#order + 1] = d end end
+    for _, d in ipairs(m.dots) do if not d.cap then order[#order + 1] = d end end
+    local lw, lh, taken = L.map_label[1], L.map_label[2], {}
+    for _, d in ipairs(order) do
+        local gap = math.floor((d.cap and L.MAP_CAP or L.MAP_DOT) / 2) + 4
+        local tw = S.label_w(d.name)
+        local right = d.x + gap + lw <= L.map[3]
+        local lx = right and d.x + gap or d.x - gap - lw
+        local tx, ly = right and lx or lx + lw - tw, d.y - math.floor(lh / 2)
+        local free = true
+        for _, b in ipairs(taken) do
+            if tx < b[1] + b[3] and b[1] < tx + tw and ly < b[2] + lh and b[2] < ly + lh then
+                free = false
+                break
+            end
+        end
+        if free then
+            taken[#taken + 1] = { tx, ly, tw }
+            shown.label = shown.label + 1
+            local lab = S.map_part(p, "label", shown.label)
+            if lab then
+                put(lab, bx, by, { lx, ly, lw, lh })
+                set(lab, d.name)
+                lab:SetTextHAlign(right and "left" or "right")
+                lab:SetVisible(true)
+            end
+        end
+    end
+end
+
+-- The picture every dot, name, road and cart is made on: drawn over it, cut with it, dragged with it.
+function S.map_surface(p)
+    local clip = find_uicomponent(p, S.MAP_CLIP)
+    local art = is_uicomponent(clip) and find_uicomponent(clip, "derpy_mr_map_art")
+    return is_uicomponent(art) and art or nil
+end
+
+function S.map_part(p, kind, i)
+    local name = S.MAP[kind] .. i
+    local c = find_uicomponent(p, name)
+    if is_uicomponent(c) then return c end
+    local on = S.map_surface(p) or p
+    pcall(function() on:CreateComponent(name, S.PATH .. S.MAP_FILE[kind]) end)
+    c = find_uicomponent(p, name)
+    if is_uicomponent(c) and i > S.map_made[kind] then S.map_made[kind] = i end
+    return is_uicomponent(c) and c or nil
+end
+
+-- Centred on (x, y) in the map's box; every part past the ones shown goes hidden.
+function S.draw_map(p, m)
+    local px, py = p:Position()
+    local bx, by = px + L.map[1], py + L.map[2]
+    local shown = { dot = 0, cart = 0, path = 0, label = 0 }
+    S.map_hits = {}
+    local function place(kind, x, y, size)
+        shown[kind] = shown[kind] + 1
+        local c = S.map_part(p, kind, shown[kind])
+        if not c then return nil end
+        sized(c, size, size)
+        c:MoveTo(bx + x - math.floor(size / 2), by + y - math.floor(size / 2))
+        c:SetVisible(true)
+        return c
+    end
+    -- the surface first: CA's picture, or a clear one on a map with no picture
+    local clip = find_uicomponent(p, S.MAP_CLIP)
+    local on = m ~= nil and m.surface ~= nil
+    if is_uicomponent(clip) then
+        clip:SetVisible(on)
+        if on then
+            put(clip, px, py, L.map)
+            local art = S.map_surface(p)
+            if art then
+                art:SetImagePath(m.art and m.art.path or S.NO_ART, 0)
+                put(art, bx, by, m.surface)
+            end
+        end
+    end
+    if m then
+        -- the road first, then the settlements, then the carts: each drawn over the one before
+        for _, d in ipairs(m.path) do place("path", d.x, d.y, L.MAP_PATH) end
+        for _, d in ipairs(m.dots) do
+            local c = place("dot", d.x, d.y, d.cap and L.MAP_CAP or L.MAP_DOT)
+            if c then
+                c:SetImagePath(d.cap and L.MAP_CAP_ICON or L.MAP_TOWN_ICON, 0)
+                c:SetTooltipText(d.name .. (d.cap and ", a province capital" or "") .. "\nClick to fly there.", true)
+                S.map_hits[c:Id()] = { d.lx, d.ly }
+            end
+        end
+        S.map_names(p, m, bx, by, shown)
+        for _, c in ipairs(m.carts) do
+            local k = place("cart", c.x, c.y, L.MAP_CART_SIZE)
+            if k then
+                k:SetTooltipText(S.ship_tip(c.s), true)
+                S.map_hits[k:Id()] = { c.lx, c.ly }
+            end
+        end
+    end
+    for kind, made in pairs(S.map_made) do
+        for i = shown[kind] + 1, made do
+            local c = find_uicomponent(p, S.MAP[kind] .. i)
+            if is_uicomponent(c) then c:SetVisible(false) end
+        end
+    end
+end
+
 function S.draw_chart(p, c)
     local px, py = p:Position()
     for _, name in ipairs(S.CHART_CELLS) do
@@ -955,7 +1430,7 @@ function S.refresh()
     local empty = find_uicomponent(p, "empty_text")
     if is_uicomponent(empty) then
         set(empty, v.empty)
-        empty:SetVisible(#v.rows == 0)
+        empty:SetVisible(#v.rows == 0 and v.map == nil)
     end
     -- THE HOLDER STARTS AT THE TOP; a kept list's poll puts it back where the bar is.
     put(find_uicomponent(p, "rows_holder"), px, py, L.list)
@@ -963,9 +1438,11 @@ function S.refresh()
     -- parent's box is not known to take clicks or the wheel.
     local holder = find_uicomponent(p, "rows_holder")
     if is_uicomponent(holder) then sized(holder, L.list[3], math.max(S.rows_shown(), #v.rows) * L.PITCH) end
-    S.ensure_list(p, #v.rows)
+    -- NO LIST ON THE MAP: an empty one still covers the map's box and, made after it, takes the grab
+    if v.map then S.drop_list(p) else S.ensure_list(p, #v.rows) end
     S.draw_rows(p, v.rows, v.heads, v.cols)
     S.draw_chart(p, v.chart)
+    S.draw_map(p, v.map)
 end
 
 function S.is_open()
@@ -998,7 +1475,8 @@ end
 
 function S.is_mine(name)
     return type(name) == "string" and (name == S.BUTTON or name == S.CLOSE or name == S.BACK
-        or name == S.TAB.goods or name == S.TAB.settlements or name == S.TAB.trade
+        or name == S.TAB.goods or name == S.TAB.settlements or name == S.TAB.trade or name == S.TAB.spending
+        or name == S.TAB.map or S.map_hits[name] ~= nil
         or string.sub(name, 1, #S.ROW) == S.ROW or string.sub(name, 1, #S.SW) == S.SW
         or string.sub(name, 1, #S.BULK) == S.BULK or string.sub(name, 1, #S.ORDER) == S.ORDER
         or name == S.SEND or name == S.SELL)
@@ -1010,6 +1488,7 @@ function S.click_switch(dir, component)
     local row = UIComponent(UIComponent(component):Parent())
     local i = tonumber(string.match(row:Id() or "", "^derpy_mr_row_(%d+)$"))
     local rc = i and S.data[i]
+    if rc and rc.capital and rc.supply and rc.supply[dir] then return S.request("supply", rc.capital, dir) end
     local send = S.flows("send")
     if not (rc and rc.stem and send) then return end
     send(cm:get_local_faction_name(true), dir, rc.stem)
@@ -1038,11 +1517,13 @@ function S.click_send(component)
     local row = UIComponent(UIComponent(component):Parent())
     local i = tonumber(string.match(row:Id() or "", "^derpy_mr_row_(%d+)$"))
     local rc = i and S.data[i]
+    if rc and rc.send and rc.send.look then return S.look_at(rc.send.look[1], rc.send.look[2]) end
     if rc and rc.send and not rc.send.off then return S.request("send", rc.stem, S.focus) end
 end
 
 function S.click(name, component)
     if name == S.SEND then return S.click_send(component) end
+    if S.map_hits[name] then return S.look_at(S.map_hits[name][1], S.map_hits[name][2]) end
     if name == S.SELL then
         if S.act.sell and not S.act.sell.off then return S.request("sell", S.focus) end
         return

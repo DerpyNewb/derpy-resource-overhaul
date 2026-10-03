@@ -616,9 +616,53 @@ effect_bundles_localised_title_derpy_mr_garrison_stocked	Garrison stocked	false
 effect_bundles_localised_description_derpy_mr_garrison_stocked	War materials fill at least a quarter of one store's space in this settlement.	false
 effect_bundles_localised_title_derpy_mr_comforts	Comforts	false
 effect_bundles_localised_description_derpy_mr_comforts	Luxuries fill at least a quarter of one store's space in this settlement.	false
+effect_bundles_localised_title_derpy_mr_event_feast	Feast	false
+effect_bundles_localised_description_derpy_mr_event_feast	A feast paid for from this settlement's stores: public order and growth are up.	false
+effect_bundles_localised_title_derpy_mr_event_siege	Siege Stores	false
+effect_bundles_localised_description_derpy_mr_event_siege	This settlement's stores feed its besieged garrison.	false
+effect_bundles_localised_title_derpy_mr_event_restore	Restored	false
+effect_bundles_localised_description_derpy_mr_event_restore	Repaired from this settlement's own stores: public order is up.	false
+effect_bundles_localised_title_derpy_mr_supply_materials	Materials on hand	false
+effect_bundles_localised_description_derpy_mr_supply_materials	Supplied from the province capital's stores each turn: construction cost -25%.	false
+effect_bundles_localised_title_derpy_mr_supply_stable	Stable stocked	false
+effect_bundles_localised_description_derpy_mr_supply_stable	Supplied from the province capital's stores each turn: recruit cost -15% for cavalry and monsters.	false
+effect_bundles_localised_title_derpy_mr_supply_arms	Arms stocked	false
+effect_bundles_localised_description_derpy_mr_supply_arms	Supplied from the province capital's stores each turn: recruit cost -15% for infantry and artillery.	false
 effect_bundles_localised_title_derpy_mr_order_festival	Festival	false
 effect_bundles_localised_description_derpy_mr_order_festival	Paid for from your stores: public order +4 in every province.	false
 effect_bundles_localised_title_derpy_mr_order_muster	Muster	false
 effect_bundles_localised_description_derpy_mr_order_muster	Paid for from your stores: recruit rank +1 for every unit.	false
 effect_bundles_localised_title_derpy_mr_order_great_works	Great Works	false
 effect_bundles_localised_description_derpy_mr_order_great_works	Paid for from your stores: construction cost -20% for every building.	false
+dilemmas_localised_title_derpy_mr_dil_feast	A Feast	false
+dilemmas_localised_description_derpy_mr_dil_feast	The stores of {{CcoCampaignEventDilemma:RegionTargetName}} overflow with provisions. The people would gladly see them set out on the tables.	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_feastFIRST	Hold the feast	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_feastFIRST	Spend 100 provisions: public order +5 and growth +20 there for 5 turns.	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_feastSECOND	Keep the stores	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_feastSECOND	Nothing is spent.	false
+dilemmas_localised_title_derpy_mr_dil_siege	Siege Stores	false
+dilemmas_localised_description_derpy_mr_dil_siege	{{CcoCampaignEventDilemma:RegionTargetName}} is under siege, and its stores still hold provisions. Open them to the garrison and it can hold out without starving.	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_siegeFIRST	Open the stores	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_siegeFIRST	Spend 60 provisions: the garrison suffers no siege attrition for 2 turns.	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_siegeSECOND	Keep the stores	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_siegeSECOND	Nothing is spent.	false
+dilemmas_localised_title_derpy_mr_dil_tribute	Tribute	false
+dilemmas_localised_description_derpy_mr_dil_tribute	{{CcoCampaignEventDilemma:FirstTargetFactionNameWithIcon}} shares a border with you and is not at war with you. A gift of luxuries from your stores would be remembered.	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_tributeFIRST	Send the gift	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_tributeFIRST	Spend 50 luxuries: they think better of you.	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_tributeSECOND	Keep the stores	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_tributeSECOND	Nothing is spent.	false
+dilemmas_localised_title_derpy_mr_dil_arsenal	Arsenal	false
+dilemmas_localised_description_derpy_mr_dil_arsenal	Your stores hold war materials enough to re-arm a whole army. {{CcoCampaignEventDilemma:CharacterTargetName}}'s army would make good use of them.	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_arsenalFIRST	Re-arm the army	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_arsenalFIRST	Spend 50 war materials: every unit in that army gains a rank.	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_arsenalSECOND	Keep the stores	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_arsenalSECOND	Nothing is spent.	false
+dilemmas_localised_title_derpy_mr_dil_restore	Restore	false
+dilemmas_localised_description_derpy_mr_dil_restore	The stores of {{CcoCampaignEventDilemma:RegionTargetName}} hold building materials enough to mend what the fighting broke.	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_restoreFIRST	Restore it	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_restoreFIRST	Spend 100 building materials there: every building is repaired, and public order +5 for 5 turns.	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_restoreSECOND	Keep the stores	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_restoreSECOND	Nothing is spent.	false
+campaign_interactable_marker_infos_name_derpy_mr_shipment	Shipment	false
+campaign_interactable_marker_infos_tooltip_derpy_mr_shipment	Goods on the road between two settlements. An army at war with their owner can seize them by marching in.	false

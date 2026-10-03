@@ -1,0 +1,12 @@
+choice_key	dilemma_key	audio_event_hover	audio_choice_vo
+#cdir_events_dilemma_choice_details_tables;4;db/cdir_events_dilemma_choice_details_tables/derpy_more_resources
+FIRST	derpy_mr_dil_feast		
+SECOND	derpy_mr_dil_feast		
+FIRST	derpy_mr_dil_siege		
+SECOND	derpy_mr_dil_siege		
+FIRST	derpy_mr_dil_tribute		
+SECOND	derpy_mr_dil_tribute		
+FIRST	derpy_mr_dil_arsenal		
+SECOND	derpy_mr_dil_arsenal		
+FIRST	derpy_mr_dil_restore		
+SECOND	derpy_mr_dil_restore		
