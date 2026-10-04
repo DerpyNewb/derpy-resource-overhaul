@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-04
+
+- The Old World compatibility pack: `derpy_resource_overhaul_oldworld.pack`.
+- Goods placed by region name also work on the Old World's regions.
+- AI builds rare-good buildings in the Old World's regions.
+- Map tab: the Old World's own campaign map.
+- Map tab: CA's panel border, a key and Zoom in/out buttons.
+- Resource Vault: CA's glows on running orders, paying supplies and convoys; short supplies pulse red.
+- Resource Vault: the map stays where it is dragged.
+- Charts: bars line up under their turn, with a baseline and top line.
+- Fixed: +/- buttons missing on a first draw.
+- Fixed: map flicker while dragging.
+
 ## 2026-10-03
 
 - Province supplies: Materials on hand, Stable stocked, Arms stocked, paid each turn from the capital.

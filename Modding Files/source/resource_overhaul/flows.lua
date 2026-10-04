@@ -629,6 +629,8 @@ function F.order_state(faction, key)
     local last = b and b.orders and b.orders[key]
     local turn = cm:model():turn_number()
     if last and turn - last < F.ORDER_COOLDOWN then st.wait = last + F.ORDER_COOLDOWN - turn end
+    -- RUNNING: its bundle lasts ORDER_TURNS from the turn it was bought; the panel makes it glow
+    if last and turn - last < F.ORDER_TURNS then st.active = last + F.ORDER_TURNS - turn end
     st.ok = st.wait == nil and have >= F.ORDER_COST
     return st
 end

@@ -767,11 +767,14 @@ def race(chain):
 # resources_to_campaign rows: a row naming a campaign that is not loaded is an unresolvable
 # foreign key, and the game refuses the whole pack - so it cannot live in the main one. Same
 # shape as IEE's own "!cr_vanilla" fragment, which links CA's 18 goods to its campaign.
-# The Old World ("cr_oldworld") goes here once that mod is updated.
+# The Old World's "devastate" variant (3813271876) reuses the cr_oldworld key and ships no
+# regions of its own, so the one oldworld pack covers it too.
 WORKSHOP = r"F:\SteamLibrary\steamapps\workshop\content\1142710"
 SUBMODS = {
     "iee": dict(campaign="cr_combi_expanded", port_prefix="cr_port_",
                 pack=os.path.join(WORKSHOP, "3007996493", "!cr_immortal_empires_expanded.pack")),
+    "oldworld": dict(campaign="cr_oldworld", port_prefix="cr_port_",
+                     pack=os.path.join(WORKSHOP, "3081800026", "!cr_oldworld_campaign.pack")),
 }
 
 
@@ -998,6 +1001,10 @@ def settlement_tiers():
     for r in db("building_levels_tables")[1]:
         if r["chain"] in chains and "ruin" not in r["level_name"]:
             by[r["chain"]].append(r)
+    return _tiers(by)
+
+
+def _tiers(by):
     out = {}
     for rows in by.values():
         nums = sorted({r["level"] for r in rows})
@@ -1182,6 +1189,23 @@ def _stores(t, add, loc):
     loc.append(("effects_description_" + STORE_CAP_FX, "Space in this settlement's stores: +%n of each resource"))
 
 
+def production_rows(good, e, chains_of, made):
+    """Each source's rows: one per level of the chains chains_of(pool) gives, gated by its condition."""
+    g = good_spec(good)
+    for i, (pool, cond) in enumerate(g["sources"]):
+        req = "" if cond is None else cond_key(good, i)
+        table = TABLES[_kind(pool)]
+        for c, levels in sorted(chains_of(pool).items()):
+            for n, lvl in enumerate(levels):
+                if (lvl, e) in made:   # the building already makes it; that row stands
+                    continue
+                v = float(max(1, round(table[min(n, len(table) - 1)] * g.get("scale", 1.0))))
+                yield {   # damaged = half, as CA's own rows
+                    "building": lvl, "effect": e, "effect_scope": "building_to_building_own",
+                    "value": v, "value_damaged": damaged(v), "value_ruined": 0.0,
+                    "context_requirement": req}
+
+
 def build():
     t = {}
 
@@ -1195,25 +1219,14 @@ def build():
 
     def produce(good, e):
         """One production row per level of each source's pool, gated by the source's condition."""
-        g = good_spec(good)
-        for i, (pool, cond) in enumerate(g["sources"]):
-            req = ""
+        for i, (pool, cond) in enumerate(good_spec(good)["sources"]):
             if cond is not None:
-                req = cond_key(good, i)
                 # display_only_active_effects: the tooltip shows the line only where it applies
                 add("building_effect_context_expressions_tables", {
-                    "expression": render(cond), "key": req,
+                    "expression": render(cond), "key": cond_key(good, i),
                     "display_only_active_effects": True, "always_show_display_text": False})
-            for c, levels in sorted(pool_chains(pool).items()):
-                table = TABLES[_kind(pool)]
-                for n, lvl in enumerate(levels):
-                    if (lvl, e) in van_made:   # CA already makes it here; its row stands
-                        continue
-                    v = float(max(1, round(table[min(n, len(table) - 1)] * g.get("scale", 1.0))))
-                    add("building_effects_junction_tables", {   # damaged = half, as CA's own rows
-                        "building": lvl, "effect": e, "effect_scope": "building_to_building_own",
-                        "value": v, "value_damaged": damaged(v), "value_ruined": 0.0,
-                        "context_requirement": req})
+        for r in production_rows(good, e, pool_chains, van_made):
+            add("building_effects_junction_tables", r)
 
     loc = []
     donor, = [r for r in db("resources_tables")[1] if r["key"] == DONOR]
@@ -1933,22 +1946,16 @@ def check_stores(t, loc):
     return len(stems)
 
 
-def build_submod(name):
-    """The campaign links for one map mod, one row per good."""
-    ver, van = db("resources_to_campaign_junctions_tables")
-    rows = [{"campaign": SUBMODS[name]["campaign"], "resource": key(g)} for g in GOODS]
-    assert all(list(r) == list(van[0]) for r in rows)
-    return {"resources_to_campaign_junctions_tables": (ver, list(van[0]), rows)}
+def _sub_rows(name, table):
+    return [r for _p, _v, rs in rvd.load(SUBMODS[name]["pack"], table) for r in rs]
 
 
-def check_submod(name):
-    """The map mod's campaign key is real, and every port slot it adds builds a chain we cover."""
-    sm = SUBMODS[name]
-    assert os.path.isfile(sm["pack"]), "%s not installed: %s" % (name, sm["pack"])
-
-    def rows(table):
-        return [r for _p, _v, rs in rvd.load(sm["pack"], table) for r in rs]
-    assert sm["campaign"] in {r["campaign_name"] for r in rows("campaigns_tables")}, sm["campaign"]
+@functools.lru_cache(None)
+def submod_slots(name):
+    """(port templates, primary templates, every template) -> the chains each permits, over the
+    map mod's OWN templates (the startpos is binary, so found by NAME). Its vanilla regions use
+    CA's templates, which the main pack already covers."""
+    rows = functools.partial(_sub_rows, name)
     sc = collections.defaultdict(set)
     for r in db("building_chains_tables")[1] + rows("building_chains_tables"):
         sc[r["building_superchain"]].add(r["key"])
@@ -1957,20 +1964,108 @@ def check_submod(name):
     items = collections.defaultdict(list)
     for r in db("building_chain_set_items_tables")[1] + rows("building_chain_set_items_tables"):
         items[r["set"]].append(r)
-    # Its own templates (the startpos is binary, so found by NAME); a new chain in one of them
-    # would make none of our goods. Its vanilla regions use CA's templates, already covered.
     perm = srm.permitted(rows("slot_template_permitted_building_chains_tables"), parent, items, sc)
-    port = {t: v for t, v in perm.items() if t.startswith(sm["port_prefix"])}
+    port = {t: v for t, v in perm.items() if t.startswith(SUBMODS[name]["port_prefix"])}
     prim = {t: v for t, v in perm.items() if "primary" in t}
+    return port, prim, perm
+
+
+@functools.lru_cache(None)
+def submod_levels(name):
+    """The map mod's OWN chains (no CA chain of that key) -> their non-ruin level rows. Those
+    levels exist only in its pack, so a row naming one can only ship in the sub-pack."""
+    van = {r["key"] for r in db("building_chains_tables")[1]}
+    by = collections.defaultdict(list)
+    for r in _sub_rows(name, "building_levels_tables"):
+        if r["chain"] not in van and "ruin" not in r["level_name"]:
+            by[r["chain"]].append(r)
+    return by
+
+
+def _sub_chains(name, slots):
+    lv = submod_levels(name)
+    return {c: [r["level_name"] for r in sorted(lv[c], key=lambda r: (r["level"], r["level_name"]))]
+            for v in slots.values() for c in v if c in lv}
+
+
+def submod_pool_chains(name, pool):
+    """pool_chains() over the map mod's own port and main-settlement chains; its mines, kinds and
+    our rare buildings are all CA chains (check_submod asserts the mines)."""
+    port, prim, _perm = submod_slots(name)
+    if pool == "port":
+        out = {c: v for c, v in _sub_chains(name, port).items() if not NOT_A_HARBOUR.search(c)}
+    elif _kind(pool) == "settlement":
+        out = {c: v for c, v in _sub_chains(name, prim).items() if not SETTLE_SKIP.search(c)
+               and (pool == "settlement" or race(c) in pool[1:])}
+    else:
+        return {}
+    return {c: v for c, v in out.items() if not EXCLUDE.search(c)}
+
+
+def build_submod(name):
+    """One map mod's pack: its campaign links, one row per good, and the rows the main pack cannot
+    carry because their building exists only in the map mod - production on its own port and
+    settlement chains, their store twins (and twins of its own rows making CA's goods), and store
+    space on its own settlements. Row shapes are the main pack's own."""
+    ver, van = db("resources_to_campaign_junctions_tables")
+    rows = [{"campaign": SUBMODS[name]["campaign"], "resource": key(g)} for g in GOODS]
+    assert all(list(r) == list(van[0]) for r in rows)
+    t = {"resources_to_campaign_junctions_tables": (ver, list(van[0]), rows)}
+    own = {r["level_name"] for v in submod_levels(name).values() for r in v}
+    made = {(r["building"], r["effect"]) for r in _sub_rows(name, "building_effects_junction_tables")}
+    bej = []
+    for good in list(GOODS) + list(CA_GOODS):
+        e = effect(good) if good in GOODS else CA_GOODS[good]["effect"]
+        bej += production_rows(good, e, functools.partial(submod_pool_chains, name), made)
+    by_fx = {fx: stem for stem, (_r, fx, _n) in store_stems().items()}
+    theirs = [r for r in _sub_rows(name, "building_effects_junction_tables") if r["building"] in own
+              and r["effect"] in by_fx and r["effect_scope"] == "building_to_building_own"]
+    bej += [dict(r, effect=store_fx(by_fx[r["effect"]]), effect_scope="region_to_region_own")
+            for r in bej + theirs if r["effect"] in by_fx]
+    _port, prim, _perm = submod_slots(name)
+    lv = submod_levels(name)
+    tiers = _tiers({c: lv[c] for c in {c for v in prim.values() for c in v} if c in lv and not SETTLE_SKIP.search(c)})
+    for lvl, n in sorted(tiers.items()):
+        v = float(STORE_STEP * min(n, STORE_TOP))
+        if v:
+            bej.append({"building": lvl, "effect": STORE_CAP_FX, "effect_scope": "region_to_region_own",
+                        "value": v, "value_damaged": v, "value_ruined": 0.0, "context_requirement": ""})
+    if bej:
+        ver, van = db("building_effects_junction_tables")
+        assert all(list(r) == list(van[0]) for r in bej)
+        t["building_effects_junction_tables"] = (ver, list(van[0]), bej)
+    return t
+
+
+def check_submod(name, t):
+    """The map mod's campaign key is real, and every chain its own port, main-settlement and mine
+    slots permit is either CA's (covered by the main pack) or has rows in t."""
+    sm = SUBMODS[name]
+    assert os.path.isfile(sm["pack"]), "%s not installed: %s" % (name, sm["pack"])
+    assert sm["campaign"] in {r["campaign_name"] for r in _sub_rows(name, "campaigns_tables")}, sm["campaign"]
+    port, prim, perm = submod_slots(name)
     assert port and prim, "%s: no port or primary templates found - the naming guess is stale" % name
-    missing = set(c for v in port.values() for c in v) - set(port_chains())
+    bej = t.get("building_effects_junction_tables", (0, [], []))[2]
+    own = {r["level_name"]: c for c, v in submod_levels(name).items() for r in v}
+    assert all(r["building"] in own for r in bej), "%s rows on a level it does not ship" % name
+    rowed = collections.defaultdict(set)   # chain -> the effects its levels carry here
+    for r in bej:
+        rowed[own[r["building"]]].add(r["effect"])
+    makes = {c for c, fx in rowed.items() if any(not f.startswith("derpy_mr_store_") for f in fx)}
+    skip = {c for c in own.values() if EXCLUDE.search(c)}
+    skip |= {c for c in own.values() if NOT_A_HARBOUR.search(c)}
+    missing = {c for v in port.values() for c in v} - set(port_chains()) - skip - makes
     assert not missing, "%s port chains with no production rows: %s" % (name, sorted(missing))
-    missing = {c for v in prim.values() for c in v
-               if not EXCLUDE.search(c) and not SETTLE_SKIP.search(c)} - set(pool_chains("settlement"))
+    settle = {c for v in prim.values() for c in v if not EXCLUDE.search(c) and not SETTLE_SKIP.search(c)}
+    missing = settle - set(pool_chains("settlement")) - makes
     assert not missing, "%s settlement chains with no production rows: %s" % (name, sorted(missing))
-    deposit = {r["key"]: r["resource"] for r in rows("slot_templates_tables") if r["resource"]}
+    lv = submod_levels(name)   # tier 0 gets the base space only, as in the main pack
+    missing = {c for c in settle if c in lv and any(_tiers({c: lv[c]}).values())
+               and STORE_CAP_FX not in rowed[c]}
+    assert not missing, "%s settlements with no store space: %s" % (name, sorted(missing))
+    deposit = {r["key"]: r["resource"] for r in _sub_rows(name, "slot_templates_tables") if r["resource"]}
     for pool in {p for g in GOODS.values() for p, _c in g["sources"] if _kind(p) == "mine"}:
-        missing = {c for t, res in deposit.items() if res in pool[1:] for c in perm.get(t, ())
+        missing = {c for t_, res in deposit.items() if res in pool[1:] for c in perm.get(t_, ())
                    if "resource" in c and not EXCLUDE.search(c) and not NOT_A_MINE.search(c)} - set(pool_chains(pool))
         assert not missing, "%s %s chains with no production rows: %s" % (name, pool, sorted(missing))
     check_submod_reach(name)
@@ -2021,11 +2116,17 @@ def submod_reach(name):
 
 
 def check_submod_reach(name):
-    """No good blankets a whole area of the map mod's own: that is a rule with its terrain
-    condition missing - Ind incense reached all 31 Ind regions, peaks and jungle alike."""
+    """No good blankets a whole area IE and RoC lack by a rule with no terrain condition: that is
+    a rule with its terrain condition missing - Ind incense reached all 31 Ind regions, peaks and
+    jungle alike. An area CA's maps have is vetted there (Norscan mead is all of Norsca on IE
+    too), and a terrain rule over an area of one terrain blankets it honestly (the Old World's
+    Athel Loren is all forest)."""
+    ca_areas = {a for g in _signals().values() for a in g["areas"]}
+    plain = {good for good in list(GOODS) + list(CA_GOODS)
+             if not any(c is not None and "climate_" in render(c) for _p, c in good_spec(good)["sources"])}
     bad = ["%s: %s in all %d regions" % (a, good, n)
-           for a, (n, goods) in submod_reach(name).items() if n >= 10
-           for good, k in goods.items() if k == n]
+           for a, (n, goods) in submod_reach(name).items() if n >= 10 and a not in ca_areas
+           for good, k in goods.items() if k == n and good in plain]
     assert not bad, "%s goods with no terrain condition in an area: %s" % (name, bad)
 
 
@@ -2169,7 +2270,7 @@ def selftest():
     real = GOODS["incense"]["sources"]
     GOODS["incense"]["sources"] = [("farm", AREA("ind"))]
     try:
-        for name in SUBMODS:
+        for name in [n for n in SUBMODS if "ind" in submod_reach(n)]:
             try:
                 check_submod_reach(name)
             except AssertionError:
@@ -2184,14 +2285,26 @@ def selftest():
     try:
         for name in SUBMODS:
             try:
-                check_submod(name)
+                check_submod(name, build_submod(name))
             except AssertionError:
                 continue
             raise SystemExit("selftest: %s passed with a port chain uncovered" % name)
     finally:
         port_chains = real
     for name in SUBMODS:
-        check_submod(name)
+        st = build_submod(name)
+        check_submod(name, st)
+        bej = st.get("building_effects_junction_tables", (0, [], []))[2]
+        own = {r["level_name"]: c for c, v in submod_levels(name).items() for r in v}
+        for fx in ({r["effect"] for r in bej if not r["effect"].startswith("derpy_mr_store_")}, {STORE_CAP_FX}):
+            for c in sorted({own[r["building"]] for r in bej if r["effect"] in fx}):
+                cut = dict(st, building_effects_junction_tables=(0, [], [
+                    r for r in bej if not (own[r["building"]] == c and r["effect"] in fx)]))
+                try:
+                    check_submod(name, cut)
+                except AssertionError:
+                    continue
+                raise SystemExit("selftest: %s passed with %s's %s rows gone" % (name, c, sorted(fx)[0]))
     # the label: patched output verifies, and each guard bites on a broken CA file
     van = label_vanilla()
     label_verify(label_patch(van))
@@ -2280,8 +2393,8 @@ def main():
     print(check_ai(ai_script()).strip().splitlines()[-1])
     subs = {}
     for name in SUBMODS:
-        n = check_submod(name)
         subs[name] = build_submod(name)
+        n = check_submod(name, subs[name])
         print("%s: %s, %d port templates, all covered" % (name, SUBMODS[name]["campaign"], n))
     if "--pack" in sys.argv:
         pack(t)

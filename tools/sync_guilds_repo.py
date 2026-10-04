@@ -140,6 +140,10 @@ MANIFEST = [(p, p) for p in [
      "docs/history/HANDOFF_20260929_GUILDS_LOGIC_AUDIT.md"),
     ("docs/sessions/HANDOFF_20260930_GUILDS_PANEL_POLISH.md",
      "docs/history/HANDOFF_20260930_GUILDS_PANEL_POLISH.md"),
+    ("docs/sessions/HANDOFF_20261004_GUILDS_UI_POLISH_PREVIEW.md",
+     "docs/history/HANDOFF_20261004_GUILDS_UI_POLISH_PREVIEW.md"),
+    ("docs/sessions/HANDOFF_20261004_GUILDS_GLOW_PULSE.md",
+     "docs/history/HANDOFF_20261004_GUILDS_GLOW_PULSE.md"),
 ]
 
 

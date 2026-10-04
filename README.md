@@ -15,7 +15,8 @@ traps Furs, the Old World's craft houses fire Pottery and its southern farms pre
 These rows use CA's own production effects, so the goods are still CA's.
 
 Until 2026-10-02 this mod was called Derpy More Resources. Its packs are now
-`derpy_resource_overhaul.pack` and `derpy_resource_overhaul_iee.pack`. Every in-game key is
+`derpy_resource_overhaul.pack`, `derpy_resource_overhaul_iee.pack` and
+`derpy_resource_overhaul_oldworld.pack`. Every in-game key is
 unchanged, and so are the DB table file names inside the packs.
 
 **Status:** not on the Steam Workshop yet. Tested in an Immortal Empires Expanded campaign
@@ -71,6 +72,11 @@ building set, so one chain shared between races appears for only one of them.
 - **Immortal Empires Expanded.** `derpy_resource_overhaul_iee.pack` extends the conditions to
   IEE's 236 extra regions (Ind, Khuresh, Nippon and the rest). The IEE pack itself is not
   needed to build anything here.
+- **The Old World.** `derpy_resource_overhaul_oldworld.pack` links the goods to the Old World
+  campaign (`cr_oldworld`, its devastate version included) and adds production and store rows
+  to the buildings it adds itself: the Kraka Ravnvake port, Mordheim's Wood Elf settlement and
+  a Realm of Chaos outpost. Enable it only with the Old World; like the IEE pack, the game
+  refuses it when that campaign is not loaded.
 - **Derpy's Grand Trade Exchange.** When both are installed, the Exchange trades all 37
   goods. It detects this mod from the goods' own names and reads each settlement's real
   production off its buildings. That bridge lives in the Exchange, not here.
@@ -129,7 +135,9 @@ checks every build before writing it:
   rounded away from zero).
 - **Rare buildings.** Every rare chain sits in exactly one building set, its rosters belong to
   one culture, every row is gated, and no race carries another race's bonus.
-- **IEE.** A guard fails any condition that blankets a whole IEE area of ten or more regions.
+- **Map mods.** A guard fails any condition with no terrain clause that blankets a whole area
+  of ten or more regions that CA's maps lack (IEE's Ind, Khuresh, Nippon). Every chain a map
+  mod's own port, settlement or mine slots permit must be CA's or have rows in its pack.
 - **Selftest cases.** The selftest breaks each of these on purpose (an ungated row, a second
   building set, a foreign bonus, a blanket condition) and confirms the check catches it.
 

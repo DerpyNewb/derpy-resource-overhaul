@@ -22,22 +22,29 @@ DERPY_MR_STORES_L = {
     MAP_CART_SIZE = 28,
     MAP_CHAR_W = 6.5,
     MAP_DOT = 20,
+    MAP_FRAME_OUT = 4,
     MAP_MIN_SPAN = 40,
     MAP_PAD = 24,
     MAP_PATH = 4,
     MAP_STEPS = 6,
     MAP_TOWN_ICON = "ui/skins/default/icon_marker_settlement.png",
+    MAP_ZOOM_MAX = 3,
+    MAP_ZOOM_STEP = 1.5,
     PAY_GAP = 4,
     PITCH = 28,
     ROWS = 16,
-    SLIDER_W = 16,
+    SLIDER_CAP = 24,
+    SLIDER_PARTS = {{"frame_top", -1, -24}, {"frame_bottom", -1, 0}, {"top", 1, -23}, {"bottom", 1, -1}},
+    SLIDER_W = 18,
     USING = 3,
     VIEWS = {focus = {{36, 230, "left"}, {276, 120, "right"}, {406, 90, "right"}, {506, 80, "left"}, {596, 204, "left"}}, goods = {{36, 204, "left"}, {244, 90, "right"}, {338, 100, "right"}, {442, 110, "right"}, {556, 240, "right"}}, map = {{36, 204, "left"}, {244, 90, "right"}, {338, 100, "right"}, {442, 110, "right"}, {556, 240, "right"}}, settlements = {{36, 230, "left"}, {276, 46, "right"}, {330, 90, "left"}, {430, 80, "right"}, {520, 280, "right"}}, spending = {{36, 230, "left"}, {276, 126, "centre"}, {408, 126, "centre"}, {540, 126, "centre"}, {672, 128, "centre"}}, trade = {{36, 230, "left"}, {276, 60, "right"}, {346, 90, "centre"}, {446, 90, "centre"}, {546, 254, "left"}}},
     W = 860,
     back = {720, 56, 120, 26},
     bars = {20, 420, 820, 120},
     bulk = {20, 598, 200, 30},
+    chart_base = {20, 540, 820, 1},
     chart_from = {20, 542, 200, 18},
+    chart_grid = {20, 420, 820, 1},
     chart_line = {20, 564, 820, 22},
     chart_to = {640, 542, 200, 18},
     chart_top = {20, 400, 300, 18},
@@ -48,6 +55,7 @@ DERPY_MR_STORES_L = {
     icon = {6, 2, 24, 24},
     list = {20, 142, 820, 448},
     map = {20, 142, 820, 448},
+    map_key = {cap = {{20, 600, 26, 26}, {50, 602, 120, 22}}, cart = {{294, 599, 28, 28}, {326, 602, 100, 22}}, town = {{180, 603, 20, 20}, {204, 602, 80, 22}}},
     map_label = {160, 16},
     send = {130, 26},
     sub_title = {20, 90, 820, 22},
@@ -58,6 +66,8 @@ DERPY_MR_STORES_L = {
     tab_trade = {272, 56, 120, 26},
     title = {20, 14, 500, 28},
     title_rule = {20, 46, 820, 2},
+    zoom_in = {800, 516, 30, 30},
+    zoom_out = {800, 550, 30, 30},
 }
 DERPY_MR_STORES_GOODS = {
     {stem = "salted_fish", res = "res_derpy_salted_fish", icon = "ui/campaign ui/effect_bundles/resource_derpy_salted_fish.png"},
@@ -788,6 +798,7 @@ end
 function S.order_tip(o, st)
     local word = S.USE_WORD[st.use] or st.use
     local out = o.label .. "\nSpend " .. S.num(st.cost) .. " " .. word .. ": " .. o.what .. ", for " .. turns(o.turns) .. ".\n"
+    if st.active then return out .. "Running: " .. turns(st.active) .. " left. Ready again in " .. turns(st.wait) .. "." end
     if st.wait then return out .. "Ready again in " .. turns(st.wait) .. "." end
     if not st.ok then return out .. "Your stores hold " .. S.num(st.have) .. " " .. word .. "." end
     return out .. "Your stores hold " .. S.num(st.have) .. ". Click to buy it."
@@ -801,16 +812,31 @@ function S.sell_tip(sale, name)
     return "Nothing to sell: your stores of " .. name .. " are no more than half full."
 end
 
+-- THE PANEL'S SHADERS, CA's own, at the values CA's ui packs use most for that meaning (counted
+-- 2026-10-04): glow_pulse_t0 1/2/3 (low, high, seconds) on "active" and "glow" states, red_pulse_t0
+-- 0/0.25/1 on "insufficient", set_greyscale_t0 on "inactive" (alpha 0.6, the Exchange's, seen in game).
+S.FX = {
+    live = { "normal_t0" },
+    off = { "set_greyscale_t0", 1, 0.6, 0, 0 },
+    glow = { "glow_pulse_t0", 1, 2, 3, 0 },
+    short = { "red_pulse_t0", 0, 0.25, 1, 0 },
+}
+function S.fx(c, kind)
+    local f = S.FX[kind] or S.FX.live
+    if not is_uicomponent(c) then return end
+    pcall(function()
+        c:ShaderTechniqueSet(f[1], true, true)
+        if f[2] then c:ShaderVarsSet(f[2], f[3], f[4], f[5], true, true) end
+    end)
+end
+
 -- GREYED, NOT JUST DISABLED: SetDisabled alone draws a live button (memory
--- wh3-setdisabled-draws-nothing); the shader is the Zharr Exchange's EX.set_off, seen in game.
+-- wh3-setdisabled-draws-nothing).
 function S.set_off(c, off)
     if not is_uicomponent(c) then return end
     off = off and true or false
     c:SetDisabled(off)
-    pcall(function()
-        c:ShaderTechniqueSet(off and "set_greyscale_t0" or "normal_t0", true, true)
-        if off then c:ShaderVarsSet(1, 0.6, 0, 0, true, true) end
-    end)
+    S.fx(c, off and "off" or "live")
 end
 
 function S.rows_shown()
@@ -850,11 +876,11 @@ function S.view_model(realm)
     elseif S.view == "spending" then
         S.spending(v)
     elseif S.view == "map" then
-        v.title = "Where your convoys are"
+        v.title = "Where your settlements and convoys are"
         v.heads = { "", "", "", "", "" }
         v.hint = "Click a convoy or a settlement to fly there."
         local f = S.local_faction()
-        if f then v.map = S.map_model(f) end
+        if f then v.map = S.map_model(f, S.map_view) end
     elseif S.view == "trade" then
         v.title = "What your settlements trade"
         v.heads = { "Resource", "Held", "Exports", "Imports", "Last turn" }
@@ -947,12 +973,6 @@ function S.icon_of(stem)
 end
 
 -- CA's greyscale (the Exchange's EX.set_off shader): greyed and faded, or back in colour
-function S.shade(c, off)
-    pcall(function()
-        c:ShaderTechniqueSet(off and "set_greyscale_t0" or "normal_t0", true, true)
-        if off then c:ShaderVarsSet(1, 0.6, 0, 0, true, true) end
-    end)
-end
 S.PAYIC = "derpy_mr_supic_"   -- a Spending row's icon of the good a supply pays with
 
 function S.spending(v)
@@ -1012,7 +1032,7 @@ function S.spending(v)
         v.orders = {}
         for i, o in ipairs(DERPY_MR_STORES_ORDERS) do
             local st = S.ask("order_state", f, o.key)
-            if st then v.orders[i] = { key = o.key, tip = S.order_tip(o, st), off = not st.ok } end
+            if st then v.orders[i] = { key = o.key, tip = S.order_tip(o, st), off = not st.ok, active = st.active } end
         end
     end
 end
@@ -1021,13 +1041,14 @@ end
 -- One scale for both axes and north up (logical y grows northward: Kislev 789, Middenheim 720,
 -- Karak Eight Peaks 359 in CA's own scripts). Pure, so the harness reads it.
 -- CA'S MINIMAP for each campaign, by cm:model():campaign_name_key() (the campaigns table's key,
--- which CA's own scripts compare). The folders are campaigns_tables' map_name (IEE's from its own
--- pack); CA's save-game panel draws campaign_maps/wh3_main_combi_map_2's the same way. w and h are
+-- which CA's own scripts compare). The folders are campaigns_tables' map_name (IEE's and the Old
+-- World's from their own packs); CA's save-game panel draws campaign_maps/wh3_main_combi_map_2's the same way. w and h are
 -- the pictures' own sizes. Any other map draws the plain one.
 S.MAP_ART = {
     wh3_main_combi = { path = "campaign_maps/wh3_main_combi_map_7/wh3_main_combi_map_minimap.png", w = 1440, h = 1120 },
     cr_combi_expanded = { path = "campaign_maps/cr_combi_expanded_map_1/cr_combi_expanded_map_minimap.png",
                           w = 1600, h = 1120 },
+    cr_oldworld = { path = "campaign_maps/cr_oldworld_map_1/cr_oldworld_map_minimap.png", w = 2048, h = 2048 },
     wh3_main_chaos = { path = "campaign_maps/wh3_main_chaos_map_4/wh3_main_chaos_map_minimap.png", w = 1108, h = 834 },
 }
 S.NO_ART = "ui/skins/default/1x1_transparent_white.png"   -- the plain map's surface: CA's clear pixel
@@ -1088,7 +1109,7 @@ function S.label_w(s) return math.ceil(string.len(s or "") * L.MAP_CHAR_W) end
 -- THE MAP TAB'S MODEL. Every point in map units: the picture's own pixels (y down) when there is
 -- a picture and a frame, else display units with north up - display, not logical, so the plain
 -- map keeps the real map's proportions too. Framed on what is drawn, in the map's box, one scale.
-function S.map_model(faction)
+function S.map_model(faction, view)
     local m = { dots = {}, carts = {}, path = {}, art = S.map_art() }
     local fr = m.art and S.map_frame()
     if not fr then m.art = nil end
@@ -1127,14 +1148,27 @@ function S.map_model(faction)
     for _, d in ipairs(m.dots) do grow(d.ux, d.uy) end
     for _, c in ipairs(m.carts) do grow(c.ux, c.uy) end
     if not x0 then return m end
-    local w, h = L.map[3] - 2 * L.MAP_PAD, L.map[4] - 2 * L.MAP_PAD
-    local scale = math.min(w / math.max(x1 - x0, L.MAP_MIN_SPAN), h / math.max(y1 - y0, L.MAP_MIN_SPAN))
-    local cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    local W, H = L.map[3], L.map[4]
+    local fit = math.min((W - 2 * L.MAP_PAD) / math.max(x1 - x0, L.MAP_MIN_SPAN),
+                         (H - 2 * L.MAP_PAD) / math.max(y1 - y0, L.MAP_MIN_SPAN))
     local a = m.art
+    -- ZOOM: view.zoom times the first framing, between the farthest and the closest it allows
+    local lo, hi
     if a then
-        -- no closer than the picture has detail for, and kept on it: no blank past its edge
-        scale = math.min(scale, L.MAP_ART_ZOOM)
-        local hw, hh = L.map[3] / 2 / scale, L.map[4] / 2 / scale
+        -- first framed no closer than the picture has detail for; zoomed out to the whole picture
+        fit = math.min(fit, L.MAP_ART_ZOOM)
+        lo, hi = math.min(fit, math.max(W / a.w, H / a.h)), L.MAP_ZOOM_MAX
+    else
+        lo, hi = fit, fit * L.MAP_ZOOM_MAX
+    end
+    local scale = math.max(lo, math.min(hi, fit * (view and view.zoom or 1)))
+    m.scale, m.zoom = scale, scale / fit
+    m.can_in, m.can_out = scale < hi * 0.999, scale > lo * 1.001
+    local cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    if view and view.cx then cx, cy = view.cx, view.cy end
+    if a then
+        -- kept on the picture: no blank past its edge
+        local hw, hh = W / 2 / scale, H / 2 / scale
         if a.w >= 2 * hw then cx = math.max(hw, math.min(a.w - hw, cx)) end
         if a.h >= 2 * hh then cy = math.max(hh, math.min(a.h - hh, cy)) end
     end
@@ -1142,12 +1176,19 @@ function S.map_model(faction)
         return math.floor(L.map[3] / 2 + (x - cx) * scale + 0.5), math.floor(L.map[4] / 2 + (y - cy) * scale + 0.5)
     end
     for _, d in ipairs(m.dots) do d.x, d.y = px(d.ux, d.uy) end
-    -- THE SURFACE everything rides on, in the map's box: the picture, or the box itself
+    -- THE SURFACE everything rides on, in the map's box: the picture, or the box grown to carry
+    -- every point drawn, so a drag carries them all. su: its top-left corner in map units.
     if a then
         local ax, ay = px(0, 0)
         m.surface = { ax, ay, math.floor(a.w * scale + 0.5), math.floor(a.h * scale + 0.5) }
+        m.su = { 0, 0 }
     else
-        m.surface = { 0, 0, L.map[3], L.map[4] }
+        local sx0, sy0 = px(x0, y0)
+        local sx1, sy1 = px(x1, y1)
+        sx0, sy0 = math.min(0, sx0 - L.MAP_PAD), math.min(0, sy0 - L.MAP_PAD)
+        sx1, sy1 = math.max(W, sx1 + L.MAP_PAD), math.max(H, sy1 + L.MAP_PAD)
+        m.surface = { sx0, sy0, sx1 - sx0, sy1 - sy0 }
+        m.su = { cx + (sx0 - W / 2) / scale, cy + (sy0 - H / 2) / scale }
     end
     for _, c in ipairs(m.carts) do
         c.x, c.y = px(c.ux, c.uy)
@@ -1193,6 +1234,14 @@ S.MAP_FILE = { dot = "derpy_mr_stores_mapdot", cart = "derpy_mr_stores_mapcart",
                label = "derpy_mr_stores_maplabel" }
 S.map_made = { dot = 0, cart = 0, path = 0, label = 0 }   -- how many of each the panel holds
 S.map_hits = {}                                           -- a map component's name -> where a click flies
+S.map_view = nil       -- after a zoom: {zoom, cx, cy} in map units; nil frames the map as it first was
+S.map_last = nil       -- the model last drawn, which a zoom reads its scale and surface off
+S.ZOOM_IN, S.ZOOM_OUT = "derpy_mr_zoom_in", "derpy_mr_zoom_out"
+S.map_drag = nil       -- {x, y}: where the picture was when the grab layer's drag began
+S.MAP_GRAB = "derpy_mr_map_grab"
+-- THE MAP'S KEY: the layout's entry, the icon the map draws for it, and its name
+S.MAP_KEY = { { "cap", L.MAP_CAP_ICON, "Province capital" }, { "town", L.MAP_TOWN_ICON, "Settlement" },
+              { "cart", L.MAP_CART, "Convoy" } }
 S.SW = "derpy_mr_sw_"
 S.ROW = "derpy_mr_row_"
 S.LIST = "derpy_mr_stores_list"
@@ -1354,12 +1403,21 @@ function S.ensure_list(p, n)
     clip:MoveTo(x, y)
     sized(clip, w, h)
     if is_uicomponent(slider) then
-        slider:MoveTo(x + w - L.SLIDER_W, y)
-        sized(slider, L.SLIDER_W, h)
-        pcall(function() slider:SetProperty("maxValue", h - L.HANDLE_H) end)
+        -- THE EXCHANGE'S SLIDER: the track between a cap at each end, the four end parts placed
+        -- after it, since a parent's MoveTo carries its children
+        local sx, ty, th = x + w - L.SLIDER_W, y + L.SLIDER_CAP, h - 2 * L.SLIDER_CAP
+        slider:MoveTo(sx, ty)
+        sized(slider, L.SLIDER_W, th)
+        for _, part in ipairs(L.SLIDER_PARTS) do
+            local c = find_uicomponent(slider, part[1])
+            local base = (part[1] == "frame_bottom" or part[1] == "bottom") and ty + th or ty
+            if is_uicomponent(c) then c:MoveTo(sx + part[2], base + part[3]) end
+        end
+        -- THE TRAVEL IS A NUMBER, not a size: Resize never reaches it
+        pcall(function() slider:SetProperty("maxValue", th - L.HANDLE_H) end)
         local handle = find_uicomponent(slider, "handle")
         if is_uicomponent(handle) then
-            pcall(function() handle:SetProperty("max_height", h - L.HANDLE_H) end)
+            pcall(function() handle:SetProperty("max_height", th - L.HANDLE_H) end)
         end
         slider:SetVisible(n > S.rows_shown())
     end
@@ -1418,7 +1476,27 @@ function S.map_hold(p)
         if aw_ < cw_ then return a end
         return math.max(c + cw_ - aw_, math.min(c, a))
     end
-    local nx, ny = hold(ax, cx, aw, cw), hold(ay, cy, ah, ch)
+    -- THE ENGINE DRAGS THE GRAB LAYER, NEVER THE PICTURE. A "Movable XP" component goes back where
+    -- its drag began when let go, as a dropped unit card does; holding the picture there after the
+    -- put-back still showed it back home for one frame (seen in game 2026-10-04). So the picture
+    -- follows the grab layer's offset from its rest (the box's corner) while IsDragged, and the
+    -- put-back happens to a layer nobody can see.
+    local nx, ny = ax, ay
+    local grab = find_uicomponent(clip, S.MAP_GRAB)
+    local okd, dragged = false, false
+    if is_uicomponent(grab) then okd, dragged = pcall(function() return grab:IsDragged() end) end
+    if okd and dragged then
+        local gx, gy = grab:Position()
+        S.map_drag = S.map_drag or { ax, ay }
+        nx, ny = S.map_drag[1] + gx - cx, S.map_drag[2] + gy - cy
+    else
+        S.map_drag = nil
+        if is_uicomponent(grab) then
+            local gx, gy = grab:Position()
+            if gx ~= cx or gy ~= cy then grab:MoveTo(cx, cy) end
+        end
+    end
+    nx, ny = hold(nx, cx, aw, cw), hold(ny, cy, ah, ch)
     if nx ~= ax or ny ~= ay then art:MoveTo(nx, ny) end
 end
 
@@ -1523,7 +1601,9 @@ function S.draw_rows(p, rows, heads, cols)
                                 ic:MoveTo(bx + L.CHECK + L.PAY_GAP, ry + math.floor((L.PITCH - L.icon[4]) / 2))
                                 ic:SetImagePath(b.pay.icon, 0)
                                 ic:SetTooltipText(b.pay.tip, true)
-                                S.shade(ic, b.pay.short)
+                                -- on: glowing while it pays, red (CA's "insufficient") when the
+                                -- next turn's price is more than it holds; off: grey when short
+                                S.fx(ic, b.on and (b.pay.short and "short" or "glow") or (b.pay.short and "off" or "live"))
                             end
                         end
                         local art = S.CHECK[b.on]
@@ -1650,6 +1730,19 @@ function S.draw_map(p, m)
     local bx, by = px + L.map[1], py + L.map[2]
     local shown = { dot = 0, cart = 0, path = 0, label = 0 }
     S.map_hits = {}
+    S.map_last = m
+    -- the bottom line: the key, then Zoom out and Zoom in in slots 3 and 4
+    for _, k in ipairs(S.MAP_KEY) do
+        local ic, tx = find_uicomponent(p, "derpy_mr_mapkey_" .. k[1]), find_uicomponent(p, "derpy_mr_mapkey_" .. k[1] .. "_text")
+        for j, c in ipairs({ ic, tx }) do
+            if is_uicomponent(c) then
+                c:SetVisible(m ~= nil)
+                if m then put(c, px, py, L.map_key[k[1]][j]) end
+            end
+        end
+        if m and is_uicomponent(ic) then ic:SetImagePath(k[2], 0) end
+        if m then set(tx, k[3]) end
+    end
     local function place(kind, x, y, size)
         shown[kind] = shown[kind] + 1
         local c = S.map_part(p, kind, shown[kind])
@@ -1671,6 +1764,27 @@ function S.draw_map(p, m)
                 art:SetImagePath(m.art and m.art.path or S.NO_ART, 0)
                 put(art, bx, by, m.surface)
             end
+            local o = L.MAP_FRAME_OUT
+            put(find_uicomponent(clip, "derpy_mr_map_frame"), px, py,
+                { L.map[1] - o, L.map[2] - o, L.map[3] + 2 * o, L.map[4] + 2 * o })
+            put(find_uicomponent(clip, S.MAP_GRAB), px, py, L.map)
+        end
+    end
+    -- + AND - ARE THE BOX'S CHILDREN, so they are placed after it: placed first, the box's own
+    -- MoveTo carried them off by however far it moved (seen in game 2026-10-04: no + and - on a
+    -- session's first draw)
+    local zoom = m ~= nil and m.scale ~= nil
+    for _, z in ipairs({ { S.ZOOM_OUT, "-", zoom and m.can_out, "Zoom out", "Draw more of the map.", L.zoom_out },
+                         { S.ZOOM_IN, "+", zoom and m.can_in, "Zoom in", "Draw the map closer.", L.zoom_in } }) do
+        local bt = find_uicomponent(p, z[1])
+        if is_uicomponent(bt) then
+            bt:SetVisible(zoom)
+            if zoom then
+                put(bt, px, py, z[6])
+                label(bt, z[2])
+                bt:SetTooltipText(z[4] .. "||" .. (z[3] and z[5] or "As far as it goes."), true)
+                S.set_off(bt, not z[3])
+            end
         end
     end
     if m then
@@ -1680,6 +1794,7 @@ function S.draw_map(p, m)
             local c = place("dot", d.x, d.y, d.cap and L.MAP_CAP or L.MAP_DOT)
             if c then
                 c:SetImagePath(d.cap and L.MAP_CAP_ICON or L.MAP_TOWN_ICON, 0)
+                c:SetImagePath(d.cap and L.MAP_CAP_ICON or L.MAP_TOWN_ICON, 1)   -- its hover: brightened
                 c:SetTooltipText(d.name .. (d.cap and ", a province capital" or "") .. "\nClick to fly there.", true)
                 S.map_hits[c:Id()] = { d.lx, d.ly }
             end
@@ -1689,6 +1804,7 @@ function S.draw_map(p, m)
             local k = place("cart", c.x, c.y, L.MAP_CART_SIZE)
             if k then
                 k:SetTooltipText(S.ship_tip(c.s), true)
+                S.fx(k, "glow")     -- a convoy on the road pulses, as CA's active markers do
                 S.map_hits[k:Id()] = { c.lx, c.ly }
             end
         end
@@ -1712,14 +1828,31 @@ function S.draw_chart(p, c)
         end
     end
     local bars = (c and c.bars) or {}
-    local bx, by, bh = L.bars[1], L.bars[2], L.bars[4]
+    local bx, by, bh, n = L.bars[1], L.bars[2], L.bars[4], #bars
+    -- AT THE RIGHT, newest last: the latest turn stands over "Turn N" however many turns there are
+    local function bar_x(i) return bx + L.bars[3] - L.BAR_W - (n - i) * L.BAR_PITCH end
+    for _, name in ipairs({ "chart_base", "chart_grid" }) do
+        local rule = find_uicomponent(p, name)
+        if is_uicomponent(rule) then
+            put(rule, px, py, L[name])
+            rule:SetVisible(n > 0)
+        end
+    end
+    -- the first turn's name under the first bar, dropped where it would meet the last turn's
+    local from = find_uicomponent(p, "chart_from")
+    if is_uicomponent(from) and n > 0 then
+        local right = L.chart_to[1] + L.chart_to[3] - string.len(c.chart_to) * L.HEAD_CHAR_W - L.GAP
+        local w = math.min(L.chart_from[3], right - bar_x(1))
+        put(from, px, py, { bar_x(1), L.chart_from[2], math.max(w, 1), L.chart_from[4] })
+        from:SetVisible(bar_x(1) + string.len(c.chart_from) * L.HEAD_CHAR_W <= right)
+    end
     for i = 1, L.BARS do
         local b = find_uicomponent(p, S.BAR .. i)
         if is_uicomponent(b) then
             local d = bars[i]
             if d then
                 sized(b, L.BAR_W, d.h)
-                b:MoveTo(px + bx + (i - 1) * L.BAR_PITCH, py + by + bh - d.h)
+                b:MoveTo(px + bar_x(i), py + by + bh - d.h)
                 b:SetTooltipText(d.tip, true)
             end
             b:SetVisible(d ~= nil)
@@ -1761,7 +1894,13 @@ function S.refresh()
                 put(bt, px, py, { L.bulk[1] + i * slot_w, L.bulk[2], L.bulk[3], L.bulk[4] })
                 label(bt, o.label)
                 bt:SetTooltipText(a.tip, true)
-                S.set_off(bt, a.off)
+                if a.active then
+                    -- RUNNING, as CA's active states glow: still not clickable
+                    bt:SetDisabled(true)
+                    S.fx(bt, "glow")
+                else
+                    S.set_off(bt, a.off)
+                end
             end
         end
     end
@@ -1820,7 +1959,7 @@ function S.show(on)
     if not is_uicomponent(p) then return end
     S.list_key = nil
     if on then
-        S.focus = nil
+        S.focus, S.map_view = nil, nil
         p:SetVisible(true)
         S.layout(p)
         if not S.polling then
@@ -1835,13 +1974,27 @@ function S.show(on)
     p:SetInteractive(on and true or false)
 end
 
+-- ZOOM AROUND THE MIDDLE OF THE BOX: the spot there now, after any drag, read off where the
+-- surface is, stays there at the new scale. A UI change only, so it needs no UITrigger.
+function S.zoom(step)
+    local p, m = S.panel(), S.map_last
+    local art = is_uicomponent(p) and S.map_surface(p)
+    if not (m and m.scale and art) then return end
+    local px, py = p:Position()
+    local ax, ay = art:Position()
+    S.map_view = { zoom = m.zoom * step,
+                   cx = m.su[1] + (L.map[3] / 2 - (ax - px - L.map[1])) / m.scale,
+                   cy = m.su[2] + (L.map[4] / 2 - (ay - py - L.map[2])) / m.scale }
+    return S.refresh()
+end
+
 function S.is_mine(name)
     return type(name) == "string" and (name == S.BUTTON or name == S.CLOSE or name == S.BACK
         or name == S.TAB.goods or name == S.TAB.settlements or name == S.TAB.trade or name == S.TAB.spending
         or name == S.TAB.map or S.map_hits[name] ~= nil
         or string.sub(name, 1, #S.ROW) == S.ROW or string.sub(name, 1, #S.SW) == S.SW
         or string.sub(name, 1, #S.BULK) == S.BULK or string.sub(name, 1, #S.ORDER) == S.ORDER
-        or name == S.SEND or name == S.SELL)
+        or name == S.SEND or name == S.SELL or name == S.ZOOM_IN or name == S.ZOOM_OUT)
 end
 
 -- A SWITCH NAMES NO GOOD: its row does, so the row is read off the clicked component's parent.
@@ -1886,6 +2039,9 @@ end
 function S.click(name, component)
     if name == S.SEND then return S.click_send(component) end
     if S.map_hits[name] then return S.look_at(S.map_hits[name][1], S.map_hits[name][2]) end
+    -- the model clamps the zoom, so a greyed button's click changes nothing
+    if name == S.ZOOM_IN then return S.zoom(L.MAP_ZOOM_STEP) end
+    if name == S.ZOOM_OUT then return S.zoom(1 / L.MAP_ZOOM_STEP) end
     if name == S.SELL then
         if S.act.sell and not S.act.sell.off then return S.request("sell", S.focus) end
         return
@@ -1908,7 +2064,7 @@ function S.click(name, component)
     end
     for view, tab in pairs(S.TAB) do
         if name == tab then
-            S.view, S.focus = view, nil
+            S.view, S.focus, S.map_view = view, nil, nil
             return S.refresh()
         end
     end

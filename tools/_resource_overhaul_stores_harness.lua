@@ -275,8 +275,9 @@ function UIC:SetTooltipText(t) self.tip = t end
 function UIC:SetTextHAlign(a) self.halign = a end
 function UIC:SetOpacity(o) self.opacity = o end
 function UIC:SetDisabled(v) self.disabled = v end
+function UIC:IsDragged() return self.dragged == true end
 function UIC:ShaderTechniqueSet(t) self.shader = t end
-function UIC:ShaderVarsSet() end
+function UIC:ShaderVarsSet(a, b, c, d) self.vars = { a, b, c, d } end
 function UIC:SetImagePath(p, i) self.image = p; self.images = self.images or {}; self.images[i or 0] = p end
 function UIC:SetProperty(k, v) self[k] = v end
 function UIC:Layout() end
@@ -472,6 +473,20 @@ FACTIONS.fac_many = faction("fac_many", many)
 LOCAL = "fac_many"; click("derpy_mr_stores_button")
 eq(find("hdr_1").text, "Settlement", "reopened on the Settlements tab")
 eq(shown_rows(), 200, "every settlement drawn"); eq(find("vslider").visible, true, "a slider for 200 rows")
+-- THE EXCHANGE'S SLIDER (asked 2026-10-04): CA's caps and arrows at each end, outside the track
+do
+    local L = DERPY_MR_STORES_L
+    local vs, lst = find("vslider"), find("derpy_mr_stores_list")
+    eq(vs.y, lst.y + L.SLIDER_CAP, "the track starts under the top cap")
+    eq(vs.y + vs.h, lst.y + lst.h - L.SLIDER_CAP, "and ends over the bottom one")
+    eq(vs.x + vs.w, lst.x + lst.w, "at the list's right edge")
+    for _, part in ipairs(L.SLIDER_PARTS) do
+        local c = find_uicomponent(vs, part[1])
+        local base = (part[1] == "frame_bottom" or part[1] == "bottom") and vs.y + vs.h or vs.y
+        eq(c ~= false and c.x == vs.x + part[2] and c.y == base + part[3], true, part[1] .. " in CA's place")
+    end
+    eq(vs.maxValue, vs.h - L.HANDLE_H, "the travel is the track less the handle")
+end
 eq(cell(1, 1).text, "r1", "a region with no loc name shows its key")
 eq(find("derpy_mr_row_200").y - find("derpy_mr_row_1").y, 199 * 28, "drawn whole, at the pitch")
 eq(find("rows_holder").h, 200 * 28, "the holder is as tall as what it holds")
@@ -539,11 +554,33 @@ eq(b3.y + b3.h, pnl.y + L.bars[2] + L.bars[4], "bars stand on one baseline")
 eq(b3.x - find("derpy_mr_bar_2").x, L.BAR_PITCH, "bar pitch"); eq(b3.tip, "Turn 5: 100 held", "bar tooltip")
 eq(find("chart_line").text, "Last turn: made +12", "the last-turn line")
 eq(find("chart_line").visible, true, "shown"); eq(find("chart_to").text, "Turn 5", "the last turn's label")
+-- THE NEWEST TURN OVER "Turn N" (polish 2026-10-04): the bars stand at the right, the first
+-- turn's name under the first bar, a baseline under them all
+do
+    local to, from, base, b1 = find("chart_to"), find("chart_from"), find("chart_base"), find("derpy_mr_bar_1")
+    eq(b3.x + b3.w, pnl.x + L.bars[1] + L.bars[3], "the newest bar ends where the chart does")
+    eq(to.x + to.w, b3.x + b3.w, "under it, Turn 5 ends with it")
+    eq(from.x, b1.x, "Turn 3 starts under the first bar")
+    eq(from.visible, true, "three turns: Turn 3 is named")
+    eq(from.x + #from.text * L.HEAD_CHAR_W < to.x + to.w - #to.text * L.HEAD_CHAR_W, true, "clear of Turn 5")
+    eq(base.visible, true, "a baseline"); eq(base.y, b3.y + b3.h, "right under the bars")
+    eq(base.x <= b1.x and base.x + base.w >= b3.x + b3.w, true, "under every bar")
+    local grid = find("chart_grid")
+    eq(grid.visible, true, "a line at the top value"); eq(grid.y, b3.y, "level with the tallest bar's top")
+end
+dump("goods_focus")
+HIST.turns, HIST.total = { 4, 5 }, { 50, 100 }
+click("derpy_mr_back"); click("derpy_mr_row_1")
+eq(bars_shown(), 2, "two turns, two bars"); eq(find("chart_from").visible, false, "Turn 4 would meet Turn 5: left off")
+eq(find("derpy_mr_bar_2").x + find("derpy_mr_bar_2").w, find("chart_to").x + find("chart_to").w, "the newest still over Turn 5")
+HIST.turns, HIST.total = { 3, 4, 5 }, { 0, 50, 100 }
+click("derpy_mr_back"); click("derpy_mr_row_1")
 eq(find("derpy_mr_stores_list").h, L.CHART_ROWS * L.PITCH, "the list shortens for the chart")
-eq(find("vslider").maxValue, L.CHART_ROWS * L.PITCH - L.HANDLE_H, "and its slider with it")
+eq(find("vslider").maxValue, L.CHART_ROWS * L.PITCH - 2 * L.SLIDER_CAP - L.HANDLE_H, "and its slider with it")
 HIST.turns, HIST.total = { 5 }, { 100 }
 click("derpy_mr_back"); click("derpy_mr_row_1")
 eq(bars_shown(), 0, "one turn: no bars"); eq(find("chart_line").text, S.NO_HISTORY, "and says why")
+eq(find("chart_base").visible or find("chart_grid").visible, false, "and no chart lines")
 click("derpy_mr_back")
 eq(find("chart_line").visible, false, "Back hides the chart")
 eq(find("derpy_mr_stores_list").h, L.ROWS * L.PITCH, "and restores the full list")
@@ -716,6 +753,7 @@ click("derpy_mr_tab_settlements"); click("derpy_mr_row_1")
 eq(find("sub_title").text, "Stores of Alpha", "Alpha's stores")
 local function sendb(i) return find_uicomponent(find("derpy_mr_row_" .. i), "derpy_mr_sendhere") end
 eq(sendb(1).visible, true, "a Send here button"); eq(sendb(1).text, "Send here", "labelled")
+dump("settlement_focus")
 eq(sendb(1).x, find("derpy_mr_row_1").x + LL.VIEWS.focus[5][1], "in the fifth column")
 eq(sendb(1).disabled, false, "live when something can come"); eq(sendb(1).shader, "normal_t0", "and drawn live")
 eq(sendb(1).tip, "Ship 12 Coal from Bravo: 10 arrive in 2 turns, 2 are lost on the way. An army at war "
@@ -779,9 +817,20 @@ for i, sp in ipairs(DERPY_MR_STORES_SUPPLY) do
 end
 eq(payic(1, "materials").images[0], good_icon("coal"), "Materials pays with the capital's fullest: coal here")
 eq(payic(1, "stable").images[0], good_icon("iron"), "a use with none held still shows its good")
-eq(payic(1, "materials").shader ~= "set_greyscale_t0", true, "26 covers the 4 a turn: in colour")
+eq(payic(1, "materials").shader, "glow_pulse_t0", "on, and 26 covers the 4 a turn: it glows as it pays")
+eq(payic(1, "materials").vars[3], S.FX.glow[4], "at CA's pulse")
 eq(payic(1, "stable").shader, "set_greyscale_t0", "none held: greyed")
-eq(payic(1, "arms").shader, "set_greyscale_t0", "3 is short of 4: greyed")
+eq(payic(1, "arms").shader, "set_greyscale_t0", "off, and 3 is short of 4: greyed")
+SUPPLY_ST.on.arms = true
+click("derpy_mr_tab_goods"); click("derpy_mr_tab_spending")
+eq(payic(1, "arms").shader, "red_pulse_t0", "on but short: CA's insufficient red pulse")
+eq(payic(1, "materials").shader, "glow_pulse_t0", "beside one that pays")
+SUPPLY_ST.on.arms = nil
+SUPPLY_ST.pay.building.n = 30; SUPPLY_ST.on.materials = nil
+click("derpy_mr_tab_goods"); click("derpy_mr_tab_spending")
+eq(payic(1, "materials").shader, "normal_t0", "off and covered: plain")
+SUPPLY_ST.pay.building.n = 26; SUPPLY_ST.on.materials = true
+click("derpy_mr_tab_goods"); click("derpy_mr_tab_spending")
 eq(string.find(payic(1, "materials").tip, "Paid from Coal first, the fullest store.", 1, true) ~= nil, true,
    "the icon says what pays and why that one")
 eq(string.find(payic(1, "stable").tip, "Nothing to pay with: the stores of Alpha hold none.", 1, true) ~= nil, true,
@@ -848,7 +897,7 @@ SHIPS = { { id = "derpy_mr_ship_1", f = LOCAL, stem = "coal", n = 22, from = "re
             x = 110, y = 290 } }
 click("derpy_mr_tab_map")
 eq(find("derpy_mr_tab_map").text, "Map", "a fifth tab")
-eq(find("sub_title").text, "Where your convoys are", "its own title")
+eq(find("sub_title").text, "Where your settlements and convoys are", "its own title")
 eq(shown_rows(), 0, "no list rows on the map")
 eq(find("empty_text").visible, false, "and no empty-list text over it")
 local function mapc(kind, i) return find("derpy_mr_map" .. kind .. "_" .. i) end
@@ -866,6 +915,8 @@ eq(da.y < db.y, true, "north up: Alpha, further north, is drawn higher")
 eq(da.x < db.x, true, "and west to the left")
 eq(da.w > db.w, true, "a province capital's dot is larger")
 eq(da.images[0], LL.MAP_CAP_ICON, "a province capital wears CA's capital marker")
+eq(da.images[1], LL.MAP_CAP_ICON, "and brightens as itself under the mouse")
+eq(db.images[1], LL.MAP_TOWN_ICON, "a settlement too")
 eq(db.images[0], LL.MAP_TOWN_ICON, "another settlement CA's settlement marker")
 eq(mapc("label", 1).visible, true, "and named on the map"); eq(mapc("label", 1).text, "Alpha", "by its name")
 eq(mapc("label", 2).visible, true, "every settlement is named"); eq(mapc("label", 2).text, "Bravo", "Bravo too")
@@ -874,6 +925,7 @@ eq(math.abs((db.x - da.x) - (db.y - da.y)) <= 1, true, "equal distances north an
 -- the convoy
 local cart = mapc("cart", 1)
 eq(cart.visible, true, "a cart for the convoy")
+eq(cart.shader, "glow_pulse_t0", "pulsing: a convoy on the road")
 dump("map")
 eq(inside(cart), true, "inside the box")
 eq(math.abs(cart.x + cart.w / 2 - (da.x + da.w / 2)) < 40, true, "near Alpha, where it is now")
@@ -996,10 +1048,124 @@ do
     a:MoveTo(clip.x + 5000, clip.y + 5000); REPEATS.derpy_mr_stores_scroll()
     eq(a.x, clip.x, "dragged too far east, it stops at its west edge"); eq(a.y, clip.y, "and its north")
 end
+-- A FRAME, A KEY AND ZOOM (asked 2026-10-04, once the drag was seen working in game)
+local function zoom_in() return find("derpy_mr_zoom_in") end
+local function zoom_out() return find("derpy_mr_zoom_out") end
+-- the picture's spot under the middle of the box, as a 0-1 fraction of the picture
+local function mid_frac()
+    local a, c = art(), find("derpy_mr_map_clip")
+    return (c.x + c.w / 2 - a.x) / a.w, (c.y + c.h / 2 - a.y) / a.h
+end
+do
+    -- the box not yet in place, as on a session's first draw (seen in game 2026-10-04: no + and -,
+    -- placed before the box's own MoveTo carried them off)
+    click("derpy_mr_tab_goods"); find("derpy_mr_map_clip"):MoveTo(0, 0); click("derpy_mr_tab_map")
+    local clip, fr = find("derpy_mr_map_clip"), find("derpy_mr_map_frame")
+    eq(fr ~= false and fr.visible, true, "the map has a frame")
+    local o = LL.MAP_FRAME_OUT
+    eq(fr.x == clip.x - o and fr.y == clip.y - o and fr.w == clip.w + 2 * o and fr.h == clip.h + 2 * o, true,
+       "past the map's box by the art's clear edge, so its line lands on the box's edge")
+    local at = {}
+    for i, k in ipairs(clip.kids) do at[k.name] = i end
+    eq(at.derpy_mr_map_frame > at.derpy_mr_map_art, true, "made after the picture, so drawn over it and everything on it")
+    for _, k in ipairs({ { "cap", LL.MAP_CAP_ICON, "Province capital" }, { "town", LL.MAP_TOWN_ICON, "Settlement" },
+                         { "cart", LL.MAP_CART, "Convoy" } }) do
+        local ic, tx = find("derpy_mr_mapkey_" .. k[1]), find("derpy_mr_mapkey_" .. k[1] .. "_text")
+        eq(ic.visible and tx.visible, true, k[3] .. " in the key")
+        eq(ic.images[0], k[2], k[3] .. ": the icon the map draws"); eq(tx.text, k[3], "and its name")
+        eq(ic.y >= pnl0.y + LL.bulk[2] and ic.y + ic.h <= pnl0.y + LL.bulk[2] + LL.bulk[4], true, k[3] .. " on the bottom line")
+        eq(tx.x >= ic.x + ic.w, true, k[3] .. ": the name right of its icon")
+    end
+    eq(zoom_out().visible and zoom_in().visible, true, "two zoom buttons")
+    eq(zoom_in().x, pnl0.x + LL.zoom_in[1], "+ in the map's corner"); eq(zoom_in().y, pnl0.y + LL.zoom_in[2], "down")
+    eq(zoom_out().x, pnl0.x + LL.zoom_out[1], "- under it"); eq(zoom_out().y, pnl0.y + LL.zoom_out[2], "down")
+    eq(zoom_in().text, "+", "a plus"); eq(zoom_out().text, "-", "a minus")
+    eq(string.find(zoom_in().tip, "Zoom in", 1, true) == 1, true, "+ says what it does")
+    eq(at.derpy_mr_zoom_in > at.derpy_mr_map_frame and at.derpy_mr_zoom_out > at.derpy_mr_map_frame, true,
+       "made after the frame, so drawn over it")
+    -- ZOOM KEEPS THE SPOT YOU ARE LOOKING AT, after a drag too
+    local a = art()
+    a:MoveTo(a.x - 40, a.y - 30); REPEATS.derpy_mr_stores_scroll()
+    local w0, fx, fy = art().w, mid_frac()
+    press(zoom_in())
+    eq(math.abs(art().w - w0 * LL.MAP_ZOOM_STEP) <= 1, true, "Zoom in draws the picture a step larger")
+    local gx, gy = mid_frac()
+    eq(math.abs(gx - fx) < 0.002 and math.abs(gy - fy) < 0.002, true, "around the spot that was in the middle")
+    on_place(art(), mapc("dot", 1), "reg_a", "zoomed in, Alpha"); on_place(art(), mapc("dot", 2), "reg_b", "and Bravo")
+    eq(math.abs(art().h / art().w - 834 / 1108) < 0.01, true, "not stretched")
+    local n = 0
+    while not zoom_in().disabled and n < 20 do press(zoom_in()); n = n + 1 end
+    eq(zoom_in().disabled, true, "Zoom in greys at the closest")
+    eq(art().w / 1108 <= LL.MAP_ZOOM_MAX + 1e-6, true, "no closer than MAP_ZOOM_MAX")
+    eq(art().w / 1108 >= LL.MAP_ZOOM_MAX / LL.MAP_ZOOM_STEP, true, "and it got there")
+    local wmax = art().w; press(zoom_in())
+    eq(art().w, wmax, "a greyed Zoom in does nothing")
+    n = 0
+    while not zoom_out().disabled and n < 20 do press(zoom_out()); n = n + 1 end
+    eq(zoom_out().disabled, true, "Zoom out greys at the farthest"); eq(zoom_in().disabled, false, "and Zoom in is back")
+    local ca = art()
+    eq(ca.w >= clip.w and ca.h >= clip.h, true, "zoomed out, the picture still covers the box")
+    eq(math.abs(ca.w - clip.w) <= 1 or math.abs(ca.h - clip.h) <= 1, true, "and one side of it fits the box: the whole map")
+    eq(ca.x <= clip.x and ca.x + ca.w >= clip.x + clip.w and ca.y <= clip.y and ca.y + ca.h >= clip.y + clip.h, true,
+       "kept on the picture")
+    -- reopening, or coming back to the tab, frames the map as it first was
+    click("derpy_mr_stores_button"); click("derpy_mr_stores_button")
+    eq(find("sub_title").text, "Where your settlements and convoys are", "reopened on the Map tab")
+    eq(art().w, w0, "reopened, the first framing"); eq(zoom_out().disabled, false, "Zoom out lit again")
+    press(zoom_in()); click("derpy_mr_tab_goods"); click("derpy_mr_tab_map")
+    eq(art().w, w0, "another tab and back, the first framing")
+    -- off the map, none of it shows
+    click("derpy_mr_tab_goods")
+    eq(zoom_in().visible or zoom_out().visible, false, "no zoom buttons off the map")
+    eq(find("derpy_mr_mapkey_cap").visible or find("derpy_mr_mapkey_cap_text").visible, false, "and no key")
+    click("derpy_mr_tab_map")
+end
+-- THE ENGINE DRAGS THE GRAB LAYER, NEVER THE PICTURE (seen in game 2026-10-04: let go, a dragged
+-- "Movable XP" picture went back where the drag began; held there after, it still flickered home
+-- for one frame). The picture follows the grab layer; the put-back happens to the clear layer.
+do
+    local poll = REPEATS.derpy_mr_stores_scroll
+    click("derpy_mr_tab_goods"); click("derpy_mr_tab_map")
+    local a, g, clip = art(), find("derpy_mr_map_grab"), find("derpy_mr_map_clip")
+    eq(g.x == clip.x and g.y == clip.y and g.w == clip.w and g.h == clip.h, true, "the grab layer covers the map's box")
+    eq(clip.kids[1], g, "beneath the picture, so the markers on it keep their clicks")
+    local x0, y0 = a.x, a.y
+    g.dragged = true; g:MoveTo(clip.x - 30, clip.y - 20); poll()
+    eq(a.x, x0 - 30, "dragging the grab layer drags the picture"); eq(a.y, y0 - 20, "both ways")
+    g:MoveTo(clip.x - 50, clip.y - 20); poll()
+    eq(a.x, x0 - 50, "and it keeps following")
+    g.dragged = false; g:MoveTo(clip.x, clip.y); poll()   -- the engine's put-back, of the grab layer
+    eq(a.x, x0 - 50, "let go: the picture stays, with nothing to flicker back"); eq(a.y, y0 - 20, "both ways")
+    g:MoveTo(clip.x - 7, clip.y + 3); poll()
+    eq(g.x == clip.x and g.y == clip.y, true, "a grab layer left out of place goes back under the box")
+    eq(a.x, x0 - 50, "without moving the picture")
+    g.dragged = true; g:MoveTo(clip.x - 99999, clip.y); poll()
+    eq(a.x, clip.x + clip.w - a.w, "a drag past the picture's edge stops at it")
+    g.dragged = false; g:MoveTo(clip.x, clip.y); poll()
+    g.dragged = true; g:MoveTo(clip.x + 10, clip.y); poll(); g.dragged = false
+    press(zoom_in())
+    local zx = art().x
+    g:MoveTo(clip.x, clip.y); poll()
+    eq(art().x, zx, "a zoom straight after a drag keeps its own framing")
+end
 -- NO ANSWER FROM THE ENGINE: the plain map, never a picture in the wrong frame
 RADAR_OFF, S.frame = true, nil
 click("derpy_mr_tab_goods"); click("derpy_mr_tab_map")
 eq(art().images[0], S.NO_ART, "no frame, no picture"); eq(mapc("dot", 1).visible, true, "the settlements still drawn")
+do
+    -- the plain map zooms too: the settlements spread, and the surface grows to carry every one
+    local function gap() return mapc("dot", 2).x - mapc("dot", 1).x end
+    local g0 = gap()
+    press(zoom_in())
+    eq(math.abs(gap() - g0 * LL.MAP_ZOOM_STEP) <= 2, true, "the plain map draws the settlements a step apart")
+    local a = art()
+    for i = 1, 2 do
+        local d = mapc("dot", i)
+        eq(d.x >= a.x and d.x + d.w <= a.x + a.w and d.y >= a.y and d.y + d.h <= a.y + a.h, true,
+           "dot " .. i .. " on the surface, so a drag carries it")
+    end
+    eq(find("derpy_mr_map_frame").visible, true, "framed too")
+end
 RADAR_OFF, S.frame = false, nil
 -- TWO SETTLEMENTS CLOSE TOGETHER BY THE MAP'S SOUTH EDGE: zoomed only as far as the picture has
 -- detail for, and the view kept on the picture rather than showing the blank below it
@@ -1046,6 +1212,19 @@ eq(act("derpy_mr_order_great_works").disabled, true, "Great Works is short")
 eq(string.find(act("derpy_mr_order_great_works").tip, "Your stores hold 120 building materials.", 1, true) ~= nil, true,
    "and says how short")
 eq(find("hint_text").y < fest.y, true, "the hint is clear of the orders' line")
+-- A RUNNING ORDER GLOWS (CA's active-state glow_pulse_t0) and still cannot be bought
+ORDER_ST.festival = { ok = false, wait = 8, active = 3, have = 250, cost = 200, use = "luxuries" }
+click("derpy_mr_tab_goods"); click("derpy_mr_tab_spending")
+local runb = act("derpy_mr_order_festival")
+eq(runb.shader, "glow_pulse_t0", "a running order glows"); eq(runb.disabled, true, "and cannot be bought again")
+eq(runb.vars[1] == S.FX.glow[2] and runb.vars[2] == S.FX.glow[3], true, "at CA's values")
+eq(string.find(runb.tip, "Running: 3 turns left. Ready again in 8 turns.", 1, true) ~= nil, true, "and says so")
+REQ = {}; press(runb); eq(#REQ, 0, "a click on a running order asks for nothing")
+eq(act("derpy_mr_order_muster").shader, "set_greyscale_t0", "a waiting one is grey, not glowing")
+ORDER_ST.festival = { ok = true, have = 250, cost = 200, use = "luxuries" }
+click("derpy_mr_tab_goods"); click("derpy_mr_tab_spending")
+eq(act("derpy_mr_order_festival").shader, "normal_t0", "over and ready: live again")
+fest = act("derpy_mr_order_festival")
 REQ = {}
 press(fest); eq(REQ[1], "fac_a|order|festival", "a click buys it")
 press(act("derpy_mr_order_muster")); eq(#REQ, 1, "a greyed order asks for nothing")

@@ -739,8 +739,12 @@ eq(FBUNDLES.oP.derpy_mr_order_festival, 5, "Festival for 5 turns")
 eq(F.book("oP").now.silk.spent_out, 150, "booked as spent")
 o1.held.silk = 300
 st = F.order_state(oP.iface, "festival"); eq(st.ok, false, "bought this turn: not again")
+eq(st.active, 5, "and running for 5 turns")
 eq(st.wait, 10, "ready in 10 turns")
 F.request("oP", "order", "festival"); eq(o1.held.silk, 300, "and a request does nothing")
+local bought = TURN
+TURN = bought + 4; eq(F.order_state(oP.iface, "festival").active, 1, "its last turn running")
+TURN = bought + 5; eq(F.order_state(oP.iface, "festival").active, nil, "over after 5 turns")
 TURN = 49; eq(F.order_state(oP.iface, "festival").wait, 1, "a turn to go")
 TURN = 50; eq(F.order_state(oP.iface, "festival").ok, true, "ready after 10 turns")
 st = F.order_state(oP.iface, "muster"); eq(st.ok, false, "30 war materials is short of 200"); eq(st.have, 30, "says so")

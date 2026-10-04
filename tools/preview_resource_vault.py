@@ -31,7 +31,7 @@ sys.path.insert(0, os.path.join(ROOT, "tools"))
 import preview_guilds_panel as PG                                    # noqa: E402
 
 PREFIX = "derpy_mr_stores_"
-TABS = ("goods", "settlements", "trade", "spending", "map",
+TABS = ("goods", "goods_focus", "settlements", "settlement_focus", "trade", "spending", "map",
         "map_wh3_main_combi", "map_cr_combi_expanded", "map_wh3_main_chaos")
 # Where a campaign's minimap is: CA's data_maps.pack, or the map mod's own pack (IEE).
 MAP_PACKS = (os.path.join(PG.GAME, "data_maps.pack"),

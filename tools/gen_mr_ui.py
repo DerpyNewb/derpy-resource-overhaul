@@ -107,7 +107,13 @@ SELL_RATE = {"provisions": 1, "building": 2, "war": 3, "mounts": 4, "luxuries": 
 # THE LAYOUT, in panel coordinates: (x, y, w, h). The Lua MoveTo's every component from these;
 # the .twui.xml sizes are the same numbers. cols are (x, w) inside a row, which starts at list x.
 L = {
-    "W": 860, "H": 640, "PITCH": 28, "ROWS": 16, "SLIDER_W": 16, "HANDLE_H": 40,
+    "W": 860, "H": 640, "PITCH": 28, "ROWS": 16, "SLIDER_W": 18, "HANDLE_H": 40,
+    # THE SLIDER IS THE ZHARR EXCHANGE'S (asked 2026-10-04): CA's event message slider, an 18px
+    # handle column with a frame cap and an arrow in SLIDER_CAP at each end, outside the track.
+    # SLIDER_PARTS: where each end part sits from the track's top-left, the two bottoms from the
+    # track's END - measured off CA's art (gen_guilds_ui.CA_SLIDER), because docking is ignored.
+    "SLIDER_CAP": 24,
+    "SLIDER_PARTS": (("frame_top", -1, -24), ("frame_bottom", -1, 0), ("top", 1, -23), ("bottom", 1, -1)),
     "BUTTON": 48, "GAP": 4,
     "title": (20, 14, 500, 28), "close": (818, 12, 30, 30),
     # A RULE BETWEEN THE TITLE AND THE TABS (asked for 2026-10-02): the two read as one block
@@ -125,6 +131,21 @@ L = {
     # ON CA'S MINIMAP (one pixel to one logical unit): never closer than MAP_ART_ZOOM, past which
     # the picture is a blur. MAP_CHAR_W is a name's width per letter at 11px, for spacing names.
     "MAP_ART_ZOOM": 2, "MAP_CHAR_W": 6.5,
+    # ZOOM (asked 2026-10-04): round + and - buttons on the map's bottom-right corner (CA's small
+    # round button, the Close button's art; CA ships no minus icon, so both are text), a step of
+    # MAP_ZOOM_STEP around the spot in the middle of the box. Closest: MAP_ZOOM_MAX pixels per picture pixel (the
+    # plain map: MAP_ZOOM_MAX times its first framing). Farthest: the whole picture, still covering
+    # the box (the plain map: its first framing). No wheel: no mouse-wheel event reaches script.
+    "MAP_ZOOM_STEP": 1.5, "MAP_ZOOM_MAX": 3,
+    "zoom_in": (800, 516, 30, 30), "zoom_out": (800, 550, 30, 30),
+    # THE FRAME REACHES THIS FAR PAST THE MAP'S BOX on every side: CA's panel_back_border.png draws
+    # its copper line from its 4th pixel in, so a frame on the box left the map showing outside the
+    # line (seen in game 2026-10-04). The box cuts off the clear 4px. check_map_frame() measures it.
+    "MAP_FRAME_OUT": 4,
+    # THE MAP'S KEY on the bottom line, left of the zoom buttons: CA's icon, then its name
+    "map_key": {"cap": ((20, 600, 26, 26), (50, 602, 120, 22)),
+                "town": ((180, 603, 20, 20), (204, 602, 80, 22)),
+                "cart": ((294, 599, 28, 28), (326, 602, 100, 22))},
     # CA's own map markers (asked 2026-10-03: "the icons can be settlement icons"): the 24px
     # castle CA marks a settlement with, and its ringed capital marker for a province capital
     "MAP_TOWN_ICON": "ui/skins/default/icon_marker_settlement.png",
@@ -155,6 +176,12 @@ L = {
     "CHART_ROWS": 9, "BARS": 20, "BAR_W": 33, "BAR_PITCH": 41, "BAR_MIN": 2,
     "chart_top": (20, 400, 300, 18), "bars": (20, 420, 820, 120),
     "chart_from": (20, 542, 200, 18), "chart_to": (640, 542, 200, 18),
+    # THE CHART'S BASELINE, under the bars (asked for polish 2026-10-04). The bars stand at the
+    # RIGHT, newest last, so the latest turn is always over "Turn N"; chart_from moves under the
+    # first bar and is dropped where it would meet chart_to.
+    "chart_base": (20, 540, 820, 1),
+    # and a fainter line at the top value, which ties chart_top's figure to the bars it measures
+    "chart_grid": (20, 420, 820, 1),
     "chart_line": (20, 564, 820, 22),
     # EACH VIEW HAS ITS OWN COLUMNS (x, w, align) inside a row: sized to what they hold and
     # aligned to it - words left, numbers right, ticks centred. One set for every view left the
@@ -209,10 +236,23 @@ BTN_BG = "ui/skins/default/button_square_large_text_active.png"
 BTN_HOVER = "ui/skins/default/button_square_large_text_hover.png"
 WHITE = "ui/skins/default/1x1_blank_white.png"
 DIVIDER_COLOUR = "#6B583680"
+GRID_COLOUR = "#6B583640"         # the chart's top line: the divider at half its strength
 ICON_BG = "ui/campaign ui/effect_bundles/resource_gold.png"
 SLIDER_TRACK = "ui/skins/default/slider_vertical_mid.png"
 SLIDER_HANDLE = "ui/skins/default/slider_vertical_handle.png"
 SLIDER_HANDLE_UNDER = "ui/skins/default/slider_vertical_handle_underlay.png"
+# CA's slider end parts and the handle's 9-slice, ported from gen_guilds_ui (SLIDER_ART, CA_SLIDER)
+# by hand: two mods that ship apart do not share a code path that changes what they emit.
+SLIDER_ART = {
+    "frame_top": "ui/skins/default/slider_vertical_top.png",
+    "frame_bottom": "ui/skins/default/slider_vertical_bottom.png",
+    "top": ("ui/skins/default/slider_vertical_top_active.png",
+            "ui/skins/default/slider_vertical_top_hover.png"),
+    "bottom": ("ui/skins/default/slider_vertical_bottom_active.png",
+               "ui/skins/default/slider_vertical_bottom_hover.png"),
+}
+SLIDER_ROD_X, SLIDER_ROD_W, HANDLE_MIN, HANDLE_SLICE = 6, 6, 39, 17
+SND_SLIDER_HANDLE, SND_SLIDER_ARROWS = "UI_GBL_TMP_Slider_Handle", "UI_GBL_TMP_Slider_Arrows"
 SND_OPEN = "UI_GBL_TMP_Round_Medium_Button"
 SND_SMALL = "UI_GBL_TMP_Round_Small_Button"
 MUTED = "#C8B48CFF"
@@ -281,11 +321,17 @@ def build_panel():
     for name in ["derpy_mr_order_" + o[0] for o in G.ORDERS] + ["derpy_mr_sell"]:
         p.add(_cell(E, name, L["bulk"][2], L["bulk"][3], interactive=True, image=BTN_BG,
                     hover=[_flat(BTN_HOVER)], sound=SND_SMALL, align="Center", size=12))
+    # the Map tab's bottom line: its key
+    for k, (icon, text) in L["map_key"].items():
+        p.add(E.C("derpy_mr_mapkey_" + k, icon[2], icon[3], image=MAP_KEY_ICON[k]))
+        p.add(_cell(E, "derpy_mr_mapkey_%s_text" % k, text[2], text[3], size=12))
     p.add(_cell(E, "chart_top", L["chart_top"][2], L["chart_top"][3], size=12, colour=MUTED))
     p.add(_cell(E, "chart_from", L["chart_from"][2], L["chart_from"][3], size=12, colour=MUTED))
     p.add(_cell(E, "chart_to", L["chart_to"][2], L["chart_to"][3], size=12, colour=MUTED,
                 align="Right"))
     p.add(_cell(E, "chart_line", L["chart_line"][2], L["chart_line"][3], size=12))
+    p.add(E.C("chart_base", L["chart_base"][2], L["chart_base"][3], image=WHITE, colour_img=DIVIDER_COLOUR))
+    p.add(E.C("chart_grid", L["chart_grid"][2], L["chart_grid"][3], image=WHITE, colour_img=GRID_COLOUR))
     E.assign(root, "MR01")
     return E.layout(root, "derpy: Resource Overhaul's Stores panel. Created at runtime by "
                     "script/campaign/mod/derpy_more_resources_stores.lua, which MoveTo's every "
@@ -350,18 +396,54 @@ def build_list():
     clip.add(E.C("list_box", w, 1, interactive=True, callbacks=["List"], docking="Top Left",
                  layoutengine={"type": "List", "sizetocontent": True, "margins": "0.00,0.00",
                                "columns": [w]}))
-    vs = lst.add(E.C("vslider", L["SLIDER_W"], h, interactive=True, callbacks=["VSlider"],
-                     allowhresize=False,
-                     props={"Value": 0, "minValue": 0, "maxValue": h - L["HANDLE_H"]},
-                     layers=[{"path": SLIDER_TRACK, "offset": (0, 0), "dw": 0, "dh": 0,
-                              "margin": 0, "tile": True, "dock": None}]))
-    vs.add(E.C("handle", L["SLIDER_W"], L["HANDLE_H"], interactive=True,
-               callbacks=["VSliderHandle"], allowhresize=False, moveable="Movable XP",
-               props={"max_height": h - L["HANDLE_H"], "min_size": 10},
-               layers=[_flat(SLIDER_HANDLE_UNDER), _flat(SLIDER_HANDLE)]))
+    lst.add(ca_vslider(h - 2 * L["SLIDER_CAP"], L["HANDLE_H"]))
     E.assign(root, "MR04")
     return E.layout(root, "derpy: the Stores panel's scrolling list. rows_holder is adopted into "
                     "list_clip. Generated by tools/gen_mr_ui.py; do not hand-edit.")
+
+
+def ca_vslider(h, handle_h):
+    """CA's vslider for a track `h` tall, as the Zharr Exchange's (gen_guilds_ui.ca_vslider): rod,
+    9-sliced handle with CA's hover brighten, two frame caps and two arrow buttons. The Lua places
+    the four end parts from L["SLIDER_PARTS"]."""
+    import gen_mr_emitter as E
+    w = L["SLIDER_W"]
+    vs = E.C("vslider", w, h, interactive=True, callbacks=["VSlider"], allowhresize=False,
+             props={"Value": 0, "minValue": 0, "maxValue": h - handle_h},
+             layers=[{"path": SLIDER_TRACK, "offset": (SLIDER_ROD_X, 0), "dw": SLIDER_ROD_W - w,
+                      "dh": 0, "margin": 0, "tile": True, "dock": None}])
+    # Children draw in this order, so the caps sit under the handle and the arrows over both.
+    vs.add(E.C("frame_top", 20, L["SLIDER_CAP"],
+               layers=[{"path": SLIDER_ART["frame_top"], "offset": (0, 0), "dw": 0, "dh": 12,
+                        "margin": 0, "dock": None}]))
+    vs.add(E.C("frame_bottom", 19, L["SLIDER_CAP"],
+               layers=[{"path": SLIDER_ART["frame_bottom"], "offset": (0, -13), "dw": 0, "dh": 13,
+                        "margin": 0, "dock": None}]))
+    sl = (HANDLE_SLICE, 0, HANDLE_SLICE, 0)
+
+    def gem(colour=None, shader_vars=None):
+        lay = {"path": SLIDER_HANDLE, "offset": (0, 0), "dw": 0, "dh": 0, "margin": sl,
+               "tile": True, "dock": None, "shader": "brighten_t0"}
+        if colour:
+            lay["colour"] = colour
+            lay["shader_vars"] = shader_vars
+        return lay
+    under = {"path": SLIDER_HANDLE_UNDER, "offset": (0, 0), "dw": 0, "dh": 0, "margin": sl,
+             "tile": True, "dock": None}
+    vs.add(E.C("handle", w, handle_h, interactive=True,
+               callbacks=["VSliderHandle", "TopmostWhenDraggingCallback"],
+               allowhresize=False, moveable="Movable XP", sound=SND_SLIDER_HANDLE,
+               props={"max_height": h - handle_h, "min_size": HANDLE_MIN},
+               # CA's hover: a third copy of the gem, brightened 0.30, transparent until hover.
+               layers=[under, gem(), gem("#FFFFFF00", "0.30,0.00,0.00,0.00")],
+               hover=[under, gem(), gem("#FFFFFFFF", "0.30,0.00,0.00,0.00")]))
+    for name, cb in (("top", "SliderDecrementButton"), ("bottom", "SliderIncrementButton")):
+        std, hov = SLIDER_ART[name]
+        vs.add(E.C(name, 15, 22, interactive=True, callbacks=[cb], sound=SND_SLIDER_ARROWS,
+                   props={"stepSize": 10},
+                   layers=[{"path": std, "offset": (0, 0), "dw": 0, "dh": 0, "margin": 0, "dock": None}],
+                   hover=[{"path": hov, "offset": (0, 0), "dw": 0, "dh": 0, "margin": 0, "dock": None}]))
+    return vs
 
 
 def build_sp():
@@ -389,14 +471,21 @@ def build_bar():
 MAP_DOT_COLOUR = "#E0553CFF"     # a settlement: red ink, read on CA's parchment and on black alike
 MAP_PATH_COLOUR = "#E0553CCC"    # the dotted road, the settlements' red, a little fainter
 MAP_ART_DIM = "#8C8C8CFF"        # CA's parchment, dimmed so the panel's beige names read on it
+ROUND_SMALL = "ui/skins/default/button_round_small_%s.png"   # the Close button's art
+MAP_KEY_ICON = {"cap": L["MAP_CAP_ICON"], "town": L["MAP_TOWN_ICON"], "cart": L["MAP_CART"]}
+# THE MAP'S FRAME: CA's own panel border (PANEL_LAYERS' second layer), copper with a clear centre
+MAP_FRAME = PANEL_LAYERS[1]
 
 
 def build_mapdot():
     """A settlement on the Map tab: a tinted square the Lua sizes, with a tooltip and a click."""
     import gen_mr_emitter as E
     root = E.C("root", L["MAP_CAP"], L["MAP_CAP"])
+    # HOVER: the same marker brightened, CA's hover shader (brighten_t0 is on 802 of its hover
+    # states); the Lua points image 1 at the marker it points image 0 at
+    hover = dict(_flat(L["MAP_TOWN_ICON"]), shader="brighten_t0", shader_vars="0.50,0.00,0.00,0.00")
     root.add(E.C("derpy_mr_stores_mapdot", L["MAP_CAP"], L["MAP_CAP"], interactive=True,
-                 image=L["MAP_TOWN_ICON"], sound=SND_SMALL))
+                 image=L["MAP_TOWN_ICON"], sound=SND_SMALL, hover=[hover]))
     E.assign(root, "MR07")
     return E.layout(root, "derpy: a settlement on the Stores panel's Map tab. Generated by "
                     "tools/gen_mr_ui.py; do not hand-edit.")
@@ -442,11 +531,23 @@ def build_mapart():
     w, h = L["map"][2], L["map"][3]
     root = E.C("root", w, h)
     clip = root.add(E.C("derpy_mr_stores_mapart", w, h, clipchildren=True))
-    # MOVEABLE: grab and drag to pan (asked 2026-10-03). CA's value, "Movable XP" (209 uses in
-    # ui3.pack). The Lua's 16ms poll keeps it covering the box; dots, names and carts are its
-    # children, so they go with it and are cut with it.
-    clip.add(E.C("derpy_mr_map_art", w, h, image=WHITE, colour_img=MAP_ART_DIM, interactive=True,
-                 moveable="Movable XP"))
+    # THE GRAB LAYER, first so beneath everything: clear, the box's size, and the only thing the
+    # engine drags ("Movable XP", CA's value). A dragged Movable XP component is put back where the
+    # drag began when let go, so the PICTURE is never dragged: the Lua's poll moves it by the grab
+    # layer's offset while IsDragged, and the put-back happens to a layer nobody sees.
+    clip.add(E.C("derpy_mr_map_grab", w, h, interactive=True, moveable="Movable XP"))
+    # The picture: NOT interactive, so a press on bare map goes through it to the grab layer; the
+    # dots, names and carts are its children, drawn over it, cut with it and moved with it.
+    clip.add(E.C("derpy_mr_map_art", w, h, image=WHITE, colour_img=MAP_ART_DIM))
+    # THE FRAME (asked 2026-10-04): after the picture, so drawn over it and all it carries; not
+    # interactive, so the grab goes through it to the picture
+    o = L["MAP_FRAME_OUT"]
+    clip.add(E.C("derpy_mr_map_frame", w + 2 * o, h + 2 * o, layers=[MAP_FRAME]))
+    # + and -, after the frame so drawn over it: the map's own controls, in its corner
+    for name in ("derpy_mr_zoom_in", "derpy_mr_zoom_out"):
+        clip.add(_cell(E, name, L["zoom_in"][2], L["zoom_in"][3], interactive=True, sound=SND_SMALL,
+                       align="Center", size=18, layers=[_flat(ROUND_SMALL % "active")],
+                       hover=[_flat(ROUND_SMALL % "hover")]))
     E.assign(root, "MR11")
     return E.layout(root, "derpy: CA's campaign minimap under the Stores panel's Map tab. Generated "
                     "by tools/gen_mr_ui.py; do not hand-edit.")
@@ -747,6 +848,34 @@ def check_layout():
     for o in G.ORDERS:
         assert CHAR_W * len(o[4]) <= bw, "order label %r does not fit" % o[4]
     assert CHAR_W * len("Sell surplus") <= bw, "Sell's label does not fit"
+    # the map's key: on the bottom line, each name right of its icon, all of it left of slot 3
+    slot3 = bx + 2 * (bw + L["BULK_GAP"])
+    for k, (icon, text) in L["map_key"].items():
+        for x, y, w, h in (icon, text):
+            assert by <= y and y + h <= by + bh and x + w <= slot3, "the map key's %s leaves its place" % k
+        assert text[0] >= icon[0] + icon[2], "the map key's %s name is on its icon" % k
+    for k, label in (("cap", "Province capital"), ("town", "Settlement"), ("cart", "Convoy")):
+        assert CHAR_W * len(label) <= L["map_key"][k][1][2], "the map key's %r does not fit" % label
+    keys = sorted(L["map_key"].values())
+    for a, b in zip(keys, keys[1:]):
+        assert b[0][0] >= a[1][0] + a[1][2], "two map key entries overlap"
+    # + and - inside the map, clear of the frame's line, one above the other
+    mx, my, mw, mh = L["map"]
+    zi, zo = L["zoom_in"], L["zoom_out"]
+    edge = L["MAP_FRAME_OUT"] + 4
+    for z in (zi, zo):
+        assert mx + edge <= z[0] and z[0] + z[2] <= mx + mw - edge, "zoom leaves the map"
+        assert my + edge <= z[1] and z[1] + z[3] <= my + mh - edge, "zoom leaves the map"
+    assert zi[1] + zi[3] < zo[1] and zi[0] == zo[0] and zi[2:] == zo[2:], "+ is not above - at one size"
+    comps = build_mapart().split("<components>", 1)[1]
+    part = lambda n: re.search(r"<%s\b.*?</%s>" % (n, n), comps, re.S).group(0)
+    grab, art = part("derpy_mr_map_grab"), part("derpy_mr_map_art")
+    assert 'interactive="true"' in grab and 'moveable="Movable XP"' in grab, "nothing to drag the map by"
+    assert 'interactive="true"' not in art and "moveable" not in art, \
+        "the picture would take the press (and be put back on release) instead of the grab layer"
+    assert comps.index("<derpy_mr_map_grab") < comps.index("<derpy_mr_map_art"), "the grab layer is over the markers"
+    frame = re.search(r"<derpy_mr_map_frame\b.*?</derpy_mr_map_frame>", comps, re.S)
+    assert frame and 'interactive="true"' not in frame.group(0), "the map's frame would take the grab"
     assert len(supply_buttons()) <= 4, "a Spending row has four box columns"
     for j in (2, 3, 4, 5):
         assert L["CHECK"] <= L["VIEWS"]["spending"][j - 1][1], "a supply box is wider than its column"
@@ -778,6 +907,13 @@ def check_layout():
     assert L["chart_line"][1] + L["chart_line"][3] <= L["bulk"][1], "the chart runs into the buttons"
     assert (L["BARS"] - 1) * L["BAR_PITCH"] + L["BAR_W"] <= L["bars"][2], "twenty bars do not fit"
     assert L["BAR_MIN"] <= L["bars"][3], "a sliver taller than the chart"
+    cb, bb = L["chart_base"], L["bars"]
+    assert cb[0] == bb[0] and cb[2] == bb[2] and cb[1] == bb[1] + bb[3], "the baseline is not under the bars"
+    assert cb[1] + cb[3] <= L["chart_from"][1], "the baseline runs into the turn labels"
+    cg = L["chart_grid"]
+    assert cg[0] == bb[0] and cg[2] == bb[2] and cg[1] == bb[1], "the top line is not at the bars' full height"
+    assert L["chart_top"][1] + L["chart_top"][3] <= cg[1], "the top figure is not above its line"
+    assert L["chart_to"][0] + L["chart_to"][2] == bb[0] + bb[2], "Turn N does not end where the bars do"
 
 
 # CA'S BUTTON ART IS NOT ALL BUTTON: button_square_large_text_*.png is 339x51 and draws only
@@ -791,6 +927,23 @@ BTN_PAD = 6          # each side of a label, inside the face
 def face(w, h):
     (x0, x1, aw), (y0, y1, ah) = BTN_FACE
     return w * (x1 - x0) / aw, h * (y1 - y0) / ah
+
+
+def check_map_frame():
+    """MAP_FRAME_OUT is where CA's border art starts drawing, read off the art itself on all four
+    sides (the preview's extracted copy; skipped when it has not been extracted yet)."""
+    path = os.path.join(ROOT, ".skilltree_cache", "ui_preview", *MAP_FRAME["path"].split("/"))
+    if not os.path.exists(path):
+        return
+    from PIL import Image
+    im = Image.open(path).convert("RGBA")
+    w, h = im.size
+    a = lambda x, y: im.getpixel((x, y))[3]
+    sides = (next(x for x in range(w) if a(x, h // 2) == 255),
+             next(y for y in range(h) if a(w // 2, y) == 255),
+             next(x for x in range(w) if a(w - 1 - x, h // 2) == 255),
+             next(y for y in range(h) if a(w // 2, h - 1 - y) == 255))
+    assert set(sides) == {L["MAP_FRAME_OUT"]}, "CA's border starts %s px in, not MAP_FRAME_OUT" % (sides,)
 
 
 def check_button_faces():
@@ -857,6 +1010,7 @@ def selftest():
     check_layout()
     check_text_fits()
     check_button_faces()
+    check_map_frame()
     check_xml()
     check_capture_kinds()
     check_uses()

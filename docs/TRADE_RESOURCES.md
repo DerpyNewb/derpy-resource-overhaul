@@ -250,7 +250,25 @@ whole pack, so it cannot sit in the main one. IEE does the same for CA's 18 good
 `!cr_vanilla` fragment. No production rows are needed for IEE: its 67 own port templates
 (`cr_port_*`) all permit only CA's `wh3_main_port_core_generic` set, which the 47 chains
 already cover, and `check_submod()` fails the build if a future IEE update adds a port chain we
-do not. The Old World (`cr_oldworld`) is one more `SUBMODS` entry once that mod is updated.
+do not.
+
+**The Old World (2026-10-04).** `derpy_resource_overhaul_oldworld.pack` links the 37 goods to
+`cr_oldworld` (Workshop 3081800026, 1,463 regions; its "devastate" variant 3813271876 reuses the
+key and ships no regions, so this one pack covers both). Unlike IEE, the Old World ships its own
+buildings in our slots, and `check_submod()` caught them: the Kraka Ravnvake port (and its Wood
+Elf variant), Mordheim's Wood Elf settlement and a Realm of Chaos outpost. A row naming one of
+those levels can only ship beside them, so the sub-pack now carries 90
+`building_effects_junction` rows: production on those four chains (`submod_pool_chains()`, the
+main pack's pool rules over the map's own chains), their store twins plus twins of three Old
+World landmarks that make CA's iron, marble and obsidian, and store space on the outpost.
+`check_submod()` now measures coverage against the rows built, and the selftest cuts each
+chain's rows and expects a failure. The blanket-area guard was narrowed: it fired on Norscan
+mead (all 158 Old World Norsca regions, as on IE's 31) and Athel Loren starwood (all forest);
+it now flags only areas CA's maps lack, by a rule with no terrain condition, which is the Ind
+incense fault it was written for. Goods placed by region name (Nuln, Sartosa, Altdorf...) now
+also name the `cr_oldworld_region_*` keys, the AI script knows 78 Old World rare-good regions,
+and the Map tab draws the Old World's own minimap (2048x2048). Built and deployed to `data/`,
+not yet seen in game.
 
 **Live check, IEE turn 1 (2026-10-01), over the wh3 bridge.** Both packs load next to IEE, with no
 script errors from them. The `CcoResourceRecord` reads back whole (Salted Fish, barrels, price 10,
@@ -1261,3 +1279,132 @@ after the map, so its interactive `list_clip` lay on top and took every grab. `S
 list on the Map tab. Harness: no list on the Map tab, and the Resources tab gets it back.
 
 **Still to see in game:** the drag itself, once nothing covers it.
+
+### 27d. Frame, key and zoom (2026-10-04)
+
+**Seen in game first (author's screenshot, IEE):** the drag works, and a click on a settlement flies
+the camera there. Asked for next: a border round the map, a key, and zoom.
+
+- **Frame:** `derpy_mr_map_frame`, CA's own `panel_back_border.png` (the panel's second layer,
+  margin 30, clear centre), the last child of the map's box, so it is drawn over the picture and
+  everything on it. It is not interactive, so the grab goes through it; `gen_mr_ui.py` asserts that.
+- **Key:** on the bottom line, left of slot 3: CA's capital marker "Province capital", settlement
+  marker "Settlement", convoy icon "Convoy" (`L.map_key`, `S.MAP_KEY`). Map tab only.
+- **Zoom:** "Zoom out" / "Zoom in" in bottom-line slots 3-4, a step of `MAP_ZOOM_STEP` (1.5) around
+  the spot in the middle of the box after any drag (`S.zoom` reads it back off the surface's place).
+  The closest is `MAP_ZOOM_MAX` (3) picture pixels per pixel; the farthest is the whole picture still
+  covering the box. The plain map zooms from its first framing to 3 times it, and its surface grows
+  to carry every point, so a zoomed plain map drags too. The buttons grey at the limits. Reopening
+  the panel or changing tab frames the map as it first was.
+- **No wheel:** no mouse-wheel event reaches script (none in CA's docs or its 7,540 scripts). CA's
+  own zoomable minimap, `MapImageCallback` with `zoom_min`/`zoom_max` user properties (ui3.pack),
+  draws its own icons, not ours, so it was not used.
+- **Checked by** the harness (frame on the box and last in it; key icons, names and places; zoom
+  step, centre kept, both limits, greyed clicks change nothing, resets, plain map) and 10 mutants:
+  9 caught; the 10th, a click guard, was redundant with the model's clamp and was deleted.
+- Built into `Modpacks/` 2026-10-04 09:16, **not in `data/`** (the game was running).
+
+**Seen in game (09:19): the frame sat inside the map's edge,** a strip of map showing outside the
+copper line. CA's `panel_back_border.png` draws its line from its **4th pixel in** on all four sides
+(the panel hides this; the panel's edge is not on anything). The frame is now `MAP_FRAME_OUT` (4)
+larger than the map's box on every side and the box cuts the clear 4px off, so the line lands on the
+edge. `check_map_frame()` measures the 4 off CA's file (the preview's extracted copy) on all four
+sides; the harness holds the frame's box to it. Both faults planted and caught. Repacked the same morning, still
+not in `data/` (game running).
+
+**To see in game:** the frame on the edge; that it lets the drag through; zoom staying on the spot
+you are looking at.
+
+### 27e. Polish pass over every view (2026-10-04)
+
+Every tab and both drill-downs drawn by `tools/preview_resource_vault.py` and read. The two
+drill-downs (`goods_focus`, `settlement_focus`) had never been previewed; the harness now dumps both.
+- **Chart (a bug):** the bars stood from the left, so with 3 turns the newest ended at x 175 while
+  "Turn 5" sat at the right under nothing. The bars now stand at the right, newest last, so the latest
+  turn is always over "Turn N". "Turn first" moves under the first bar and is dropped where it would
+  meet "Turn N" (2 turns). A baseline (`chart_base`) runs under the bars, and a fainter line at the
+  top value (`chart_grid`, `#6B583640`) ties the floating top figure to the bars it measures. Both
+  lines are hidden with no history.
+- **Map title:** "Where your settlements and convoys are" (was "...convoys are"; the tab draws both).
+- **Looked at and left:** Goods tab's "held / space" in the Space column repeats Held, but it is
+  the approved spec's format. The raw keys on the Trade tab preview (`black_lotus`) are the harness's
+  missing loc; all 54 stores ship a display name.
+- **Checked by:** harness asserts (newest bar ends at the chart's edge and with "Turn N"; first label
+  under the first bar, kept at 3 turns and dropped at 2; both lines placed, hidden with no history),
+  three mutants all caught. Deployed to `data/` 2026-10-04 with §27d's frame fix (backup in
+  `%TEMP%/ro_backup_20261004`).
+
+### 27f. Drag that stays, + and - buttons, the Exchange's slider (2026-10-04)
+
+- **Let go, the map went back where the drag began (seen in game).** `moveable="Movable XP"` is
+  CA's drag-and-drop flag: of its 209 uses in ui3.pack most are unit cards, ingredient slots and
+  ancillary entries, which spring back when dropped on nothing; the map did the same. Fix: CA's
+  documented `uicomponent:IsDragged()`. While it is true the 16ms poll notes where the map is; once
+  let go, `S.map_hold` holds it there for `S.KEEP_TICKS` (10) frames, past the put-back. A redraw
+  (a zoom) clears the hold, so a zoom right after letting go is not pulled back. **Not yet seen in
+  game:** that Position() follows the drag while IsDragged is true (the design assumes it).
+- **Found, not used:** CA documents `DragAndZoomCallback` ("drag around and zoom in and out ... with
+  mouse wheel scroll (for maps, etc)") and `DraggableContainerCallback` (a child clipped by its
+  parent, panning and zooming, user property `allowance`). Neither appears in any WH3 ui pack or in
+  TWUI Studio's catalog, so how they behave is unknown. They are the route to wheel zoom, after an
+  in-game probe.
+- **+ and -:** round 30px buttons in the map's bottom-right corner, CA's `button_round_small_*`
+  (the Close button's art) with "+" / "-" as text: CA ships plus icons but no minus. Made in the map's
+  box after the frame, so drawn over the map; `L.zoom_in` / `L.zoom_out`; tooltips "Zoom in" /
+  "Zoom out", "As far as it goes." at a limit.
+- **The Exchange's slider** (asked): CA's event message slider - rod, 9-sliced handle with CA's
+  hover brighten, frame caps and arrow buttons - ported from `gen_guilds_ui.ca_vslider` into
+  `gen_mr_ui.ca_vslider` (a copy, by the two-mods-two-code-paths rule). `SLIDER_W` 18, `SLIDER_CAP`
+  24, `SLIDER_PARTS` in the generated layout, so the Lua and the XML read one table. The track sits
+  between the caps; the list's travel is the track less the handle.
+- **Checked by:** harness (let-go hold, a late put-back undone, freed after the hold, a zoom after a
+  drag kept; +/- placed, labelled, drawn over the frame; slider track, all four end parts, travel)
+  and 8 mutants, all caught. Deployed to `data/` 2026-10-04 (backup `%TEMP%/ro_backup_20261004b`).
+
+### 27g. CA's shaders on the panel's actions (2026-10-04)
+
+Asked for: "visual effect shader to action, such as active doctrine or selecting it", based on CA's.
+CA's UI shaders were counted by the state they sit on (memory `wh3-ca-ui-shader-vocabulary`):
+`brighten_t0` on hover, `glow_pulse_t0` 1/2/3 on active/glow states, `red_pulse_t0` 0/0.25/1 on
+"insufficient", `set_greyscale_t0` on inactive. One helper, `S.fx(c, kind)` with `S.FX`, carries them;
+`S.set_off` goes through it and the old `S.shade` is gone.
+- **A running order** (Festival, Muster, Great Works) glows and stays unclickable; its tooltip says
+  "Running: N turns left. Ready again in M turns." `F.order_state` now returns `active`, the turns
+  left of its bundle.
+- **A supply's pay icon:** on and covered - glows as it pays; on but short - red pulse (CA's
+  "insufficient"), it will switch itself off; off and short - grey; off and covered - plain.
+- **The map:** a convoy's cart pulses; a settlement marker brightens under the mouse (its hover
+  state: the same marker, `brighten_t0` 0.5; the Lua points image 1 at the marker image 0 shows).
+- **Checked by:** harness (each state's shader and CA's values, a running order ignores clicks, a
+  waiting one is grey not glowing, the hover image, the cart pulse) and the flows harness (active 5,
+  1 on its last turn, nil after); 5 mutants, all caught. Deployed to `data/` 2026-10-04 (backup
+  `%TEMP%/ro_backup_20261004c`). **To see in game:** the pulse's strength on each, and that the hover
+  brighten shows on the markers.
+
+### 27h. No + and - on a first draw; the drag flicker (2026-10-04)
+
+**Seen in game (screenshot, Karaz-a-Karak):** no + and - buttons, and a one-frame flicker on every
+drag. The script log (`script_log_041026_1053.txt`) showed the Vault loading and no errors from it;
+the wh3 bridge was not connected that session, so nothing was probed live.
+- **No + and -:** `S.draw_map` placed them BEFORE the map's box. They are the box's children, and
+  the box's own MoveTo carried them off by however far it moved, which is the whole way on a
+  session's first draw. The harness only drew the map after the box was already in place. Fixed by
+  placing them after the box; the harness now moves the box away before the first Map draw. The
+  "wrong order" mutant is caught.
+- **The flicker replaces §27f's hold.** Holding the let-go picture after the engine's put-back
+  still showed the picture back home for one frame. Now the engine never drags the picture: a clear
+  **grab layer** (`derpy_mr_map_grab`, the box's size, first in the box so beneath everything) is the
+  only `Movable XP` component. The picture is no longer interactive, so a press on bare map goes
+  through to the grab layer, and the markers on the picture keep their own clicks (rows already
+  showed clickable children inside a non-interactive holder). While the grab layer `IsDragged`,
+  the poll moves the picture by the grab layer's offset from the box's corner. On release the
+  engine puts back the clear layer, which nobody sees, and the poll returns it home if the engine
+  does not. `S.KEEP_TICKS` / `S.map_keep` are gone.
+- **Checked by:** `gen_mr_ui.py` (grab layer interactive and moveable, picture neither, grab first)
+  and the harness (covers the box, beneath the picture, the picture follows, stays on release, a
+  stray grab layer goes home without moving the picture, edge clamp, zoom after a drag). 5 mutants:
+  4 caught; the 5th found a redundant clear, which was deleted.
+- Deployed to `data/` 2026-10-04 (backup `%TEMP%/ro_backup_20261004d`). **To see in game:** that a
+  press on bare map starts a drag through the non-interactive picture, and that the markers still
+  click. If the press does not reach the grab layer, the wh3 bridge can read `IsDragged()` on it
+  live.
