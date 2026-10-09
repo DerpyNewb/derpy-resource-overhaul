@@ -20,12 +20,22 @@ end
 local FACTIONS, REGIONS, LOG = {}, {}, {}
 BUNDLES = {}                 -- region key -> {bundle = turns}, as cm applies and removes them
 FBUNDLES, TREASURY = {}, {}  -- faction key -> {bundle = turns}; faction key -> gold added
+FPOOL, FPOOL_FACTOR = {}, {}  -- faction key -> {CA pool = value}; the factor of each pool change
+CHARS, FORCE_BUNDLES = {}, {}  -- cqi -> character (named recipes, section 4b/4c); {bundle, force cqi, turns}
 local CCO_MADE = ""
 local function pool(r, stem)
     local key = "derpy_mr_store_" .. stem
     return { is_null_interface = function() return false end, key = function() return key end,
              value = function() return r.held[stem] or 0 end,
-             maximum_value = function() return r.cap end }
+             maximum_value = function() return r.cap end,
+             -- this turn's transactions: r.made is the production twin rows' "stocked" factor
+             factors = function()
+                 local fs = {}
+                 if (r.made or {})[stem] then
+                     fs[1] = { key = function() return "derpy_mr_stocked" end, value = function() return r.made[stem] end }
+                 end
+                 return list(fs)
+             end }
 end
 local function region(key, x, y, cap, held)
     local r = { key = key, x = x, y = y, cap = cap, held = held or {}, owner = nil, readable = true, level = 1,
@@ -83,13 +93,23 @@ local function faction(name, opts)
     NEXT_CQI = NEXT_CQI + 1
     local f = { name = name, human = opts.human or false, rebel = opts.rebel or false,
                 regions = {}, war = {}, partners = {}, has = opts.has or {}, home = nil, cqi = NEXT_CQI,
-                armies = {} }
+                armies = {}, pool = {} }
+    FPOOL[name] = opts.pools
     f.iface = {
         is_null_interface = function() return false end,
         name = function() return name end,
         command_queue_index = function() return f.cqi end,
         is_human = function() return f.human end,
+        has_effect_bundle = function(_, b) return FBUNDLES[name] ~= nil and FBUNDLES[name][b] ~= nil end,
+        treasury = function() return (opts.gold or 100000) + (TREASURY[name] or 0) end,
         subculture = function() return opts.sc or "wh_main_sc_emp_empire" end,
+        pooled_resource_manager = function()
+            return { resource = function(_, k)
+                if not (FPOOL[name] and FPOOL[name][k]) then return NULL end
+                return { is_null_interface = function() return false end, value = function() return FPOOL[name][k] end,
+                         maximum_value = function() return (opts.pool_max and opts.pool_max[k]) or 2147483647 end }
+            end }
+        end,
         is_rebel = function() return f.rebel end,
         is_dead = function() return f.dead == true end,
         factions_at_war_with = function()
@@ -114,6 +134,17 @@ local function faction(name, opts)
         end,
         trade_resource_exists = function(_, res) return f.has[res] == true end,
         military_force_list = function() return list(f.armies) end,
+        mercenary_pool = function()
+            if f.pool_broken then error("no pool here") end
+            return { mercenary_pool_units = function()
+                local t = {}
+                for unit, n in pairs(f.pool) do
+                    t[#t + 1] = { unit_record = function() return { key = function() return unit end } end,
+                                  unit_count = function() return n end }
+                end
+                return list(t)
+            end }
+        end,
     }
     FACTIONS[name] = f
     return f
@@ -149,6 +180,7 @@ end
 local SAVED, MP, TURN = {}, false, 1
 DILEMMAS, DIPLO, RANKS, ROLLS, ROLL = {}, {}, {}, {}, 100   -- ROLL 100: no computer-run event fires
 MARKERS, SPAWN_FAIL = {}, false
+ITEMS, POOL, RESEARCH, GRANTED = {}, {}, {}, {}   -- the Workshop's grants
 REPAIRED = {}                     -- Restore: the slots cm repaired   -- phase 5: the shipment markers on the map; a spot CA cannot find
 local FIRST, LISTENERS = {}, {}
 cm = {
@@ -158,7 +190,7 @@ cm = {
     add_first_tick_callback = function(_, fn) FIRST[#FIRST + 1] = fn end,
     callback = function() end,
     repeat_real_callback = function() end,
-    get_local_faction_name = function() return "hum" end,
+    get_local_faction_name = function() return LOCAL_FK or "hum" end,
     get_faction = function(_, k) return FACTIONS[k] and FACTIONS[k].iface or false end,
     get_region = function(_, k) return REGIONS[k] and REGIONS[k].iface or false end,
     get_human_factions = function()
@@ -181,22 +213,43 @@ cm = {
         BUNDLES[rk][b] = turns
     end,
     remove_effect_bundle_from_region = function(_, b, rk) if BUNDLES[rk] then BUNDLES[rk][b] = nil end end,
+    remove_effect_bundle = function(_, k, fk) if FBUNDLES[fk] then FBUNDLES[fk][k] = nil end end,
     apply_effect_bundle = function(_, b, fk, turns)
         FBUNDLES[fk] = FBUNDLES[fk] or {}
-        FBUNDLES[fk][b] = turns
+        -- whether a DB bundle applied over a CUSTOM one of the same key replaces it is unmeasured:
+        -- assume not, so only a removal clears it
+        if type(FBUNDLES[fk][b]) ~= "table" then FBUNDLES[fk][b] = turns end
     end,
+    -- CA's docs say positive only; CA's own scripts pass negatives (import duty, spec section 2)
     treasury_mod = function(_, fk, n)
-        if n <= 0 then error("treasury_mod takes a positive amount") end
+        if n == 0 then error("treasury_mod of nothing") end
         TREASURY[fk] = (TREASURY[fk] or 0) + n
+    end,
+    faction_add_pooled_resource = function(_, fk, pool, factor, n)
+        FPOOL[fk] = FPOOL[fk] or {}
+        FPOOL[fk][pool] = (FPOOL[fk][pool] or 0) + n
+        FPOOL_FACTOR[#FPOOL_FACTOR + 1] = factor
     end,
     -- phase 6: what the events hand the engine, recorded
     trigger_dilemma_with_targets = function(_, fcqi, key, tf, _sf, ch, mf, rg, st, cb)
         if type(cb) ~= "function" then error("trigger_dilemma_with_targets takes its callback") end
+        if DILEMMA_FAILS then return false end    -- CA's wrapper: false in multiplayer when not issued
         DILEMMAS[#DILEMMAS + 1] = { fcqi = fcqi, key = key, faction = tf, character = ch, force = mf, region = rg }
         return true
     end,
     apply_dilemma_diplomatic_bonus = function(_, a, b, n) DIPLO[#DIPLO + 1] = { a, b, n } end,
     add_experience_to_units_commanded_by_character = function(_, lookup, n) RANKS[#RANKS + 1] = { lookup, n } end,
+    -- CA's wrapper answers false for a cqi it cannot find
+    get_character_by_cqi = function(_, cqi) local c = CHARS[cqi]; return c and c.iface or false end,
+    apply_effect_bundle_to_force = function(_, b, fcqi, turns)
+        if type(b) ~= "string" or type(fcqi) ~= "number" then error("apply_effect_bundle_to_force: bad arguments") end
+        FORCE_BUNDLES[#FORCE_BUNDLES + 1] = { b, fcqi, turns }
+    end,
+    force_add_trait = function(_, lookup, trait, show, points)
+        local cqi = tonumber(string.match(lookup, "^character_cqi:(%d+)$"))
+        if not (cqi and CHARS[cqi]) or type(trait) ~= "string" then error("force_add_trait: bad arguments") end
+        CHARS[cqi].traits[trait] = true
+    end,
     random_number = function(_, hi, lo) ROLLS[#ROLLS + 1] = { hi, lo }; return ROLL end,
     -- phase 5: CA's spot beside a settlement is one step off it; -1, -1 when it finds none
     find_valid_spawn_location_for_character_from_settlement = function(_, fk, rk, sea, same, dist)
@@ -216,6 +269,30 @@ cm = {
         if type(slot) ~= "table" or not slot.has_building then error("repair takes a slot interface") end
         REPAIRED[#REPAIRED + 1] = slot
     end,
+    -- the Workshop: what it hands the engine, recorded
+    add_ancillary_to_faction = function(_, f, key, quiet)
+        if type(f) ~= "table" or type(key) ~= "string" or quiet ~= false then error("add_ancillary_to_faction: bad arguments") end
+        ITEMS[#ITEMS + 1] = { f = f:name(), key = key }
+    end,
+    add_unit_to_faction_mercenary_pool = function(_, f, unit, src, n, rc, max, mpt, fr, sr, tr, partial, group)
+        if type(f) ~= "table" or type(unit) ~= "string" or type(group) ~= "string" or type(n) ~= "number" or n < 1
+                or type(max) ~= "number" then
+            error("add_unit_to_faction_mercenary_pool: bad arguments")
+        end
+        POOL[#POOL + 1] = { f = f:name(), unit = unit, src = src, max = max, group = group }
+        local fp = FACTIONS[f:name()].pool
+        -- THE COUNT IS SET, NOT ADDED (measured 2026-10-07: 1 on a pool of 1 stays 1, 2 makes it 2)
+        fp[unit] = math.min(max, n)
+    end,
+    grant_research_points = function(_, fk, n)
+        if type(fk) ~= "string" or type(n) ~= "number" then error("grant_research_points: bad arguments") end
+        RESEARCH[#RESEARCH + 1] = { f = fk, n = n }
+    end,
+    grant_unit_to_character = function(_, lookup, unit)
+        if type(lookup) ~= "string" or type(unit) ~= "string" then error("grant_unit_to_character: bad arguments") end
+        GRANTED[#GRANTED + 1] = { lookup = lookup, unit = unit }
+        if GRANT_HOOK then GRANT_HOOK(unit) end   -- an engine that fires UnitTrained inside the call
+    end,
     save_named_value = function(_, k, v) SAVED[k] = copy(v) end,
     load_named_value = function(_, k, d) if SAVED[k] == nil then return d end return copy(SAVED[k]) end,
 }
@@ -226,8 +303,10 @@ core = {
 }
 local SENT = {}
 CampaignUI = { TriggerCampaignScriptEvent = function(cqi, id) SENT[#SENT + 1] = { cqi, id } end }
+SOUNDS = {}                   -- the Workshop: every sound event played, in order
 common = {
-    get_localised_string = function() return "" end,
+    trigger_soundevent = function(ev) SOUNDS[#SOUNDS + 1] = ev end,
+    get_localised_string = function() LOC_CALLS = (LOC_CALLS or 0) + 1; return "" end,
     get_context_value = function() return CCO_MADE end,
 }
 local function fire(event, context)
@@ -388,6 +467,14 @@ eq(#ERRORS, 0, "without saying it could not read them")
 decide("occupation_decision_raze_without_occupy", a1, hum, "ai1")
 eq(h1.held.coal, 50, "the battle's reading is used once"); ERRORS = {}
 a1.readable = true
+-- ANY DECISION SPENDS IT, and a reading from another turn is a failed siege's, not this capture's
+battle_at(a1); decide("occupation_decision_occupy", a1, hum, "ai1"); a1.readable = false
+decide("occupation_decision_raze_without_occupy", a1, hum, "ai1")
+eq(h1.held.coal, 50, "an occupy spends the battle's reading: a later raze takes nothing"); ERRORS = {}
+a1.readable = true; battle_at(a1); TURN = TURN + 1; a1.readable = false
+decide("occupation_decision_raze_without_occupy", a1, hum, "ai1")
+eq(h1.held.coal, 50, "a reading from an earlier turn is not used"); ERRORS = {}
+TURN = TURN - 1; a1.readable = true
 
 -- ---- trade ------------------------------------------------------------------------------
 local tA = faction("tA", { has = { res_derpy_coal = true } })
@@ -474,6 +561,93 @@ F.toggle("tP", "import", "iron"); turn_start(tQ); eq(tP1.held.iron, 5, "an accep
 F.toggle("tQ", "export", "iron"); eq(F.stopped("tQ", "export", "iron"), false, "a computer-run faction has no switches")
 F.toggle("tP", "sideways", "coal"); eq(F.stopped("tP", "sideways", "coal"), false, "an unknown direction is ignored")
 F.toggle("tP", "export", "no_such_good"); eq(F.stopped("tP", "export", "no_such_good"), false, "an unknown good is ignored")
+do
+    -- A STOPPED EXPORT LEAVES CA'S TRADE TOO (TRADE_RESOURCES.md 28): a hidden faction marker per
+    -- stopped good, which the DB's hold rows read, and the visible "Exports held" record
+    local function held(fk)
+        local n = 0
+        for k in pairs(FBUNDLES[fk] or {}) do if string.find(k, "^derpy_mr_hold_") then n = n + 1 end end
+        return n
+    end
+    local function rec(fk) return FBUNDLES[fk] and FBUNDLES[fk].derpy_mr_exports_held end
+    F.apply("tP", "export", "coal")
+    eq(FBUNDLES.tP.derpy_mr_hold_coal, 0, "a stopped export puts the good's marker on, until allowed again")
+    eq(held("tP"), 1, "and no other good's"); eq(rec("tP"), 0, "with the record")
+    F.apply("tP", "import", "iron"); eq(held("tP"), 1, "an import switch holds nothing back")
+    F.apply("tP", "import", "iron")
+    F.apply("tP", "export", "coal"); eq(held("tP"), 0, "allowed again: the marker comes off")
+    eq(rec("tP"), nil, "and the record with the last one")
+    F.apply("tP", "export", F.ALL_STOP); eq(held("tP"), #DERPY_MR_FLOWS_GOODS, "stop all holds every good")
+    F.apply("tP", "export", F.ALL_ALLOW); eq(held("tP") + (rec("tP") or 0), 0, "allow all lifts every one")
+    F.apply("tQ", "export", "coal"); eq(held("tQ"), 0, "a computer-run faction never gets one")
+    FBUNDLES.tP.derpy_mr_exports_held = { custom = true }   -- a save from before 2026-10-08: -1000 on every good
+    turn_start(tP); eq(rec("tP"), nil, "the old custom bundle comes off with nothing held")
+    FBUNDLES.tP.derpy_mr_exports_held = { custom = true }; F.apply("tP", "export", "coal")
+    eq(rec("tP"), 0, "and with something held, the plain record replaces it")
+    F.apply("tP", "export", "coal")
+    F.apply("tP", "export", "coal"); FBUNDLES.tP = nil   -- a save from before the markers existed
+    turn_start(tP); eq(FBUNDLES.tP and FBUNDLES.tP.derpy_mr_hold_coal, 0, "the player's turn start puts it back")
+    F.apply("tP", "export", "coal"); eq(held("tP"), 0, "and leaves no switch stopped for what follows")
+end
+do
+    -- IMPORT DUTY: each turn a faction pays each trade partner 10% of what the partner made, at
+    -- what CA's trade pays a unit (g.value), never the Exchange's market price; gold to the partner
+    local dA = faction("dA", { human = true }); local dA1 = region("dA1", 5000, 0, 600, {}); own(dA, dA1, true)
+    local dB = faction("dB"); local dB1 = region("dB1", 5100, 0, 600, { coal = 50, salt = 50 }); own(dB, dB1, true)
+    dA.partners = { dB }; dB.partners = { dA }
+    dB1.made = { coal = 30, salt = 20 }
+    local t0, a0, b0 = TURN, TREASURY.dA or 0, TREASURY.dB or 0
+    local ex0 = EX; EX = { sell_price = function() return 818 end }   -- the Exchange's market price
+    F.made_cache = nil; turn_start(dA)
+    EX = ex0
+    local due = math.floor((30 * F.GOOD.coal.value + 20 * F.GOOD.salt.value) * 10 / 100)
+    eq(F.GOOD.salt.value > 5 and F.GOOD.salt.value < 20, true, "a unit is worth what CA's trade pays (9), not 818")
+    eq((TREASURY.dA or 0) - a0, -due, "the importer pays 10% of its partner's output at CA's trade value")
+    eq((TREASURY.dB or 0) - b0, due, "and the exporter receives exactly that")
+    TURN = t0 + 1
+    local last = F.duty_last("dA")
+    eq(last and last.paid, due, "the player's ledger shows it the next turn")
+    eq(last.by.dB.paid, due, "partner by partner"); eq(F.duty_last("dB"), nil, "a computer faction keeps no ledger")
+    -- the computer pays too, under its switch, and the player's ledger shows what came in
+    dA1.made = { salt = 40 }
+    a0 = TREASURY.dA or 0
+    F.made_cache = nil; turn_start(dB)
+    local got = math.floor(40 * F.GOOD.salt.value * 10 / 100)
+    eq((TREASURY.dA or 0) - a0, got, "a computer faction pays the player for its imports")
+    TURN = t0 + 2; eq(F.duty_last("dA").got, got, "and the player's ledger shows what came in")
+    -- A HELD GOOD CARRIES NO DUTY: it leaves no trade agreement (TRADE_RESOURCES.md 28)
+    F.toggle("dA", "export", "salt"); a0 = TREASURY.dA or 0
+    F.made_cache = nil; turn_start(dB); eq((TREASURY.dA or 0) - a0, 0, "nothing paid on a good the player holds back")
+    F.toggle("dA", "export", "salt")
+    -- TWO PARTNERS, TWO TURNS, NO RESET: the made cache is per faction and per turn
+    local dD = faction("dD"); local dD1 = region("dD1", 5300, 0, 600, { coal = 1 }); own(dD, dD1, true)
+    dA.partners, dB1.made, dD1.made = { dB, dD }, { coal = 10 }, { coal = 100 }
+    local function due_on(n) return math.floor(n * F.GOOD.coal.value * 10 / 100) end
+    a0 = TREASURY.dA or 0; TURN = t0 + 3; turn_start(dA)
+    eq((TREASURY.dA or 0) - a0, -(due_on(10) + due_on(100)), "each partner on its own output")
+    dD1.made = { coal = 50 }; a0 = TREASURY.dA or 0; TURN = t0 + 4; turn_start(dA)
+    eq((TREASURY.dA or 0) - a0, -(due_on(10) + due_on(50)), "and on this turn's, not the first turn's")
+    dA.partners, dD.partners = { dB }, {}
+    -- OTHER FACTIONS' STORES OFF: both ways where a player is one side, as trade runs; none between computers
+    F.state.rates.ai = false; dB.partners, dD.partners = { dA, dD }, { dB }
+    a0, b0 = TREASURY.dA or 0, TREASURY.dB or 0; local d0 = TREASURY.dD or 0
+    F.made_cache = nil; TURN = t0 + 5; turn_start(dB)
+    eq((TREASURY.dA or 0) - a0, got, "a computer partner still pays the player with the switch off")
+    eq((TREASURY.dD or 0) - d0, 0, "but not another computer faction")
+    b0 = TREASURY.dB or 0; turn_start(dD); eq((TREASURY.dB or 0) - b0, 0, "nor the other way round")
+    F.state.rates.ai = true; dB.partners, dD.partners = { dA }, {}; TURN = t0 + 2
+    -- never more than the payer holds; 0 turns it off; nothing made, nothing due
+    local dC = faction("dC", { human = true, gold = 5 }); local dC1 = region("dC1", 5200, 0, 600, {}); own(dC, dC1, true)
+    dC.partners = { dB }; b0 = TREASURY.dB or 0
+    F.made_cache = nil; turn_start(dC)
+    eq((TREASURY.dB or 0) - b0, 5, "a faction with 5 gold pays 5"); eq(dC.iface:treasury(), 0, "and runs no debt")
+    F.state.rates.duty = 0; b0 = TREASURY.dB or 0; a0 = TREASURY.dA or 0
+    F.made_cache = nil; turn_start(dA); eq((TREASURY.dB or 0) - b0, 0, "a rate of 0 is off")
+    F.state.rates.duty = 10; dB1.made = nil
+    F.made_cache = nil; turn_start(dA); eq((TREASURY.dB or 0) - b0, 0, "nothing made, nothing due")
+    dA.partners, dB.partners, dC.partners = {}, {}, {}
+    TURN = t0
+end
 -- a click reaches the model through the network in multiplayer, never straight from the UI
 local function ui_trigger(cqi, id)
     fire("UITrigger", { trigger = function() return id end, faction_cqi = function() return cqi end })
@@ -521,7 +695,9 @@ F.state.factions.hum = nil
 h1.held, h2.held = { coal = 40 }, { coal = 2 }
 raid(army(hum, a1, 12, 0))                                  -- something in the ledger
 local raided = F.book("hum").now.coal.raided_in
-TURN = 7; turn_start(hum)
+LOC_CALLS = 0; TURN = 7; turn_start(hum)
+-- a loc read from a turn handler CTD'd turn 1 of a fresh campaign; the snapshot reads no name
+eq(LOC_CALLS, 0, "a human's turn start reads no localised text")
 local bk = F.book("hum")
 eq(bk.turns[1], 7, "the snapshot's turn"); eq(bk.total.coal[1], h1.held.coal + h2.held.coal, "realm total")
 eq(bk.last.coal.raided_in, raided, "the ledger becomes last turn's"); eq(bk.last.coal.made, 12, "made, both settlements")
@@ -570,6 +746,7 @@ local function option()
     function o:slider_set_step_size() end
     function o:set_assigned_section() end
     function o:set_default_value(v) self.value = v end
+    function o:set_locked(v, why) self.locked, self.why = v, why end
     function o:get_finalized_setting() return self.value end
     return o
 end
@@ -588,8 +765,16 @@ local MCT_API = {
     get_mod_by_key = function(_, k) return MCT[k] end,
 }
 get_mct = function() return MCT_API end
+-- GREYED IN A CAMPAIGN, as the Guilds' and the Exchange's pages are: the values are frozen there
+__lib_type_campaign, __game_mode = "campaign", "frontend"
+dofile("__MCT__")
+for k, o in pairs(MCT.derpy_more_resources.options) do eq(o.locked, nil, "the main menu leaves " .. k .. " open") end
+__game_mode = "campaign"
 dofile("__MCT__")
 local opt = MCT.derpy_more_resources.options
+for k, o in pairs(opt) do
+    eq(o.locked, true, "a campaign greys " .. k); eq(type(o.why) == "string" and #o.why > 0, true, "and says why")
+end
 for k, d in pairs(DERPY_MR_FLOWS_DEFAULTS) do
     eq(opt[k] ~= nil, true, "the MCT file has an option for " .. k)
     eq(opt[k].value, d, "the MCT default for " .. k .. " is the script's")
@@ -598,7 +783,20 @@ F.state = { factions = {} }
 opt.raid.value, opt.ai.value = 30, false
 eq(F.rates().raid, 30, "a new campaign takes MCT's raid share")
 eq(F.rates().ai, false, "an unticked box stays unticked")
-opt.raid.value = 40; eq(F.rates().raid, 30, "frozen: a later MCT change does not reach a running campaign")
+-- A READ NEVER FREEZES: the panel reads the rates, and opening it before the freeze froze them there
+eq(F.state.rates, nil, "reading the rates freezes nothing")
+opt.raid.value = 35; eq(F.rates().raid, 35, "so an MCT change before the freeze still counts")
+F.freeze_rates(); eq(F.state.rates and F.state.rates.raid, 35, "the freeze keeps what MCT says then")
+opt.raid.value = 40; eq(F.rates().raid, 35, "frozen: a later MCT change does not reach a running campaign")
+F.freeze_rates(); eq(F.rates().raid, 35, "and a second freeze does not move it")
+F.state = { factions = {} }; F.on_faction_turn_start(faction("fz").iface)
+eq(F.state.rates and F.state.rates.raid, 40, "a turn start freezes too (a save from before first tick froze)")
+-- AT FIRST TICK: a new campaign fires no FactionTurnStart until turn 1 ends. F.init again, its
+-- listeners dropped after, so nothing below fires twice
+do local n_listeners = #LISTENERS
+F.state = { factions = {} }; F.started = false; F.init()
+for i = #LISTENERS, n_listeners + 1, -1 do LISTENERS[i] = nil end end
+eq(F.state.rates and F.state.rates.raid, 40, "the first tick freezes the rates")
 F.state = { factions = {} }; MP = true
 eq(F.rates().raid, 10, "multiplayer takes the defaults"); eq(F.rates().ai, true, "all of them")
 MP = false
@@ -610,8 +808,9 @@ F.state = { factions = {}, rates = { raid = 25, sack = 50, raze = 50, trade = 5,
 eq(F.rates().upkeep, true, "a switch added after the freeze takes its value")
 eq(F.rates().actions, true, "every one of them")
 eq(F.rates().raid, 25, "the frozen rates stay frozen")
+F.freeze_rates()
 opt.upkeep.value = false; eq(F.rates().upkeep, true, "and the new one is frozen too")
-get_mct = nil; F.state.rates = nil; F.rates()
+get_mct = nil; F.state.rates = nil; F.freeze_rates()
 -- THE EVENTS ARE MEASURED ALONE, in their own section below, as the moves are
 eq(F.rates().events, true, "events on by default"); F.state.rates.events = false
 eq(F.rates().supply, true, "province supplies on by default"); F.state.rates.supply = false
@@ -767,12 +966,29 @@ eq(l1.held.coal, 180, "taken from the fullest store"); eq(l2.held.coal, 20, "not
 eq(TREASURY.lP, 30, "and paid"); eq(F.book("lP").now.coal.sold_out, 10, "booked as sold")
 F.request("lP", "sell", "coal"); eq(TREASURY.lP, 30, "nothing left to sell, nothing paid")
 l1.held.coal = 190
-EX = { sell_price = function(res) eq(res, "res_derpy_coal", "asked by resource key"); return 51 end }
-eq(F.sale(lP.iface, "coal").gold, 510, "the Exchange's price when it is loaded")
-EX = { sell_price = function() error("the Exchange broke") end }
+-- THE EXCHANGE AS IT IS: sell_price is a LOT's price (EX.lot units), and it reads the houses' stance
+-- toward EX.who() - the local player unless EX.with_player binds another (zzz_derpy_chd_exchange.lua)
+do
+local function ex_stub(price_for)
+    local X = { subject = nil }
+    function X.lot() return 10 end
+    function X.with_player(f, fn)
+        local prev = X.subject; X.subject = f
+        local ok = pcall(fn); X.subject = prev
+        return ok
+    end
+    function X.sell_price(res) return price_for(res, X.subject) end
+    return X
+end
+EX = ex_stub(function(res, who) eq(res, "res_derpy_coal", "asked by resource key"); return who == "lP" and 510 or 99999 end)
+local xs = F.sale(lP.iface, "coal")
+eq(xs.price, 51, "a lot of 10 at 510 is 51 a unit, not 510 (paid 10x before)")
+eq(xs.gold, 510, "the Exchange's price for the SELLER, whoever's machine runs it")
+EX = ex_stub(function() error("the Exchange broke") end)
 eq(F.sale(lP.iface, "coal").price, 3, "the fixed rate when it errors")
-EX = { sell_price = function() return 0 end }; eq(F.sale(lP.iface, "coal").price, 3, "or prices at nothing")
+EX = ex_stub(function() return 0 end); eq(F.sale(lP.iface, "coal").price, 3, "or prices at nothing")
 EX = nil
+end
 -- EVERY ACTION GOES THROUGH UITrigger in multiplayer; computer factions and the switch refuse
 MP = true; SENT = {}
 F.request("lP", "sell", "coal")
@@ -860,8 +1076,25 @@ eq(DIPLO[1][1], "wP", "the giver acts"); eq(DIPLO[1][2], "nB", "the neighbour's 
 eq(DIPLO[1][3] > 0, true, "upwards")
 w1.adj, w2.adj = {}, {}
 -- ARSENAL: war materials across the realm, for the largest army, by its general
+-- a character: a lord with an army (mf) or a hero without one (named recipes, section 4b/4c)
+local function character(cqi, f, mf)
+    local c = { traits = {} }
+    local agent = mf and "general" or "champion"   -- a lord leads an army; a hero does not
+    c.iface = {
+        is_null_interface = function() return false end,
+        command_queue_index = function() return cqi end,
+        faction = function() return f.iface end,
+        has_military_force = function() return mf ~= nil end,
+        -- CA's scripts ask has_military_force first: the stub refuses an unguarded read
+        military_force = function() if not mf then error("military_force of a character with none") end return mf end,
+        has_trait = function(_, t) return c.traits[t] == true end,
+        character_type = function(_, t) return t == agent end,
+    }
+    CHARS[cqi] = c
+    return c
+end
 local function host(cqi, units, kind)
-    local mf = { is_armed_citizenry = function() return kind == "garrison" end,
+    local mf = { is_null_interface = function() return false end, is_armed_citizenry = function() return kind == "garrison" end,
                  has_general = function() return true end,
                  force_type = function() return { key = function() return kind or "ARMY" end } end,
                  command_queue_index = function() return cqi + 1000 end,
@@ -884,6 +1117,10 @@ local yP = faction("yP", { human = true })
 local y1 = region("y1", 11000, 0, 400, { grain = 99, coal = 49 }); y1.level = 0; own(yP, y1, true)
 TURN = 800; DILEMMAS = {}; turn_start(yP); eq(#DILEMMAS, 0, "99 provisions and 49 war materials: nothing")
 y1.held.grain = 100; turn_start(yP); only("feast")
+-- NEVER ISSUED (CA's wrapper returns false in multiplayer): no offer waits and no gap starts
+TURN = 1500; DILEMMA_FAILS = true; F.state.pending = nil; DILEMMAS = {}; turn_start(yP)
+eq(F.pending("yP", "feast"), nil, "an event never issued leaves no offer")
+DILEMMA_FAILS = nil; turn_start(yP); only("feast")
 -- COMPUTER-RUN FACTIONS: no dilemma; the same deal on a roll of EVENT_AI_PCT or under
 local zA = faction("zA")
 local z1 = region("z1", 12000, 0, 400, { grain = 150 }); z1.level = 0; own(zA, z1, true)
@@ -959,14 +1196,21 @@ local st5 = F.supply_state(pP.iface, "pc")
 eq(st5.cost, SH.per * 2, "2 for each of the 2 settlements you hold there, not the one you do not")
 eq(st5.on.materials, nil, "every switch starts off"); eq(st5.on.standing, nil, "and so does Supply the capital")
 -- WHAT EACH SUPPLY PAYS WITH (asked 2026-10-03): the good the payment takes first - the fullest,
--- a tie by resource key, as F.draw_realm takes them - for the Spending tab's icon
+-- a tie by stem, as F.draw_realm takes them - for the Spending tab's icon
 eq(st5.pay.building.stem, "timber", "Materials pays with the fullest building material")
 eq(st5.pay.building.n, 30, "and says how much of it there is")
 eq(st5.pay.mounts.n, 0, "a use the capital holds none of still names a good")
 eq(type(st5.pay.mounts.stem), "string", "so the tab has an icon to grey")
+-- iron and whale oil sort apart by stem and by resource key (res_rom_iron / res_derpy_whale_oil):
+-- the icon named whale oil while the payment took iron
 pc.held.marble = 30
-eq(F.supply_state(pP.iface, "pc").pay.building.stem, "marble", "a tie goes by resource key, as the payment takes it")
-pc.held.marble = 4
+eq(F.supply_state(pP.iface, "pc").pay.building.stem, "marble", "a tie goes by stem")
+do local iron0, oil0 = pc.held.iron, pc.held.whale_oil
+pc.held.iron, pc.held.whale_oil = 300, 300
+eq(F.supply_state(pP.iface, "pc").pay.war.stem, "iron", "a tie goes by stem, as the payment takes it")
+F.draw(pc.iface, F.stock(pc.iface), "war", 1, DERPY_MR_FLOWS_KIND.spend, "pP")
+eq(pc.held.iron, 299, "and the payment does take that one"); eq(pc.held.whale_oil, 300, "not the other")
+pc.held.iron, pc.held.whale_oil, pc.held.marble = iron0, oil0, 4 end
 F.request("pP", "supply", "pc", "materials")
 eq(F.supply_state(pP.iface, "pc").on.materials, true, "a click turns it on")
 eq(pc.held.timber, 30, "and takes nothing before turn start")
@@ -1198,6 +1442,22 @@ o0.held.grain = 150
 decide("occupation_decision_occupy", ot, oP, "oVr")
 answer(oP, EV.feast.dilemma, "FIRST"); eq(o0.held.grain, 150 - EV.feast.cost, "the feast offered before still pays out")
 answer(oP, RS.dilemma, "FIRST"); eq(ot.held.timber, 200 - RS.cost, "and so does the Restore")
+-- TWO OCCUPATIONS IN ONE TURN: one Restore at a time, as the answer cannot say which settlement;
+-- the second offer replaced the first, and the first answer paid for and repaired the second
+do local ou = region("ou", 30030, 0, 400, { timber = 200 }); own(oP, ou)
+ot.held.timber = 200; DILEMMAS = {}; REPAIRED = {}
+decide("occupation_decision_occupy", ot, oP, "oVr"); decide("occupation_decision_occupy", ou, oP, "oVr")
+eq(#DILEMMAS, 1, "a second occupation that turn offers no second Restore")
+answer(oP, RS.dilemma, "FIRST")
+eq(ot.held.timber, 200 - RS.cost, "the answer pays from the settlement it named"); eq(ou.held.timber, 200, "not the other")
+F.state.pending = { oPr = { restore = { key = "restore", region = "ou", turn = TURN - 1 } } }; DILEMMAS = {}
+decide("occupation_decision_occupy", ou, oP, "oVr"); eq(#DILEMMAS, 1, "an offer left from an earlier turn blocks nothing")
+answer(oP, RS.dilemma, "SECOND")
+-- NEVER ISSUED (CA's wrapper returns false in multiplayer): no offer is left waiting
+DILEMMA_FAILS = true; DILEMMAS = {}
+decide("occupation_decision_occupy", ou, oP, "oVr"); eq(F.pending("oPr", "restore"), nil, "a Restore never issued leaves no offer")
+DILEMMA_FAILS = nil
+lose(oP, ou) end
 -- A SAVE FROM BEFORE: one pending offer per faction, not one per event
 F.state.pending = { oPr = { key = "feast", region = "o0" } }; o0.held.grain = 150
 answer(oP, EV.feast.dilemma, "FIRST"); eq(o0.held.grain, 150 - EV.feast.cost, "an old save's offer still pays out")
@@ -1216,6 +1476,548 @@ F.state.rates.ai = true; ROLL = 100
 lose(oA, ot); own(oP, ot); F.state.rates.events = false; DILEMMAS = {}
 decide("occupation_decision_occupy", ot, oP, "oVr"); eq(#DILEMMAS, 0, "store events off: no Restore")
 eq(#ERRORS, 0, "no script errors in Restore: " .. table.concat(ERRORS, "; "))
+
+-- ---- THE WORKSHOP (spec 2026-10-07): a rare good plus a bulk of its use buys a lasting thing ----
+-- a function, not a do-block: its locals are its own, and the main chunk is at Lua 5.1's 200
+;(function()
+    local W = {}
+    for _, w in ipairs(DERPY_MR_FLOWS_WORKS) do W[w.key] = w end
+    local armour, axe = W.item_gromril_armour, W.unit_wh_main_dwf_inf_ironbreakers
+    LOCAL_FK = "dP"
+    local dP = faction("dP", { human = true, sc = "wh_main_sc_dwf_dwarfs" })
+    local d1 = region("d1", 20000, 0, 1000, { gromril = 200, coal = 0 }); own(dP, d1, true)
+    local d2 = region("d2", 20100, 0, 1000, { iron = 100 }); own(dP, d2)
+    TURN = 60
+    -- REVIEW FOCUS 1: gromril is a war material, but the bulk never counts it
+    local st = F.work_state(dP.iface, "item_gromril_armour")
+    eq(st.rare.have, 200, "the rare part counts the gromril"); eq(st.bulk.have, 100, "the bulk counts only the iron")
+    eq(st.ok, false, "100 of 150 war materials: short"); eq(st.why, "short", "and says why")
+    F.request("dP", "work", "item_gromril_armour")
+    eq(d1.held.gromril, 200, "short: no gromril taken"); eq(d2.held.iron, 100, "and no iron"); eq(#ITEMS, 0, "nothing given")
+    d2.held.iron = 300
+    F.request("dP", "work", "item_gromril_armour")
+    eq(d1.held.gromril, 200 - armour.rare_n, "the rare part taken"); eq(d2.held.iron, 300 - armour.use_n, "the bulk from iron only")
+    eq(ITEMS[1].key, armour.grant, "the item goes to the pool"); eq(ITEMS[1].f, "dP", "of the buyer")
+    eq(F.book("dP").now.gromril.spent_out, armour.rare_n, "booked as spent")
+    eq(SOUNDS[#SOUNDS], DERPY_MR_FLOWS_WORK_SOUND.item, "a purchase sounds, by its kind")
+    local heard = #SOUNDS
+    F.request("dP", "work", "item_gromril_armour"); eq(#SOUNDS, heard, "a refused one is silent")
+    -- REVIEW FOCUS 3: the same click again
+    st = F.work_state(dP.iface, "item_gromril_armour"); eq(st.why, "done", "an item is forged once")
+    F.request("dP", "work", "item_gromril_armour"); eq(#ITEMS, 1, "a second click gives nothing")
+    eq(d1.held.gromril, 200 - armour.rare_n, "and takes nothing")
+    -- the rare part short with the bulk there: refused, and says which
+    local g0 = d1.held.gromril
+    d1.held.gromril = 10
+    st = F.work_state(dP.iface, "item_gromril_greataxe")
+    eq(st.bulk.have >= st.bulk.cost, true, "the bulk is there"); eq(st.why, "short", "10 gromril of 40: short")
+    F.request("dP", "work", "item_gromril_greataxe"); eq(#ITEMS, 1, "and nothing forged"); eq(d1.held.gromril, 10, "nothing taken")
+    d1.held.gromril = g0
+    -- race lock: a Dwarf sees no High Elf row; a key not in the catalogue is refused
+    eq(F.work_state(dP.iface, "item_ithilmar_breastplate"), nil, "a High Elf item is not open to Dwarfs")
+    F.request("dP", "work", "no_such_work"); eq(#ERRORS, 0, "an unknown key is ignored")
+    -- a unit, for a faction that owns its race's pool: into that pool, with its group and the cap
+    DERPY_MR_FLOWS_POOL_HAS[axe.pool] = DERPY_MR_FLOWS_POOL_HAS[axe.pool] or {}
+    DERPY_MR_FLOWS_POOL_HAS[axe.pool].dP = true
+    eq(F.work_state(dP.iface, axe.key).route, "pool", "it owns the pool: the pool route")
+    F.request("dP", "work", axe.key)
+    eq(POOL[1].unit, axe.grant, "the unit goes to the mercenary pool"); eq(POOL[1].group, axe.group, "with its group")
+    eq(POOL[1].max, DERPY_MR_FLOWS_WORK.unit_max, "capped at 2"); eq(POOL[1].src, axe.pool, "into its race's pool")
+    d1.held.gromril, d2.held.iron = 200, 400
+    F.request("dP", "work", axe.key); eq(#POOL, 2, "a second goes in")
+    eq(F.work_state(dP.iface, axe.key).why, "full", "two in the pool: full")
+    F.request("dP", "work", axe.key)
+    eq(#POOL, 2, "a third is refused"); eq(d1.held.gromril, 200 - axe.rare_n, "and takes nothing")
+    -- THE POOL IS READ, NOT REMEMBERED: one recruited, one may be bought again
+    dP.pool[axe.grant] = 1
+    eq(F.work_state(dP.iface, axe.key).why ~= "full", true, "one recruited: room for one more")
+    -- an engine that will not say: the Workshop's own count of what it put there
+    dP.pool_broken = true
+    eq(F.work_state(dP.iface, axe.key).why, "full", "the pool unreadable: its own count of 2")
+    dP.pool_broken = nil
+    -- A FACTION WITHOUT ITS RACE'S POOL (a minor faction has no renown pool): straight into an army
+    local gP = faction("gP", { human = true, sc = "wh_main_sc_dwf_dwarfs" })
+    local g1 = region("g1", 20500, 0, 1000, { gromril = 100, iron = 300 }); own(gP, g1, true)
+    st = F.work_state(gP.iface, axe.key)
+    eq(st.route, "army", "no pool: the army route"); eq(st.why, "no_army", "and no army with room says so")
+    gP.armies = { host(91, { 1, 2, 3 }) }
+    eq(F.work_state(gP.iface, axe.key).ok, true, "an army with room: it can be bought")
+    local granted, pooled, heard_gp = #GRANTED, #POOL, #SOUNDS
+    F.request("gP", "work", axe.key)
+    eq(#SOUNDS, heard_gp, "another player's purchase is silent on this machine")
+    eq(GRANTED[granted + 1].lookup, "character_cqi:91", "into that army"); eq(#POOL, pooled, "not into a pool")
+    eq(g1.held.gromril, 100 - axe.rare_n, "paid for")
+    eq(F.work_state(dP.iface, "unit_wh_main_dwf_inf_hammerers").why ~= "full", true, "another unit is not full")
+    -- an upgrade needs a settlement, and the buyer's own
+    eq(F.work_state(dP.iface, "up_gromril").why, "where", "an upgrade row alone is not a purchase")
+    F.request("dP", "work", "up_gromril"); eq(BUNDLES.d1 and BUNDLES.d1.derpy_mr_up_gromril, nil, "work refuses an upgrade key")
+    local enemy = faction("eE", { sc = "wh_main_sc_grn_greenskins" })
+    local e1 = region("e1", 20200, 0, 1000, {}); own(enemy, e1)
+    eq(F.work_state(dP.iface, "up_gromril", "e1").why, "not_yours", "REVIEW FOCUS 2: not on a settlement you do not hold")
+    F.request("dP", "upgrade", "up_gromril", "e1"); eq(BUNDLES.e1, nil, "and a request there does nothing")
+    d1.held.gromril, d2.held.iron = 300, 500
+    F.request("dP", "upgrade", "up_gromril", "d1")
+    eq(BUNDLES.d1.derpy_mr_up_gromril, 0, "the bundle never expires (0 turns)")
+    eq(d1.held.gromril, 300 - W.up_gromril.rare_n, "the upgrade's rare part taken")
+    eq(F.upgrades_of("d1").up_gromril, "dP", "kept with its buyer")
+    eq(F.work_state(dP.iface, "up_gromril", "d1").why, "built", "once per settlement")
+    eq(F.work_state(dP.iface, "up_gromril", "d2").ok, true, "the same upgrade elsewhere is allowed")
+    F.request("dP", "upgrade", "item_gromril_greataxe", "d2"); eq(#ITEMS, 1, "upgrade refuses an item key")
+    -- research: luxuries only, then a 10-turn wait
+    local lux
+    for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do if g.use == "luxuries" and not g.rare then lux = lux or g.stem end end
+    d2.held[lux] = 400
+    F.request("dP", "work", "research")
+    eq(RESEARCH[1].n, DERPY_MR_FLOWS_WORK.research_points, "research points granted"); eq(d2.held[lux], 100, "300 luxuries")
+    eq(SOUNDS[#SOUNDS], DERPY_MR_FLOWS_WORK_SOUND.research, "research has its own sound")
+    TURN = 65; st = F.work_state(dP.iface, "research"); eq(st.why, "wait", "then a wait"); eq(st.wait, 5, "of 10 turns")
+    TURN = 70; eq(F.work_state(dP.iface, "research").why, "short", "the wait is over after 10; only the goods are short")
+    -- the switch and the computer
+    F.state.rates.actions = false; d2.held[lux] = 400; F.request("dP", "work", "research"); eq(#RESEARCH, 1, "off with the switch")
+    F.state.rates.actions = true
+    local cA = faction("cA", { sc = "wh_main_sc_dwf_dwarfs" })
+    F.dispatch("cA", { "work", "research" }); eq(#RESEARCH, 1, "a computer faction cannot use the door")
+    cm.saving_game_callbacks[1]({})
+    eq(SAVED.derpy_mr_flows.factions.dP.works.items.item_gromril_armour, 60, "the forged item is kept in the save")
+    eq(SAVED.derpy_mr_flows.upgrades.d1.up_gromril, "dP", "and the upgrade")
+    -- REVIEW FOCUS 5, A SETTLEMENT CHANGES HANDS: its upgrade works only for its buyer
+    local function changed(r) fire("RegionFactionChangeEvent", { region = function() return r.iface end }) end
+    lose(dP, d1); own(enemy, d1); changed(d1)
+    eq(BUNDLES.d1.derpy_mr_up_gromril, nil, "captured: the upgrade stops")
+    local third = faction("tT", { sc = "wh_main_sc_emp_empire" })
+    lose(enemy, d1); own(third, d1); changed(d1)
+    eq(BUNDLES.d1.derpy_mr_up_gromril, nil, "a third party never gets it")
+    lose(third, d1); own(dP, d1); changed(d1)
+    eq(BUNDLES.d1.derpy_mr_up_gromril, 0, "back for its buyer, for good")
+    changed(e1); eq(BUNDLES.e1, nil, "a settlement with no upgrade: nothing")
+    -- ANOTHER FACTION BOUGHT IT, AND IS ALIVE: the new owner may build its own, and is not told "built"
+    local fP = faction("fP", { sc = "wh_main_sc_dwf_dwarfs" })
+    lose(dP, d1); own(fP, d1); changed(d1)
+    d1.held.gromril, d1.held.iron = 300, 300
+    st = F.work_state(fP.iface, "up_gromril", "d1")
+    eq(st.why, nil, "someone else's upgrade is not built for the new owner"); eq(st.ok, true, "it can build its own")
+    eq(F.work(fP.iface, "up_gromril", "d1"), true, "and does")
+    eq(F.upgrades_of("d1").up_gromril, "fP", "now its"); eq(BUNDLES.d1.derpy_mr_up_gromril, 0, "and working")
+    lose(fP, d1); own(dP, d1); changed(d1)
+    eq(BUNDLES.d1.derpy_mr_up_gromril, nil, "the old buyer retakes it: the new buyer's, not its, so off")
+    eq(F.work_state(dP.iface, "up_gromril", "d1").why ~= "built", true, "and it may build again")
+    -- asking about a settlement never writes the save
+    F.work_state(dP.iface, "up_gromril", "d2")
+    eq(F.state.upgrades.d2, nil, "a state read leaves no entry behind")
+    -- a dead buyer's upgrades are cleared at a player's turn start
+    F.upgrades_of("e1").up_gromril = "gone"
+    faction("gone", {}).dead = true
+    turn_start(dP)
+    eq(F.upgrades_of("e1").up_gromril, nil, "a dead buyer's entries cleared")
+    eq(F.upgrades_of("d1").up_gromril, "fP", "a living buyer's kept")
+    -- REVIEW FOCUS 4, COMPUTER FACTIONS: one purchase on a 20% roll; units straight into the largest
+    -- army with room; a reserve keeps their upkeep stock. Called directly: turn start also runs
+    -- upkeep and events, which draw goods and use rolls.
+    local aC = faction("aC", { sc = "wh_main_sc_dwf_dwarfs" })
+    local a1 = region("a1", 21000, 0, 1000, { gromril = 100, iron = 150 }); own(aC, a1, true)
+    local items0, granted0, pool0 = #ITEMS, #GRANTED, #POOL
+    F.state.rates.ai = true
+    ROLL = 1
+    F.work_ai(aC.iface)
+    eq(#GRANTED + #ITEMS, granted0 + items0, "150 iron: paying 150 leaves less than 150 - the reserve stops it")
+    a1.held.iron = 400
+    aC.armies = { host(81, { 1, 2, 3 }), host(82, { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 }) }
+    ROLL = DERPY_MR_FLOWS_WORK.ai_pct + 1; F.work_ai(aC.iface)
+    eq(#GRANTED + #ITEMS, granted0 + items0, "a roll over the chance buys nothing, though it could afford it")
+    local heard_ai = #SOUNDS
+    ROLL = DERPY_MR_FLOWS_WORK.ai_pct; F.work_ai(aC.iface)
+    eq(#SOUNDS, heard_ai, "a computer's purchase is silent")
+    eq(GRANTED[granted0 + 1].lookup, "character_cqi:81", "into the largest army with room - the full one is skipped")
+    eq(#POOL, pool0, "not into the pool")
+    eq(a1.held.gromril, 100 - W.unit_wh_main_dwf_inf_hammerers.rare_n, "and paid for")
+    aC.armies = { host(83, { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 }) }
+    F.work_ai(aC.iface)
+    eq(#GRANTED, granted0 + 1, "no army with room: no unit")
+    eq(#ITEMS, items0 + 1, "it buys the next row, an item"); eq(ITEMS[#ITEMS].f, "aC", "for itself")
+    F.state.rates.ai = false; a1.held.gromril, a1.held.iron = 300, 900
+    F.work_ai(aC.iface); eq(#ITEMS, items0 + 1, "the switch off: nothing")
+    F.state.rates.ai = true
+    turn_start(aC); eq(#ITEMS, items0 + 2, "turn start runs the purchase")
+    eq(F.work_state(aC.iface, "up_gromril", "a1").ok, true, "it could afford the capital's upgrade")
+    aC.human = true; turn_start(aC); eq(#ITEMS, items0 + 2, "a player's faction never buys by itself")
+    eq(BUNDLES.a1 and BUNDLES.a1.derpy_mr_up_gromril, nil, "not even the upgrade")
+    aC.human = false
+    -- an upgrade: the capital, else the settlement holding the most of the bulk's use
+    local bC = faction("bC", { sc = "wh_main_sc_dwf_dwarfs" })
+    local b1 = region("b1", 22000, 0, 1000, { gromril = 200, iron = 50 }); own(bC, b1, true)
+    local b2 = region("b2", 22100, 0, 1000, { iron = 300 }); own(bC, b2)
+    local b3 = region("b3", 22200, 0, 1000, { iron = 200 }); own(bC, b3)
+    local wb = F.works_book("bC")
+    -- every item open to it forged already, so the upgrade is next (the catalogue grows: spec 2026-10-08 section 5)
+    for _, w in ipairs(DERPY_MR_FLOWS_WORKS) do
+        if w.kind == "item" and F.work_open(bC.iface, w) then wb.items[w.key] = 1 end
+    end
+    F.upgrades_of("b1").up_gromril = "bC"
+    F.work_ai(bC.iface)
+    eq(BUNDLES.b2 and BUNDLES.b2.derpy_mr_up_gromril, 0, "the capital has it: the fullest settlement gets it")
+    eq(BUNDLES.b3, nil, "not the other")
+    ROLL = 100
+    LOCAL_FK = nil
+    eq(#ERRORS, 0, "no script errors in the Workshop: " .. table.concat(ERRORS, "; "))
+end)()
+
+-- ---- A RARE GOOD IS NEVER BULK (author, 2026-10-08): only the Workshop's own works take it ----
+do
+    local rP = faction("rP", { human = true })
+    local r1 = region("r1", 40000, 0, 2000, { gromril = 900, grain = 0 }); r1.level = 3; own(rP, r1, true)
+    eq(F.use_total(F.stock(r1.iface), "war"), 0, "900 gromril count as no war materials")
+    eq(F.order_state(rP.iface, "muster").ok, false, "so Muster cannot be bought with them")
+    F.draw(r1.iface, F.stock(r1.iface), "war", 50, DERPY_MR_FLOWS_KIND.spend, "rP")
+    eq(r1.held.gromril, 900, "and a draw of war materials leaves them")
+    r1.held.coal = 300
+    F.request("rP", "order", "muster")
+    eq(r1.held.gromril, 900, "Muster pays with coal, never gromril"); eq(r1.held.coal, 300 - F.ORDER_COST, "all of it")
+    r1.held.black_lotus = 500; turn_start(rP)
+    eq(r1.held.black_lotus, 500, "upkeep eats no rare good")
+    eq(BUNDLES.r1 and BUNDLES.r1.derpy_mr_comforts, nil, "nor does one count toward Comforts")
+    lose(rP, r1)
+end
+-- RESTORE ON LOOT-AND-OCCUPY TOO (author, 2026-10-08)
+do
+    local lP2 = faction("lP2", { human = true }); local lv = faction("lV2")
+    local l0 = region("l0", 41000, 0, 400, {}); own(lP2, l0, true)
+    local lt = region("lt", 41010, 0, 400, { timber = 200 }); own(lP2, lt)
+    lt.slots = { { has_building = function() return true end } }
+    F.state.rates.events = true; F.state.pending = nil; DILEMMAS = {}
+    decide("occupation_decision_loot", lt, lP2, "lV2")
+    eq(#DILEMMAS, 1, "loot-and-occupy offers Restore"); eq(DILEMMAS[1].key, DERPY_MR_FLOWS_EVENTS.restore.dilemma, "the Restore one")
+    answer(lP2, DERPY_MR_FLOWS_EVENTS.restore.dilemma, "SECOND")
+    F.state.rates.events = false
+end
+
+-- ---- THE RECRUITMENT DRAW (spec 2026-10-08 workshop expansion, section 3) ----
+;(function()
+    local function train(f, key, caste, value)
+        fire("UnitTrained", { unit = function() return {
+            faction = function() return f.iface end, unit_key = function() return key end,
+            unit_caste = function() return caste end, get_unit_custom_battle_cost = function() return value end } end })
+    end
+    -- the gold price of a missing good, from the data: CA's trade value of the cheapest of its kind
+    local function worth(pick)
+        local w
+        for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do if pick(g) and (not w or g.value < w) then w = g.value end end
+        return w
+    end
+    local war = worth(F.bulk("war"))
+    local R = DERPY_MR_FLOWS_RECRUIT
+    local rates0, turn0 = F.state.rates, TURN
+    TURN = 9000
+    F.state.rates = nil; F.freeze_rates()
+    F.state.rates.recruit, F.state.rates.recruit_per, F.state.rates.ai = true, 1, true
+    local rcP = faction("rcP", { human = true, sc = "wh_main_sc_dwf_dwarfs" })
+    local rc1 = region("rc1", 42000, 0, 2000, { coal = 50, gromril = 10, warhorses = 50 }); own(rcP, rc1, true)
+    train(rcP, "modded_inf", "melee_infantry", 650)
+    eq(rc1.held.coal, 50 - 7, "650 gold of infantry takes 7 war materials, any mod's unit")
+    train(rcP, "modded_cav", "melee_cavalry", 900); eq(rc1.held.warhorses, 50 - 9, "cavalry takes mounts")
+    train(rcP, "modded_mon", "monster", 1000); eq(rc1.held.warhorses, 41 - 15, "a monster 1.5x")
+    train(rcP, "modded_gun", "warmachine", 800)
+    eq(rc1.held.coal, 43 - 4, "a war machine: half its draw in war materials")
+    local split = 0
+    for _, b in ipairs(F.recruit_bill(rcP.iface, "warmachine", 700)) do split = split + b.n end
+    eq(split, 7, "an odd draw splits 4 and 3, not rounded up in both halves")
+    train(rcP, "wh_main_dwf_inf_ironbreakers", "melee_infantry", R.elite + 100)
+    eq(rc1.held.gromril, 10 - math.ceil((R.elite + 100) / R.elite_per), "an elite Dwarf unit also takes gromril")
+    eq(rc1.held.coal, 39 - math.ceil((R.elite + 100) / R.per), "and its war materials, never the gromril")
+    train(rcP, "almost", "melee_infantry", R.elite - 1)
+    eq(rc1.held.gromril, 10 - math.ceil((R.elite + 100) / R.elite_per), "one gold short of elite: no gromril")
+    rc1.held.gromril = 10; train(rcP, "at_line", "melee_infantry", R.elite)
+    eq(rc1.held.gromril, 10 - math.ceil(R.elite / R.elite_per), "exactly the elite line: it takes gromril")
+    -- a race with no rare good draws none, gromril held or not; Dark Elves: lotus for foot, hide for the rest
+    local ksP = faction("ksP", { human = true, sc = "wh3_main_sc_ksl_kislev" })
+    local ks1 = region("ks1", 42050, 0, 2000, { coal = 50, gromril = 10, feathers = 10 }); own(ksP, ks1, true)
+    train(ksP, "modded_elite", "melee_infantry", 2000)
+    eq(ks1.held.gromril + ks1.held.feathers, 20, "Kislev has no rare good: none taken")
+    local dfP = faction("dfP", { human = true, sc = "wh2_main_sc_def_dark_elves" })
+    local df1 = region("df1", 42060, 0, 2000, { coal = 50, warhorses = 50, black_lotus = 20, sea_dragon_hide = 20 })
+    own(dfP, df1, true)
+    train(dfP, "modded_elite", "melee_infantry", 1600)
+    eq(df1.held.black_lotus, 16, "Dark Elf foot takes black lotus"); eq(df1.held.sea_dragon_hide, 20, "not hide")
+    train(dfP, "modded_elite", "melee_cavalry", 1600); eq(df1.held.sea_dragon_hide, 16, "their riders take hide")
+    lose(ksP, ks1); lose(dfP, df1)
+    local c0 = rc1.held.coal
+    train(rcP, "lord", "lord", 2000); train(rcP, "odd", nil, 800); train(rcP, "free", "melee_infantry", 0)
+    eq(rc1.held.coal, c0, "REVIEW FOCUS 1: a lord, an unreadable caste and a unit worth nothing take nothing")
+    eq(#ERRORS, 0, "and throw nothing: " .. table.concat(ERRORS, "; "))
+    -- the slider: 2 per 100 gold doubles it, 0 turns it off
+    rc1.held.coal = 50; F.state.rates.recruit_per = 2; train(rcP, "modded_inf", "melee_infantry", 650)
+    eq(rc1.held.coal, 50 - 13, "2 per 100 gold: 650 takes 13"); F.state.rates.recruit_per = 0
+    train(rcP, "modded_inf", "melee_infantry", 650); eq(rc1.held.coal, 37, "0: nothing"); F.state.rates.recruit_per = 1
+    -- SHORTFALL, no race currency (Dwarfs): gold at gold_x times CA's trade value
+    rc1.held.coal = 3; local t0 = rcP.iface:treasury()
+    train(rcP, "modded_inf", "melee_infantry", 650)
+    eq(rc1.held.coal, 0, "the stores give what they hold")
+    eq(rcP.iface:treasury() - t0, -math.ceil(4 * war * R.gold_x), "the 4 missing are paid in gold")
+    -- CHAOS DWARFS pay the shortfall in Armaments first
+    local cdP = faction("cdP", { human = true, sc = "wh3_dlc23_sc_chd_chaos_dwarfs", pools = { wh3_dlc23_chd_armaments = 10 } })
+    local cd1 = region("cd1", 42100, 0, 2000, {}); own(cdP, cd1, true)
+    local cur = DERPY_MR_FLOWS_CURRENCY.chd
+    local g0 = cdP.iface:treasury()
+    train(cdP, "modded_inf", "melee_infantry", 650)
+    eq(FPOOL.cdP.wh3_dlc23_chd_armaments, 10 - math.ceil(7 / cur.per), "7 missing, paid in Armaments, rounded up")
+    eq(FPOOL_FACTOR[#FPOOL_FACTOR], R.factor, "under our factor")
+    eq(cdP.iface:treasury(), g0, "and no gold while the Armaments cover it")
+    FPOOL.cdP.wh3_dlc23_chd_armaments = 1
+    train(cdP, "modded_inf", "melee_infantry", 650)
+    eq(FPOOL.cdP.wh3_dlc23_chd_armaments, 0, "the last Armament goes")
+    eq(cdP.iface:treasury() - g0, -math.ceil((7 - cur.per) * war * R.gold_x), "what it did not cover, in gold")
+    -- REVIEW FOCUS 2 and 3: no settlements and no pool; a faction with 5 gold pays 5 and no more
+    local hzP = faction("hzP", { human = true, sc = "wh3_dlc23_sc_chd_chaos_dwarfs", gold = 5 })
+    train(hzP, "modded_inf", "melee_infantry", 650); eq(hzP.iface:treasury(), 0, "no settlements, no pool: 5 gold, no debt")
+    -- THE LEDGER: last turn's, humans only, in the race's words
+    TURN = 9001
+    local l = F.recruit_last("cdP")
+    eq(l and l.paid[cur.word], math.ceil(7 / cur.per) + 1, "the panel reads last turn's Armaments")
+    eq(l and l.line, cur.line, "with the race's sentence")
+    eq(F.recruit_last("rcP").goods > 0, true, "a Dwarf's line counts the goods")
+    eq(F.recruit_last("rcP").line, nil, "and has no currency sentence")
+    -- SWITCHES: off takes nothing; a computer faction only under "Other factions use their stores"
+    F.state.rates.recruit = false; rc1.held.coal = 50; train(rcP, "modded_inf", "melee_infantry", 650)
+    eq(rc1.held.coal, 50, "switched off: nothing taken"); F.state.rates.recruit = true
+    local aiF = faction("aiF", { sc = "wh_main_sc_emp_empire" })
+    local ai1 = region("ai1", 42200, 0, 2000, { coal = 50 }); own(aiF, ai1, true)
+    F.state.rates.ai = false; train(aiF, "modded_inf", "melee_infantry", 650)
+    eq(ai1.held.coal, 50, "a computer faction is spared with the switch off")
+    F.state.rates.ai = true; train(aiF, "modded_inf", "melee_infantry", 650); eq(ai1.held.coal, 43, "and charged with it on")
+    TURN = 9002; eq(F.recruit_last("aiF"), nil, "no ledger for a computer faction")
+    local dmP = faction("dmP", { human = true, sc = "wh3_main_sc_kho_khorne" })
+    local dm1 = region("dm1", 42300, 0, 2000, { coal = 50 }); own(dmP, dm1, true)
+    train(dmP, "modded_inf", "melee_infantry", 650); eq(dm1.held.coal, 50, "a race that keeps no stores pays nothing")
+    eq(F.cost.recruit ~= nil, true, "REVIEW FOCUS 5: the handler counts its time")
+    lose(rcP, rc1); lose(cdP, cd1); lose(aiF, ai1); lose(dmP, dm1)
+    F.state.rates, TURN = rates0, turn0
+end)()
+;(function()
+    -- REVIEW FOCUS 4: a unit bought in the Workshop arrives without a second charge; only that one
+    local W = {}
+    for _, w in ipairs(DERPY_MR_FLOWS_WORKS) do W[w.key] = w end
+    local axe = W.unit_wh_main_dwf_inf_ironbreakers
+    local function train(f)
+        fire("UnitTrained", { unit = function() return {
+            faction = function() return f.iface end, unit_key = function() return axe.grant end,
+            unit_caste = function() return "melee_infantry" end, get_unit_custom_battle_cost = function() return 1300 end } end })
+    end
+    local rates0, turn0 = F.state.rates, TURN
+    TURN = 9100
+    F.state.rates = nil; F.freeze_rates(); F.state.rates.recruit, F.state.rates.recruit_per = true, 1
+    local wkP = faction("wkP", { human = true, sc = "wh_main_sc_dwf_dwarfs" })
+    local wk1 = region("wk1", 42400, 0, 2000, { coal = 100, gromril = 100 }); own(wkP, wk1, true)
+    DERPY_MR_FLOWS_POOL_HAS[axe.pool] = DERPY_MR_FLOWS_POOL_HAS[axe.pool] or {}
+    DERPY_MR_FLOWS_POOL_HAS[axe.pool].wkP = true
+    F.work_grant(wkP.iface, axe, nil)
+    train(wkP); eq(wk1.held.coal, 100, "the Workshop's unit arrives without a second charge")
+    eq(wk1.held.gromril, 100, "nor its gromril")
+    train(wkP); eq(wk1.held.coal < 100, true, "a second, recruited the usual way, is charged")
+    -- THE ARMY ROUTE, with UnitTrained fired INSIDE grant_unit_to_character (final review, 2026-10-08):
+    -- the free recruit must be on the book before the call, or the unit is charged and a later one is free
+    local waP = faction("waP", { human = true, sc = "wh_main_sc_dwf_dwarfs" })
+    local wa1 = region("wa1", 42500, 0, 2000, { coal = 100, gromril = 100 }); own(waP, wa1, true)
+    waP.armies = { host(71, { 1, 2, 3 }) }
+    GRANT_HOOK = function() train(waP) end
+    F.work_grant(waP.iface, axe, nil)
+    GRANT_HOOK = nil
+    eq(#GRANTED > 0 and GRANTED[#GRANTED].lookup, "character_cqi:71", "the army route")
+    eq(wa1.held.coal, 100, "fired inside the grant: not charged")
+    train(waP); eq(wa1.held.coal < 100, true, "and the next ordinary recruit is charged, not free")
+    lose(waP, wa1)
+    eq(#ERRORS, 0, "no script errors: " .. table.concat(ERRORS, "; "))
+    lose(wkP, wk1)
+    F.state.rates, TURN = rates0, turn0
+end)()
+
+-- ---- THE NAMED RECIPES (workshop expansion spec section 4): convert, lasting, computers ----
+;(function()
+    local W = {}
+    for _, w in ipairs(DERPY_MR_FLOWS_WORKS) do W[w.key] = w end
+    local conv, gran = W.conv_armaments, W.last_granary
+    local rates0, turn0 = F.state.rates, TURN
+    F.state.rates = nil; F.freeze_rates(); F.state.rates.actions, F.state.rates.recruit = true, true
+    TURN = 9200
+    -- a common good of coal's use that no part of the recipe names: a draw by use would take it
+    local by
+    for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+        if g.use == F.GOOD.coal.use and not g.rare and g.stem ~= "coal" and g.stem ~= "brimstone" and g.stem ~= "iron" then
+            by = by or g.stem
+        end
+    end
+    local cvP = faction("cvP", { human = true, sc = "wh3_dlc23_sc_chd_chaos_dwarfs", pools = { wh3_dlc23_chd_armaments = 0 } })
+    local cv1 = region("cv1", 42600, 0, 2000, { coal = 50, brimstone = 50, iron = 50, [by] = 500 }); own(cvP, cv1, true)
+    F.request("cvP", "work", conv.key)
+    eq(cv1.held.coal, 50 - 20, "the Armaments recipe takes its coal"); eq(cv1.held.brimstone, 30, "its brimstone")
+    eq(cv1.held.iron, 30, "and its iron"); eq(cv1.held[by], 500, "named goods only, never another of their use")
+    eq(FPOOL.cvP.wh3_dlc23_chd_armaments, conv.amount, "and pays the Armaments")
+    eq(FPOOL_FACTOR[#FPOOL_FACTOR], "derpy_mr_workshop", "under the Workshop's factor")
+    eq(F.work_state(cvP.iface, conv.key).why, "wait", "once a turn")
+    F.request("cvP", "work", conv.key); eq(cv1.held.coal, 30, "a second click this turn takes nothing")
+    TURN = 9201; eq(F.work_state(cvP.iface, conv.key).ok, true, "the next turn it is open again")
+    cv1.held.brimstone = 5
+    eq(F.work_state(cvP.iface, conv.key).why, "short", "short in one good: short")
+    F.request("cvP", "work", conv.key); eq(cv1.held.coal, 30, "and nothing taken, not even the goods it has")
+    eq(F.work_state(faction("cvD", { human = true, sc = "wh_main_sc_dwf_dwarfs" }).iface, conv.key), nil,
+       "a Dwarf has no Armaments recipe")
+    -- LASTING: a faction bundle for good, once a campaign
+    local lsP = faction("lsP", { human = true, sc = "wh_main_sc_emp_empire" })
+    local ls1 = region("ls1", 42700, 0, 4000, { grain = 300, salt = 300, salted_meat = 300, pottery = 300 }); own(lsP, ls1, true)
+    F.request("lsP", "work", gran.key)
+    eq(ls1.held.pottery, 300 - 120, "the Granary takes its four goods")
+    eq(FBUNDLES.lsP and FBUNDLES.lsP[gran.bundle], 0, "and its bundle goes on for good")
+    eq(F.work_state(lsP.iface, gran.key).why, "done", "once a campaign")
+    FBUNDLES.lsP[gran.bundle] = nil
+    eq(F.work_state(lsP.iface, gran.key).why, "done", "REVIEW FOCUS 3: still bought after the bundle goes")
+    -- REVIEW FOCUS 5: a computer buys a lasting work with every good held twice over, never an army work
+    local aiW = faction("aiW", { sc = "wh_main_sc_emp_empire" })
+    local aw1 = region("aw1", 42800, 0, 4000, { grain = 200, salt = 200, salted_meat = 200, pottery = 200,
+                                                 blackpowder = 900, brass = 900 }); own(aiW, aw1, true)
+    aiW.armies = { host(61, { 1, 2 }) }
+    F.state.rates.ai = true; ROLL = 1
+    F.work_ai(aiW.iface)
+    eq(aw1.held.grain, 200, "200 grain is not twice 120: no Granary"); eq(aw1.held.brass, 900, "and never an army work")
+    aw1.held.grain, aw1.held.salt, aw1.held.salted_meat, aw1.held.pottery = 240, 240, 240, 240
+    F.work_ai(aiW.iface)
+    eq(aw1.held.grain, 120, "every good held twice over: the Granary is bought")
+    eq(FBUNDLES.aiW and FBUNDLES.aiW[gran.bundle], 0, "with its bundle")
+    -- A COMPUTER'S UNIT PURCHASE is not charged again by the recruit draw (stage 1 final review)
+    local axe = W.unit_wh_main_dwf_inf_ironbreakers
+    local aiD = faction("aiD", { sc = "wh_main_sc_dwf_dwarfs" })
+    local ad1 = region("ad1", 42900, 0, 4000, { gromril = 100, iron = 400 }); own(aiD, ad1, true)
+    aiD.armies = { host(62, { 1, 2 }) }
+    GRANT_HOOK = function(unit)
+        fire("UnitTrained", { unit = function() return {
+            faction = function() return aiD.iface end, unit_key = function() return unit end,
+            unit_caste = function() return "melee_infantry" end, get_unit_custom_battle_cost = function() return 1300 end } end })
+    end
+    F.work_ai(aiD.iface)
+    GRANT_HOOK = nil
+    eq(ad1.held.gromril, 100 - axe.rare_n, "a computer pays the Workshop's gromril")
+    eq(ad1.held.iron, 400 - axe.use_n, "and its iron, and nothing for the recruit it hands itself")
+    eq(#ERRORS, 0, "no script errors: " .. table.concat(ERRORS, "; "))
+    lose(cvP, cv1); lose(lsP, ls1); lose(aiW, aw1); lose(aiD, ad1)
+    F.state.rates, TURN, ROLL = rates0, turn0, 100
+end)()
+
+-- ---- ARMY AND CHARACTER WORKS on the selected character (spec section 4b, 4c) ----
+;(function()
+    local W = {}
+    for _, w in ipairs(DERPY_MR_FLOWS_WORKS) do W[w.key] = w end
+    local ammo, rations, forge, steel = W.army_ammo, W.army_rations, W.army_forge, W.trait_steel
+    local rates0, turn0 = F.state.rates, TURN
+    F.state.rates = nil; F.freeze_rates(); F.state.rates.actions = true
+    TURN = 9300
+    local tgP = faction("tgP", { human = true, sc = "wh_main_sc_emp_empire" })
+    local tg1 = region("tg1", 43000, 0, 4000, { blackpowder = 500, brass = 500, grain = 500, salt = 500, beer = 500,
+                                                 iron = 500, coal = 500, books = 500, glassware = 500, silver = 500 }); own(tgP, tg1, true)
+    local mfA, mfB = host(71, { 1 }), host(72, { 1 })
+    character(71, tgP, mfA); character(72, tgP, mfB); character(73, faction("tgF"), host(73, { 1 }))
+    character(74, tgP, nil)
+    F.request("tgP", "aim", ammo.key, "71")
+    local fb = FORCE_BUNDLES[#FORCE_BUNDLES]
+    eq(fb and fb[1], ammo.bundle, "the Ammunition Train's bundle"); eq(fb and fb[2], mfA:command_queue_index(), "on that army")
+    eq(fb and fb[3], ammo.turns, "for its turns"); eq(tg1.held.brass, 450, "paid for")
+    eq(F.work_state(tgP.iface, ammo.key, nil, 71).why, "wait", "REVIEW FOCUS 2: once per army")
+    F.request("tgP", "aim", ammo.key, "71"); eq(tg1.held.brass, 450, "a second on the same army takes nothing")
+    F.request("tgP", "aim", ammo.key, "72"); eq(tg1.held.brass, 400, "another army can take it")
+    eq(FORCE_BUNDLES[#FORCE_BUNDLES][2], mfB:command_queue_index(), "on the other army")
+    TURN = 9300 + ammo.wait; eq(F.work_state(tgP.iface, ammo.key, nil, 71).ok, true, "its wait over, open again")
+    F.request("tgP", "aim", rations.key, "71")
+    eq(RANKS[#RANKS] and RANKS[#RANKS][1], "character_cqi:71", "Rations: the army's units gain a rank")
+    eq(RANKS[#RANKS] and RANKS[#RANKS][2], rations.rank, "one rank")
+    -- REVIEW FOCUS 1: a target that is not the player's, is gone, or has no army
+    F.request("tgP", "aim", forge.key, "73"); eq(tg1.held.iron, 500, "another faction's army: refused, nothing taken")
+    eq(F.work_state(tgP.iface, forge.key, nil, 73).why, "not_yours", "and says why")
+    F.request("tgP", "aim", forge.key, "74"); eq(tg1.held.iron, 500, "a hero with no army: refused")
+    eq(F.work_state(tgP.iface, forge.key, nil, 74).why, "no_army", "and says why")
+    local gone = CHARS[72]; CHARS[72] = nil
+    F.request("tgP", "aim", forge.key, "72"); eq(tg1.held.iron, 500, "a character gone by the dispatch: refused")
+    CHARS[72] = gone
+    F.request("tgP", "work", forge.key); eq(tg1.held.iron, 500, "an army work with no target is refused")
+    F.request("tgP", "aim", forge.key, "x71"); eq(tg1.held.iron, 500, "a target that is not a number is ignored")
+    eq(F.work_state(tgP.iface, forge.key).why, "aim", "nothing selected: says so")
+    local rec = W.last_records
+    F.request("tgP", "aim", rec.key, "71"); eq(FBUNDLES.tgP and FBUNDLES.tgP[rec.bundle], nil,
+       "a work that takes no target is not bought through a target")
+    -- REVIEW FOCUS 4: a trait once per character
+    F.request("tgP", "aim", steel.key, "74")
+    eq(CHARS[74].traits[steel.trait], true, "a hero takes Steel-shod"); eq(tg1.held.iron, 500 - 80, "paid for")
+    eq(F.work_state(tgP.iface, steel.key, nil, 74).why, "done", "once")
+    F.request("tgP", "aim", steel.key, "74"); eq(tg1.held.iron, 420, "a second takes nothing")
+    F.request("tgP", "aim", steel.key, "71"); eq(CHARS[71].traits[steel.trait], true, "another character can take it")
+    for _, w in ipairs(DERPY_MR_FLOWS_WORKS) do
+        eq(DERPY_MR_FLOWS_WORK_SOUND[w.kind] ~= nil, true, w.key .. ": every kind has its purchase sound")
+    end
+    eq(#ERRORS, 0, "no script errors: " .. table.concat(ERRORS, "; "))
+    lose(tgP, tg1)
+    F.state.rates, TURN = rates0, turn0
+end)()
+
+-- ---- RARE WORKS DEEPENED (workshop expansion spec section 5): a race new to the Workshop ----
+;(function()
+    local W = {}
+    for _, w in ipairs(DERPY_MR_FLOWS_WORKS) do W[w.key] = w end
+    local zd = W.unit_wh3_dlc29_vmp_mon_zombie_dragon
+    eq(zd ~= nil, true, "the Zombie Dragon is in the catalogue")
+    if not zd then return end
+    local rates0, turn0 = F.state.rates, TURN
+    F.state.rates = nil; F.freeze_rates(); F.state.rates.actions = true
+    TURN = 9400
+    local bulk
+    for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+        if g.use == zd.use and not g.rare then bulk = bulk or g.stem end
+    end
+    local vzP = faction("vzP", { human = true, sc = "wh_main_sc_vmp_vampire_counts" })
+    local vz1 = region("vz1", 43100, 0, 4000, { dragon_bone = 100, [bulk] = 400 }); own(vzP, vz1, true)
+    DERPY_MR_FLOWS_POOL_HAS[zd.pool] = DERPY_MR_FLOWS_POOL_HAS[zd.pool] or {}
+    DERPY_MR_FLOWS_POOL_HAS[zd.pool].vzP = true
+    local p0 = #POOL
+    F.request("vzP", "work", zd.key)
+    eq(POOL[p0 + 1] and POOL[p0 + 1].unit, zd.grant, "a Vampire Counts faction buys its Zombie Dragon")
+    eq(POOL[p0 + 1] and POOL[p0 + 1].src, zd.pool, "into its own Regiments of Renown pool")
+    eq(vz1.held.dragon_bone, 100 - zd.rare_n, "paid in dragon bone")
+    local czP = faction("czP", { human = true, sc = "wh3_main_sc_cth_cathay" })
+    eq(F.work_state(czP.iface, "unit_wh3_main_cth_inf_dragon_guard_0") ~= nil, true, "Cathay sees its Dragon Guard")
+    eq(F.work_state(czP.iface, "unit_wh_main_brt_cav_pegasus_knights"), nil, "and not Bretonnia's Pegasus Knights")
+    -- stage 3 review: Kislev makes no feathers and trade stops at one shipment, so no feather works
+    local kzP = faction("kzP", { human = true, sc = "wh3_main_sc_ksl_kislev" })
+    eq(F.work_state(kzP.iface, "item_phoenix_pinion"), nil, "Kislev is offered no feather work")
+    eq(#ERRORS, 0, "no script errors: " .. table.concat(ERRORS, "; "))
+    lose(vzP, vz1)
+    F.state.rates, TURN = rates0, turn0
+end)()
+
+-- ---- STAGE 2 FINAL REVIEW (2026-10-08): a pool at its cap, a lord's trait on a hero ----
+;(function()
+    local W = {}
+    for _, w in ipairs(DERPY_MR_FLOWS_WORKS) do W[w.key] = w end
+    local food, spice = W.conv_food, W.trait_spice
+    local rates0, turn0 = F.state.rates, TURN
+    F.state.rates = nil; F.freeze_rates(); F.state.rates.actions = true
+    TURN = 9500
+    local skP = faction("skP", { human = true, sc = "wh2_main_sc_skv_skaven", pools = { skaven_food = 98 },
+                                 pool_max = { skaven_food = 100 } })
+    local sk1 = region("sk1", 43200, 0, 2000, { grain = 100, salted_fish = 100 }); own(skP, sk1, true)
+    eq(F.work_state(skP.iface, food.key).why, "full", "98 of 100 Food: the 4 would not fit")
+    F.request("skP", "work", food.key); eq(sk1.held.grain, 100, "so nothing is taken")
+    FPOOL.skP.skaven_food = 100 - food.amount
+    eq(F.work_state(skP.iface, food.key).ok, true, "room for exactly the 4: open")
+    local npP = faction("npP", { human = true, sc = "wh2_main_sc_skv_skaven" })
+    local np1 = region("np1", 43300, 0, 2000, { grain = 100, salted_fish = 100 }); own(npP, np1, true)
+    eq(F.work_state(npP.iface, food.key).why, "no_pool", "a faction without the pool cannot buy into it")
+    F.request("npP", "work", food.key); eq(np1.held.grain, 100, "and pays nothing")
+    -- a lord's trait (general_to_force_own): a hero would hold it for nothing
+    local lhP = faction("lhP", { human = true, sc = "wh_main_sc_emp_empire" })
+    local lh1 = region("lh1", 43400, 0, 2000, { spices = 500, incense = 500 }); own(lhP, lh1, true)
+    character(81, lhP, host(81, { 1 })); character(82, lhP, nil)
+    F.request("lhP", "aim", spice.key, "82")
+    eq(CHARS[82].traits[spice.trait], nil, "a hero cannot take a lord's trait"); eq(lh1.held.spices, 500, "nothing taken")
+    eq(F.work_state(lhP.iface, spice.key, nil, 82).why, "not_lord", "and says why")
+    F.request("lhP", "aim", spice.key, "81"); eq(CHARS[81].traits[spice.trait], true, "a lord can")
+    eq(#ERRORS, 0, "no script errors: " .. table.concat(ERRORS, "; "))
+    lose(skP, sk1); lose(npP, np1); lose(lhP, lh1)
+    F.state.rates, TURN = rates0, turn0
+end)()
 
 -- ---- the run-cost counter (Task 7 reads it) --------------------------------------------
 local counters = F.cost

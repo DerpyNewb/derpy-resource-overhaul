@@ -342,7 +342,7 @@ an explicit list because `chain_category` (money/military/happiness) is too coar
 farm from a tavern. **No fallback, by the user's lore ruling:** a race with no building of a kind
 makes none of those goods and gets them by trade or raiding - Chaos Dwarfs make no farm goods,
 Norsca and Vampire Counts no farm or industry goods, and only Bretonnia, the Empire, High Elves,
-Kislev and Norsca breed warhorses and feathers. One deliberate exception: Norscan mead also comes
+Kislev and Norsca breed warhorses; only Bretonnia and the Empire keep eyries for feathers. One deliberate exception: Norscan mead also comes
 from Norsca's main settlement (`("settlement", "nor")` pool - the jarl's hall is the mead hall).
 `check()` asserts no farm/industry chain of those races creeps back in, and that every listed
 chain is buildable in a secondary slot and carries a race tag.
@@ -523,7 +523,8 @@ so a score row would have the AI build them where they do nothing. The 27 chains
 factions instead.
 
 - **Which regions.** The script carries a list, per rare good, of the regions where
-  `rare_cond()` holds: 124 across Immortal Empires, the Realm of Chaos and IEE's own regions.
+  `rare_cond()` holds and a permitted slot template lets the chain in (`ai_regions()`): 172 as of
+  2026-10-08 (55 Immortal Empires and Realm of Chaos, 26 IEE, 91 Old World).
   Some IEE deposits and races of origin can't be read offline. Those regions read as no, so any
   mistake leaves a building unbuilt rather than built where it does nothing.
 - **When.** On `FactionTurnStart`, for AI factions only, each faction acts once every 5 turns
@@ -538,7 +539,9 @@ factions instead.
 - **Checked by.** `check_ai()` and `tools/_resource_overhaul_ai_harness.lua`, which run the
   generated script under Lua 5.1. Mutation-tested against four faults: charging without
   verifying, ignoring the region list, skipping the tier check, and acting for a human.
-- **Not yet seen in game.** `cm:add_building_to_settlement` has no use anywhere in CA's scripts.
+- **Not yet seen in game.** CA does use `cm:add_building_to_settlement` (corrected 2026-10-08:
+  `wh3_tol_something_rotten_in_kislev.lua:637-641` adds secondary resource buildings with it, as
+  this script does; also `wh3_tol_helpers.lua:33`, `wh3_dlc25_gelt_dilemmas.lua:98`).
   The script logs `derpy_mr_ai:` for every build, upgrade and failure, so the first AI turn in a
   campaign shows whether it works.
 
@@ -996,6 +999,18 @@ option ("Occupy and restore") is part 2 and is not built: it needs the game meas
 - **To see in game:** each dilemma's picture and text with its target named; the siege bundle
   stopping siege attrition; the diplomatic bonus's size.
 
+**Seen in game 2026-10-08 (Arsenal, a Dwarf game):** nothing under either button, and the text read
+"'s army". The list under a button is drawn from payload rows only, and these dilemmas had none.
+Each choice now carries `TEXT_DISPLAY` rows (`LOOKUP[<component>]`; display only, the script still
+pays): the cost (`negative`, the use's icon from `gen_mr_ui.USE_ICON`) and the reward (`positive`, the
+bundle's icon, or `icon` on the event) under the accept button, read off the accept line, and
+"Nothing is spent" under "Keep the stores". `check_dilemmas()` holds every choice to a line, every
+state to CA's four, every icon to CA's packs, and ids unique and clear of CA's; three planted faults
+caught. **The blank name:** `CharacterTargetName` drew empty with the character AND the force handed
+to `trigger_dilemma_with_targets`; cause unproven (CA's Sword of Khaine hands the character alone).
+The Arsenal no longer uses the token: "Your largest army", which is the army the script picks.
+Deployed to `data/` in `10c0547c` (with section 28).
+
 **Part 2, the capture option, needs measuring first.** CA's Dechala row
 (`culture_settlement_occupation_options`, id 1218317010) charges through
 `captured_region_resource_transaction = wh3_dlc27_resource_cost_sla_thralls_occupation`, a
@@ -1408,3 +1423,243 @@ the wh3 bridge was not connected that session, so nothing was probed live.
   press on bare map starts a drag through the non-interactive picture, and that the markers still
   click. If the press does not reach the grab layer, the wh3 bridge can read `IsDragged()` on it
   live.
+
+### 27i. The mouse wheel over the map (2026-10-08) - DragAndZoomCallback tried and removed
+
+**Seen in game:** the wheel over the Map tab zoomed the campaign camera under the panel, not the
+Vault's map. The wheel is not a shortcut (`text/default_keys_osx.xml` has no wheel binding, so
+`cm:disable_shortcut` cannot block it), and no wheel event reaches script.
+- **Tried:** CA's `DragAndZoomCallback` on the grab layer (documented for "drag around and zoom in
+  and out ... with mouse wheel scroll (for maps, etc)", used in no WH3 ui pack), with the poll
+  reading any engine resize of the layer as a zoom step.
+- **Seen in game the same morning (`script_log_081026_0935.txt`):** dragging stopped working and the
+  wheel zoomed nothing. Every press reached `derpy_mr_map_grab` and the log printed it at the same
+  `[550, 362]`, `[820, 448]` each time: the callback took the press away from `Movable XP` and moved
+  or sized nothing a script can read. No `map wheel` line.
+- **Removed:** the layer is back to `Movable XP` alone, and `gen_mr_ui.py` now asserts the callback
+  is absent. Deployed to `data/` (`5bc530b4`; the broken `6d2c196b` backed up in
+  `Backup/resource_overhaul_20261008_wheel_revert/`). Wheel zoom stays open; the + and - buttons are the zoom. Untried:
+  `DraggableContainerCallback` (on a clipped child, user property `allowance`).
+
+## 28. Stopping a good's CA trade export (measured 2026-10-08)
+
+Asked: the Trade tab's Exports switch stops only the stores' shipments, while CA's trade
+agreement still pays for the good. Measured live through the bridge (Old World, Overlords of
+Zharrduk, one salt building at 20 barrels, trading with the Conclave):
+
+| Test bundle on the faction | After the turn |
+|---|---|
+| `wh3_dlc29_effect_region_disable_resource_salt`, `faction_to_region_own`, 1 and 100 | no change, 20 barrels (bundle confirmed present). CA's 16 disable effects are dead content |
+| `wh_main_effect_region_resource_salt_production`, `faction_to_region_own`, -20 | salt gone from Producing and Exports; income 465 -> 285, exactly 20 x 9 |
+
+Trade figures move at turn start only; a mid-turn read is not a measurement. Imports cannot be
+refused per good (they are the partner's exports). Memory `wh3-stop-a-trade-export-per-faction`.
+
+**First build, WITHDRAWN the same day: a flat -1000 per good, faction-wide.** A custom bundle with
+each stopped good's production effect at `faction_to_region_own`, -1000. Stop all, in game: Producing
+emptied, and the Trade Forecast then listed EXPORTS of goods the faction never made (Dwarf Beer,
+"Exporting: 20 kegs", value 12), income 465 -> 18,801. A production total far below zero is not
+read as zero by CA's trade; the -20 row above worked only because it cancelled exactly what was
+made. Never push a resource's production below zero.
+
+**As built: exact hold rows.** Every production row (`building_to_building_own`, one of the 54
+goods' production effects) gets a twin with `value`, `value_damaged` and `value_ruined` negated and
+`context_requirement` = `derpy_mr_hold_<stem>[__<its own condition>]`, an expression
+`(<its own condition>) && Owner.IsEffectBundleActive("derpy_mr_hold_<stem>") == true` (CA's own
+building-to-owner test, `HasToZFactoryConclaveSeat`). The cancel is therefore exactly what is made,
+same lore gates, same damage, never below zero. Three sets, each in a file of its own so every
+production check still reads production: `_hold` (our 2,810 rows), `_hold_ca` (CA's 820, refused by
+the public repo like the `_ca` twins), and the Old World submod's 33 (its 30 plus the map mod's own 3).
+`F.hold_exports` now only puts the 54 hidden faction markers `derpy_mr_hold_<stem>` on and off
+(`cm:apply_effect_bundle(k, f, 0)`; 0 is indefinite, CA's wrapper clamps -1 to it) and the visible
+record `derpy_mr_exports_held`, which it always removes first: a save from the first build carries
+a custom bundle under that key with -1000 on every good. Players only; the player's turn start
+re-syncs. **Checked by** `check_hold_part` (one hold per production row, negated, own condition
+then marker; main pack, CA's rows, the Old World submod), nine selftest mutants, and the flows
+harness, ten mutants, eight caught, two equivalent (re-running `hold_exports` is idempotent).
+The harness assumes a DB bundle applied over a custom one of the same key does NOT replace it,
+which is unmeasured. Deployed to `data/` (`32e3a7c8`; backup
+`Backup/resource_overhaul_20261008_hold_rows/`). **To see in game:** Stop exports of one good, end
+the turn: it leaves the Trade Forecast and income drops by its value only, with no other good
+appearing; Allow, end the turn, and it returns. Unmeasured: whether a building effect expression
+re-reads the owner's bundles at turn start (it should: CA's ToZ factory seat works the same way).
+
+**Every scope, since the sweep (section 30).** The first hold build twinned only
+`building_to_building_own` rows. CA has 13 more production rows for these goods on other scopes:
+Underdeep gems/iron/marble and the beer blocker on `foreign_building_to_region_own`, the Spirit of
+Grungni beer halls on `force_to_region_own`, and the Underdeep drinking halls, which CONSUME beer
+(-4/-2/-10) on `foreign_building_to_region_own`. Holding beer cancelled the positive rows and left the
+consumption, a total below zero: the phantom case above. Each now has a twin on its own scope
+(`_hold_ca` 833 rows); `check_hold_part` no longer filters by scope, so a scope filter put back is a
+count mismatch. Whether `Owner.` evaluates on a foreign-building or force scope is unmeasured; if it
+does not, those twins never apply, which is the old behaviour. NOT holdable: 17 rows in
+`campaign_effect_list_effect_junctions` (Aislinn's colonies, the dragonship, Throgg's dens; that table
+has no condition column) and the Talabecland minister bundle (timber +24). They are positive only, so
+a held good there keeps a small export, never a phantom one.
+
+## 29. Import duty (2026-10-08)
+
+Spec `superpowers/specs/2026-10-08-resource-overhaul-import-duty-design.md` (decisions: 10%,
+everyone pays, gold to the exporter). Deployed to `data/` (`413927e5`; backup
+`Backup/resource_overhaul_20261008_import_duty/`), not seen in game.
+- `F.duty(faction)` at every faction's turn start, after `F.trade`: for each partner in
+  `factions_trading_with()`, `floor(F.made_value(partner) x rate / 100)`, capped at the payer's
+  treasury, `cm:treasury_mod(payer, -due)` then `(partner, due)`. Computers under "Other factions use
+  their stores"; `F.uses_stores` gates the payer.
+- `F.made_value(faction)`: one walk of every settlement's store pools, summing each
+  `derpy_mr_stocked` factor x `F.price(g)` (the Exchange's price, else `SELL_RATE`); cached per
+  faction per game turn.
+- Booked for humans by game turn (`book.duty[turn]`, two kept); the panel shows the turn before.
+- MCT "Import duty" slider 0-50, default 10 (`RATES`); an old save fills the new key in.
+- Trade tab: an "Import duty" first row (CA's `income.png`), "paid N, received M" under Last turn,
+  each partner in its tooltip; no row while the rate is 0. The Imports tooltips now say trade
+  agreement imports carry import duty (they said "cost you nothing" for an hour).
+- **Checked by** the flows harness (payment, the partner gets exactly it, ledger next turn, a
+  computer pays the player, its switch, a 5-gold payer pays 5 and runs no debt, rate 0, nothing
+  made) and the stores harness (row first, both ways, tooltip, no switches, hidden at 0); 7
+  mutants: 6 caught, the 7th (the rate-0 early return) only skips the walk and is commented so.
+  Preview `mr_trade.png` drawn and read.
+- **To see in game:** the treasury moving at turn start by the row's figures; the Conclave's
+  treasury rising by what you paid; turn-start time with many factions trading.
+
+**Seen in game the same afternoon (turn 6): "received 6128".** The duty priced goods with
+`F.price`, the Exchange's market price when it is loaded: salt 818, coal 400, brass 1,930,
+blackpowder 4,549 a unit (read live). One turn's 44 units came to 61,690, so the Conclave paid its
+whole treasury. CA's trade pays 9 a unit (Trade Forecast "Resource value: 9" for Salt and Brimstone,
+both `trade_value` 50). **Fixed:** each good carries `value` = `trade_value` x `gen_mr_ui.CA_UNIT_VALUE`
+(9/50, measured) on `DERPY_MR_FLOWS_GOODS`, and `F.made_value` uses it, never `F.price`. The harness
+now runs the duty with a stub Exchange at 818 and expects CA's value; putting `F.price` back is
+caught. Deployed `b2db35fd` to `data/` (backup `Backup/resource_overhaul_20261008_duty_price/`). That save keeps the
+6,128 windfall and the Conclave's empty treasury.
+
+## 30. The full sweep (2026-10-08)
+
+Six read-only reviews (flows economy, flows engine safety, the panel, the AI/hub/MCT scripts and
+cross-file keys, the DB generator, the harnesses with 95 mutants), every claim re-read in the code
+before fixing. Fixed, each with a harness test watched failing (20 mutants, 20 caught):
+
+1. **Sell surplus paid 10x with the Exchange loaded.** `EX.sell_price` is a LOT's price (the
+   Exchange's own note at `EX.holdings_value`); `F.price` now divides by `EX.lot`. The per-unit
+   market figures in section 29 (salt 818, blackpowder 4,549) were lot prices too.
+2. **Sell desynced multiplayer with the Exchange loaded:** `EX.sell_price` reads the houses' stance
+   toward `EX.who()`, the LOCAL player. `F.price(g, fkey)` runs it inside `EX.with_player(seller)`.
+3. **Holds missed 13 CA rows on other scopes**, beer going below zero (section 28, "Every scope").
+4. **Import duty on held goods:** `F.made_value` skips a good the exporter holds.
+5. **Two Restores in one turn:** the answer cannot say which settlement, so the second offer
+   replaced the first and the first answer paid for and repaired the second. One Restore per
+   faction per turn; a pending one from an earlier turn is stale and blocks nothing.
+6. **The turn-start snapshot read display names** (loc from a turn handler, the turn-1 CTD of
+   2026-09-07). `S.read_realm(faction, true)` reads none; the harness counts loc calls in a human's
+   turn start and expects 0.
+7. **Opening the Vault froze the settings** (single player, before the first turn start).
+   `F.rates()` is now a read; `F.freeze_rates()` writes, at first tick (a new campaign fires no
+   FactionTurnStart until turn 1 ends) and at every turn start. The MCT page greys every option in a
+   campaign with a reason, as the Guilds' and the Exchange's do.
+8. **A dilemma never issued left its offer pending and started the event gap.** CA's wrapper
+   returns false in multiplayer when not issued (single player always true, an intervention):
+   the offer is cleared and no gap starts.
+9. **A failed siege's battle reading fed a later raze.** Any decision spends it, and it is stamped
+   with its turn.
+10. **Supply pay icon pulsed red while the capital could pay:** short is now the use's total.
+11. **Workshop tooltip listed rare goods** after "not counting rare goods".
+12. **Pay icon tie by resource key, payment by stem** (Starwood shown, Marble taken).
+13. **Chart's newest bar** read as the live figure: now "Start of turn N: X held".
+14. **Imports tooltip on greyed rows carried the grey markup.**
+15. **Import duty row shown to factions that never pay** (no stores).
+
+Not a bug on reading: a seized shipment shows in the owner's history as moved and lost on the road
+(sent as `moved_out`, never `moved_in`). Left for decisions, not fixed: rare goods spent as bulk
+by orders/supplies/events; duty one way with "Other factions use their stores" off; Restore not
+offered on loot-and-occupy; our Underdeep coal/silver/brimstone rows on `building_to_building_own`
+where CA scopes that building `foreign_building_to_*` (probably makes nothing for trade; look in
+game). Also open: AI supply and event books never pruned (bounded, ~160 KB worst case);
+`derpy_hub_mr.lua:109` says wrappers must be compared by Id, but line 337 compares with `==` and
+works (CA does the same, `lib_help_pages.lua:2592`); the hub is shared by four mods, so its comment
+is left. Deployed `b57c8802` to `data/` (backup `Backup/resource_overhaul_20261008_sweep_fixes/`).
+
+**Decisions the same day (author).** A: a rare good is never bulk - `F.bulk(use)` is the one pick
+every use-wide count and draw goes through (`F.use_total`, `F.draw`, orders, events, the supply
+icon, Supply the capital), so orders, supplies, events, upkeep and the holding bonuses neither count
+nor take gromril, ithilmar, dragon bone, starwood and the rest; only the Workshop does, and the
+panel's goods lists leave them out. C: Restore is offered on loot-and-occupy too. D: the Underdeep
+coal/silver/brimstone rows show prices in game, so `building_to_building_own` works on that
+foreign-slot building; nothing to change. B (one-way duty with the other-factions switch off) is
+still open. Six mutants, six caught; deployed `40797c9d` (backup
+`Backup/resource_overhaul_20261008_rare_loot/`).
+B, decided: **duty runs both ways wherever a player is one side**, the rule trade follows
+(`F.allowed` per partner): with "Other factions use their stores" off, a computer partner now pays
+the player, and two computer factions pay each other nothing. Two mutants caught; deployed
+`dc14833f` (backup `Backup/resource_overhaul_20261008_duty_both_ways/`).
+
+## 31. The recruitment draw (built 2026-10-08, not yet seen in game)
+
+Stage 1 of the Workshop expansion (spec `superpowers/specs/2026-10-08-resource-overhaul-workshop-expansion-design.md`
+section 3, plan `superpowers/plans/2026-10-08-resource-overhaul-recruitment-draw.md`).
+
+- **Trigger:** `UnitTrained`, `context:unit()` (CA reads `:faction()` there too, `corruption_swing.lua:127`).
+  Reads `unit_caste()` and `get_unit_custom_battle_cost()`. CA documents the second as the *multiplayer /
+  custom battle* cost, so a recruit is priced at that, not at its campaign cost.
+- **Rule:** `ceil(value/100 * per100)` of the caste's use (`gen_mr_ui.CASTE_DRAW`); value >= 1200 also takes
+  `ceil(value/400)` of the race's rare good (`RACE_RARE`, Dark Elf foot `black_lotus`). Lords, heroes,
+  `generic`, an unreadable caste or a 0 value take nothing.
+- **Shortfall:** Chaos Dwarfs Armaments (1 per 2 goods), Ogres Meat (1 per 3), Skaven Food (1 per 2), through
+  the spend-only factor `derpy_mr_recruit`; then gold at 2x the cheapest good of that line, capped at the
+  treasury. **Tomb Kings and Khorne get no currency**, a deviation from the spec: both are in `NO_STORES`, so they
+  never draw.
+- **Workshop units** record one free recruit per purchase (`works.free[unit]`); the next `UnitTrained` of
+  that key is skipped. The army route (`grant_unit_to_character`) records one too, **unmeasured**: if it
+  fires no `UnitTrained`, the next ordinary recruit of that unit goes free.
+- **Panel:** "Recruits last turn" at the foot of the Spending tab, with the race's line in its tooltip.
+- **Not measured yet (plan Task 0, deferred because the game was shut):** whether `UnitTrained` fires for
+  global recruitment, mercenaries, the computer and `grant_unit_to_character`, and whether
+  `unit_caste()` / `get_unit_custom_battle_cost()` answer on the campaign unit. A failing read is caught by
+  `F.guard` and charges nothing.
+- Final review fix: the free recruit is booked BEFORE the grant call, so a `UnitTrained` the engine fires inside
+  `grant_unit_to_character` finds it (harness stubs a re-entrant grant). Open: if that call does fire
+  `UnitTrained`, CA's own scripted gifts (custom starts, caravans, Glottkin) are charged as recruits too; the
+  in-game check must include one CA grant. Known and kept: a war machine with an odd base takes one extra
+  good (each half rounds up).
+- 13 + 2 + 4 mutants caught. Deployed `3fe19009` (backup of the build before it: `Backup/resource_overhaul_20261008_recruit_draw/`).
+
+## 32. Named recipes (built 2026-10-08, not yet seen in game)
+
+Stage 2 of the Workshop expansion (plan `superpowers/plans/2026-10-08-resource-overhaul-named-recipes.md`).
+`gen_resource_overhaul.WORK_RECIPES`: 18 works priced in named common goods, drawn by STEM (`rare_pick`),
+never by use, so a recipe never spends a good it does not name.
+
+- **Race resources** (once a turn, gain-only factor `derpy_mr_workshop`): Chaos Dwarfs coal/brimstone/iron
+  -> 30 Armaments; Skaven grain/salted_fish -> 4 Food (the pool caps at 100); Dwarfs gold_idols/silver -> 30
+  Oathgold; Vampire Coast rum/pearls -> 50 Infamy (a SCORE toward victory, not a currency). **No Ogre Meat:**
+  `wh3_main_ogr_meat` is scope `MILITARY_FORCE`, out of `cm:faction_add_pooled_resource`'s reach (the same
+  finding removed Ogres from stage 1's shortfall currency; Skaven's shortfall rate became 1 Food per 5 goods).
+- **Army works** on the army selected on the map (`cm:get_campaign_ui_manager():get_char_selected_cqi()`,
+  carried through the new `aim` action on the UITrigger door): Rations and Drill (+1 rank), Ammunition Train,
+  Field Forge, Remounts, Medicine Chests (force bundles, 5 turns). A wait of 5 turns **per army, per work**.
+  Medicine Chests give attrition resistance: CA has no generic post-battle casualty recovery.
+- **Lord and hero works**: five traits on CA's donor `wh2_main_trait_defeated_balthasar_gelt`'s rows,
+  `cm:force_add_trait`, once per character. Spice-hardened's movement -5% is the one listed penalty.
+- **Works that last**: five faction bundles for good, once a campaign (stays bought if the bundle goes).
+- **Computer factions** buy lasting works and conversions only, every good held twice over. Their unit
+  purchases now book the free recruit before the grant (stage 1's review finding, on the AI path).
+- **Panel**: a recipe's price is up to four icon-and-amount pairs from column 3 (`PRICE_PITCH` 50, row
+  cells `use1-4`/`pn1-4`), short ones grey and red; every Workshop section folds on a click.
+- 5 + 6 + 8 + 6 + 6 mutants caught. Deployed `e371147d` (backup `Backup/resource_overhaul_20261008_named_recipes/`).
+
+## 33. Rare works deepened, and stage 2's review (built 2026-10-08, not yet seen in game)
+
+Stage 3 (plan `superpowers/plans/2026-10-08-resource-overhaul-rare-works-deepened.md`): 15 more CA items and
+9 more units on the existing rare pricing, plus Regiments of Renown pools for four races new to the Workshop
+(Vampire Counts, Cathay, Norsca). Every row passes `check_works` (faction sets via `_set_admits`, units in
+`main_units`, pools owned). Lore-led: the Zombie Dragon for dragon bone (CA's own dragon graves grant it), Norsca's
+Frost Wyrm and Drake Hunters' Banner, Cathay's Dragon Guard and Icon of the Spirit Dragon.
+Left out: Imrik's Vine Dragon Scale (his encounter reward), the Feral Wyvern
+(Waaagh-pool only), the Ogre Dragonhide Banner, and Kislev's three feather works (Winged Lancers, Phoenix Pinion, Griffon Banner):
+Kislev makes no feathers and `F.lacks` ships only to a capital holding none, so an import stops at one
+shipment, short of every price. `check_works` now asserts a rare work's races can make its good. CA's "Magnificent Armour of Borek Beetlebrow" shows as "Armour of
+Borek Beetlebrow" in the panel (the row's name field; the item keeps CA's name).
+
+Stage 2's final review, three findings fixed: a conversion is refused when the pool cannot take it ("full": Skaven
+Food caps at 100) or the faction has no such pool ("no_pool"); Spice-hardened and Furred and Booted are a lord's
+only (`lord = true`, `character_type("general")`), since their effects are `general_to_force_own`; the Workshop
+redraws on `CharacterSelected`/`CharacterDeselected` and a click whose selection moved since the draw redraws
+instead of buying for the old army. Deployed `aae632d2` (backup `Backup/resource_overhaul_20261008_rare_works/`).

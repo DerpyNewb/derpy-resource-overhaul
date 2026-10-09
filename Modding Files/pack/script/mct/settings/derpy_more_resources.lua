@@ -2,10 +2,13 @@
 --
 -- MCT registration for Resource Overhaul's stores. MCT loads every .lua under
 -- script/mct/settings/, so this file only ever runs when MCT is installed. The
--- campaign script freezes these values into the save at the first turn start.
+-- campaign script freezes these values into the save at the first tick; the lock
+-- below only shows that in a campaign (MCT has no campaign gating of its own).
 
 local mct = get_mct and get_mct()
 if not mct then return end
+local IN_CAMPAIGN = __game_mode == __lib_type_campaign
+local LOCK_REASON = "Fixed when a campaign starts. Change it from the main menu before starting a new one."
 
 local m = mct:register_mod("derpy_more_resources")
 m:set_title("Derpy Resource Overhaul")
@@ -21,6 +24,7 @@ o_raid:slider_set_min_max(0, 50)
 o_raid:slider_set_step_size(1, 0)
 o_raid:set_default_value(10)
 o_raid:set_assigned_section("stores")
+if IN_CAMPAIGN then o_raid:set_locked(true, LOCK_REASON) end
 
 local o_sack = m:add_new_option("sack", "slider")
 o_sack:set_text("Sack share")
@@ -30,6 +34,7 @@ o_sack:slider_set_min_max(0, 100)
 o_sack:slider_set_step_size(1, 0)
 o_sack:set_default_value(50)
 o_sack:set_assigned_section("stores")
+if IN_CAMPAIGN then o_sack:set_locked(true, LOCK_REASON) end
 
 local o_raze = m:add_new_option("raze", "slider")
 o_raze:set_text("Raze share")
@@ -39,6 +44,7 @@ o_raze:slider_set_min_max(0, 100)
 o_raze:slider_set_step_size(1, 0)
 o_raze:set_default_value(50)
 o_raze:set_assigned_section("stores")
+if IN_CAMPAIGN then o_raze:set_locked(true, LOCK_REASON) end
 
 local o_trade = m:add_new_option("trade", "slider")
 o_trade:set_text("Trade share per turn")
@@ -48,6 +54,17 @@ o_trade:slider_set_min_max(0, 25)
 o_trade:slider_set_step_size(1, 0)
 o_trade:set_default_value(5)
 o_trade:set_assigned_section("stores")
+if IN_CAMPAIGN then o_trade:set_locked(true, LOCK_REASON) end
+
+local o_duty = m:add_new_option("duty", "slider")
+o_duty:set_text("Import duty")
+o_duty:set_tooltip_text("Each turn, every faction pays each trade partner this share of the value of what that partner's settlements made that turn, at the value trade agreements put on it. The gold goes to the partner. 0 turns this off.")
+o_duty:slider_set_precision(0)
+o_duty:slider_set_min_max(0, 50)
+o_duty:slider_set_step_size(1, 0)
+o_duty:set_default_value(10)
+o_duty:set_assigned_section("stores")
+if IN_CAMPAIGN then o_duty:set_locked(true, LOCK_REASON) end
 
 local o_ships = m:add_new_option("ships", "slider")
 o_ships:set_text("Shipments on the road")
@@ -57,12 +74,24 @@ o_ships:slider_set_min_max(1, 10)
 o_ships:slider_set_step_size(1, 0)
 o_ships:set_default_value(3)
 o_ships:set_assigned_section("stores")
+if IN_CAMPAIGN then o_ships:set_locked(true, LOCK_REASON) end
+
+local o_recruit_per = m:add_new_option("recruit_per", "slider")
+o_recruit_per:set_text("Resources per 100 gold of a recruit")
+o_recruit_per:set_tooltip_text("How many resources a recruit takes from your stores for each 100 gold it is worth. 0 turns this off.")
+o_recruit_per:slider_set_precision(0)
+o_recruit_per:slider_set_min_max(0, 5)
+o_recruit_per:slider_set_step_size(1, 0)
+o_recruit_per:set_default_value(1)
+o_recruit_per:set_assigned_section("stores")
+if IN_CAMPAIGN then o_recruit_per:set_locked(true, LOCK_REASON) end
 
 local o_ai = m:add_new_option("ai", "checkbox")
 o_ai:set_text("Other factions use their stores")
-o_ai:set_tooltip_text("Factions no player controls raid, sack, trade, eat and gain bonuses from their stores as a player does. Off: resources move only when a player's faction is one of the two, and other factions' settlements neither eat nor gain bonuses, which makes turns faster on a slow machine.")
+o_ai:set_tooltip_text("Factions no player controls raid, sack, trade, eat, recruit and gain bonuses from their stores as a player does. Off: resources move only when a player's faction is one of the two. Other factions' settlements do not eat or gain bonuses, and their recruits take nothing. Turns run faster on a slow machine.")
 o_ai:set_default_value(true)
 o_ai:set_assigned_section("stores")
+if IN_CAMPAIGN then o_ai:set_locked(true, LOCK_REASON) end
 
 m:add_new_section("using", "Using stores")
 
@@ -71,21 +100,32 @@ o_upkeep:set_text("Settlements use their stores")
 o_upkeep:set_tooltip_text("Each turn every settlement eats provisions from its stores. Five turns of provisions left make it Well fed; war materials and luxuries filling a quarter of one store's space give Garrison stocked and Comforts. Off: stores are only kept, raided and traded.")
 o_upkeep:set_default_value(true)
 o_upkeep:set_assigned_section("using")
+if IN_CAMPAIGN then o_upkeep:set_locked(true, LOCK_REASON) end
 
 local o_actions = m:add_new_option("actions", "checkbox")
 o_actions:set_text("Resource Vault actions")
 o_actions:set_tooltip_text("The Resource Vault can send a resource between your settlements, buy a Festival, Muster or Great Works with your stores, and sell what your stores hold above half their space. Off: the panel only shows.")
 o_actions:set_default_value(true)
 o_actions:set_assigned_section("using")
+if IN_CAMPAIGN then o_actions:set_locked(true, LOCK_REASON) end
 
 local o_events = m:add_new_option("events", "checkbox")
 o_events:set_text("Store events")
 o_events:set_tooltip_text("Now and then a full store offers a choice: a feast, opening the stores to a besieged garrison, a gift to a neighbour or re-arming an army. Accepting spends the resources. Other factions make the same choices on their own. Off: no events.")
 o_events:set_default_value(true)
 o_events:set_assigned_section("using")
+if IN_CAMPAIGN then o_events:set_locked(true, LOCK_REASON) end
 
 local o_supply = m:add_new_option("supply", "checkbox")
 o_supply:set_text("Province supplies")
-o_supply:set_tooltip_text("A province capital can pay from its stores each turn for Materials on hand, Stable stocked and Arms stocked in every settlement you hold in its province, and can send for goods from the province's other settlements. Off: no province supplies.")
+o_supply:set_tooltip_text("A province capital can pay from its stores each turn for Materials on hand, Stable stocked and Arms stocked in every settlement you hold in its province, and can send for resources from the province's other settlements. Off: no province supplies.")
 o_supply:set_default_value(true)
 o_supply:set_assigned_section("using")
+if IN_CAMPAIGN then o_supply:set_locked(true, LOCK_REASON) end
+
+local o_recruit = m:add_new_option("recruit", "checkbox")
+o_recruit:set_text("Recruits use the stores")
+o_recruit:set_tooltip_text("Every unit you recruit takes resources from your stores by its type and worth (cavalry and monsters take mounts, infantry and war machines take war materials, the finest also take your rare resource). What the stores lack is paid in your race's own currency where it has one, then in gold. Off: recruiting takes nothing.")
+o_recruit:set_default_value(true)
+o_recruit:set_assigned_section("using")
+if IN_CAMPAIGN then o_recruit:set_locked(true, LOCK_REASON) end

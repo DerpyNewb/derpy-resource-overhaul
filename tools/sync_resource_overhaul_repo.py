@@ -35,9 +35,14 @@ CA_CLONES = ("resources_tables", "resources_to_campaign_junctions_tables",
              "cai_personality_strategic_resource_values_tables", "effects_tables",
              "building_chains_tables", "building_levels_tables",
              "building_culture_variants_tables", "pooled_resources_tables",
-             "campaign_interactable_marker_infos_tables", "dilemmas_tables")
+             "campaign_interactable_marker_infos_tables", "dilemmas_tables",
+             # the Workshop's own items and traits: CA's donor rows with our key (2026-10-08)
+             "ancillaries_tables", "ancillary_to_effects_tables",
+             "character_traits_tables", "character_trait_levels_tables")
 # Whole FILES that are CA rows with our key: the store twins of CA's production rows (2026-10-02).
-CA_CLONE_FILES = ("building_effects_junction_tables__derpy_more_resources_ca.tsv",)
+# And their hold twins, negated (2026-10-08).
+CA_CLONE_FILES = ("building_effects_junction_tables__derpy_more_resources_ca.tsv",
+                  "building_effects_junction_tables__derpy_more_resources_hold_ca.tsv")
 
 # Anything that is art, a built pack, a CA ui file or a binary game format never goes public.
 REFUSED_EXT = (".png", ".dds", ".jpg", ".jpeg", ".webp", ".tga", ".pack", ".bin",

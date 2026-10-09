@@ -432,3 +432,9 @@ derpy_mr_store_trinkets_eaten	derpy_mr_eaten	derpy_mr_store_trinkets	-2147483647
 derpy_mr_store_trinkets_moved	derpy_mr_moved	derpy_mr_store_trinkets	-2147483647	2147483647		0
 derpy_mr_store_trinkets_spent	derpy_mr_spent	derpy_mr_store_trinkets	-2147483647	2147483647		0
 derpy_mr_store_trinkets_sold	derpy_mr_sold	derpy_mr_store_trinkets	-2147483647	2147483647		0
+derpy_mr_recruit_skaven_food	derpy_mr_recruit	skaven_food	-2147483647	0		0
+derpy_mr_recruit_wh3_dlc23_chd_armaments	derpy_mr_recruit	wh3_dlc23_chd_armaments	-2147483647	0		0
+derpy_mr_workshop_cst_infamy	derpy_mr_workshop	cst_infamy	0	2147483647		0
+derpy_mr_workshop_dwf_oathgold	derpy_mr_workshop	dwf_oathgold	0	2147483647		0
+derpy_mr_workshop_skaven_food	derpy_mr_workshop	skaven_food	0	2147483647		0
+derpy_mr_workshop_wh3_dlc23_chd_armaments	derpy_mr_workshop	wh3_dlc23_chd_armaments	0	2147483647		0

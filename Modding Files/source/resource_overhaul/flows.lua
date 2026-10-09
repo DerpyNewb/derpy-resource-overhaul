@@ -91,22 +91,25 @@ end
 -- A SAVE FROM BEFORE A SWITCH EXISTED has no key for it, and nil read as "off": phases 4 and 7
 -- never ran in such a save (measured live 2026-10-02). A missing key takes its value now and
 -- is frozen with the rest; the keys already frozen do not move.
+-- A READ, never a write: the panel calls it, and opening the panel before the first turn start
+-- froze the settings there (single player: the MCT then did nothing). F.freeze_rates writes.
 function F.rates()
     local r = F.state.rates
-    if not r then
-        r = F.read_rates()
-        F.state.rates = r
-    end
+    if not r then return F.read_rates() end
     for k in pairs(DERPY_MR_FLOWS_DEFAULTS) do
         if r[k] == nil then
-            local fresh = F.read_rates()
-            for k2, v in pairs(fresh) do
-                if r[k2] == nil then r[k2] = v end
-            end
-            break
+            local out = F.read_rates()
+            for k2, v in pairs(r) do out[k2] = v end
+            return out
         end
     end
     return r
+end
+
+-- THE ONE WRITER, at every faction's turn start: the same point on every machine.
+function F.freeze_rates()
+    F.state.rates = F.rates()
+    return F.state.rates
 end
 
 function F.is_human(fkey)
@@ -278,6 +281,12 @@ function F.capture_preview(region, taker, kind)
 end
 
 function F.on_occupation(context)
+    -- THE BATTLE'S READING IS SPENT BY ANY DECISION, first: left by an occupy or a skipped case,
+    -- it fed a later raze of the same settlement stock that was no longer there
+    local region = context:garrison_residence():region()
+    local at_battle = F.at_battle[region:name()]
+    if F.at_battle_turn[region:name()] ~= cm:model():turn_number() then at_battle = nil end   -- a failed siege's
+    F.at_battle[region:name()], F.at_battle_turn[region:name()] = nil, nil
     local what = F.DECISION[context:occupation_decision_type()]
     if not what then return end
     local character = context:character()
@@ -285,9 +294,6 @@ function F.on_occupation(context)
     local victim = context:previous_owner()        -- empty for rebels
     if victim == nil or victim == "" or victim == taker:name() then return end
     if not F.allowed(taker:name(), victim) then return end
-    local region = context:garrison_residence():region()
-    local at_battle = F.at_battle[region:name()]
-    F.at_battle[region:name()] = nil
     if F.pool(region, DERPY_MR_FLOWS_GOODS[1].stem) then
         at_battle = nil                            -- live stores win over the battle's reading
     elseif not at_battle then
@@ -302,7 +308,7 @@ end
 -- THE STORES AS THEY WERE AT THE BATTLE: the engine drops a razed region's pools before the
 -- occupation decision fires (measured 2026-10-02, Venom Glade). CA's Bloodgrounds caches the
 -- settlement the same way, on the same event. Not saved: the decision follows in the same session.
-F.at_battle = {}
+F.at_battle, F.at_battle_turn = {}, {}
 function F.on_battle(context)
     local pb = context:pending_battle()
     if not pb:has_contested_garrison() then return end
@@ -312,7 +318,7 @@ function F.on_battle(context)
         local h = F.held(region, g.stem)
         if h > 0 then t[g.stem] = h end
     end
-    F.at_battle[region:name()] = t
+    F.at_battle[region:name()], F.at_battle_turn[region:name()] = t, cm:model():turn_number()
 end
 
 -- ---- trade --------------------------------------------------------------------------------
@@ -377,6 +383,84 @@ function F.trade(exporter)
     end
 end
 
+-- ---- import duty (docs/superpowers/specs/2026-10-08-resource-overhaul-import-duty-design.md) --
+-- At its turn start a faction pays each trade partner a share of what that partner made this
+-- turn, at what CA's trade pays a unit (g.value, gen_mr_ui.CA_UNIT_VALUE), and the gold goes to
+-- the partner. NEVER the Exchange's market price: on it one turn's output cost a partner its
+-- whole treasury (seen in game 2026-10-08, 6,128 gold for 44 units).
+F.MADE = "derpy_mr_stocked"   -- the production twin rows' factor: this turn's output (measured 2026-10-08)
+
+-- What a faction's settlements made this turn, priced. One walk of its stores, kept for the turn:
+-- every partner of the faction asks the same question.
+function F.made_value(faction)
+    local fkey, turn = faction:name(), cm:model():turn_number()
+    if not (F.made_cache and F.made_cache.turn == turn) then F.made_cache = { turn = turn, of = {} } end
+    if F.made_cache.of[fkey] then return F.made_cache.of[fkey] end
+    local total, rl = 0, faction:region_list()
+    for i = 0, rl:num_items() - 1 do
+        local list = rl:item_at(i):pooled_resource_manager():resources()
+        for j = 0, list:num_items() - 1 do
+            local p = list:item_at(j)
+            local k = not p:is_null_interface() and p:key() or ""
+            local g = string.sub(k, 1, #F.PREFIX) == F.PREFIX and F.GOOD[string.sub(k, #F.PREFIX + 1)]
+            -- a good the exporter holds back leaves no trade agreement, so it carries no duty
+            if g and not F.stopped(fkey, "export", g.stem) then
+                local fl = p:factors()
+                for n = 0, fl:num_items() - 1 do
+                    local fc = fl:item_at(n)
+                    if fc:key() == F.MADE and fc:value() > 0 then total = total + fc:value() * g.value end
+                end
+            end
+        end
+    end
+    F.made_cache.of[fkey] = total
+    return total
+end
+
+-- Never more than the payer holds: a faction with an empty treasury pays nothing and runs no debt.
+function F.duty(faction)
+    local pct = F.rates().duty or 0
+    -- pct 0 would charge 0 anyway (a mutant proved it); returning here only skips the walk
+    if pct <= 0 or not F.uses_stores(faction) then return end
+    local partners = faction:factions_trading_with()
+    if type(partners) == "boolean" then return end   -- as F.trade: measured for some faction
+    local fkey = faction:name()
+    for i = 0, partners:num_items() - 1 do
+        local partner = partners:item_at(i)
+        -- BOTH WAYS WHEREVER A PLAYER IS ONE SIDE (author, 2026-10-08), as trade itself runs
+        -- (F.allowed): with other factions' stores off a computer partner paid the player nothing
+        -- while the player paid it, against the row's own "each partner pays you the same"
+        local due = not F.allowed(fkey, partner:name()) and 0 or math.min(math.floor(F.made_value(partner) * pct / 100), math.max(0, faction:treasury()))
+        if due > 0 then
+            cm:treasury_mod(fkey, -due)   -- negative: CA's own scripts do (spec section 2)
+            cm:treasury_mod(partner:name(), due)
+            F.book_duty(fkey, partner:name(), "paid", due)
+            F.book_duty(partner:name(), fkey, "got", due)
+        end
+    end
+end
+
+-- Booked for humans only, by game turn; the panel shows the turn before, which every faction in
+-- the round has finished paying into.
+function F.book_duty(fkey, other, way, n)
+    if not F.is_human(fkey) then return end
+    local b, turn = F.book(fkey), cm:model():turn_number()
+    b.duty = b.duty or {}
+    for t in pairs(b.duty) do
+        if t < turn - 1 then b.duty[t] = nil end
+    end
+    local d = b.duty[turn] or { paid = 0, got = 0, by = {} }
+    b.duty[turn] = d
+    d[way] = d[way] + n
+    d.by[other] = d.by[other] or { paid = 0, got = 0 }
+    d.by[other][way] = d.by[other][way] + n
+end
+
+function F.duty_last(fkey)
+    local b = F.state.factions[fkey]
+    return b and b.duty and b.duty[cm:model():turn_number() - 1] or nil
+end
+
 -- ---- the player's trade switches (the Stores panel's Trade tab) ---------------------------
 -- Saved in the faction's book as stop[dir][stem] = true; everything allowed by default.
 -- Humans only: a computer-run faction has no panel to set them from.
@@ -405,14 +489,40 @@ end
 
 -- `what` is a resource's key (toggle it) or ALL_STOP / ALL_ALLOW (set every one, not a toggle)
 function F.apply(fkey, dir, what)
-    if what ~= F.ALL_STOP and what ~= F.ALL_ALLOW then return F.toggle(fkey, dir, what) end
-    if not F.DIRS[dir] or not F.is_human(fkey) then return end
-    local b = F.book(fkey)
-    b.stop = b.stop or {}
-    b.stop[dir] = {}
-    if what == F.ALL_STOP then
-        for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do b.stop[dir][g.stem] = true end
+    if what ~= F.ALL_STOP and what ~= F.ALL_ALLOW then
+        F.toggle(fkey, dir, what)
+    elseif F.DIRS[dir] and F.is_human(fkey) then
+        local b = F.book(fkey)
+        b.stop = b.stop or {}
+        b.stop[dir] = {}
+        if what == F.ALL_STOP then
+            for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do b.stop[dir][g.stem] = true end
+        end
     end
+    if dir == "export" and F.is_human(fkey) then F.hold_exports(fkey) end
+end
+
+-- A STOPPED EXPORT LEAVES CA'S TRADE TOO (TRADE_RESOURCES.md 28): every production row, ours and
+-- CA's, has a negated twin gated on its owner holding the hidden faction bundle derpy_mr_hold_<stem>,
+-- so a held good's production is cancelled exactly - same lore gates, same damage, never below
+-- zero - and it leaves the trade agreements with exactly its income, from the next turn. A flat
+-- -1000 was measured to make phantom exports of goods the faction never made. The stores fill from
+-- their own rows and are untouched. Imports have no such lever: they are the partner's exports.
+F.HOLD_BUNDLE, F.HOLD_PREFIX = "derpy_mr_exports_held", "derpy_mr_hold_"
+function F.hold_exports(fkey)
+    local f = cm:get_faction(fkey)
+    if not f or f:is_null_interface() then return end
+    local any = false
+    for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+        local key, held = F.HOLD_PREFIX .. g.stem, F.stopped(fkey, "export", g.stem)
+        any = any or held
+        if held and not f:has_effect_bundle(key) then cm:apply_effect_bundle(key, fkey, 0)
+        elseif not held and f:has_effect_bundle(key) then cm:remove_effect_bundle(key, fkey) end
+    end
+    -- the visible record; removed first because a save from before 2026-10-08 carries a custom
+    -- bundle under this key holding -1000 on every good
+    cm:remove_effect_bundle(F.HOLD_BUNDLE, fkey)
+    if any then cm:apply_effect_bundle(F.HOLD_BUNDLE, fkey, 0) end
 end
 
 -- A trade switch: one resource's key, or ALL_STOP / ALL_ALLOW (F.request, below).
@@ -470,10 +580,15 @@ function F.stock(region)
     return held, cap
 end
 
+-- A RARE GOOD IS NEVER BULK (author, 2026-10-08): gromril is a war material but pays only for the
+-- Workshop's own works, never an order, a supply, an event, upkeep or a holding bonus. Every
+-- use-wide count and draw goes through F.bulk.
+function F.bulk(use) return function(g) return g.use == use and not g.rare end end
+
 function F.use_total(held, use)
-    local n = 0
+    local n, pick = 0, F.bulk(use)
     for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
-        if g.use == use then n = n + (held[g.stem] or 0) end
+        if pick(g) then n = n + (held[g.stem] or 0) end
     end
     return n
 end
@@ -509,7 +624,7 @@ end
 
 -- One settlement's stores of one use.
 function F.draw(region, held, use, n, kind, fkey)
-    return F.draw_realm({ { region = region, held = held } }, function(g) return g.use == use end, n, kind, fkey)
+    return F.draw_realm({ { region = region, held = held } }, F.bulk(use), n, kind, fkey)
 end
 
 function F.bundle(rkey, region, use, on)
@@ -639,18 +754,502 @@ function F.order(faction, key)
     local st = F.order_state(faction, key)
     if not (st and st.ok) then return end
     local o, fkey = DERPY_MR_FLOWS_ORDERS[key], faction:name()
-    F.draw_realm(F.stocks(faction), function(g) return g.use == o.use end, F.ORDER_COST, KIND.spend, fkey)
+    F.draw_realm(F.stocks(faction), F.bulk(o.use), F.ORDER_COST, KIND.spend, fkey)
     cm:apply_effect_bundle(o.bundle, fkey, F.ORDER_TURNS)
     local b = F.book(fkey)
     b.orders = b.orders or {}
     b.orders[key] = cm:model():turn_number()
 end
 
+-- THE WORKSHOP (spec 2026-10-07): a rare good plus a bulk of its use buys something that lasts.
+-- Mirrors the orders: a state the panel greys with, a buy that checks both parts before taking.
+F.WORK = {}
+for _, w in ipairs(DERPY_MR_FLOWS_WORKS) do F.WORK[w.key] = w end
+F.WORK_CFG = DERPY_MR_FLOWS_WORK
+F.WORK_FACTOR = "derpy_mr_workshop"   -- gen_resource_overhaul.WORK_FACTOR: a conversion's gain-only factor
+
+-- the race token of a subculture key: wh_main_sc_dwf_dwarfs -> dwf; "" for one with none
+function F.race(faction)
+    return string.match(faction:subculture(), "_sc_(%a+)_") or ""
+end
+
+function F.work_open(faction, w)
+    local race = F.race(faction)
+    for _, r in ipairs(w.races) do
+        if r == "all" or r == race then return true end
+    end
+    return false
+end
+
+-- THE BULK IS ORDINARY GOODS ONLY: gromril is a war material, and must never pay as one
+local bulk_pick = F.bulk
+local function rare_pick(stem) return function(g) return g.stem == stem end end
+
+function F.work_have(stocks, pick)
+    local n = 0
+    for _, s in ipairs(stocks) do
+        for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+            if pick(g) then n = n + (s.held[g.stem] or 0) end
+        end
+    end
+    return n
+end
+
+function F.works_book(fkey)
+    local b = F.book(fkey)
+    b.works = b.works or { items = {} }
+    return b.works
+end
+
+-- Did this faction build this upgrade here? A read: it never adds an entry to the save.
+function F.built_by(region_key, key, fkey)
+    local ups = F.state.upgrades and F.state.upgrades[region_key]
+    return ups ~= nil and ups[key] == fkey
+end
+
+-- region key -> {work key = buyer's faction key}, in the save. One buyer a settlement: a new owner
+-- who builds it again becomes its buyer.
+function F.upgrades_of(region_key)
+    F.state.upgrades = F.state.upgrades or {}
+    F.state.upgrades[region_key] = F.state.upgrades[region_key] or {}
+    return F.state.upgrades[region_key]
+end
+
+-- How many of a unit the faction's pool holds, or nil where the engine will not say: the faction's
+-- mercenary pool, read through unit_record():key() and unit_count() (measured 2026-10-07). Where it
+-- cannot be read, F.work_state falls back on the Workshop's own count of what it put there, so a
+-- purchase past the cap is refused rather than paid for and lost.
+function F.pool_count(faction, unit)
+    local ok, n = pcall(function()
+        local units, total = faction:mercenary_pool():mercenary_pool_units(), 0
+        for i = 0, units:num_items() - 1 do
+            local u = units:item_at(i)
+            if u:unit_record():key() == unit then total = total + u:unit_count() end
+        end
+        return total
+    end)
+    if ok and type(n) == "number" then return n end
+    return nil
+end
+
+-- WHERE A UNIT GOES: its race's pool when the faction owns it (it lists in that pool's panel), else
+-- straight into the faction's largest army with room - a minor faction has no renown pool.
+function F.work_route(faction, w)
+    local has = DERPY_MR_FLOWS_POOL_HAS[w.pool]
+    if has and has[faction:name()] then return "pool" end
+    return "army"
+end
+
+-- Is any part of a price more than the stores hold?
+function F.work_short(st)
+    if st.rare and st.rare.have < st.rare.cost then return true end
+    if st.bulk and st.bulk.have < st.bulk.cost then return true end
+    for _, g in ipairs(st.goods or {}) do
+        if g.have < g.cost then return true end
+    end
+    return false
+end
+
+-- A computer keeps a reserve: the bulk, or every named good, held twice over
+function F.work_reserve(st)
+    for _, g in ipairs(st.goods or {}) do
+        if g.have < g.cost + g.cost then return false end
+    end
+    return not st.bulk or st.bulk.have >= st.bulk.cost + st.bulk.cost
+end
+
+-- THE TARGET of an army or character work (spec section 4b, 4c): the character the player had
+-- selected, read again here, because the click and its dispatch are apart (a UITrigger in
+-- multiplayer). nil and why when it is gone, another faction's, or an army work's lord has none.
+function F.work_target(faction, w, cqi)
+    if type(cqi) ~= "number" or cqi <= 0 then return nil, "aim" end
+    local c = cm:get_character_by_cqi(cqi)
+    if not c or c:is_null_interface() then return nil, "aim" end
+    if c:faction():name() ~= faction:name() then return nil, "not_yours" end
+    -- a general_to_force_own trait does nothing on a hero (stage 2 final review)
+    if w.lord and not c:character_type("general") then return nil, "not_lord" end
+    if w.kind == "army" then
+        if not c:has_military_force() then return nil, "no_army" end
+        local mf = c:military_force()
+        if mf:is_null_interface() or mf:is_armed_citizenry() then return nil, "no_army" end
+    end
+    return c
+end
+
+function F.work_state(faction, key, region_key, cqi)
+    local w = F.WORK[key]
+    if not w or not F.work_open(faction, w) then return nil end
+    local stocks = F.stocks(faction)
+    local st = {}
+    if w.goods then
+        -- A NAMED RECIPE (workshop expansion spec section 4): each good by its own stem
+        st.goods = {}
+        for _, p in ipairs(w.goods) do
+            st.goods[#st.goods + 1] = { stem = p[1], have = F.work_have(stocks, rare_pick(p[1])), cost = p[2] }
+        end
+    else
+        st.bulk = { have = F.work_have(stocks, bulk_pick(w.use)), cost = w.use_n }
+    end
+    if w.rare ~= "" then st.rare = { have = F.work_have(stocks, rare_pick(w.rare)), cost = w.rare_n } end
+    -- READ, NEVER WRITE: a faction that has bought nothing keeps no book (a computer has no ledger)
+    local book = F.state.factions[faction:name()]
+    local wb, turn = book and book.works or { items = {} }, cm:model():turn_number()
+    if w.kind == "item" and wb.items[key] then
+        st.why = "done"
+    elseif w.kind == "convert" and wb.convert and wb.convert[key] and turn - wb.convert[key] < w.wait then
+        st.why, st.wait = "wait", wb.convert[key] + w.wait - turn
+    elseif w.kind == "convert" then
+        -- NOTHING PAID FOR NOTHING (stage 2 final review): the engine clamps a grant to the pool's
+        -- maximum (Food stops at 100), and a faction without the pool gets nothing at all
+        local p = faction:pooled_resource_manager():resource(w.pool)
+        if not p or p:is_null_interface() then
+            st.why = "no_pool"
+        elseif p:value() + w.amount > p:maximum_value() then
+            st.why = "full"
+        end
+    elseif w.kind == "lasting" and wb.lasting and wb.lasting[key] then
+        st.why = "done"
+    elseif w.kind == "army" or w.kind == "trait" then
+        local c, why = F.work_target(faction, w, cqi)
+        if not c then
+            st.why = why
+        elseif w.kind == "trait" then
+            if c:has_trait(w.trait) then st.why = "done" end
+        else
+            -- A WAIT PER ARMY, PER WORK: another army can take it the same turn
+            local at = wb.army and wb.army[key] and wb.army[key][c:military_force():command_queue_index()]
+            if at and turn - at < w.wait then st.why, st.wait = "wait", at + w.wait - turn end
+        end
+    elseif w.kind == "research" and wb.research and turn - wb.research < F.WORK_CFG.research_wait then
+        st.why, st.wait = "wait", wb.research + F.WORK_CFG.research_wait - turn
+    elseif w.kind == "upgrade" then
+        if not region_key then
+            st.why = "where"
+        else
+            local r = cm:get_region(region_key)
+            local owner = r and not r:is_null_interface() and r:owning_faction()
+            if not owner or owner:is_null_interface() or owner:name() ~= faction:name() then
+                st.why = "not_yours"
+            elseif F.built_by(region_key, key, faction:name()) then
+                st.why = "built"
+            end
+        end
+    elseif w.kind == "unit" then
+        st.route = F.work_route(faction, w)
+        if st.route == "pool" then
+            local n = F.pool_count(faction, w.grant) or (wb.units and wb.units[key]) or 0
+            if n >= F.WORK_CFG.unit_max then st.why = "full" end
+        elseif not F.work_army(faction) then
+            st.why = "no_army"
+        end
+    end
+    if not st.why and F.work_short(st) then st.why = "short" end
+    st.ok = st.why == nil
+    return st
+end
+
+function F.work_grant(faction, w, region_key, cqi)
+    local fkey = faction:name()
+    local wb, turn = F.works_book(fkey), cm:model():turn_number()
+    if w.kind == "unit" then
+        -- ONE FREE RECRUIT per purchase (spec section 3), booked BEFORE the grant: an engine call can
+        -- fire a listener inside itself, and a UnitTrained raised there must already find it.
+        -- UNMEASURED (plan Task 0): if the army route fires no UnitTrained at all, this waives the
+        -- faction's next ordinary recruit of the unit instead; checked in game before release
+        wb.free = wb.free or {}
+        wb.free[w.grant] = (wb.free[w.grant] or 0) + 1
+    end
+    if w.kind == "item" then
+        cm:add_ancillary_to_faction(faction, w.grant, false)
+        wb.items[w.key] = turn
+    elseif w.kind == "unit" and F.work_route(faction, w) == "pool" then
+        -- THE COUNT IS SET, NOT ADDED (measured 2026-10-07: count 1 on a pool of 1 left 1; a second
+        -- purchase was paid for and lost). So: what the pool holds now, plus one.
+        local now = F.pool_count(faction, w.grant) or (wb.units and wb.units[w.key]) or 0
+        cm:add_unit_to_faction_mercenary_pool(faction, w.grant, w.pool, now + 1, 0,
+                                              F.WORK_CFG.unit_max, 0, "", "", "", false, w.group)
+        wb.units = wb.units or {}
+        wb.units[w.key] = (wb.units[w.key] or 0) + 1
+    elseif w.kind == "unit" then
+        cm:grant_unit_to_character("character_cqi:" .. F.work_army(faction):general_character():command_queue_index(),
+                                   w.grant)
+    elseif w.kind == "upgrade" then
+        cm:apply_effect_bundle_to_region(w.grant, region_key, 0)
+        F.upgrades_of(region_key)[w.key] = fkey
+    elseif w.kind == "convert" then
+        cm:faction_add_pooled_resource(fkey, w.pool, F.WORK_FACTOR, w.amount)
+        wb.convert = wb.convert or {}
+        wb.convert[w.key] = turn
+    elseif w.kind == "army" then
+        local fc = cm:get_character_by_cqi(cqi):military_force():command_queue_index()
+        if w.rank then
+            cm:add_experience_to_units_commanded_by_character("character_cqi:" .. cqi, w.rank)
+        else
+            cm:apply_effect_bundle_to_force(w.bundle, fc, w.turns)
+        end
+        wb.army = wb.army or {}
+        wb.army[w.key] = wb.army[w.key] or {}
+        -- clearing a field during pairs is allowed in Lua 5.1; the new one goes in after
+        for k, t in pairs(wb.army[w.key]) do
+            if turn - t >= w.wait then wb.army[w.key][k] = nil end
+        end
+        wb.army[w.key][fc] = turn
+    elseif w.kind == "trait" then
+        cm:force_add_trait("character_cqi:" .. cqi, w.trait, true, 1)
+    elseif w.kind == "lasting" then
+        cm:apply_effect_bundle(w.bundle, fkey, 0)
+        wb.lasting = wb.lasting or {}
+        wb.lasting[w.key] = turn
+    else
+        cm:grant_research_points(fkey, F.WORK_CFG.research_points)
+        wb.research = turn
+    end
+end
+
+-- Pay both parts, the rare good first, from the fullest stores realm-wide.
+function F.work_pay(faction, w, st)
+    local fkey, stocks = faction:name(), F.stocks(faction)
+    if st.rare then F.draw_realm(stocks, rare_pick(w.rare), w.rare_n, KIND.spend, fkey) end
+    if st.goods then
+        for _, g in ipairs(st.goods) do F.draw_realm(stocks, rare_pick(g.stem), g.cost, KIND.spend, fkey) end
+    else
+        F.draw_realm(stocks, bulk_pick(w.use), w.use_n, KIND.spend, fkey)
+    end
+end
+
+-- A purchase: an upgrade only with a settlement, an army or character work only with a target
+-- (a character's cqi), anything else with neither.
+function F.work(faction, key, region_key, cqi)
+    local w = F.WORK[key]
+    if not w or (w.kind == "upgrade") ~= (region_key ~= nil) then return false end
+    if (w.kind == "army" or w.kind == "trait") ~= (cqi ~= nil) then return false end
+    local st = F.work_state(faction, key, region_key, cqi)
+    if not (st and st.ok) then return false end
+    F.work_pay(faction, w, st)
+    F.work_grant(faction, w, region_key, cqi)
+    -- A SOUND, on the buyer's own machine only: sound changes nothing in the model, so it is
+    -- multiplayer-safe there (docs/SOUNDS.md)
+    if faction:name() == cm:get_local_faction_name(true) then
+        common.trigger_soundevent(DERPY_MR_FLOWS_WORK_SOUND[w.kind])
+    end
+    return true
+end
+
+-- ---- THE RECRUITMENT DRAW (workshop expansion spec 2026-10-08, section 3) ------------------
+-- A recruit takes goods by its caste and gold worth, read off the unit itself, so any mod's unit
+-- is priced alike. Charged after the recruit (a script cannot block it). What the stores lack is
+-- paid in the race's CA currency, then in gold at gold_x times CA's trade value, never below 0.
+F.RECRUIT = DERPY_MR_FLOWS_RECRUIT
+
+-- CA's trade value of the cheapest good a pick takes: what one missing good costs in gold
+function F.cheapest(pick)
+    local w
+    for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+        if pick(g) and (not w or g.value < w) then w = g.value end
+    end
+    return w or 0
+end
+
+function F.recruit_bill(faction, caste, value)
+    local out, per = {}, F.rates().recruit_per or 0
+    local parts = caste and DERPY_MR_FLOWS_CASTE[caste]
+    if not parts or type(value) ~= "number" or value <= 0 or per <= 0 then return out end
+    local base = math.ceil(value / F.RECRUIT.per * per)
+    -- the RUNNING total is rounded, not each part: a 7 split in halves is 4 and 3, never 4 and 4
+    local share, done = 0, 0
+    for _, p in ipairs(parts) do
+        local pick = F.bulk(p[1])
+        share = share + p[2]
+        local upto = math.ceil(base * share)
+        if upto > done then out[#out + 1] = { pick = pick, n = upto - done, worth = F.cheapest(pick) } end
+        done = upto
+    end
+    local race = F.race(faction)
+    local rare = (DERPY_MR_FLOWS_INFANTRY[caste] and DERPY_MR_FLOWS_RACE_RARE_INF[race]) or DERPY_MR_FLOWS_RACE_RARE[race]
+    if rare and value >= F.RECRUIT.elite then
+        local pick = rare_pick(rare)
+        out[#out + 1] = { pick = pick, n = math.ceil(value / F.RECRUIT.elite_per), worth = F.cheapest(pick) }
+    end
+    return out
+end
+
+-- The shortfall, in bill order: the race's currency first (one per `per` goods, rounded up), then gold.
+function F.recruit_short(faction, short)
+    local fkey, paid, missing = faction:name(), {}, 0
+    for _, s in ipairs(short) do missing = missing + s.n end
+    local c, cover = DERPY_MR_FLOWS_CURRENCY[F.race(faction)], 0
+    if c and missing > 0 then
+        local pool = faction:pooled_resource_manager():resource(c.pool)
+        local have = (not pool:is_null_interface()) and pool:value() or 0
+        local take = math.min(math.ceil(missing / c.per), math.max(0, have))
+        if take > 0 then
+            cm:faction_add_pooled_resource(fkey, c.pool, F.RECRUIT.factor, -take)
+            paid[c.word], cover = take, take * c.per
+        end
+    end
+    local due = 0
+    for _, s in ipairs(short) do
+        local covered = math.min(cover, s.n)
+        cover = cover - covered
+        due = due + (s.n - covered) * s.worth * F.RECRUIT.gold_x
+    end
+    local gold = math.min(math.ceil(due), math.max(0, faction:treasury()))
+    if gold > 0 then cm:treasury_mod(fkey, -gold) end
+    return paid, gold, c and c.line or nil
+end
+
+-- A UNIT PAID FOR IN THE WORKSHOP is not charged again when it is recruited (spec section 3):
+-- the next UnitTrained of that key for that faction is skipped, one per purchase. A read first:
+-- F.works_book would add a book to the save for every computer faction that recruits.
+function F.recruit_skip(fkey, unit_key)
+    local b = F.state.factions[fkey]
+    local free = b and b.works and b.works.free
+    if not (free and (free[unit_key] or 0) > 0) then return false end
+    free[unit_key] = free[unit_key] - 1
+    if free[unit_key] == 0 then free[unit_key] = nil end
+    return true
+end
+
+function F.on_unit_trained(context)
+    local unit = context:unit()
+    local faction = unit:faction()
+    if not faction or faction:is_null_interface() then return end
+    local r = F.rates()
+    if not r.recruit or not F.uses_stores(faction) or not (r.ai or faction:is_human()) then return end
+    local fkey = faction:name()
+    if F.recruit_skip(fkey, unit:unit_key()) then return end
+    local bill = F.recruit_bill(faction, unit:unit_caste(), unit:get_unit_custom_battle_cost())
+    if #bill == 0 then return end
+    local stocks, got_n, short = F.stocks(faction), 0, {}
+    for _, b in ipairs(bill) do
+        local got = F.draw_realm(stocks, b.pick, b.n, KIND.spend, fkey)
+        got_n = got_n + got
+        if got < b.n then short[#short + 1] = { n = b.n - got, worth = b.worth } end
+    end
+    local paid, gold, line = F.recruit_short(faction, short)
+    if F.is_human(fkey) then F.book_recruit(fkey, got_n, paid, gold, line) end
+end
+
+-- THE LEDGER: this turn's and last turn's, for the Spending tab. Clearing a field during pairs
+-- is allowed in Lua 5.1 (adding one is not).
+function F.book_recruit(fkey, goods, paid, gold, line)
+    local b, turn = F.book(fkey), cm:model():turn_number()
+    b.recruit = b.recruit or {}
+    for t in pairs(b.recruit) do if t < turn - 1 then b.recruit[t] = nil end end
+    local e = b.recruit[turn] or { goods = 0, paid = {}, gold = 0 }
+    b.recruit[turn] = e
+    e.goods, e.gold, e.line = e.goods + goods, e.gold + gold, e.line or line
+    for w, n in pairs(paid) do e.paid[w] = (e.paid[w] or 0) + n end
+end
+
+function F.recruit_last(fkey)
+    local b = F.state.factions[fkey]
+    return b and b.recruit and b.recruit[cm:model():turn_number() - 1] or nil
+end
+
+-- The largest field army that still has room for a unit: never a garrison or a convoy.
+F.ARMY_MAX = 20
+function F.work_army(faction)
+    local best, bn, bc = nil, nil, nil
+    local list = faction:military_force_list()
+    for i = 0, list:num_items() - 1 do
+        local mf = list:item_at(i)
+        if not mf:is_armed_citizenry() and mf:has_general() and mf:force_type():key() ~= "CONVOY" then
+            local n, c = mf:unit_list():num_items(), mf:general_character():command_queue_index()
+            if n < F.ARMY_MAX and (bn == nil or n > bn or (n == bn and c < bc)) then best, bn, bc = mf, n, c end
+        end
+    end
+    return best
+end
+
+-- Where a computer builds an upgrade: its capital, else its settlement holding the most of the
+-- bulk's use; never where it is built already. A tie goes by region key.
+function F.work_ai_where(faction, w)
+    local home = faction:has_home_region() and faction:home_region()
+    local fkey = faction:name()
+    if home and not home:is_null_interface() and not F.built_by(home:name(), w.key, fkey) then return home:name() end
+    local best, bn = nil, -1
+    for _, s in ipairs(F.stocks(faction)) do
+        local rk = s.region:name()
+        local n = F.work_have({ s }, bulk_pick(w.use))
+        if not F.built_by(rk, w.key, fkey) and (n > bn or (n == bn and rk < best)) then best, bn = rk, n end
+    end
+    return best
+end
+
+-- army and character works are the player's alone (spec section 4): no order, never bought
+F.WORK_AI_ORDER = { unit = 1, item = 2, upgrade = 3, lasting = 4, convert = 5, research = 6 }
+
+-- A COMPUTER FACTION BUYS: one thing on a roll, the first it can afford with a reserve left over
+-- (its stores of the bulk's use still hold the bulk's cost again), units straight into an army.
+function F.work_ai(faction)
+    if faction:is_human() or not F.rates().ai or not F.uses_stores(faction) then return end
+    if cm:random_number(100, 1) > F.WORK_CFG.ai_pct then return end
+    local rows = {}
+    for _, w in ipairs(DERPY_MR_FLOWS_WORKS) do
+        if F.WORK_AI_ORDER[w.kind] and F.work_open(faction, w) then rows[#rows + 1] = w end
+    end
+    table.sort(rows, function(a, b)
+        local oa, ob = F.WORK_AI_ORDER[a.kind], F.WORK_AI_ORDER[b.kind]
+        if oa ~= ob then return oa < ob end
+        return a.key < b.key
+    end)
+    for _, w in ipairs(rows) do
+        local region_key, army
+        if w.kind == "upgrade" then
+            region_key = F.work_ai_where(faction, w)
+        elseif w.kind == "unit" then
+            army = F.work_army(faction)
+        end
+        local st = (w.kind ~= "upgrade" or region_key) and (w.kind ~= "unit" or army)
+                   and F.work_state(faction, w.key, region_key)
+        if st and st.ok and F.work_reserve(st) then
+            F.work_pay(faction, w, st)
+            if w.kind == "unit" then
+                -- its free recruit booked first, as F.work_grant does: the grant may fire UnitTrained
+                local wb = F.works_book(faction:name())
+                wb.free = wb.free or {}
+                wb.free[w.grant] = (wb.free[w.grant] or 0) + 1
+                cm:grant_unit_to_character("character_cqi:" .. army:general_character():command_queue_index(), w.grant)
+            else
+                F.work_grant(faction, w, region_key)
+            end
+            return
+        end
+    end
+end
+
+-- A SETTLEMENT CHANGES HANDS: an upgrade works for the faction that bought it and for nobody
+-- else, and comes back when its buyer takes the settlement back.
+function F.on_region_change(region)
+    local rk = region:name()
+    local ups = F.state.upgrades and F.state.upgrades[rk]
+    if not ups then return end
+    local owner = region:owning_faction()
+    local who = (owner and not owner:is_null_interface()) and owner:name() or ""
+    for key, buyer in pairs(ups) do
+        local w = F.WORK[key]
+        if w then
+            if buyer == who then
+                cm:apply_effect_bundle_to_region(w.grant, rk, 0)
+            elseif region:has_effect_bundle(w.grant) then
+                cm:remove_effect_bundle_from_region(w.grant, rk)
+            end
+        end
+    end
+end
+
 -- SELL: the Zharr Exchange's price a unit when it is loaded and answers, the fixed rate of the
 -- resource's use otherwise. The surplus is what the realm holds above half its space for it.
-function F.price(g)
-    if type(EX) == "table" and type(EX.sell_price) == "function" then
-        local ok, p = pcall(EX.sell_price, g.res)
+-- A UNIT's price, for the seller `fkey`. EX.sell_price is the price of a LOT (EX.lot units; the
+-- Exchange's own note on EX.holdings_value) and was paid per unit, 10x. And it reads the houses'
+-- stance toward EX.who(), the LOCAL player unless bound: EX.with_player binds it to the seller,
+-- so every machine prices one sale alike (a UITrigger action runs on all of them).
+function F.price(g, fkey)
+    if type(EX) == "table" and type(EX.sell_price) == "function" and type(EX.lot) == "function"
+       and type(EX.with_player) == "function" then
+        local p
+        local ok = EX.with_player(fkey, function() p = EX.sell_price(g.res) / EX.lot(g.res) end)
         if ok and type(p) == "number" and p > 0 then return p end
     end
     return DERPY_MR_FLOWS_SELL_RATE[g.use] or 0
@@ -667,7 +1266,7 @@ function F.sale(faction, stem)
     end
     local n = total - math.floor(space / 2)
     if n <= 0 then return nil end
-    local price = F.price(g)
+    local price = F.price(g, faction:name())
     local gold = math.floor(n * price)
     if gold <= 0 then return nil end
     return { n = n, price = price, gold = gold }
@@ -683,7 +1282,7 @@ end
 
 -- THE ONE DOOR. parts = {action, args...}: a trade switch (export|import, stem), or an action
 -- with exactly its own count of parts. Humans only; the actions only with the MCT switch on.
-F.ACTIONS = { send = 3, order = 2, sell = 2, supply = 3 }
+F.ACTIONS = { send = 3, order = 2, sell = 2, supply = 3, work = 2, upgrade = 3, aim = 3 }
 function F.dispatch(fkey, parts)
     if not F.is_human(fkey) then return end
     local a = parts[1]
@@ -697,6 +1296,11 @@ function F.dispatch(fkey, parts)
     if a == "send" then F.send_here(f, parts[2], parts[3])
     elseif a == "supply" then F.toggle_supply(f, parts[2], parts[3])
     elseif a == "order" then F.order(f, parts[2])
+    elseif a == "work" then F.work(f, parts[2])
+    elseif a == "upgrade" then F.work(f, parts[2], parts[3])
+    elseif a == "aim" then
+        local cqi = tonumber(parts[3])
+        if cqi then F.work(f, parts[2], nil, cqi) end
     else F.sell(f, parts[2]) end
 end
 
@@ -823,7 +1427,7 @@ end
 -- The spend and the reward. A store short of the cost when this runs pays nothing and gets nothing.
 function F.event_apply(faction, p)
     local e, fkey = DERPY_MR_FLOWS_EVENTS[p.key], faction:name()
-    local pick = function(g) return g.use == e.use end
+    local pick = F.bulk(e.use)
     if e.where == "region" then
         local r = F.owned(faction, p.region)
         if not r then return end
@@ -860,8 +1464,13 @@ function F.events(faction)
         local tf = o.target and cm:get_faction(o.target):command_queue_index() or 0
         local rg = o.region and cm:get_region(o.region):cqi() or 0
         F.set_pending(fkey, o)
-        cm:trigger_dilemma_with_targets(faction:command_queue_index(), e.dilemma, tf, 0, o.char or 0,
-                                        o.force or 0, rg, 0, function() end)
+        -- false: never issued (multiplayer, a target gone); no offer waits and no gap starts.
+        -- Single player always answers true, as CA wraps it in an intervention.
+        if not cm:trigger_dilemma_with_targets(faction:command_queue_index(), e.dilemma, tf, 0, o.char or 0,
+                                               o.force or 0, rg, 0, function() end) then
+            F.clear_pending(fkey, o.key)
+            return
+        end
     else
         if cm:random_number(100, 1) > F.EVENT_AI_PCT then return end   -- a failed roll starts no gap
         F.event_apply(faction, o)
@@ -915,7 +1524,7 @@ end
 -- RESTORE ON CAPTURE (spending spec section 4, part 2): occupying a settlement whose captured
 -- stores hold the cost in building materials offers Restore, a store event's dilemma; a
 -- computer-run faction takes it on the events' roll. Under the store events switch.
-F.RESTORE_ON = { occupation_decision_occupy = true }
+F.RESTORE_ON = { occupation_decision_occupy = true, occupation_decision_loot = true }   -- loot: author, 2026-10-08
 function F.on_restore(context)
     if not F.RESTORE_ON[context:occupation_decision_type()] then return end
     local r, faction = F.rates(), context:character():faction()
@@ -925,11 +1534,19 @@ function F.on_restore(context)
     local region = context:garrison_residence():region()
     local e = DERPY_MR_FLOWS_EVENTS.restore
     if F.use_total(F.stock(region), e.use) < e.cost then return end
-    local o = { key = "restore", region = region:name() }
+    local turn = cm:model():turn_number()
+    local o = { key = "restore", region = region:name(), turn = turn }
     if human then
+        -- ONE RESTORE AT A TIME: the answer does not say which settlement it is for, so a second
+        -- offer replaced the first and the first answer paid for and repaired the second. A
+        -- pending one from an earlier turn is stale (a dilemma is answered before the turn ends).
+        local p = F.pending(faction:name(), "restore")
+        if p and p.turn == turn then return end
         F.set_pending(faction:name(), o)
-        cm:trigger_dilemma_with_targets(faction:command_queue_index(), e.dilemma, 0, 0, 0, 0, region:cqi(), 0,
-                                        function() end)
+        if not cm:trigger_dilemma_with_targets(faction:command_queue_index(), e.dilemma, 0, 0, 0, 0, region:cqi(), 0,
+                                               function() end) then
+            F.clear_pending(faction:name(), "restore")   -- never issued (multiplayer returns false)
+        end
     elseif cm:random_number(100, 1) <= F.EVENT_AI_PCT then
         F.event_apply(faction, o)
     end
@@ -1003,13 +1620,13 @@ function F.supply_state(faction, rkey)
     st.pay = {}
     for _, s in pairs(DERPY_MR_FLOWS_SUPPLY) do
         st.have[s.use] = F.use_total(held, s.use)
-        -- what the payment takes first: the fullest, a tie by resource key (F.draw_realm's order)
+        -- what the payment takes first: the fullest, a tie by stem (F.draw_realm's order, one region)
         local best
         for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
-            if g.use == s.use then
+            if F.bulk(s.use)(g) then
                 local n = held[g.stem] or 0
-                if not best or n > best.n or (n == best.n and g.res < best.res) then
-                    best = { stem = g.stem, n = n, res = g.res }
+                if not best or n > best.n or (n == best.n and g.stem < best.stem) then
+                    best = { stem = g.stem, n = n }
                 end
             end
         end
@@ -1194,6 +1811,13 @@ function F.sweep()
             table.remove(list, i)
         end
     end
+    -- the Workshop: a dead buyer's upgrades go with it
+    for _, ups in pairs(F.state.upgrades or {}) do
+        for key, buyer in pairs(ups) do
+            local f = cm:get_faction(buyer)
+            if not f or f:is_null_interface() or f:is_dead() then ups[key] = nil end
+        end
+    end
 end
 
 -- WALKED IN: only an army, and only of a faction at war with the owner. Its own armies and its
@@ -1221,7 +1845,7 @@ function F.standing(faction, p, b, cost)
         local have = b[k] and F.use_total(F.stock(cap), use) or 0
         local coming = false
         for _, s in ipairs(F.ships_to(fkey, cap:name())) do
-            if F.GOOD[s.stem].use == use then coming = true end
+            if F.bulk(use)(F.GOOD[s.stem]) then coming = true end
         end
         if b[k] and have < F.SHIP.stand * cost and not coming then
             local from, stem, fh = nil, nil, 0
@@ -1230,7 +1854,7 @@ function F.standing(faction, p, b, cost)
                     local held = F.stock(r)
                     for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
                         local h = held[g.stem] or 0
-                        if g.use == use and h > fh then from, stem, fh = r, g.stem, h end
+                        if F.bulk(use)(g) and h > fh then from, stem, fh = r, g.stem, h end
                     end
                 end
             end
@@ -1320,7 +1944,7 @@ function F.snapshot(faction)
     local S = DERPY_MR_STORES
     if not (S and S.read_realm) then return end
     local totals, made = {}, {}
-    for _, s in ipairs(S.read_realm(faction)) do
+    for _, s in ipairs(S.read_realm(faction, true)) do   -- bare: no loc from a turn handler
         for stem, v in pairs(s.held) do totals[stem] = (totals[stem] or 0) + v end
         for stem, v in pairs(s.made) do made[stem] = (made[stem] or 0) + v end
     end
@@ -1339,23 +1963,27 @@ function F.last(fkey, stem)
 end
 
 function F.on_faction_turn_start(faction)
-    F.rates()                                     -- frozen at the first turn start
+    F.freeze_rates()                              -- frozen at the first turn start
     if faction:is_human() then
         -- ITS OWN GUARD: the snapshot reads through the UI-side CCO and loc, and a throw there must
         -- not skip the trade below, which is model state every machine has to run alike
         F.guard(F.snapshot, faction)
         F.round_cost, F.cost = F.cost, { raid = 0, turn = 0 }
         F.guard(F.sweep)
+        F.guard(F.hold_exports, faction:name())   -- a save from before the bundle existed catches up
     end
     -- eat before trading, so a partner is sent what is left; its own guard, so a throw in one
     -- settlement cannot stop the trade every machine must run alike
     F.guard(F.upkeep, faction)
     F.trade(faction)
+    F.guard(F.duty, faction)
     -- shipments before supplies, so an arrival is in the capital before the turn's payment
     F.guard(F.ships_turn, faction)
     F.guard(F.supply, faction)
     -- last, on what eating and trading left; its own guard, as an offer is model state too
     F.guard(F.events, faction)
+    -- the Workshop's computer purchases, after everything else has used the stores
+    F.guard(F.work_ai, faction)
 end
 
 function F.guard(fn, a, slot)
@@ -1368,6 +1996,9 @@ end
 function F.init()
     if F.started then return end
     F.started = true
+    -- FROZEN AT FIRST TICK: a new campaign fires no FactionTurnStart until turn 1 ends, and MCT
+    -- has read the player's settings by now (its LoadingGame callback). A loaded save is frozen.
+    F.guard(F.freeze_rates)
     core:add_listener("derpy_mr_flows_raid", "CharacterTurnStart", true,
         function(context) F.guard(F.on_character_turn_start, context:character(), "raid") end, true)
     core:add_listener("derpy_mr_flows_occupation", "CharacterPerformsSettlementOccupationDecision", true,
@@ -1383,6 +2014,10 @@ function F.init()
     core:add_listener("derpy_mr_flows_ship", "AreaEntered",
         function(context) return string.sub(context:area_key(), 1, #F.SHIP_PREFIX) == F.SHIP_PREFIX end,
         function(context) F.guard(F.on_area, context) end, true)
+    core:add_listener("derpy_mr_flows_region", "RegionFactionChangeEvent", true,
+        function(context) F.guard(F.on_region_change, context:region()) end, true)
+    core:add_listener("derpy_mr_flows_recruit", "UnitTrained", true,
+        function(context) F.guard(F.on_unit_trained, context, "recruit") end, true)
     core:add_listener("derpy_mr_flows_turn", "FactionTurnStart", true,
         function(context) F.guard(F.on_faction_turn_start, context:faction(), "turn") end, true)
 end

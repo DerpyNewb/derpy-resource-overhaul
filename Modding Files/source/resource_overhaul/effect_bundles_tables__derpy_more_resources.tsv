@@ -1,5 +1,59 @@
 key	localised_description	localised_title	bundle_target	priority	ui_icon	is_global_effect	show_in_3d_space	owner_only
 #effect_bundles_tables;4;db/effect_bundles_tables/derpy_more_resources
+derpy_mr_hold_salted_fish	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_whale_oil	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_sea_dragon_hide	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_rum	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_amber	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_grain	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_warhorses	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_pipeweed	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_books	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_olive_oil	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_silk	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_tea	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_jade	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_coal	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_silver	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_gromril	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_quicksilver	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_brimstone	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_brass	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_blackpowder	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_ithilmar	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_dragon_bone	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_lustrian_plumes	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_black_lotus	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_incense	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_salted_meat	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_carpets	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_kvas	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_rhinox_hides	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_mead	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_glassware	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_wool	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_porcelain	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_pearls	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_starwood	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_feathers	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_wyvern_scales	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_animals	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_dyes	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_gems	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_gold_idols	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_tusks	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_medicine	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_obsidian	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_furs	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_beer	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_iron	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_salt	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_marble	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_pottery	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_timber	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_wine	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_spices	[hidden]	[hidden]	faction	1		true	false	true
+derpy_mr_hold_trinkets	[hidden]	[hidden]	faction	1		true	false	true
 derpy_mr_well_fed	After eating, this settlement's stores still hold five turns of provisions.	Well fed	region	1	growth.png	true	false	true
 derpy_mr_garrison_stocked	War materials fill at least a quarter of one store's space in this settlement.	Garrison stocked	region	1	siege_defence.png	true	false	true
 derpy_mr_comforts	Luxuries fill at least a quarter of one store's space in this settlement.	Comforts	region	1	public_order_happy.png	true	false	true
@@ -9,6 +63,24 @@ derpy_mr_event_restore	Repaired from this settlement's own stores: public order 
 derpy_mr_supply_materials	Supplied from the province capital's stores each turn: construction cost -25%.	Materials on hand	region	1	construction.png	true	false	true
 derpy_mr_supply_stable	Supplied from the province capital's stores each turn: recruit cost -15% for cavalry and monsters.	Stable stocked	region	1	mount.png	true	false	true
 derpy_mr_supply_arms	Supplied from the province capital's stores each turn: recruit cost -15% for infantry and artillery.	Arms stocked	region	1	weapon_damage.png	true	false	true
+derpy_mr_up_gromril	Built from your stores: melee defence +10 for your armies here, armour +10 in the province.	Gromril Gate	region	1	siege_defence.png	true	false	true
+derpy_mr_up_ithilmar	Built from your stores: public order +3 in the province, income +10% here.	Ithilmar Spire	region	1	public_order_happy.png	true	false	true
+derpy_mr_up_dragon_bone	Built from your stores: units recruited in the province gain a rank.	Dragon Bone Shrine	region	1	experience.png	true	false	true
+derpy_mr_up_sea_dragon_hide	Built from your stores: income +15% here.	Sea Dragon Moorings	region	1	income.png	true	false	true
+derpy_mr_up_black_lotus	Built from your stores: hero actions from here succeed more often (+10).	Black Lotus Gardens	region	1	agent.png	true	false	true
+derpy_mr_up_starwood	Built from your stores: growth +20 in the province.	Starwood Grove	region	1	growth.png	true	false	true
+derpy_mr_up_feathers	Built from your stores: recruitment cost -15% in the province.	Eyrie	region	1	mount.png	true	false	true
+derpy_mr_up_wyvern_scales	Built from your stores: upkeep -5% for your armies here.	Wyvern Roost	region	1	variable_upkeep.png	true	false	true
 derpy_mr_order_festival	Paid for from your stores: public order +4 in every province.	Festival	faction	1	public_order_jubilant.png	true	false	true
 derpy_mr_order_muster	Paid for from your stores: recruit rank +1 for every unit.	Muster	faction	1	experience.png	true	false	true
 derpy_mr_order_great_works	Paid for from your stores: construction cost -20% for every building.	Great Works	faction	1	construction.png	true	false	true
+derpy_mr_rc_army_ammo	Paid for from your stores: ammunition +20%, 5 turns.	Ammunition Train	force	1	ammo.png	false	false	true
+derpy_mr_rc_army_forge	Paid for from your stores: armour +15, 5 turns.	Field Forge	force	1	armour.png	false	false	true
+derpy_mr_rc_army_remounts	Paid for from your stores: replenishment +10%, 5 turns.	Remounts	force	1	replenishment.png	false	false	true
+derpy_mr_rc_army_medicine	Paid for from your stores: attrition -25%, 5 turns.	Medicine Chests	force	1	attrition.png	false	false	true
+derpy_mr_rc_last_granary	Paid for from your stores: growth +15, for good.	Great Granary	faction	1	growth.png	true	false	true
+derpy_mr_rc_last_records	Paid for from your stores: research +15%, for good.	Hall of Records	faction	1	technology.png	true	false	true
+derpy_mr_rc_last_bazaar	Paid for from your stores: trade income +15%, for good.	Grand Bazaar	faction	1	trade_agreement.png	true	false	true
+derpy_mr_rc_last_arsenal	Paid for from your stores: upkeep -10%, for good.	Arsenal	faction	1	variable_upkeep.png	true	false	true
+derpy_mr_rc_last_stables	Paid for from your stores: cavalry cost -20%, for good.	Royal Stables	faction	1	mount.png	true	false	true
+derpy_mr_exports_held	You are holding some resources back from your trade agreements (the Resource Vault's Trade tab). Your regions make none of them for trade, so they earn you no trade income. Your stores still fill.	Exports held	faction	1	trade_agreement.png	true	false	true

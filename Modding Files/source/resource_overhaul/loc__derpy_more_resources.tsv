@@ -35,17 +35,17 @@ resources_long_description_res_derpy_rum		false
 effects_description_derpy_effect_region_resource_rum_production	Rum resource production: %n kegs	false
 uied_component_texts_localised_string_derpy_mr_rum_Tooltip	Rum||A building in this settlement produces Rum, a trade resource.	false
 resources_onscreen_text_res_derpy_amber	Amber	false
-resources_description_res_derpy_amber	Golden resin washed up on the Sea of Claws shores, prized by jewellers and wizards alike.	false
+resources_description_res_derpy_amber	Golden resin washed up on the Sea of Claws shores, prized by jewellers and wizards.	false
 resources_long_description_res_derpy_amber		false
 effects_description_derpy_effect_region_resource_amber_production	Amber resource production: %n chests	false
 uied_component_texts_localised_string_derpy_mr_amber_Tooltip	Amber||A building in this settlement produces Amber, a trade resource.	false
 resources_onscreen_text_res_derpy_grain	Grain	false
-resources_description_res_derpy_grain	Wheat, rye and barley from the farmland of the Old World. Bread for cities and fodder for armies.	false
+resources_description_res_derpy_grain	Wheat, rye and barley from the farmland of the Old World and the barley fields of the Dwarf holds. Bread for cities and fodder for armies.	false
 resources_long_description_res_derpy_grain		false
 effects_description_derpy_effect_region_resource_grain_production	Grain resource production: %n sacks	false
 uied_component_texts_localised_string_derpy_mr_grain_Tooltip	Grain||A building in this settlement produces Grain, a trade resource.	false
 resources_onscreen_text_res_derpy_warhorses	Warhorses	false
-resources_description_res_derpy_warhorses	Bretonnian destriers, Kislevite steppe horses and Arabyan coursers, bred for war.	false
+resources_description_res_derpy_warhorses	Bretonnian destriers, Kislevite steppe horses, Arabyan coursers, Ellyrian steeds, Averland's herds and the Druchii's Dark Steeds, bred for war.	false
 resources_long_description_res_derpy_warhorses		false
 effects_description_derpy_effect_region_resource_warhorses_production	Warhorses resource production: %n horses	false
 uied_component_texts_localised_string_derpy_mr_warhorses_Tooltip	Warhorses||A building in this settlement produces Warhorses, a trade resource.	false
@@ -85,7 +85,7 @@ resources_long_description_res_derpy_coal		false
 effects_description_derpy_effect_region_resource_coal_production	Coal resource production: %n sacks	false
 uied_component_texts_localised_string_derpy_mr_coal_Tooltip	Coal||A building in this settlement produces Coal, a trade resource.	false
 resources_onscreen_text_res_derpy_silver	Silver	false
-resources_description_res_derpy_silver	Veins of silver found in mountain mines already worked for iron, gems or gold.	false
+resources_description_res_derpy_silver	Veins of silver found in mountain mines already worked for iron, gems or gold, and in the Dwarfs' Underdeep.	false
 resources_long_description_res_derpy_silver		false
 effects_description_derpy_effect_region_resource_silver_production	Silver resource production: %n ingot	false
 uied_component_texts_localised_string_derpy_mr_silver_Tooltip	Silver||A building in this settlement produces Silver, a trade resource.	false
@@ -100,7 +100,7 @@ resources_long_description_res_derpy_quicksilver		false
 effects_description_derpy_effect_region_resource_quicksilver_production	Quicksilver resource production: %n flasks	false
 uied_component_texts_localised_string_derpy_mr_quicksilver_Tooltip	Quicksilver||A building in this settlement produces Quicksilver, a trade resource.	false
 resources_onscreen_text_res_derpy_brimstone	Brimstone	false
-resources_description_res_derpy_brimstone	Yellow sulphur scraped from the vents of the Dark Lands and every obsidian field.	false
+resources_description_res_derpy_brimstone	Yellow sulphur scraped from the vents of the Dark Lands, every obsidian field and the Dwarfs' deepest workings.	false
 resources_long_description_res_derpy_brimstone		false
 effects_description_derpy_effect_region_resource_brimstone_production	Brimstone resource production: %n sacks	false
 uied_component_texts_localised_string_derpy_mr_brimstone_Tooltip	Brimstone||A building in this settlement produces Brimstone, a trade resource.	false
@@ -203,14 +203,14 @@ building_culture_variants_name_derpy_mr_bld_gromril_1	Gromril Prospect	false
 building_culture_variants_name_derpy_mr_bld_gromril_2	Gromril Delving	false
 building_culture_variants_name_derpy_mr_bld_gromril_3	Deep Gromril Mine	false
 building_chains_chain_tooltip_derpy_mr_bld_gromril	Gromril	false
-building_short_description_texts_short_description_derpy_mr_bld_gromril	Meteoric iron found only deep beneath the old Dwarf holds. Nothing forged is harder. Only a Dwarf hold in the mountains, sitting on iron, gems or gold, has gromril to dig. Anywhere else it makes nothing.	false
-building_description_texts_long_description_derpy_mr_bld_gromril	Meteoric iron found only deep beneath the old Dwarf holds. Nothing forged is harder. Only a Dwarf hold in the mountains, sitting on iron, gems or gold, has gromril to dig. Anywhere else it makes nothing.	false
+building_short_description_texts_short_description_derpy_mr_bld_gromril	Only a Dwarf hold in the mountains, sitting on iron, gems or gold, has gromril to dig. Anywhere else it makes nothing.	false
+building_description_texts_long_description_derpy_mr_bld_gromril	Only a Dwarf hold in the mountains, sitting on iron, gems or gold, has gromril to dig. Anywhere else it makes nothing.	false
 building_culture_variants_name_derpy_mr_bld_ithilmar_1	Ithilmar Lode	false
 building_culture_variants_name_derpy_mr_bld_ithilmar_2	Ithilmar Mine	false
 building_culture_variants_name_derpy_mr_bld_ithilmar_3	Ithilmar Deepworks	false
 building_chains_chain_tooltip_derpy_mr_bld_ithilmar	Ithilmar	false
-building_short_description_texts_short_description_derpy_mr_bld_ithilmar	The light, bright metal of the elves, found only in the rock of Ulthuan. Ithilmar lies only in the rock of Ulthuan, under iron, gems, gold or marble, and at Vaul's Anvil. Anywhere else it makes nothing.	false
-building_description_texts_long_description_derpy_mr_bld_ithilmar	The light, bright metal of the elves, found only in the rock of Ulthuan. Ithilmar lies only in the rock of Ulthuan, under iron, gems, gold or marble, and at Vaul's Anvil. Anywhere else it makes nothing.	false
+building_short_description_texts_short_description_derpy_mr_bld_ithilmar	Ithilmar lies only in the rock of Ulthuan, under iron, gems, gold or marble, and at Vaul's Anvil. Anywhere else it makes nothing.	false
+building_description_texts_long_description_derpy_mr_bld_ithilmar	Ithilmar lies only in the rock of Ulthuan, under iron, gems, gold or marble, and at Vaul's Anvil. Anywhere else it makes nothing.	false
 building_culture_variants_name_derpy_mr_bld_dragon_bone_brt_1	Bone Pickers	false
 building_culture_variants_name_derpy_mr_bld_dragon_bone_brt_2	Dragon Bone Digs	false
 building_culture_variants_name_derpy_mr_bld_dragon_bone_brt_3	Dragon Graveyard Excavation	false
@@ -279,14 +279,14 @@ building_culture_variants_name_derpy_mr_bld_dragon_bone_wef_1	Bone Pickers	false
 building_culture_variants_name_derpy_mr_bld_dragon_bone_wef_2	Dragon Bone Digs	false
 building_culture_variants_name_derpy_mr_bld_dragon_bone_wef_3	Dragon Graveyard Excavation	false
 building_chains_chain_tooltip_derpy_mr_bld_dragon_bone_wef	Dragon Bone	false
-building_short_description_texts_short_description_derpy_mr_bld_dragon_bone	Bones from the dragon-holds of Caledor and the old dragon graveyards. Dragon bones lie only in Caledor's dragon mountains and mines and on the Plain of Bones. Anywhere else it makes nothing.	false
-building_description_texts_long_description_derpy_mr_bld_dragon_bone	Bones from the dragon-holds of Caledor and the old dragon graveyards. Dragon bones lie only in Caledor's dragon mountains and mines and on the Plain of Bones. Anywhere else it makes nothing.	false
+building_short_description_texts_short_description_derpy_mr_bld_dragon_bone	Dragon bones lie only in Caledor's dragon mountains and mines and on the Plain of Bones. Anywhere else it makes nothing.	false
+building_description_texts_long_description_derpy_mr_bld_dragon_bone	Dragon bones lie only in Caledor's dragon mountains and mines and on the Plain of Bones. Anywhere else it makes nothing.	false
 building_culture_variants_name_derpy_mr_bld_sea_dragon_hide_1	Flensing Yard	false
 building_culture_variants_name_derpy_mr_bld_sea_dragon_hide_2	Sea Dragon Hunters	false
 building_culture_variants_name_derpy_mr_bld_sea_dragon_hide_3	Sea Dragon Fleet	false
 building_chains_chain_tooltip_derpy_mr_bld_sea_dragon_hide	Sea Dragon Hide	false
-building_short_description_texts_short_description_derpy_mr_bld_sea_dragon_hide	Taken by Druchii corsairs from the sea dragons of the cold seas off Naggaroth. A cloak of it turns a blade. Sea dragons are hunted only from the ports of Naggaroth's cold coasts. Anywhere else it makes nothing.	false
-building_description_texts_long_description_derpy_mr_bld_sea_dragon_hide	Taken by Druchii corsairs from the sea dragons of the cold seas off Naggaroth. A cloak of it turns a blade. Sea dragons are hunted only from the ports of Naggaroth's cold coasts. Anywhere else it makes nothing.	false
+building_short_description_texts_short_description_derpy_mr_bld_sea_dragon_hide	Sea dragons are hunted only from the ports of Naggaroth's cold coasts. Anywhere else it makes nothing.	false
+building_description_texts_long_description_derpy_mr_bld_sea_dragon_hide	Sea dragons are hunted only from the ports of Naggaroth's cold coasts. Anywhere else it makes nothing.	false
 building_culture_variants_name_derpy_mr_bld_black_lotus_def_1	Lotus Gatherers	false
 building_culture_variants_name_derpy_mr_bld_black_lotus_def_2	Lotus Garden	false
 building_culture_variants_name_derpy_mr_bld_black_lotus_def_3	Black Lotus Plantation	false
@@ -295,14 +295,14 @@ building_culture_variants_name_derpy_mr_bld_black_lotus_skv_1	Lotus Gatherers	fa
 building_culture_variants_name_derpy_mr_bld_black_lotus_skv_2	Lotus Garden	false
 building_culture_variants_name_derpy_mr_bld_black_lotus_skv_3	Black Lotus Plantation	false
 building_chains_chain_tooltip_derpy_mr_bld_black_lotus_skv	Black Lotus	false
-building_short_description_texts_short_description_derpy_mr_bld_black_lotus	A poison flower of the southern jungles, sought by assassins and Witch Elves. The black lotus grows only in the jungles of the Southlands and Khuresh. Anywhere else it makes nothing.	false
-building_description_texts_long_description_derpy_mr_bld_black_lotus	A poison flower of the southern jungles, sought by assassins and Witch Elves. The black lotus grows only in the jungles of the Southlands and Khuresh. Anywhere else it makes nothing.	false
+building_short_description_texts_short_description_derpy_mr_bld_black_lotus	The black lotus grows only in the jungles of the Southlands and Khuresh. Anywhere else it makes nothing.	false
+building_description_texts_long_description_derpy_mr_bld_black_lotus	The black lotus grows only in the jungles of the Southlands and Khuresh. Anywhere else it makes nothing.	false
 building_culture_variants_name_derpy_mr_bld_starwood_1	Glade of Gifts	false
 building_culture_variants_name_derpy_mr_bld_starwood_2	Starwood Grove	false
 building_culture_variants_name_derpy_mr_bld_starwood_3	Grove of the Willing	false
 building_chains_chain_tooltip_derpy_mr_bld_starwood	Starwood	false
-building_short_description_texts_short_description_derpy_mr_bld_starwood	Wood the living trees of Athel Loren shed by their own will. It is given, never cut. Only the enchanted forest of Athel Loren gives starwood. Anywhere else it makes nothing.	false
-building_description_texts_long_description_derpy_mr_bld_starwood	Wood the living trees of Athel Loren shed by their own will. It is given, never cut. Only the enchanted forest of Athel Loren gives starwood. Anywhere else it makes nothing.	false
+building_short_description_texts_short_description_derpy_mr_bld_starwood	Only the enchanted forest of Athel Loren gives starwood. Anywhere else it makes nothing.	false
+building_description_texts_long_description_derpy_mr_bld_starwood	Only the enchanted forest of Athel Loren gives starwood. Anywhere else it makes nothing.	false
 building_culture_variants_name_derpy_mr_bld_feathers_brt_1	Eyrie Climbers	false
 building_culture_variants_name_derpy_mr_bld_feathers_brt_2	Mountain Eyrie	false
 building_culture_variants_name_derpy_mr_bld_feathers_brt_3	Great Eyrie	false
@@ -311,8 +311,8 @@ building_culture_variants_name_derpy_mr_bld_feathers_emp_1	Eyrie Climbers	false
 building_culture_variants_name_derpy_mr_bld_feathers_emp_2	Mountain Eyrie	false
 building_culture_variants_name_derpy_mr_bld_feathers_emp_3	Great Eyrie	false
 building_chains_chain_tooltip_derpy_mr_bld_feathers_emp	Griffon and Pegasus Feathers	false
-building_short_description_texts_short_description_derpy_mr_bld_feathers	Feathers gathered from the mountain eyries of griffons and pegasi. Griffons and pegasi nest only in the mountains of Bretonnia, the Empire and the Border Princes. Anywhere else it makes nothing.	false
-building_description_texts_long_description_derpy_mr_bld_feathers	Feathers gathered from the mountain eyries of griffons and pegasi. Griffons and pegasi nest only in the mountains of Bretonnia, the Empire and the Border Princes. Anywhere else it makes nothing.	false
+building_short_description_texts_short_description_derpy_mr_bld_feathers	Griffons and pegasi nest only in the mountains of Bretonnia, the Empire and the Border Princes. Anywhere else it makes nothing.	false
+building_description_texts_long_description_derpy_mr_bld_feathers	Griffons and pegasi nest only in the mountains of Bretonnia, the Empire and the Border Princes. Anywhere else it makes nothing.	false
 building_culture_variants_name_derpy_mr_bld_wyvern_scales_grn_1	Scale Scavengers	false
 building_culture_variants_name_derpy_mr_bld_wyvern_scales_grn_2	Wyvern Roost	false
 building_culture_variants_name_derpy_mr_bld_wyvern_scales_grn_3	Wyvern Hunters' Lodge	false
@@ -321,8 +321,13 @@ building_culture_variants_name_derpy_mr_bld_wyvern_scales_ogr_1	Scale Scavengers
 building_culture_variants_name_derpy_mr_bld_wyvern_scales_ogr_2	Wyvern Roost	false
 building_culture_variants_name_derpy_mr_bld_wyvern_scales_ogr_3	Wyvern Hunters' Lodge	false
 building_chains_chain_tooltip_derpy_mr_bld_wyvern_scales_ogr	Wyvern Scales	false
-building_short_description_texts_short_description_derpy_mr_bld_wyvern_scales	Scales of the wyverns that nest in the Badlands and the Mountains of Mourn. Wyverns nest only in the mountains of the Badlands and the Mountains of Mourn. Anywhere else it makes nothing.	false
-building_description_texts_long_description_derpy_mr_bld_wyvern_scales	Scales of the wyverns that nest in the Badlands and the Mountains of Mourn. Wyverns nest only in the mountains of the Badlands and the Mountains of Mourn. Anywhere else it makes nothing.	false
+building_short_description_texts_short_description_derpy_mr_bld_wyvern_scales	Wyverns nest only in the mountains of the Badlands and the Mountains of Mourn. Anywhere else it makes nothing.	false
+building_description_texts_long_description_derpy_mr_bld_wyvern_scales	Wyverns nest only in the mountains of the Badlands and the Mountains of Mourn. Anywhere else it makes nothing.	false
+effects_description_derpy_mr_effect_cost_chd_lammasu_taurus	Recruitment cost: %+n% for Lammasu, Great Taurus and Bale Taurus units	false
+effects_description_derpy_mr_effect_cost_hef_dragons_dragon_princes	Recruitment cost: %+n% for Dragons and Dragon Princes	false
+effects_description_derpy_mr_effect_rank_chd_lammasu_taurus	Recruit rank: %+n for Lammasu, Great Taurus and Bale Taurus units	false
+effects_description_derpy_mr_effect_rank_hef_dragons_dragon_princes	Recruit rank: %+n for Dragons and Dragon Princes	false
+effects_description_derpy_mr_effect_upkeep_wef_gladeguard_gladeriders	Upkeep: %+n% for Glade Guard and Glade Riders units	false
 pooled_resource_factors_display_name_positive_derpy_mr_stocked	Stocked	false
 pooled_resource_factors_display_name_negative_derpy_mr_stocked	Stocked	false
 pooled_resource_factors_display_name_positive_derpy_mr_raided	Raid spoils	false
@@ -610,6 +615,133 @@ pooled_resources_positive_factors_display_name_derpy_mr_store_trinkets	Stocked	f
 pooled_resources_negative_factors_display_name_derpy_mr_store_trinkets	Used	false
 effects_description_derpy_mr_store_trinkets_stocked	Elven Trinkets stocked: %n	false
 effects_description_derpy_mr_store_capacity	Space in this settlement's stores: +%n of each resource	false
+pooled_resource_factors_display_name_positive_derpy_mr_recruit	Recruits	false
+pooled_resource_factors_display_name_negative_derpy_mr_recruit	Recruits	false
+character_trait_levels_onscreen_name_derpy_mr_trait_silk	Silk-robed	false
+character_trait_levels_colour_text_derpy_mr_trait_silk	Robed in silk and jade, they are received as an equal at any court.	false
+character_trait_levels_explanation_text_derpy_mr_trait_silk	Fitted out from the Workshop's stores.	false
+character_trait_levels_onscreen_name_derpy_mr_trait_steel	Steel-shod	false
+character_trait_levels_colour_text_derpy_mr_trait_steel	Plate and greaves from the realm's own stores, fitted by its best smiths.	false
+character_trait_levels_explanation_text_derpy_mr_trait_steel	Fitted out from the Workshop's stores.	false
+character_trait_levels_onscreen_name_derpy_mr_trait_read	Well-read	false
+character_trait_levels_colour_text_derpy_mr_trait_read	A library carried on campaign, and lenses to read it by lamplight.	false
+character_trait_levels_explanation_text_derpy_mr_trait_read	Fitted out from the Workshop's stores.	false
+character_trait_levels_onscreen_name_derpy_mr_trait_spice	Spice-hardened	false
+character_trait_levels_colour_text_derpy_mr_trait_spice	Fiery on the tongue and slow in the stomach: brave, and in no hurry.	false
+character_trait_levels_explanation_text_derpy_mr_trait_spice	Fitted out from the Workshop's stores.	false
+character_trait_levels_onscreen_name_derpy_mr_trait_fur	Furred and Booted	false
+character_trait_levels_colour_text_derpy_mr_trait_fur	Fur-lined boots and wool cloaks for every soldier, whatever the weather.	false
+character_trait_levels_explanation_text_derpy_mr_trait_fur	Fitted out from the Workshop's stores.	false
+pooled_resource_factors_display_name_positive_derpy_mr_workshop	Workshop	false
+pooled_resource_factors_display_name_negative_derpy_mr_workshop	Workshop	false
+effect_bundles_localised_title_derpy_mr_hold_salted_fish	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_salted_fish	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_whale_oil	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_whale_oil	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_sea_dragon_hide	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_sea_dragon_hide	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_rum	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_rum	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_amber	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_amber	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_grain	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_grain	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_warhorses	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_warhorses	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_pipeweed	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_pipeweed	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_books	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_books	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_olive_oil	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_olive_oil	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_silk	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_silk	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_tea	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_tea	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_jade	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_jade	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_coal	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_coal	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_silver	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_silver	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_gromril	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_gromril	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_quicksilver	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_quicksilver	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_brimstone	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_brimstone	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_brass	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_brass	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_blackpowder	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_blackpowder	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_ithilmar	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_ithilmar	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_dragon_bone	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_dragon_bone	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_lustrian_plumes	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_lustrian_plumes	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_black_lotus	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_black_lotus	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_incense	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_incense	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_salted_meat	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_salted_meat	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_carpets	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_carpets	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_kvas	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_kvas	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_rhinox_hides	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_rhinox_hides	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_mead	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_mead	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_glassware	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_glassware	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_wool	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_wool	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_porcelain	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_porcelain	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_pearls	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_pearls	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_starwood	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_starwood	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_feathers	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_feathers	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_wyvern_scales	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_wyvern_scales	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_animals	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_animals	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_dyes	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_dyes	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_gems	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_gems	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_gold_idols	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_gold_idols	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_tusks	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_tusks	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_medicine	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_medicine	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_obsidian	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_obsidian	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_furs	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_furs	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_beer	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_beer	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_iron	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_iron	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_salt	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_salt	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_marble	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_marble	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_pottery	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_pottery	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_timber	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_timber	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_wine	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_wine	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_spices	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_spices	[hidden]	false
+effect_bundles_localised_title_derpy_mr_hold_trinkets	[hidden]	false
+effect_bundles_localised_description_derpy_mr_hold_trinkets	[hidden]	false
 effect_bundles_localised_title_derpy_mr_well_fed	Well fed	false
 effect_bundles_localised_description_derpy_mr_well_fed	After eating, this settlement's stores still hold five turns of provisions.	false
 effect_bundles_localised_title_derpy_mr_garrison_stocked	Garrison stocked	false
@@ -628,41 +760,100 @@ effect_bundles_localised_title_derpy_mr_supply_stable	Stable stocked	false
 effect_bundles_localised_description_derpy_mr_supply_stable	Supplied from the province capital's stores each turn: recruit cost -15% for cavalry and monsters.	false
 effect_bundles_localised_title_derpy_mr_supply_arms	Arms stocked	false
 effect_bundles_localised_description_derpy_mr_supply_arms	Supplied from the province capital's stores each turn: recruit cost -15% for infantry and artillery.	false
+effect_bundles_localised_title_derpy_mr_up_gromril	Gromril Gate	false
+effect_bundles_localised_description_derpy_mr_up_gromril	Built from your stores: melee defence +10 for your armies here, armour +10 in the province.	false
+effect_bundles_localised_title_derpy_mr_up_ithilmar	Ithilmar Spire	false
+effect_bundles_localised_description_derpy_mr_up_ithilmar	Built from your stores: public order +3 in the province, income +10% here.	false
+effect_bundles_localised_title_derpy_mr_up_dragon_bone	Dragon Bone Shrine	false
+effect_bundles_localised_description_derpy_mr_up_dragon_bone	Built from your stores: units recruited in the province gain a rank.	false
+effect_bundles_localised_title_derpy_mr_up_sea_dragon_hide	Sea Dragon Moorings	false
+effect_bundles_localised_description_derpy_mr_up_sea_dragon_hide	Built from your stores: income +15% here.	false
+effect_bundles_localised_title_derpy_mr_up_black_lotus	Black Lotus Gardens	false
+effect_bundles_localised_description_derpy_mr_up_black_lotus	Built from your stores: hero actions from here succeed more often (+10).	false
+effect_bundles_localised_title_derpy_mr_up_starwood	Starwood Grove	false
+effect_bundles_localised_description_derpy_mr_up_starwood	Built from your stores: growth +20 in the province.	false
+effect_bundles_localised_title_derpy_mr_up_feathers	Eyrie	false
+effect_bundles_localised_description_derpy_mr_up_feathers	Built from your stores: recruitment cost -15% in the province.	false
+effect_bundles_localised_title_derpy_mr_up_wyvern_scales	Wyvern Roost	false
+effect_bundles_localised_description_derpy_mr_up_wyvern_scales	Built from your stores: upkeep -5% for your armies here.	false
 effect_bundles_localised_title_derpy_mr_order_festival	Festival	false
 effect_bundles_localised_description_derpy_mr_order_festival	Paid for from your stores: public order +4 in every province.	false
 effect_bundles_localised_title_derpy_mr_order_muster	Muster	false
 effect_bundles_localised_description_derpy_mr_order_muster	Paid for from your stores: recruit rank +1 for every unit.	false
 effect_bundles_localised_title_derpy_mr_order_great_works	Great Works	false
 effect_bundles_localised_description_derpy_mr_order_great_works	Paid for from your stores: construction cost -20% for every building.	false
+effect_bundles_localised_title_derpy_mr_rc_army_ammo	Ammunition Train	false
+effect_bundles_localised_description_derpy_mr_rc_army_ammo	Paid for from your stores: ammunition +20%, 5 turns.	false
+effect_bundles_localised_title_derpy_mr_rc_army_forge	Field Forge	false
+effect_bundles_localised_description_derpy_mr_rc_army_forge	Paid for from your stores: armour +15, 5 turns.	false
+effect_bundles_localised_title_derpy_mr_rc_army_remounts	Remounts	false
+effect_bundles_localised_description_derpy_mr_rc_army_remounts	Paid for from your stores: replenishment +10%, 5 turns.	false
+effect_bundles_localised_title_derpy_mr_rc_army_medicine	Medicine Chests	false
+effect_bundles_localised_description_derpy_mr_rc_army_medicine	Paid for from your stores: attrition -25%, 5 turns.	false
+effect_bundles_localised_title_derpy_mr_rc_last_granary	Great Granary	false
+effect_bundles_localised_description_derpy_mr_rc_last_granary	Paid for from your stores: growth +15, for good.	false
+effect_bundles_localised_title_derpy_mr_rc_last_records	Hall of Records	false
+effect_bundles_localised_description_derpy_mr_rc_last_records	Paid for from your stores: research +15%, for good.	false
+effect_bundles_localised_title_derpy_mr_rc_last_bazaar	Grand Bazaar	false
+effect_bundles_localised_description_derpy_mr_rc_last_bazaar	Paid for from your stores: trade income +15%, for good.	false
+effect_bundles_localised_title_derpy_mr_rc_last_arsenal	Arsenal	false
+effect_bundles_localised_description_derpy_mr_rc_last_arsenal	Paid for from your stores: upkeep -10%, for good.	false
+effect_bundles_localised_title_derpy_mr_rc_last_stables	Royal Stables	false
+effect_bundles_localised_description_derpy_mr_rc_last_stables	Paid for from your stores: cavalry cost -20%, for good.	false
+effect_bundles_localised_title_derpy_mr_exports_held	Exports held	false
+effect_bundles_localised_description_derpy_mr_exports_held	You are holding some resources back from your trade agreements (the Resource Vault's Trade tab). Your regions make none of them for trade, so they earn you no trade income. Your stores still fill.	false
 dilemmas_localised_title_derpy_mr_dil_feast	A Feast	false
 dilemmas_localised_description_derpy_mr_dil_feast	The stores of {{CcoCampaignEventDilemma:RegionTargetName}} overflow with provisions. The people would gladly see them set out on the tables.	false
 cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_feastFIRST	Hold the feast	false
 cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_feastFIRST	Spend 100 provisions: public order +5 and growth +20 there for 5 turns.	false
+campaign_payload_ui_details_description_derpy_mr_dil_feast_cost	Spend 100 provisions	false
+campaign_payload_ui_details_description_derpy_mr_dil_feast_reward	Public order +5 and growth +20 there for 5 turns	false
 cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_feastSECOND	Keep the stores	false
 cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_feastSECOND	Nothing is spent.	false
+campaign_payload_ui_details_description_derpy_mr_dil_keep	Nothing is spent	false
 dilemmas_localised_title_derpy_mr_dil_siege	Siege Stores	false
 dilemmas_localised_description_derpy_mr_dil_siege	{{CcoCampaignEventDilemma:RegionTargetName}} is under siege, and its stores still hold provisions. Open them to the garrison and it can hold out without starving.	false
 cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_siegeFIRST	Open the stores	false
 cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_siegeFIRST	Spend 60 provisions: the garrison suffers no siege attrition for 2 turns.	false
+campaign_payload_ui_details_description_derpy_mr_dil_siege_cost	Spend 60 provisions	false
+campaign_payload_ui_details_description_derpy_mr_dil_siege_reward	The garrison suffers no siege attrition for 2 turns	false
 cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_siegeSECOND	Keep the stores	false
 cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_siegeSECOND	Nothing is spent.	false
 dilemmas_localised_title_derpy_mr_dil_tribute	Tribute	false
 dilemmas_localised_description_derpy_mr_dil_tribute	{{CcoCampaignEventDilemma:FirstTargetFactionNameWithIcon}} shares a border with you and is not at war with you. A gift of luxuries from your stores would be remembered.	false
 cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_tributeFIRST	Send the gift	false
-cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_tributeFIRST	Spend 50 luxuries: they think better of you.	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_tributeFIRST	Spend 50 luxuries: relations with that neighbour improve.	false
+campaign_payload_ui_details_description_derpy_mr_dil_tribute_cost	Spend 50 luxuries	false
+campaign_payload_ui_details_description_derpy_mr_dil_tribute_reward	Relations with that neighbour improve	false
 cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_tributeSECOND	Keep the stores	false
 cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_tributeSECOND	Nothing is spent.	false
 dilemmas_localised_title_derpy_mr_dil_arsenal	Arsenal	false
-dilemmas_localised_description_derpy_mr_dil_arsenal	Your stores hold war materials enough to re-arm a whole army. {{CcoCampaignEventDilemma:CharacterTargetName}}'s army would make good use of them.	false
+dilemmas_localised_description_derpy_mr_dil_arsenal	Your stores hold war materials enough to re-arm a whole army. Your largest army would make good use of them.	false
 cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_arsenalFIRST	Re-arm the army	false
-cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_arsenalFIRST	Spend 50 war materials: every unit in that army gains a rank.	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_arsenalFIRST	Spend 50 war materials: every unit in your largest army gains a rank.	false
+campaign_payload_ui_details_description_derpy_mr_dil_arsenal_cost	Spend 50 war materials	false
+campaign_payload_ui_details_description_derpy_mr_dil_arsenal_reward	Every unit in your largest army gains a rank	false
 cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_arsenalSECOND	Keep the stores	false
 cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_arsenalSECOND	Nothing is spent.	false
 dilemmas_localised_title_derpy_mr_dil_restore	Restore	false
 dilemmas_localised_description_derpy_mr_dil_restore	The stores of {{CcoCampaignEventDilemma:RegionTargetName}} hold building materials enough to mend what the fighting broke.	false
 cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_restoreFIRST	Restore it	false
 cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_restoreFIRST	Spend 100 building materials there: every building is repaired, and public order +5 for 5 turns.	false
+campaign_payload_ui_details_description_derpy_mr_dil_restore_cost	Spend 100 building materials there	false
+campaign_payload_ui_details_description_derpy_mr_dil_restore_reward	Every building is repaired, and public order +5 for 5 turns	false
 cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_restoreSECOND	Keep the stores	false
 cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_restoreSECOND	Nothing is spent.	false
 campaign_interactable_marker_infos_name_derpy_mr_shipment	Shipment	false
-campaign_interactable_marker_infos_tooltip_derpy_mr_shipment	Goods on the road between two settlements. An army at war with their owner can seize them by marching in.	false
+campaign_interactable_marker_infos_tooltip_derpy_mr_shipment	A shipment of resources on the road between two settlements. An army at war with its owner can seize it by marching in.	false
+ancillaries_onscreen_name_derpy_mr_anc_gromril_armour	Gromril Armour	false
+ancillaries_colour_text_derpy_mr_anc_gromril_armour	Gromril, the star-metal of the deep holds, beaten into plate no common blade will bite.	false
+ancillaries_onscreen_name_derpy_mr_anc_gromril_greataxe	Gromril Greataxe	false
+ancillaries_colour_text_derpy_mr_anc_gromril_greataxe	A gromril edge, rune-hardened, that keeps its bite through a whole war.	false
+ancillaries_onscreen_name_derpy_mr_anc_sea_dragon_cloak	Sea Dragon Cloak	false
+ancillaries_colour_text_derpy_mr_anc_sea_dragon_cloak	Cut from the hide of a sea dragon, as the corsairs of the Black Arks wear it.	false
+ancillaries_onscreen_name_derpy_mr_anc_lotus_venom_blade	Lotus-Venom Blade	false
+ancillaries_colour_text_derpy_mr_anc_lotus_venom_blade	Its edge is kept wet with black lotus, and the smallest cut is enough.	false
+ancillaries_onscreen_name_derpy_mr_anc_starwood_bow	Starwood Bow	false
+ancillaries_colour_text_derpy_mr_anc_starwood_bow	Grown, not carved, from the willing wood of Athel Loren.	false
+ancillaries_onscreen_name_derpy_mr_anc_wyvern_scale_armour	Wyvern-Scale Armour	false
+ancillaries_colour_text_derpy_mr_anc_wyvern_scale_armour	Scales prised from a wyvern of the Badlands, still hard as iron.	false

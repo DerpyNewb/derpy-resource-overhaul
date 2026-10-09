@@ -1,5 +1,44 @@
 # Changelog
 
+## 2026-10-09
+
+- Fixed: a war machine took one resource too many when its draw split unevenly.
+- Wood Elf items name who can carry them (Hail of Doom Arrow, Bow of Loren).
+- Kislev's feather works removed: Kislev makes no feathers and trade brings too few.
+- Text: one word for resources throughout, clearer tooltips, Workshop title and tab tooltips updated.
+- Rare-resource buildings: description no longer repeats itself.
+
+## 2026-10-08
+
+- Trade tab: stopping a good's exports also stops CA's trade agreement export of it.
+- Import duty: each turn trade partners pay each other a share of what they make (MCT 0-50, default 10).
+- Trade tab: an Import duty row, paid and received per partner.
+- Rare resources are kept for the Workshop: orders, supplies, events and upkeep no longer use them.
+- Restore is offered on loot-and-occupy too.
+- Recruiting takes resources from your stores, by unit type and worth, for any mod's units.
+- Recruiting: elite units also take your race's rare resource.
+- Recruiting: a shortfall is paid in Armaments (Chaos Dwarfs) or Food (Skaven), then gold.
+- MCT: Recruits use the stores, and how much each recruit takes.
+- Spending tab: Recruits last turn.
+- Workshop: convert stores into Armaments, Food, Oathgold or Infamy.
+- Workshop: army works for the selected army (ammunition, armour, replenishment, attrition, a rank).
+- Workshop: traits for the selected lord or hero.
+- Workshop: works that last (growth, research, trade income, upkeep, cavalry cost).
+- Workshop: each recipe shows up to four priced resources; sections fold.
+- Workshop: 15 more CA items and 9 more units.
+- Workshop: Vampire Counts, Cathay and Norsca.
+- Fixed: Sell surplus paid ten times over with the Exchange installed.
+- Fixed: Sell surplus could desync multiplayer with the Exchange installed.
+- Fixed: holding beer could list exports the faction never made.
+- Fixed: import duty charged on held goods.
+- Fixed: two Restores in one turn paid for the wrong settlement.
+- Fixed: opening the Resource Vault before the first turn froze the settings.
+- Fixed: an event never issued blocked the next one.
+- Fixed: a failed siege's spoils carried over to a later raze.
+- Fixed: supply pay icon pulsed red while the capital could pay.
+- Fixed: Workshop tooltip, chart's newest bar, Imports tooltip and Import duty row text.
+- MCT options are greyed in a campaign, with the reason.
+
 ## 2026-10-04
 
 - The Old World compatibility pack: `derpy_resource_overhaul_oldworld.pack`.

@@ -53,16 +53,25 @@ RATES = (
     ("trade", "Trade share per turn",
      "Each turn, every trade agreement sends this share of a resource from the sender's fullest store "
      "to the partner's capital, for each resource the partner lacks. 0 turns this off.", 0, 25, 5),
+    # IMPORT DUTY (spec 2026-10-08): gold, paid to the partner, never more than the payer holds
+    ("duty", "Import duty",
+     "Each turn, every faction pays each trade partner this share of the value of what that partner's "
+     "settlements made that turn, at the value trade agreements put on it. The gold goes to the partner. "
+     "0 turns this off.", 0, 50, 10),
     # PHASE 5: shipments are drawn on the map, so their number is held down
     ("ships", "Shipments on the road",
      "How many shipments of yours can be on the road at once. Sending a resource between your settlements "
      "takes two turns, and an army at war with you can seize it on the way. Other factions keep one.", 1, 10, 3),
+    # THE RECRUITMENT DRAW (workshop expansion spec 2026-10-08, section 3)
+    ("recruit_per", "Resources per 100 gold of a recruit",
+     "How many resources a recruit takes from your stores for each 100 gold it is worth. 0 turns this off.",
+     0, 5, 1),
 )
 AI_SWITCH = ("ai", "Other factions use their stores",
-             "Factions no player controls raid, sack, trade, eat and gain bonuses from their stores as a "
-             "player does. Off: resources move only when a player's faction is one of the two, and other "
-             "factions' settlements neither eat nor gain bonuses, which makes turns faster on a slow "
-             "machine.", True)
+             "Factions no player controls raid, sack, trade, eat, recruit and gain bonuses from their "
+             "stores as a player does. Off: resources move only when a player's faction is one of the "
+             "two. Other factions' settlements do not eat or gain bonuses, and their recruits take "
+             "nothing. Turns run faster on a slow machine.", True)
 # PHASE 4 (spending spec section 2): settlements eat provisions and well-stocked stores give bonuses
 UPKEEP_SWITCH = ("upkeep", "Settlements use their stores",
                  "Each turn every settlement eats provisions from its stores. Five turns of provisions left "
@@ -80,9 +89,43 @@ EVENTS_SWITCH = ("events", "Store events",
 # PHASE 5 (spending spec section 3): a province capital pays for supplies across its province
 SUPPLY_SWITCH = ("supply", "Province supplies",
                  "A province capital can pay from its stores each turn for Materials on hand, Stable stocked "
-                 "and Arms stocked in every settlement you hold in its province, and can send for goods from "
+                 "and Arms stocked in every settlement you hold in its province, and can send for resources from "
                  "the province's other settlements. Off: no province supplies.", True)
-SWITCHES = (AI_SWITCH, UPKEEP_SWITCH, ACTIONS_SWITCH, EVENTS_SWITCH, SUPPLY_SWITCH)
+RECRUIT_SWITCH = ("recruit", "Recruits use the stores",
+                  "Every unit you recruit takes resources from your stores by its type and worth "
+                  "(cavalry and monsters take mounts, infantry and war machines take war materials, "
+                  "the finest also take your rare resource). What the stores lack is paid in your "
+                  "race's own currency where it has one, then in gold. Off: recruiting takes nothing.", True)
+SWITCHES = (AI_SWITCH, UPKEEP_SWITCH, ACTIONS_SWITCH, EVENTS_SWITCH, SUPPLY_SWITCH, RECRUIT_SWITCH)
+# THE RECRUITMENT DRAW (workshop expansion spec 2026-10-08, section 3): what a recruited unit draws
+# from the stores, by CA's caste (main_units.caste), per RECRUIT_PER gold of its value. Lords,
+# heroes and `generic` draw nothing. check_recruit() holds every key to CA's DB.
+RECRUIT_PER, RECRUIT_ELITE, RECRUIT_ELITE_PER, RECRUIT_GOLD_X = 100, 1200, 400, 2
+CASTE_DRAW = {
+    "melee_infantry": [("war", 1)], "missile_infantry": [("war", 1)],
+    "monstrous_infantry": [("war", 1.5)],
+    "melee_cavalry": [("mounts", 1)], "missile_cavalry": [("mounts", 1)], "chariot": [("mounts", 1)],
+    "monstrous_cavalry": [("mounts", 1.5)], "war_beast": [("mounts", 1.5)], "monster": [("mounts", 1.5)],
+    "warmachine": [("war", 0.5), ("building", 0.5)],
+}
+INFANTRY_CASTES = ("melee_infantry", "missile_infantry", "monstrous_infantry")
+# an elite's rare good, lore-led (author's rule: a race without the lore basis goes without)
+RACE_RARE = {"dwf": "gromril", "hef": "ithilmar", "def": "sea_dragon_hide", "skv": "black_lotus",
+             "wef": "starwood", "brt": "feathers", "emp": "feathers", "grn": "wyvern_scales",
+             "ogr": "wyvern_scales", "chd": "dragon_bone"}
+RACE_RARE_INF = {"def": "black_lotus"}
+# the shortfall, in the race's own CA currency: `per` missing goods cost one of it, then gold at
+# RECRUIT_GOLD_X x CA's trade value. First values, tuned in game. Tomb Kings and Khorne are in
+# NO_STORES: they keep no stores, so they never draw, and a currency charge would be a tax with no
+# stores behind it. Ogre Meat is held per army (scope MILITARY_FORCE), out of
+# cm:faction_add_pooled_resource's reach, so Ogres pay gold.
+CURRENCY = {
+    "chd": {"pool": "wh3_dlc23_chd_armaments", "per": 2, "word": "Armaments",
+            "line": "The forges took %d %s in place of what the stores lacked."},
+    # Food caps at 100 and CA grants 3-5 at a time: one per 5 goods, so a recruit cannot empty it
+    "skv": {"pool": "skaven_food", "per": 5, "word": "Food",
+            "line": "The warrens gave up %d %s in place of what the stores lacked."},
+}
 # THE FIVE USES (spending spec section 1): every store has exactly one; check_uses() asserts it.
 USES = {
     "provisions": ("grain", "salted_fish", "salted_meat", "olive_oil", "tea", "kvas", "mead", "rum", "beer",
@@ -95,6 +138,15 @@ USES = {
     "luxuries": ("silk", "jade", "carpets", "porcelain", "pearls", "amber", "lustrian_plumes", "incense",
                  "black_lotus", "pipeweed", "books", "gems", "gold_idols", "dyes", "trinkets", "silver", "wool"),
 }
+# THE WORKSHOP'S PRICE CELL: one icon per use the bulk is drawn from, CA's own bundle glyphs
+USE_ICON = {"war": "weapon_damage.png", "mounts": "mount.png", "building": "construction.png",
+            "luxuries": "public_order_jubilant.png", "provisions": "growth.png"}
+# THE WORKSHOP'S PURCHASE SOUNDS, one per kind, every one an event in CA's registry (checked)
+WORK_SOUND = {"item": "UI_CLICK_Craft_Item", "unit": "UI_CAM_DWF_BookOfGrudges_Purchase_Unit",
+              "upgrade": "UI_CLICK_Building_Upgrade", "research": "UI_CLICK_Upgrade_Technology",
+              # the named recipes (spec section 4): CA's own events again, by what the work is like
+              "convert": "UI_CLICK_Craft_Item", "army": "UI_CAM_DWF_BookOfGrudges_Purchase_Unit",
+              "trait": "UI_CLICK_Upgrade_Technology", "lasting": "UI_CLICK_Building_Upgrade"}
 # WHO HAS NO STORES TO USE: the subculture tokens whose buildings make nothing
 # (gen_resource_overhaul.EXCLUDE); check_uses() asserts the two lists agree.
 NO_STORES = ("dae", "kho", "nur", "sla", "tze", "tmb", "nag", "bst")
@@ -119,9 +171,10 @@ L = {
     # A RULE BETWEEN THE TITLE AND THE TABS (asked for 2026-10-02): the two read as one block
     # without it.
     "title_rule": (20, 46, 820, 2),
-    # FIVE TABS, 120 wide and 6 apart, clear of Back at 720
-    "tab_goods": (20, 56, 120, 26), "tab_settlements": (146, 56, 120, 26),
-    "tab_trade": (272, 56, 120, 26), "tab_spending": (398, 56, 120, 26), "tab_map": (524, 56, 120, 26),
+    # SIX TABS, 112 wide and 4 apart, clear of Back at 720 (the Workshop made six, 2026-10-07)
+    "tab_goods": (20, 56, 112, 26), "tab_settlements": (136, 56, 112, 26),
+    "tab_trade": (252, 56, 112, 26), "tab_spending": (368, 56, 112, 26), "tab_map": (484, 56, 112, 26),
+    "tab_workshop": (600, 56, 112, 26),
     # THE MAP TAB: the list's own box, a pad inside it, and no picture of the map - it is framed on
     # the dots it draws, so it fits any campaign. A capital's dot is larger and named; a convoy is
     # CA's convoy icon on MAP_STEPS dots from where it left to where it goes. MAP_MIN_SPAN keeps one
@@ -170,7 +223,10 @@ L = {
     # right-aligned digits leave room; measure in game if one collides.
     "ICONS": 4, "ICON_PITCH": 26,
     # THE USING COLUMN (phase 4): up to USING bundle icons in a Settlements row's third column
-    "USING": 3,
+    "USING": 4,
+    # A NAMED RECIPE'S PRICE (workshop expansion spec section 4): up to four goods from the Workshop's
+    # column 3, each its icon then its amount, PRICE_PITCH apart; the amounts are the pn cells
+    "PRICE_PITCH": 50,
     # THE CHART (flows spec section 7), on a good's drill-down only: the list drops to CHART_ROWS
     # and twenty bars stand on one baseline under it.
     "CHART_ROWS": 9, "BARS": 20, "BAR_W": 33, "BAR_PITCH": 41, "BAR_MIN": 2,
@@ -200,6 +256,13 @@ L = {
         # 2-4 and its Show button in 5
         "spending": ((36, 230, "left"), (276, 126, "centre"), (408, 126, "centre"), (540, 126, "centre"),
                      (672, 128, "centre")),
+        # the Workshop: name, what it gives, the rare good's price and the bulk's, each after its
+        # icon (rc.lead), Buy in 5
+        "workshop": ((36, 210, "left"), (252, 200, "left"), (458, 100, "left"), (564, 98, "left"),
+                     (668, 132, "left")),
+        # an upgrade's settlements, Buy here in 5
+        "workshop_focus": ((36, 300, "left"), (344, 120, "left"), (472, 100, "left"), (580, 60, "left"),
+                           (668, 132, "left")),
         # no list on the Map tab: the Resources tab's columns, for headers it leaves blank
         "map": ((36, 204, "left"), (244, 90, "right"), (338, 100, "right"), (442, 110, "right"),
                 (556, 240, "right")),
@@ -300,8 +363,11 @@ def build_panel():
             ("derpy_mr_tab_trade", L["tab_trade"],
              "Trade||Choose which resources your settlements send and take by trade."),
             ("derpy_mr_tab_spending", L["tab_spending"],
-             "Spending||What your stores pay for: province supplies, shipments on the road, and orders."),
+             "Spending||What your stores pay for: province supplies, shipments on the road, orders, recruits and import duty."),
             ("derpy_mr_tab_map", L["tab_map"], "Map||Where your settlements and convoys are."),
+            ("derpy_mr_tab_workshop", L["tab_workshop"],
+             "Workshop||Spend your stores on items, units, settlement upgrades, research and works for "
+             "your armies and characters."),
             ("derpy_mr_back", L["back"], "Back to the full list.")):
         p.add(_cell(E, name, box[2], box[3], interactive=True, image=BTN_BG,
                     hover=[_flat(BTN_HOVER)], sound=SND_SMALL, align="Center", tooltip=tip))
@@ -356,6 +422,8 @@ def build_row():
         r.add(E.C("use%d" % j, L["icon"][2], L["icon"][3], image=ICON_BG))
     for j, (_x, cw, _a) in enumerate(COLS, 1):
         r.add(_cell(E, "c%d" % j, cw, 20, size=12, align=ALIGN[j - 1]))
+    for j in range(1, L["USING"] + 1):   # a named recipe's amounts, one after each use icon
+        r.add(_cell(E, "pn%d" % j, L["PRICE_PITCH"] - L["ICON_PITCH"], 20, size=12, align="Left"))
     for j in range(2, len(COLS) + 1):
         r.add(E.C("vline%d" % j, 1, L["PITCH"], image=WHITE, colour_img=DIVIDER_COLOUR))
     # the Trade tab's two boxes, then the Spending tab's four supply boxes
@@ -535,6 +603,8 @@ def build_mapart():
     # engine drags ("Movable XP", CA's value). A dragged Movable XP component is put back where the
     # drag began when let go, so the PICTURE is never dragged: the Lua's poll moves it by the grab
     # layer's offset while IsDragged, and the put-back happens to a layer nobody sees.
+    # NOT DragAndZoomCallback (tried 2026-10-08): on this layer it took the press, so the drag
+    # stopped, and moved or sized nothing a script can read, so the wheel zoomed nothing either.
     clip.add(E.C("derpy_mr_map_grab", w, h, interactive=True, moveable="Movable XP"))
     # The picture: NOT interactive, so a press on bare map goes through it to the grab layer; the
     # dots, names and carts are its children, drawn over it, cut with it and moved with it.
@@ -595,6 +665,11 @@ def capture_kinds():
     return tuple(sorted(out.items()))
 
 
+def _rare(stem):
+    import gen_resource_overhaul as G
+    return "true" if stem in G.RARE else "false"
+
+
 def use_of(stem):
     for use, stems in USES.items():
         if stem in stems:
@@ -615,6 +690,32 @@ def check_uses():
     assert set(SELL_RATE) == set(USES), "a use with no sell rate"
 
 
+def check_recruit():
+    """The recruitment rules name only real things: CA's castes, our goods' uses and rare stems,
+    race tokens a subculture yields, and CA pools that exist (keys fail silently)."""
+    import gen_resource_overhaul as G
+    castes = {r["caste"] for r in G.db("main_units_tables")[1]}
+    assert set(CASTE_DRAW) <= castes, set(CASTE_DRAW) - castes
+    assert not {"lord", "hero", "generic"} & set(CASTE_DRAW), "characters draw nothing"
+    assert set(INFANTRY_CASTES) <= set(CASTE_DRAW), INFANTRY_CASTES
+    uses = {use_of(s) for s, _r, _i in goods()}
+    for caste, parts in CASTE_DRAW.items():
+        assert parts and all(u in uses and 0 < x <= 2 for u, x in parts), caste
+    rare = {s for s, _r, _i in goods() if _rare(s) == "true"}
+    assert set(RACE_RARE.values()) | set(RACE_RARE_INF.values()) <= rare
+    tokens = {m.group(1) for r in G.db("cultures_subcultures_tables")[1]
+              for m in [re.search(r"_sc_([a-z]+)_", r["subculture"])] if m}
+    named = set(RACE_RARE) | set(RACE_RARE_INF) | set(CURRENCY)
+    assert named <= tokens, named - tokens
+    assert named.isdisjoint(NO_STORES), "a race that keeps no stores: %s" % (named & set(NO_STORES))
+    pools = {r["key"]: r for r in G.db("pooled_resources_tables")[1]}
+    for race, c in CURRENCY.items():
+        assert c["pool"] in pools, (race, c["pool"])
+        # cm:faction_add_pooled_resource reaches a FACTION pool only: Ogre Meat is held per army
+        assert pools[c["pool"]]["scope"] == "FACTION", "%s is a %s pool" % (c["pool"], pools[c["pool"]]["scope"])
+        assert c["per"] >= 1 and "%d" in c["line"] and "%s" in c["line"], race
+
+
 def check_capture_kinds():
     got = dict(capture_kinds())
     assert len(got) > 40, "only %d sack/raze options read" % len(got)
@@ -622,7 +723,13 @@ def check_capture_kinds():
         assert got.get(oid) == kind, "option %d is %r in the table, %r in game" % (oid, got.get(oid), kind)
 
 
+# what a named recipe carries into the flows header beyond a rare work's fields
+RECIPE_FIELDS = ("goods", "amount", "bundle", "turns", "trait", "rank", "wait", "lord")
+
+
 def _lua(v):
+    if isinstance(v, bool):
+        return "true" if v else "false"
     if isinstance(v, dict):
         return "{" + ", ".join("%s = %s" % (k, _lua(v[k])) for k in sorted(v)) + "}"
     if isinstance(v, (tuple, list)):
@@ -639,7 +746,8 @@ def header():
              "DERPY_MR_STORES_L = {"]
     lines += ["    %s = %s," % (k, _lua(L[k])) for k in sorted(L)]
     lines += ["}", "DERPY_MR_STORES_GOODS = {"]
-    lines += ['    {stem = "%s", res = "%s", icon = "%s"},' % g for g in goods()]
+    lines += ['    {stem = "%s", res = "%s", icon = "%s", use = "%s", rare = %s},'
+              % (s, r, i, use_of(s), _rare(s)) for s, r, i in goods()]
     lines += ["}", "DERPY_MR_CAPTURE_KIND = {"]
     lines += ['    [%d] = "%s",' % kv for kv in capture_kinds()]
     lines += ["}", "DERPY_MR_STORES_BUNDLES = {"]
@@ -651,6 +759,19 @@ def header():
     lines += ["}", "DERPY_MR_STORES_SUPPLY = {"]
     lines += ['    {key = "%s", label = "%s", use = "%s", what = "%s"},' % (k, l, u, w)
               for (k, l, u), w in zip(supply_buttons(), [s[5] for s in G.SUPPLY] + [""])]
+    lines += ["}", "DERPY_MR_STORES_WORKS = {"]
+    icon_of = {s: i for s, _r, i in goods()}
+    for w in G.works():
+        priced = _lua([(st, n, icon_of[st]) for st, n in w.get("goods", ())])
+        # a general_to_force_own trait is a lord's alone (stage 2 final review)
+        target = "lord" if w.get("lord") else {"army": "army", "trait": "character"}.get(w["kind"], "")
+        first = w["rare"] or (w["goods"][0][0] if w.get("goods") else "books")
+        lines.append('    {key = "%s", kind = "%s", rare = "%s", use = "%s", name = "%s", gives = "%s", detail = "%s", '
+                     'icon = "%s", pool = "%s", goods = %s, target = "%s"},'
+                     % (w["key"], w["kind"], w["rare"], w["use"], w["name"], w["gives"], w["detail"], icon_of[first],
+                        w.get("pool", ""), priced, target))
+    lines += ["}", "DERPY_MR_STORES_USE_ICON = {"]
+    lines += ['    %s = "ui/campaign ui/effect_bundles/%s",' % kv for kv in sorted(USE_ICON.items())]
     lines.append("}")
     return "\n".join(lines) + "\n"
 
@@ -667,6 +788,23 @@ def stores_lua():
         return header() + fh.read()
 
 
+# IMPORT DUTY'S PRICE: what CA's trade pays a unit. Measured 2026-10-08 (Old World): the Trade
+# Forecast showed "Resource value: 9" for Salt and Brimstone, both trade_value 50. The Exchange's
+# market price (salt 818, blackpowder 4,549) is NOT a trade price: on it one turn's output of 44
+# units came to a 6,128 duty, the partner's whole treasury.
+CA_UNIT_VALUE = 9 / 50
+
+
+def trade_values():
+    """resource key -> resources_tables.trade_value: CA's rows, and ours (cloned from the donor)."""
+    import gen_resource_overhaul as G
+    van = G.db("resources_tables")[1]
+    out = {r["key"]: r["trade_value"] for r in van}
+    donor, = [r for r in van if r["key"] == G.DONOR]
+    out.update({G.key(g): donor["trade_value"] for g in G.GOODS})
+    return out
+
+
 def flows_header():
     lines = ["-- GENERATED by tools/gen_mr_ui.py from Modding Files/source/resource_overhaul/flows.lua.",
              "-- Edit the source or the generator, never this file.",
@@ -676,7 +814,12 @@ def flows_header():
     lines += ["}", "DERPY_MR_FLOWS_KIND = {"]
     lines += ['    %s = "%s",' % (k, FLOW_KIND[k]) for k in sorted(FLOW_KIND)]
     lines += ["}", "DERPY_MR_FLOWS_GOODS = {"]
-    lines += ['    {stem = "%s", res = "%s", use = "%s"},' % (s, r, use_of(s)) for s, r, _i in goods()]
+    worth = trade_values()
+    import gen_resource_overhaul as G
+    # F.hold_exports applies derpy_mr_hold_<stem>; a stem with no marker bundle holds nothing, silently
+    assert {s for s, _r, _i in goods()} == set(G.store_stems()), "goods without a hold marker"
+    lines += ['    {stem = "%s", res = "%s", use = "%s", rare = %s, value = %g},'
+              % (s, r, use_of(s), _rare(s), worth[r] * CA_UNIT_VALUE) for s, r, _i in goods()]
     import gen_resource_overhaul as G
     lines += ["}", "DERPY_MR_FLOWS_ORDERS = {"]
     lines += ['    %s = {use = "%s", bundle = "%s"},' % (k, u, b) for k, u, b, *_r in G.ORDERS]
@@ -698,9 +841,33 @@ def flows_header():
               'near = %d, spot = %d, info = "%s"}'
               % (G.SUPPLY_PER, G.SHIP_TURNS, G.SHIP_AI_CAP, G.SHIP_STAND, G.SHIP_AI_ON, G.SHIP_RADIUS,
                  G.SHIP_NEAR, G.SHIP_SPOT, G.SHIP_INFO)]
+    lines += ['DERPY_MR_FLOWS_RECRUIT = {per = %d, elite = %d, elite_per = %d, gold_x = %d, factor = "derpy_mr_recruit"}'
+              % (RECRUIT_PER, RECRUIT_ELITE, RECRUIT_ELITE_PER, RECRUIT_GOLD_X), "DERPY_MR_FLOWS_CASTE = {"]
+    lines += ["    %s = {%s}," % (c, ", ".join('{"%s", %g}' % p for p in parts)) for c, parts in sorted(CASTE_DRAW.items())]
+    lines += ["}", "DERPY_MR_FLOWS_INFANTRY = {%s}" % ", ".join("%s = true" % c for c in INFANTRY_CASTES),
+              "DERPY_MR_FLOWS_RACE_RARE = {%s}" % ", ".join('%s = "%s"' % kv for kv in sorted(RACE_RARE.items())),
+              "DERPY_MR_FLOWS_RACE_RARE_INF = {%s}" % ", ".join('%s = "%s"' % kv for kv in sorted(RACE_RARE_INF.items())),
+              "DERPY_MR_FLOWS_CURRENCY = {"]
+    lines += ['    %s = {pool = "%s", per = %d, word = "%s", line = "%s"},' % (r, c["pool"], c["per"], c["word"], c["line"])
+              for r, c in sorted(CURRENCY.items())]
+    lines += ["}"]
     lines += ["DERPY_MR_FLOWS_NO_STORES = {%s}" % ", ".join('"%s"' % t for t in NO_STORES),
               "DERPY_MR_FLOWS_BUNDLES = {"]
     lines += ['    %s = "%s",' % (u, k) for u, k, *_r in bundles()]
+    lines += ["}", "DERPY_MR_FLOWS_WORKS = {"]
+    for w in G.works():
+        # a named recipe's price and payload (workshop expansion spec section 4)
+        extra = "".join(", %s = %s" % (k, _lua(w[k])) for k in RECIPE_FIELDS if k in w)
+        lines.append('    {key = "%s", kind = "%s", rare = "%s", rare_n = %d, use = "%s", use_n = %d, races = %s, '
+                     'grant = "%s", group = "%s", pool = "%s"%s},'
+                     % (w["key"], w["kind"], w["rare"], w["rare_n"], w["use"], w["use_n"], _lua(w["races"]),
+                        w["grant"], w["group"], w.get("pool", ""), extra))
+    lines += ["}", "DERPY_MR_FLOWS_WORK = %s" % _lua(G.work_cfg()),
+              "DERPY_MR_FLOWS_WORK_SOUND = %s" % _lua(WORK_SOUND),
+              "-- the factions that own each pool (faction_to_mercenary_set_junctions); any other buys into an army",
+              "DERPY_MR_FLOWS_POOL_HAS = {"]
+    for pool, fs in sorted(G.pool_factions().items()):
+        lines.append("    %s = {%s}," % (pool, ", ".join("%s = true" % f for f in fs)))
     lines.append("}")
     return "\n".join(lines) + "\n"
 
@@ -721,15 +888,22 @@ MCT_DESC = ("How goods move between settlement stores. These are fixed for the l
             "they are ignored and every value is the default on every machine.")
 
 
+# Shown on a greyed setting in a campaign: the values are frozen into the save (flows.lua).
+MCT_LOCK = "Fixed when a campaign starts. Change it from the main menu before starting a new one."
+
+
 def mct_lua():
     lines = ["-- GENERATED by tools/gen_mr_ui.py - do not edit by hand.",
              "--",
              "-- MCT registration for Resource Overhaul's stores. MCT loads every .lua under",
              "-- script/mct/settings/, so this file only ever runs when MCT is installed. The",
-             "-- campaign script freezes these values into the save at the first turn start.",
+             "-- campaign script freezes these values into the save at the first tick; the lock",
+             "-- below only shows that in a campaign (MCT has no campaign gating of its own).",
              "",
              "local mct = get_mct and get_mct()",
              "if not mct then return end",
+             "local IN_CAMPAIGN = __game_mode == __lib_type_campaign",
+             'local LOCK_REASON = "%s"' % MCT_LOCK,
              "",
              'local m = mct:register_mod("derpy_more_resources")',
              'm:set_title("%s")' % MCT_TITLE,
@@ -745,10 +919,11 @@ def mct_lua():
                   "o_%s:slider_set_min_max(%d, %d)" % (k, lo, hi),
                   "o_%s:slider_set_step_size(1, 0)" % k,
                   "o_%s:set_default_value(%d)" % (k, d),
-                  'o_%s:set_assigned_section("stores")' % k]
+                  'o_%s:set_assigned_section("stores")' % k,
+                  "if IN_CAMPAIGN then o_%s:set_locked(true, LOCK_REASON) end" % k]
     for (k, label, tip, d), section in ((AI_SWITCH, "stores"), (UPKEEP_SWITCH, "using"),
                                         (ACTIONS_SWITCH, "using"), (EVENTS_SWITCH, "using"),
-                                        (SUPPLY_SWITCH, "using")):
+                                        (SUPPLY_SWITCH, "using"), (RECRUIT_SWITCH, "using")):
         if k == "upkeep":
             lines += ["", 'm:add_new_section("using", "Using stores")']
         lines += ["",
@@ -756,7 +931,8 @@ def mct_lua():
                   'o_%s:set_text("%s")' % (k, label),
                   'o_%s:set_tooltip_text("%s")' % (k, tip),
                   "o_%s:set_default_value(%s)" % (k, "true" if d else "false"),
-                  'o_%s:set_assigned_section("%s")' % (k, section)]
+                  'o_%s:set_assigned_section("%s")' % (k, section),
+                  "if IN_CAMPAIGN then o_%s:set_locked(true, LOCK_REASON) end" % k]
     return "\n".join(lines) + "\n"
 
 
@@ -824,7 +1000,8 @@ def check_layout():
     """Every box inside the panel; headers, list and hint in order; columns clear of each
     other and of the slider. A box that leaves the panel draws over the map."""
     W, H = L["W"], L["H"]
-    for k in ("title", "title_rule", "close", "tab_goods", "tab_settlements", "tab_trade", "back",
+    for k in ("title", "title_rule", "close", "tab_goods", "tab_settlements", "tab_trade", "tab_spending",
+              "tab_map", "tab_workshop", "back",
               "sub_title", "list", "empty", "hint"):
         x, y, w, h = L[k]
         assert 0 <= x and 0 <= y and x + w <= W and y + h <= H, "%s leaves the panel" % k
@@ -833,10 +1010,29 @@ def check_layout():
     assert L["head_y"] + 22 <= ly and ly + lh <= L["bulk"][1], "headers, list and buttons overlap"
     assert L["hint"][:2] == L["sub_title"][:2], "the hint has left the sub-title's line"
     assert L["tab_trade"][0] >= L["tab_settlements"][0] + L["tab_settlements"][2], "the tabs overlap"
-    tabs = [L[k] for k in ("tab_goods", "tab_settlements", "tab_trade", "tab_spending", "tab_map")]
+    tabs = [L[k] for k in ("tab_goods", "tab_settlements", "tab_trade", "tab_spending", "tab_map", "tab_workshop")]
     for a, b in zip(tabs, tabs[1:]):
         assert b[0] >= a[0] + a[2], "the tabs overlap"
-    assert L["back"][0] >= L["tab_map"][0] + L["tab_map"][2], "back overlaps a tab"
+    assert L["back"][0] >= tabs[-1][0] + tabs[-1][2], "back overlaps a tab"
+    for view in ("workshop", "workshop_focus"):   # Buy in the fifth column
+        assert L["send"][0] <= L["VIEWS"][view][4][1], "Buy overruns %s's last column" % view
+    # EVERY WORKSHOP ROW'S TEXT FITS ITS COLUMN: the name, the short line, and each price part
+    # after its icon (a part's figure starts ICON_PITCH in)
+    import gen_resource_overhaul as G
+    wc = L["VIEWS"]["workshop"]
+    for w in G.works():
+        for text, (_x, cw, _a) in ((w["name"], wc[0]), (w["gives"], wc[1])):
+            assert CHAR_W * len(text) <= cw, "%r is %dpx in a %dpx column" % (text, CHAR_W * len(text), cw)
+        for n, (_x, cw, _a) in ((w["rare_n"], wc[2]), (w["use_n"], wc[3])):
+            assert L["ICON_PITCH"] + CHAR_W * len(str(n)) <= cw, "%s's price %d does not fit" % (w["key"], n)
+    assert L["USING"] >= 2, "a Workshop row's two price icons use the row's use1 and use2"
+    # A NAMED RECIPE'S PRICE STRIP stops short of Buy, and each amount fits after its icon
+    for w in G.works():
+        goods = w.get("goods", ())
+        assert len(goods) <= L["USING"], "%s names more goods than a row has icons" % w["key"]
+        assert wc[2][0] + len(goods) * L["PRICE_PITCH"] <= wc[4][0], "%s's price runs into Buy" % w["key"]
+        for _s, n in goods:
+            assert CHAR_W * len(str(n)) <= L["PRICE_PITCH"] - L["ICON_PITCH"], "%s: %d does not fit" % (w["key"], n)
     assert L["map"] == L["list"], "the map draws in the list's box"
     assert 2 * L["MAP_PAD"] + L["MAP_CART_SIZE"] < min(L["map"][2], L["map"][3]), "the map's pad leaves no room"
     bx, by, bw, bh = L["bulk"]
@@ -871,6 +1067,7 @@ def check_layout():
     part = lambda n: re.search(r"<%s\b.*?</%s>" % (n, n), comps, re.S).group(0)
     grab, art = part("derpy_mr_map_grab"), part("derpy_mr_map_art")
     assert 'interactive="true"' in grab and 'moveable="Movable XP"' in grab, "nothing to drag the map by"
+    assert "DragAndZoomCallback" not in grab, "DragAndZoomCallback stops the drag (seen in game 2026-10-08)"
     assert 'interactive="true"' not in art and "moveable" not in art, \
         "the picture would take the press (and be put back on release) instead of the grab layer"
     assert comps.index("<derpy_mr_map_grab") < comps.index("<derpy_mr_map_art"), "the grab layer is over the markers"
@@ -951,9 +1148,10 @@ def check_button_faces():
     import gen_resource_overhaul as G
     buttons = [(L["tab_goods"], ("Resources",)), (L["tab_settlements"], ("Settlements",)),
                (L["tab_trade"], ("Trade",)), (L["tab_spending"], ("Spending",)), (L["tab_map"], ("Map",)),
+               (L["tab_workshop"], ("Workshop",)),
                (L["back"], ("Back",)),
                (L["bulk"], ["Allow all exports", "Stop all imports", "Sell surplus"] + [o[4] for o in G.ORDERS]),
-               ((0, 0) + L["send"], ("Send here", "Show"))]
+               ((0, 0) + L["send"], ("Send here", "Show", "Buy", "Buy here", "Forged", "Built", "Choose"))]
     for (_x, _y, w, h), labels in buttons:
         fw, fh = face(w, h)
         for t in labels:
@@ -1004,6 +1202,12 @@ def check_xml():
     for stem, _res, icon in goods():
         assert icon in have or os.path.isfile(os.path.join(ROOT, PACK_REL, *icon.split("/"))), \
             "no icon for %s: %s" % (stem, icon)
+    import gen_iron_court
+    reg = gen_iron_court.sound_registry()
+    for kind, ev in WORK_SOUND.items():   # the Workshop's purchase sounds: an unknown name is silence
+        assert ev.lower() in reg, "the %s purchase sound %s is not in CA's sound registry" % (kind, ev)
+    for use, icon in USE_ICON.items():   # the Workshop's price cell
+        assert "ui/campaign ui/effect_bundles/" + icon in have, "no icon for the %s price: %s" % (use, icon)
 
 
 def selftest():
@@ -1014,6 +1218,7 @@ def selftest():
     check_xml()
     check_capture_kinds()
     check_uses()
+    check_recruit()
     import gen_resource_overhaul as G
     g = goods()
     assert [s for s, _r, _i in g] == list(G.store_stems()), "the panel's goods are not the stores"

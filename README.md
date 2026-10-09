@@ -33,14 +33,14 @@ Feathers, Wyvern Scales.
 
 Each good comes from one or more kinds of building:
 
-- **Ports** - fish, whale oil, amber, rum, pearls, sea dragon hide
-- **Farms** - grain, wool, olive oil, pipeweed, mead, tea
-- **Hunting lodges** - plumes, rhinox hides, salted meat
-- **Craft houses** - silk, jade, carpets, glassware, porcelain
-- **Forges** - brass
-- **Mines** - silver, gromril, quicksilver, coal, brimstone, ithilmar, blackpowder saltpetre
-- **Inns, teahouses, stables and eyries** - kvas, tea, warhorses, feathers
-- **A few cities, by name** - Nuln's blackpowder, the great libraries' books
+- **Ports:** fish, whale oil, amber, rum, pearls, sea dragon hide
+- **Farms:** grain, wool, olive oil, pipeweed, mead, tea
+- **Hunting lodges:** plumes, rhinox hides, salted meat
+- **Craft houses:** silk, jade, carpets, glassware, porcelain
+- **Forges:** brass
+- **Mines:** silver, gromril, quicksilver, coal, brimstone, ithilmar, blackpowder saltpetre
+- **Inns, teahouses, stables and eyries:** kvas, tea, warhorses, feathers
+- **A few cities, by name:** Nuln's blackpowder, the great libraries' books
 
 The buildings were chosen by their in-game names and descriptions, not by category: the
 Kislev Roadhouse, which "sells nothing but kvas", makes Kvas, and the Cathay Tea Parlour makes

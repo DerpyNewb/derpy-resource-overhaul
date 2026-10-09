@@ -32,12 +32,13 @@ DERPY_MR_STORES_L = {
     MAP_ZOOM_STEP = 1.5,
     PAY_GAP = 4,
     PITCH = 28,
+    PRICE_PITCH = 50,
     ROWS = 16,
     SLIDER_CAP = 24,
     SLIDER_PARTS = {{"frame_top", -1, -24}, {"frame_bottom", -1, 0}, {"top", 1, -23}, {"bottom", 1, -1}},
     SLIDER_W = 18,
-    USING = 3,
-    VIEWS = {focus = {{36, 230, "left"}, {276, 120, "right"}, {406, 90, "right"}, {506, 80, "left"}, {596, 204, "left"}}, goods = {{36, 204, "left"}, {244, 90, "right"}, {338, 100, "right"}, {442, 110, "right"}, {556, 240, "right"}}, map = {{36, 204, "left"}, {244, 90, "right"}, {338, 100, "right"}, {442, 110, "right"}, {556, 240, "right"}}, settlements = {{36, 230, "left"}, {276, 46, "right"}, {330, 90, "left"}, {430, 80, "right"}, {520, 280, "right"}}, spending = {{36, 230, "left"}, {276, 126, "centre"}, {408, 126, "centre"}, {540, 126, "centre"}, {672, 128, "centre"}}, trade = {{36, 230, "left"}, {276, 60, "right"}, {346, 90, "centre"}, {446, 90, "centre"}, {546, 254, "left"}}},
+    USING = 4,
+    VIEWS = {focus = {{36, 230, "left"}, {276, 120, "right"}, {406, 90, "right"}, {506, 80, "left"}, {596, 204, "left"}}, goods = {{36, 204, "left"}, {244, 90, "right"}, {338, 100, "right"}, {442, 110, "right"}, {556, 240, "right"}}, map = {{36, 204, "left"}, {244, 90, "right"}, {338, 100, "right"}, {442, 110, "right"}, {556, 240, "right"}}, settlements = {{36, 230, "left"}, {276, 46, "right"}, {330, 90, "left"}, {430, 80, "right"}, {520, 280, "right"}}, spending = {{36, 230, "left"}, {276, 126, "centre"}, {408, 126, "centre"}, {540, 126, "centre"}, {672, 128, "centre"}}, trade = {{36, 230, "left"}, {276, 60, "right"}, {346, 90, "centre"}, {446, 90, "centre"}, {546, 254, "left"}}, workshop = {{36, 210, "left"}, {252, 200, "left"}, {458, 100, "left"}, {564, 98, "left"}, {668, 132, "left"}}, workshop_focus = {{36, 300, "left"}, {344, 120, "left"}, {472, 100, "left"}, {580, 60, "left"}, {668, 132, "left"}}},
     W = 860,
     back = {720, 56, 120, 26},
     bars = {20, 420, 820, 120},
@@ -59,71 +60,72 @@ DERPY_MR_STORES_L = {
     map_label = {160, 16},
     send = {130, 26},
     sub_title = {20, 90, 820, 22},
-    tab_goods = {20, 56, 120, 26},
-    tab_map = {524, 56, 120, 26},
-    tab_settlements = {146, 56, 120, 26},
-    tab_spending = {398, 56, 120, 26},
-    tab_trade = {272, 56, 120, 26},
+    tab_goods = {20, 56, 112, 26},
+    tab_map = {484, 56, 112, 26},
+    tab_settlements = {136, 56, 112, 26},
+    tab_spending = {368, 56, 112, 26},
+    tab_trade = {252, 56, 112, 26},
+    tab_workshop = {600, 56, 112, 26},
     title = {20, 14, 500, 28},
     title_rule = {20, 46, 820, 2},
     zoom_in = {800, 516, 30, 30},
     zoom_out = {800, 550, 30, 30},
 }
 DERPY_MR_STORES_GOODS = {
-    {stem = "salted_fish", res = "res_derpy_salted_fish", icon = "ui/campaign ui/effect_bundles/resource_derpy_salted_fish.png"},
-    {stem = "whale_oil", res = "res_derpy_whale_oil", icon = "ui/campaign ui/effect_bundles/resource_derpy_whale_oil.png"},
-    {stem = "sea_dragon_hide", res = "res_derpy_sea_dragon_hide", icon = "ui/campaign ui/effect_bundles/resource_derpy_sea_dragon_hide.png"},
-    {stem = "rum", res = "res_derpy_rum", icon = "ui/campaign ui/effect_bundles/resource_derpy_rum.png"},
-    {stem = "amber", res = "res_derpy_amber", icon = "ui/campaign ui/effect_bundles/resource_derpy_amber.png"},
-    {stem = "grain", res = "res_derpy_grain", icon = "ui/campaign ui/effect_bundles/resource_derpy_grain.png"},
-    {stem = "warhorses", res = "res_derpy_warhorses", icon = "ui/campaign ui/effect_bundles/resource_derpy_warhorses.png"},
-    {stem = "pipeweed", res = "res_derpy_pipeweed", icon = "ui/campaign ui/effect_bundles/resource_derpy_pipeweed.png"},
-    {stem = "books", res = "res_derpy_books", icon = "ui/campaign ui/effect_bundles/resource_derpy_books.png"},
-    {stem = "olive_oil", res = "res_derpy_olive_oil", icon = "ui/campaign ui/effect_bundles/resource_derpy_olive_oil.png"},
-    {stem = "silk", res = "res_derpy_silk", icon = "ui/campaign ui/effect_bundles/resource_derpy_silk.png"},
-    {stem = "tea", res = "res_derpy_tea", icon = "ui/campaign ui/effect_bundles/resource_derpy_tea.png"},
-    {stem = "jade", res = "res_derpy_jade", icon = "ui/campaign ui/effect_bundles/resource_derpy_jade.png"},
-    {stem = "coal", res = "res_derpy_coal", icon = "ui/campaign ui/effect_bundles/resource_derpy_coal.png"},
-    {stem = "silver", res = "res_derpy_silver", icon = "ui/campaign ui/effect_bundles/resource_derpy_silver.png"},
-    {stem = "gromril", res = "res_derpy_gromril", icon = "ui/campaign ui/effect_bundles/resource_derpy_gromril.png"},
-    {stem = "quicksilver", res = "res_derpy_quicksilver", icon = "ui/campaign ui/effect_bundles/resource_derpy_quicksilver.png"},
-    {stem = "brimstone", res = "res_derpy_brimstone", icon = "ui/campaign ui/effect_bundles/resource_derpy_brimstone.png"},
-    {stem = "brass", res = "res_derpy_brass", icon = "ui/campaign ui/effect_bundles/resource_derpy_brass.png"},
-    {stem = "blackpowder", res = "res_derpy_blackpowder", icon = "ui/campaign ui/effect_bundles/resource_derpy_blackpowder.png"},
-    {stem = "ithilmar", res = "res_derpy_ithilmar", icon = "ui/campaign ui/effect_bundles/resource_derpy_ithilmar.png"},
-    {stem = "dragon_bone", res = "res_derpy_dragon_bone", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png"},
-    {stem = "lustrian_plumes", res = "res_derpy_lustrian_plumes", icon = "ui/campaign ui/effect_bundles/resource_derpy_lustrian_plumes.png"},
-    {stem = "black_lotus", res = "res_derpy_black_lotus", icon = "ui/campaign ui/effect_bundles/resource_derpy_black_lotus.png"},
-    {stem = "incense", res = "res_derpy_incense", icon = "ui/campaign ui/effect_bundles/resource_derpy_incense.png"},
-    {stem = "salted_meat", res = "res_derpy_salted_meat", icon = "ui/campaign ui/effect_bundles/resource_derpy_salted_meat.png"},
-    {stem = "carpets", res = "res_derpy_carpets", icon = "ui/campaign ui/effect_bundles/resource_derpy_carpets.png"},
-    {stem = "kvas", res = "res_derpy_kvas", icon = "ui/campaign ui/effect_bundles/resource_derpy_kvas.png"},
-    {stem = "rhinox_hides", res = "res_derpy_rhinox_hides", icon = "ui/campaign ui/effect_bundles/resource_derpy_rhinox_hides.png"},
-    {stem = "mead", res = "res_derpy_mead", icon = "ui/campaign ui/effect_bundles/resource_derpy_mead.png"},
-    {stem = "glassware", res = "res_derpy_glassware", icon = "ui/campaign ui/effect_bundles/resource_derpy_glassware.png"},
-    {stem = "wool", res = "res_derpy_wool", icon = "ui/campaign ui/effect_bundles/resource_derpy_wool.png"},
-    {stem = "porcelain", res = "res_derpy_porcelain", icon = "ui/campaign ui/effect_bundles/resource_derpy_porcelain.png"},
-    {stem = "pearls", res = "res_derpy_pearls", icon = "ui/campaign ui/effect_bundles/resource_derpy_pearls.png"},
-    {stem = "starwood", res = "res_derpy_starwood", icon = "ui/campaign ui/effect_bundles/resource_derpy_starwood.png"},
-    {stem = "feathers", res = "res_derpy_feathers", icon = "ui/campaign ui/effect_bundles/resource_derpy_feathers.png"},
-    {stem = "wyvern_scales", res = "res_derpy_wyvern_scales", icon = "ui/campaign ui/effect_bundles/resource_derpy_wyvern_scales.png"},
-    {stem = "animals", res = "res_animals", icon = "ui/campaign ui/effect_bundles/resource_animals.png"},
-    {stem = "dyes", res = "res_dyes", icon = "ui/campaign ui/effect_bundles/resource_dyes.png"},
-    {stem = "gems", res = "res_gems", icon = "ui/campaign ui/effect_bundles/resource_gemstones.png"},
-    {stem = "gold_idols", res = "res_gold_idols", icon = "ui/campaign ui/effect_bundles/resource_gold_idols.png"},
-    {stem = "tusks", res = "res_ivory", icon = "ui/campaign ui/effect_bundles/resource_ivory.png"},
-    {stem = "medicine", res = "res_medicine", icon = "ui/campaign ui/effect_bundles/resource_medicine.png"},
-    {stem = "obsidian", res = "res_obsidian", icon = "ui/campaign ui/effect_bundles/resource_obsidian.png"},
-    {stem = "furs", res = "res_rom_furs", icon = "ui/campaign ui/effect_bundles/resource_furs.png"},
-    {stem = "beer", res = "res_rom_glass", icon = "ui/campaign ui/effect_bundles/resource_dwarf_beer.png"},
-    {stem = "iron", res = "res_rom_iron", icon = "ui/campaign ui/effect_bundles/resource_iron.png"},
-    {stem = "salt", res = "res_rom_lead", icon = "ui/campaign ui/effect_bundles/resource_salt.png"},
-    {stem = "marble", res = "res_rom_marble", icon = "ui/campaign ui/effect_bundles/resource_marble.png"},
-    {stem = "pottery", res = "res_rom_textiles", icon = "ui/campaign ui/effect_bundles/resource_pottery.png"},
-    {stem = "timber", res = "res_rom_timber", icon = "ui/campaign ui/effect_bundles/resource_timber.png"},
-    {stem = "wine", res = "res_rom_wine", icon = "ui/campaign ui/effect_bundles/resource_wine.png"},
-    {stem = "spices", res = "res_spices", icon = "ui/campaign ui/effect_bundles/resource_spices.png"},
-    {stem = "trinkets", res = "res_trinkets", icon = "ui/campaign ui/effect_bundles/resource_trinkets.png"},
+    {stem = "salted_fish", res = "res_derpy_salted_fish", icon = "ui/campaign ui/effect_bundles/resource_derpy_salted_fish.png", use = "provisions", rare = false},
+    {stem = "whale_oil", res = "res_derpy_whale_oil", icon = "ui/campaign ui/effect_bundles/resource_derpy_whale_oil.png", use = "war", rare = false},
+    {stem = "sea_dragon_hide", res = "res_derpy_sea_dragon_hide", icon = "ui/campaign ui/effect_bundles/resource_derpy_sea_dragon_hide.png", use = "mounts", rare = true},
+    {stem = "rum", res = "res_derpy_rum", icon = "ui/campaign ui/effect_bundles/resource_derpy_rum.png", use = "provisions", rare = false},
+    {stem = "amber", res = "res_derpy_amber", icon = "ui/campaign ui/effect_bundles/resource_derpy_amber.png", use = "luxuries", rare = false},
+    {stem = "grain", res = "res_derpy_grain", icon = "ui/campaign ui/effect_bundles/resource_derpy_grain.png", use = "provisions", rare = false},
+    {stem = "warhorses", res = "res_derpy_warhorses", icon = "ui/campaign ui/effect_bundles/resource_derpy_warhorses.png", use = "mounts", rare = false},
+    {stem = "pipeweed", res = "res_derpy_pipeweed", icon = "ui/campaign ui/effect_bundles/resource_derpy_pipeweed.png", use = "luxuries", rare = false},
+    {stem = "books", res = "res_derpy_books", icon = "ui/campaign ui/effect_bundles/resource_derpy_books.png", use = "luxuries", rare = false},
+    {stem = "olive_oil", res = "res_derpy_olive_oil", icon = "ui/campaign ui/effect_bundles/resource_derpy_olive_oil.png", use = "provisions", rare = false},
+    {stem = "silk", res = "res_derpy_silk", icon = "ui/campaign ui/effect_bundles/resource_derpy_silk.png", use = "luxuries", rare = false},
+    {stem = "tea", res = "res_derpy_tea", icon = "ui/campaign ui/effect_bundles/resource_derpy_tea.png", use = "provisions", rare = false},
+    {stem = "jade", res = "res_derpy_jade", icon = "ui/campaign ui/effect_bundles/resource_derpy_jade.png", use = "luxuries", rare = false},
+    {stem = "coal", res = "res_derpy_coal", icon = "ui/campaign ui/effect_bundles/resource_derpy_coal.png", use = "war", rare = false},
+    {stem = "silver", res = "res_derpy_silver", icon = "ui/campaign ui/effect_bundles/resource_derpy_silver.png", use = "luxuries", rare = false},
+    {stem = "gromril", res = "res_derpy_gromril", icon = "ui/campaign ui/effect_bundles/resource_derpy_gromril.png", use = "war", rare = true},
+    {stem = "quicksilver", res = "res_derpy_quicksilver", icon = "ui/campaign ui/effect_bundles/resource_derpy_quicksilver.png", use = "war", rare = false},
+    {stem = "brimstone", res = "res_derpy_brimstone", icon = "ui/campaign ui/effect_bundles/resource_derpy_brimstone.png", use = "war", rare = false},
+    {stem = "brass", res = "res_derpy_brass", icon = "ui/campaign ui/effect_bundles/resource_derpy_brass.png", use = "war", rare = false},
+    {stem = "blackpowder", res = "res_derpy_blackpowder", icon = "ui/campaign ui/effect_bundles/resource_derpy_blackpowder.png", use = "war", rare = false},
+    {stem = "ithilmar", res = "res_derpy_ithilmar", icon = "ui/campaign ui/effect_bundles/resource_derpy_ithilmar.png", use = "war", rare = true},
+    {stem = "dragon_bone", res = "res_derpy_dragon_bone", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", use = "mounts", rare = true},
+    {stem = "lustrian_plumes", res = "res_derpy_lustrian_plumes", icon = "ui/campaign ui/effect_bundles/resource_derpy_lustrian_plumes.png", use = "luxuries", rare = false},
+    {stem = "black_lotus", res = "res_derpy_black_lotus", icon = "ui/campaign ui/effect_bundles/resource_derpy_black_lotus.png", use = "luxuries", rare = true},
+    {stem = "incense", res = "res_derpy_incense", icon = "ui/campaign ui/effect_bundles/resource_derpy_incense.png", use = "luxuries", rare = false},
+    {stem = "salted_meat", res = "res_derpy_salted_meat", icon = "ui/campaign ui/effect_bundles/resource_derpy_salted_meat.png", use = "provisions", rare = false},
+    {stem = "carpets", res = "res_derpy_carpets", icon = "ui/campaign ui/effect_bundles/resource_derpy_carpets.png", use = "luxuries", rare = false},
+    {stem = "kvas", res = "res_derpy_kvas", icon = "ui/campaign ui/effect_bundles/resource_derpy_kvas.png", use = "provisions", rare = false},
+    {stem = "rhinox_hides", res = "res_derpy_rhinox_hides", icon = "ui/campaign ui/effect_bundles/resource_derpy_rhinox_hides.png", use = "mounts", rare = false},
+    {stem = "mead", res = "res_derpy_mead", icon = "ui/campaign ui/effect_bundles/resource_derpy_mead.png", use = "provisions", rare = false},
+    {stem = "glassware", res = "res_derpy_glassware", icon = "ui/campaign ui/effect_bundles/resource_derpy_glassware.png", use = "building", rare = false},
+    {stem = "wool", res = "res_derpy_wool", icon = "ui/campaign ui/effect_bundles/resource_derpy_wool.png", use = "luxuries", rare = false},
+    {stem = "porcelain", res = "res_derpy_porcelain", icon = "ui/campaign ui/effect_bundles/resource_derpy_porcelain.png", use = "luxuries", rare = false},
+    {stem = "pearls", res = "res_derpy_pearls", icon = "ui/campaign ui/effect_bundles/resource_derpy_pearls.png", use = "luxuries", rare = false},
+    {stem = "starwood", res = "res_derpy_starwood", icon = "ui/campaign ui/effect_bundles/resource_derpy_starwood.png", use = "building", rare = true},
+    {stem = "feathers", res = "res_derpy_feathers", icon = "ui/campaign ui/effect_bundles/resource_derpy_feathers.png", use = "mounts", rare = true},
+    {stem = "wyvern_scales", res = "res_derpy_wyvern_scales", icon = "ui/campaign ui/effect_bundles/resource_derpy_wyvern_scales.png", use = "mounts", rare = true},
+    {stem = "animals", res = "res_animals", icon = "ui/campaign ui/effect_bundles/resource_animals.png", use = "mounts", rare = false},
+    {stem = "dyes", res = "res_dyes", icon = "ui/campaign ui/effect_bundles/resource_dyes.png", use = "luxuries", rare = false},
+    {stem = "gems", res = "res_gems", icon = "ui/campaign ui/effect_bundles/resource_gemstones.png", use = "luxuries", rare = false},
+    {stem = "gold_idols", res = "res_gold_idols", icon = "ui/campaign ui/effect_bundles/resource_gold_idols.png", use = "luxuries", rare = false},
+    {stem = "tusks", res = "res_ivory", icon = "ui/campaign ui/effect_bundles/resource_ivory.png", use = "mounts", rare = false},
+    {stem = "medicine", res = "res_medicine", icon = "ui/campaign ui/effect_bundles/resource_medicine.png", use = "provisions", rare = false},
+    {stem = "obsidian", res = "res_obsidian", icon = "ui/campaign ui/effect_bundles/resource_obsidian.png", use = "war", rare = false},
+    {stem = "furs", res = "res_rom_furs", icon = "ui/campaign ui/effect_bundles/resource_furs.png", use = "mounts", rare = false},
+    {stem = "beer", res = "res_rom_glass", icon = "ui/campaign ui/effect_bundles/resource_dwarf_beer.png", use = "provisions", rare = false},
+    {stem = "iron", res = "res_rom_iron", icon = "ui/campaign ui/effect_bundles/resource_iron.png", use = "war", rare = false},
+    {stem = "salt", res = "res_rom_lead", icon = "ui/campaign ui/effect_bundles/resource_salt.png", use = "provisions", rare = false},
+    {stem = "marble", res = "res_rom_marble", icon = "ui/campaign ui/effect_bundles/resource_marble.png", use = "building", rare = false},
+    {stem = "pottery", res = "res_rom_textiles", icon = "ui/campaign ui/effect_bundles/resource_pottery.png", use = "building", rare = false},
+    {stem = "timber", res = "res_rom_timber", icon = "ui/campaign ui/effect_bundles/resource_timber.png", use = "building", rare = false},
+    {stem = "wine", res = "res_rom_wine", icon = "ui/campaign ui/effect_bundles/resource_wine.png", use = "provisions", rare = false},
+    {stem = "spices", res = "res_spices", icon = "ui/campaign ui/effect_bundles/resource_spices.png", use = "provisions", rare = false},
+    {stem = "trinkets", res = "res_trinkets", icon = "ui/campaign ui/effect_bundles/resource_trinkets.png", use = "luxuries", rare = false},
 }
 DERPY_MR_CAPTURE_KIND = {
     [367] = "raze",
@@ -370,6 +372,96 @@ DERPY_MR_STORES_SUPPLY = {
     {key = "arms", label = "Arms stocked", use = "war", what = "recruit cost -15% for infantry and artillery"},
     {key = "standing", label = "Supply the capital", use = "", what = ""},
 }
+DERPY_MR_STORES_WORKS = {
+    {key = "item_gromril_armour", kind = "item", rare = "gromril", use = "war", name = "Gromril Armour", gives = "Armour", detail = "Armour for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_gromril.png", pool = "", goods = {}, target = ""},
+    {key = "item_gromril_greataxe", kind = "item", rare = "gromril", use = "war", name = "Gromril Greataxe", gives = "Weapon", detail = "Weapon for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_gromril.png", pool = "", goods = {}, target = ""},
+    {key = "item_ithilmar_breastplate", kind = "item", rare = "ithilmar", use = "war", name = "Enchanted Ithilmar Breastplate", gives = "Armour", detail = "Armour for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_ithilmar.png", pool = "", goods = {}, target = ""},
+    {key = "item_dragonhelm", kind = "item", rare = "dragon_bone", use = "mounts", name = "Dragonhelm", gives = "Armour", detail = "Armour for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "", goods = {}, target = ""},
+    {key = "item_dragonbane_gem", kind = "item", rare = "dragon_bone", use = "mounts", name = "Dragonbane Gem", gives = "Talisman", detail = "Talisman for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "", goods = {}, target = ""},
+    {key = "item_dragonscale_shield", kind = "item", rare = "dragon_bone", use = "mounts", name = "Dragonscale Shield", gives = "Armour", detail = "Armour for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "", goods = {}, target = ""},
+    {key = "item_dragon_slayers_scales", kind = "item", rare = "dragon_bone", use = "mounts", name = "Dragon Slayer's Scales", gives = "Armour", detail = "Armour for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "", goods = {}, target = ""},
+    {key = "item_dragons_claw", kind = "item", rare = "dragon_bone", use = "mounts", name = "Dragon's Claw", gives = "Talisman", detail = "Talisman for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "", goods = {}, target = ""},
+    {key = "item_sea_dragon_cloak", kind = "item", rare = "sea_dragon_hide", use = "mounts", name = "Sea Dragon Cloak", gives = "Armour", detail = "Armour for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_sea_dragon_hide.png", pool = "", goods = {}, target = ""},
+    {key = "item_lotus_venom_blade", kind = "item", rare = "black_lotus", use = "luxuries", name = "Lotus-Venom Blade", gives = "Weapon", detail = "Weapon for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_black_lotus.png", pool = "", goods = {}, target = ""},
+    {key = "item_starwood_bow", kind = "item", rare = "starwood", use = "building", name = "Starwood Bow", gives = "Weapon", detail = "Weapon for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_starwood.png", pool = "", goods = {}, target = ""},
+    {key = "item_featherfoe_torc", kind = "item", rare = "feathers", use = "mounts", name = "Featherfoe Torc", gives = "Enchanted item", detail = "Enchanted item for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_feathers.png", pool = "", goods = {}, target = ""},
+    {key = "item_wyvernbone_bow", kind = "item", rare = "wyvern_scales", use = "mounts", name = "Wyvernbone Bow", gives = "Weapon", detail = "Weapon for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_wyvern_scales.png", pool = "", goods = {}, target = ""},
+    {key = "item_wyvern_scale_armour", kind = "item", rare = "wyvern_scales", use = "mounts", name = "Wyvern-Scale Armour", gives = "Armour", detail = "Armour for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_wyvern_scales.png", pool = "", goods = {}, target = ""},
+    {key = "item_borek_armour", kind = "item", rare = "gromril", use = "war", name = "Armour of Borek Beetlebrow", gives = "Armour", detail = "Armour for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_gromril.png", pool = "", goods = {}, target = ""},
+    {key = "item_ironbeards_armour", kind = "item", rare = "gromril", use = "war", name = "Ironbeard's Armour", gives = "Armour", detail = "Armour for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_gromril.png", pool = "", goods = {}, target = ""},
+    {key = "item_helm_of_fortune", kind = "item", rare = "ithilmar", use = "war", name = "Helm of Fortune", gives = "Armour", detail = "Armour for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_ithilmar.png", pool = "", goods = {}, target = ""},
+    {key = "item_armour_of_caledor", kind = "item", rare = "ithilmar", use = "war", name = "Armour of Caledor", gives = "Armour", detail = "Armour for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_ithilmar.png", pool = "", goods = {}, target = ""},
+    {key = "item_spirit_dragon_icon", kind = "item", rare = "dragon_bone", use = "mounts", name = "Icon of the Spirit Dragon", gives = "Enchanted item", detail = "Enchanted item for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "", goods = {}, target = ""},
+    {key = "item_drake_hunters_banner", kind = "item", rare = "dragon_bone", use = "mounts", name = "Drake Hunters' Banner", gives = "Banner", detail = "Banner for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "", goods = {}, target = ""},
+    {key = "item_cloak_of_hag_graef", kind = "item", rare = "sea_dragon_hide", use = "mounts", name = "Cloak of Hag Graef", gives = "Armour", detail = "Armour for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_sea_dragon_hide.png", pool = "", goods = {}, target = ""},
+    {key = "item_sea_serpent_standard", kind = "item", rare = "sea_dragon_hide", use = "mounts", name = "Sea Serpent Standard", gives = "Banner", detail = "Banner for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_sea_dragon_hide.png", pool = "", goods = {}, target = ""},
+    {key = "item_hail_of_doom_arrow", kind = "item", rare = "starwood", use = "building", name = "Hail of Doom Arrow", gives = "Enchanted item", detail = "Enchanted item for Glade Lords and Waystalkers", icon = "ui/campaign ui/effect_bundles/resource_derpy_starwood.png", pool = "", goods = {}, target = ""},
+    {key = "item_bow_of_loren", kind = "item", rare = "starwood", use = "building", name = "The Bow of Loren", gives = "Weapon", detail = "Weapon for Glade Captains, Glade Lords, Waystalkers and the Sisters", icon = "ui/campaign ui/effect_bundles/resource_derpy_starwood.png", pool = "", goods = {}, target = ""},
+    {key = "item_phoenix_pinion", kind = "item", rare = "feathers", use = "mounts", name = "Extinguished Phoenix Pinion", gives = "Enchanted item", detail = "Enchanted item for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_feathers.png", pool = "", goods = {}, target = ""},
+    {key = "item_griffon_banner", kind = "item", rare = "feathers", use = "mounts", name = "Griffon Banner", gives = "Banner", detail = "Banner for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_feathers.png", pool = "", goods = {}, target = ""},
+    {key = "item_glittering_scales", kind = "item", rare = "wyvern_scales", use = "mounts", name = "Glittering Scales", gives = "Armour", detail = "Armour for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_wyvern_scales.png", pool = "", goods = {}, target = ""},
+    {key = "item_venom_sword", kind = "item", rare = "black_lotus", use = "luxuries", name = "Venom Sword", gives = "Weapon", detail = "Weapon for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_black_lotus.png", pool = "", goods = {}, target = ""},
+    {key = "item_corrosive_blade", kind = "item", rare = "black_lotus", use = "luxuries", name = "Corrosive Blade", gives = "Weapon", detail = "Weapon for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_black_lotus.png", pool = "", goods = {}, target = ""},
+    {key = "unit_wh_main_dwf_inf_ironbreakers", kind = "unit", rare = "gromril", use = "war", name = "Ironbreakers", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_gromril.png", pool = "wh3_dlc25_dwf_book_of_grudges_mercenary_pool", goods = {}, target = ""},
+    {key = "unit_wh_main_dwf_inf_hammerers", kind = "unit", rare = "gromril", use = "war", name = "Hammerers", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_gromril.png", pool = "wh3_dlc25_dwf_book_of_grudges_mercenary_pool", goods = {}, target = ""},
+    {key = "unit_wh2_main_hef_inf_swordmasters_of_hoeth_0", kind = "unit", rare = "ithilmar", use = "war", name = "Swordmasters of Hoeth", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_ithilmar.png", pool = "wh2_main_hef_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh2_main_hef_inf_phoenix_guard", kind = "unit", rare = "ithilmar", use = "war", name = "Phoenix Guard", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_ithilmar.png", pool = "wh2_main_hef_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh2_main_hef_cav_dragon_princes", kind = "unit", rare = "dragon_bone", use = "mounts", name = "Dragon Princes", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "wh2_main_hef_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh3_dlc23_chd_mon_lammasu", kind = "unit", rare = "dragon_bone", use = "mounts", name = "Lammasu", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "wh3_dlc23_chd_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh3_dlc23_chd_mon_bale_taurus", kind = "unit", rare = "dragon_bone", use = "mounts", name = "Bale Taurus", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "wh3_dlc23_chd_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh2_main_def_inf_black_ark_corsairs_0", kind = "unit", rare = "sea_dragon_hide", use = "mounts", name = "Black Ark Corsairs", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_sea_dragon_hide.png", pool = "wh2_main_def_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh2_main_def_inf_witch_elves_0", kind = "unit", rare = "black_lotus", use = "luxuries", name = "Witch Elves", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_black_lotus.png", pool = "wh2_main_def_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh2_main_skv_inf_gutter_runners_0", kind = "unit", rare = "black_lotus", use = "luxuries", name = "Gutter Runners", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_black_lotus.png", pool = "wh2_dlc12_skv_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh_dlc05_wef_inf_glade_guard_0", kind = "unit", rare = "starwood", use = "building", name = "Glade Guard", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_starwood.png", pool = "wh_dlc05_wef_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh_main_brt_cav_pegasus_knights", kind = "unit", rare = "feathers", use = "mounts", name = "Pegasus Knights", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_feathers.png", pool = "wh_dlc07_brt_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh_main_emp_cav_demigryph_knights_0", kind = "unit", rare = "feathers", use = "mounts", name = "Demigryph Knights", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_feathers.png", pool = "wh_dlc04_emp_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh_main_grn_inf_black_orcs", kind = "unit", rare = "wyvern_scales", use = "mounts", name = "Black Orcs (Great Weapons)", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_wyvern_scales.png", pool = "wh_dlc06_grn_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh3_main_ogr_mon_stonehorn_0", kind = "unit", rare = "wyvern_scales", use = "mounts", name = "Stonehorn", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_wyvern_scales.png", pool = "wh3_main_ogr_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh3_dlc26_ogr_mon_thundertusk", kind = "unit", rare = "wyvern_scales", use = "mounts", name = "Thundertusk", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_wyvern_scales.png", pool = "wh3_main_ogr_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh_main_dwf_inf_irondrakes_0", kind = "unit", rare = "gromril", use = "war", name = "Irondrakes", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_gromril.png", pool = "wh3_dlc25_dwf_book_of_grudges_mercenary_pool", goods = {}, target = ""},
+    {key = "unit_wh2_main_hef_cav_silver_helms_0", kind = "unit", rare = "ithilmar", use = "war", name = "Silver Helms", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_ithilmar.png", pool = "wh2_main_hef_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh3_dlc29_vmp_mon_zombie_dragon", kind = "unit", rare = "dragon_bone", use = "mounts", name = "Zombie Dragon", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "wh_dlc04_vmp_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh3_main_cth_inf_dragon_guard_0", kind = "unit", rare = "dragon_bone", use = "mounts", name = "Celestial Dragon Guard", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "wh3_main_cth_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh_dlc08_nor_mon_frost_wyrm_0", kind = "unit", rare = "dragon_bone", use = "mounts", name = "Chaos Frost Dragon", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "wh_dlc08_nor_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh2_main_def_inf_black_ark_corsairs_1", kind = "unit", rare = "sea_dragon_hide", use = "mounts", name = "Black Ark Corsairs (Handbows)", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_sea_dragon_hide.png", pool = "wh2_main_def_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh_dlc05_wef_inf_waywatchers_0", kind = "unit", rare = "starwood", use = "building", name = "Waywatchers", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_starwood.png", pool = "wh_dlc05_wef_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh2_main_skv_inf_poison_wind_globadiers", kind = "unit", rare = "black_lotus", use = "luxuries", name = "Poisoned Wind Globadiers", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_black_lotus.png", pool = "wh2_dlc12_skv_units_of_renown_pool", goods = {}, target = ""},
+    {key = "up_gromril", kind = "upgrade", rare = "gromril", use = "war", name = "Gromril Gate", gives = "Melee defence and armour", detail = "Melee defence +10 for your armies here, armour +10 in the province, for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_gromril.png", pool = "", goods = {}, target = ""},
+    {key = "up_ithilmar", kind = "upgrade", rare = "ithilmar", use = "war", name = "Ithilmar Spire", gives = "Public order and income", detail = "Public order +3 in the province, income +10% here, for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_ithilmar.png", pool = "", goods = {}, target = ""},
+    {key = "up_dragon_bone", kind = "upgrade", rare = "dragon_bone", use = "mounts", name = "Dragon Bone Shrine", gives = "Recruits gain a rank", detail = "Units recruited in the province gain a rank, for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "", goods = {}, target = ""},
+    {key = "up_sea_dragon_hide", kind = "upgrade", rare = "sea_dragon_hide", use = "mounts", name = "Sea Dragon Moorings", gives = "Income +15% here", detail = "Income +15% here, for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_sea_dragon_hide.png", pool = "", goods = {}, target = ""},
+    {key = "up_black_lotus", kind = "upgrade", rare = "black_lotus", use = "luxuries", name = "Black Lotus Gardens", gives = "Hero actions succeed more", detail = "Hero actions from here succeed more often (+10), for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_black_lotus.png", pool = "", goods = {}, target = ""},
+    {key = "up_starwood", kind = "upgrade", rare = "starwood", use = "building", name = "Starwood Grove", gives = "Growth +20", detail = "Growth +20 in the province, for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_starwood.png", pool = "", goods = {}, target = ""},
+    {key = "up_feathers", kind = "upgrade", rare = "feathers", use = "mounts", name = "Eyrie", gives = "Recruitment cost -15%", detail = "Recruitment cost -15% in the province, for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_feathers.png", pool = "", goods = {}, target = ""},
+    {key = "up_wyvern_scales", kind = "upgrade", rare = "wyvern_scales", use = "mounts", name = "Wyvern Roost", gives = "Army upkeep -5%", detail = "Upkeep -5% for your armies here, for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_wyvern_scales.png", pool = "", goods = {}, target = ""},
+    {key = "conv_armaments", kind = "convert", rare = "", use = "", name = "Armaments", gives = "30 Armaments", detail = "Makes 30 Armaments from your stores, once a turn", icon = "ui/campaign ui/effect_bundles/resource_derpy_coal.png", pool = "wh3_dlc23_chd_armaments", goods = {{"coal", 20, "ui/campaign ui/effect_bundles/resource_derpy_coal.png"}, {"brimstone", 20, "ui/campaign ui/effect_bundles/resource_derpy_brimstone.png"}, {"iron", 20, "ui/campaign ui/effect_bundles/resource_iron.png"}}, target = ""},
+    {key = "conv_food", kind = "convert", rare = "", use = "", name = "Food", gives = "4 Food", detail = "Makes 4 Food from your stores, once a turn", icon = "ui/campaign ui/effect_bundles/resource_derpy_grain.png", pool = "skaven_food", goods = {{"grain", 30, "ui/campaign ui/effect_bundles/resource_derpy_grain.png"}, {"salted_fish", 30, "ui/campaign ui/effect_bundles/resource_derpy_salted_fish.png"}}, target = ""},
+    {key = "conv_oathgold", kind = "convert", rare = "", use = "", name = "Oathgold", gives = "30 Oathgold", detail = "Makes 30 Oathgold from your stores, once a turn", icon = "ui/campaign ui/effect_bundles/resource_gold_idols.png", pool = "dwf_oathgold", goods = {{"gold_idols", 30, "ui/campaign ui/effect_bundles/resource_gold_idols.png"}, {"silver", 30, "ui/campaign ui/effect_bundles/resource_derpy_silver.png"}}, target = ""},
+    {key = "conv_infamy", kind = "convert", rare = "", use = "", name = "Infamy", gives = "50 Infamy", detail = "Makes 50 Infamy from your stores, once a turn", icon = "ui/campaign ui/effect_bundles/resource_derpy_rum.png", pool = "cst_infamy", goods = {{"rum", 30, "ui/campaign ui/effect_bundles/resource_derpy_rum.png"}, {"pearls", 30, "ui/campaign ui/effect_bundles/resource_derpy_pearls.png"}}, target = ""},
+    {key = "army_rations", kind = "army", rare = "", use = "", name = "Rations and Drill", gives = "The army gains a rank", detail = "Every unit in the selected army gains a rank", icon = "ui/campaign ui/effect_bundles/resource_derpy_grain.png", pool = "", goods = {{"grain", 35, "ui/campaign ui/effect_bundles/resource_derpy_grain.png"}, {"salt", 35, "ui/campaign ui/effect_bundles/resource_salt.png"}, {"beer", 35, "ui/campaign ui/effect_bundles/resource_dwarf_beer.png"}}, target = "army"},
+    {key = "army_ammo", kind = "army", rare = "", use = "", name = "Ammunition Train", gives = "Ammunition +20%, 5 turns", detail = "The selected army's ammunition +20% for 5 turns", icon = "ui/campaign ui/effect_bundles/resource_derpy_blackpowder.png", pool = "", goods = {{"blackpowder", 50, "ui/campaign ui/effect_bundles/resource_derpy_blackpowder.png"}, {"brass", 50, "ui/campaign ui/effect_bundles/resource_derpy_brass.png"}}, target = "army"},
+    {key = "army_forge", kind = "army", rare = "", use = "", name = "Field Forge", gives = "Armour +15, 5 turns", detail = "The selected army's armour +15 for 5 turns", icon = "ui/campaign ui/effect_bundles/resource_iron.png", pool = "", goods = {{"iron", 50, "ui/campaign ui/effect_bundles/resource_iron.png"}, {"coal", 50, "ui/campaign ui/effect_bundles/resource_derpy_coal.png"}}, target = "army"},
+    {key = "army_remounts", kind = "army", rare = "", use = "", name = "Remounts", gives = "Replenishment +10%, 5 turns", detail = "The selected army replenishes 10% faster for 5 turns", icon = "ui/campaign ui/effect_bundles/resource_derpy_warhorses.png", pool = "", goods = {{"warhorses", 50, "ui/campaign ui/effect_bundles/resource_derpy_warhorses.png"}, {"animals", 50, "ui/campaign ui/effect_bundles/resource_animals.png"}}, target = "army"},
+    {key = "army_medicine", kind = "army", rare = "", use = "", name = "Medicine Chests", gives = "Attrition -25%, 5 turns", detail = "The selected army suffers 25% less attrition for 5 turns", icon = "ui/campaign ui/effect_bundles/resource_medicine.png", pool = "", goods = {{"medicine", 50, "ui/campaign ui/effect_bundles/resource_medicine.png"}, {"wine", 50, "ui/campaign ui/effect_bundles/resource_wine.png"}}, target = "army"},
+    {key = "trait_silk", kind = "trait", rare = "", use = "", name = "Silk-robed", gives = "Diplomacy +10", detail = "A trait for the selected lord or hero: diplomatic relations +10", icon = "ui/campaign ui/effect_bundles/resource_derpy_silk.png", pool = "", goods = {{"silk", 50, "ui/campaign ui/effect_bundles/resource_derpy_silk.png"}, {"dyes", 50, "ui/campaign ui/effect_bundles/resource_dyes.png"}, {"jade", 50, "ui/campaign ui/effect_bundles/resource_derpy_jade.png"}}, target = "character"},
+    {key = "trait_steel", kind = "trait", rare = "", use = "", name = "Steel-shod", gives = "Armour +10", detail = "A trait for the selected lord or hero: armour +10", icon = "ui/campaign ui/effect_bundles/resource_iron.png", pool = "", goods = {{"iron", 80, "ui/campaign ui/effect_bundles/resource_iron.png"}, {"brass", 80, "ui/campaign ui/effect_bundles/resource_derpy_brass.png"}}, target = "character"},
+    {key = "trait_read", kind = "trait", rare = "", use = "", name = "Well-read", gives = "Experience +20%", detail = "A trait for the selected lord or hero: experience gained +20%", icon = "ui/campaign ui/effect_bundles/resource_derpy_books.png", pool = "", goods = {{"books", 80, "ui/campaign ui/effect_bundles/resource_derpy_books.png"}, {"glassware", 80, "ui/campaign ui/effect_bundles/resource_derpy_glassware.png"}}, target = "character"},
+    {key = "trait_spice", kind = "trait", rare = "", use = "", name = "Spice-hardened", gives = "Leadership +4, movement -5%", detail = "A trait for the selected lord: leadership +4 for the army, movement -5%", icon = "ui/campaign ui/effect_bundles/resource_spices.png", pool = "", goods = {{"spices", 60, "ui/campaign ui/effect_bundles/resource_spices.png"}, {"incense", 60, "ui/campaign ui/effect_bundles/resource_derpy_incense.png"}}, target = "lord"},
+    {key = "trait_fur", kind = "trait", rare = "", use = "", name = "Furred and Booted", gives = "Attrition -25%", detail = "A trait for the selected lord: their army suffers 25% less attrition", icon = "ui/campaign ui/effect_bundles/resource_furs.png", pool = "", goods = {{"furs", 60, "ui/campaign ui/effect_bundles/resource_furs.png"}, {"wool", 60, "ui/campaign ui/effect_bundles/resource_derpy_wool.png"}}, target = "lord"},
+    {key = "last_granary", kind = "lasting", rare = "", use = "", name = "Great Granary", gives = "Growth +15, for good", detail = "Growth +15 in every province, for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_grain.png", pool = "", goods = {{"grain", 120, "ui/campaign ui/effect_bundles/resource_derpy_grain.png"}, {"salt", 120, "ui/campaign ui/effect_bundles/resource_salt.png"}, {"salted_meat", 120, "ui/campaign ui/effect_bundles/resource_derpy_salted_meat.png"}, {"pottery", 120, "ui/campaign ui/effect_bundles/resource_pottery.png"}}, target = ""},
+    {key = "last_records", kind = "lasting", rare = "", use = "", name = "Hall of Records", gives = "Research +15%, for good", detail = "Research rate +15%, for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_books.png", pool = "", goods = {{"books", 150, "ui/campaign ui/effect_bundles/resource_derpy_books.png"}, {"glassware", 150, "ui/campaign ui/effect_bundles/resource_derpy_glassware.png"}, {"silver", 150, "ui/campaign ui/effect_bundles/resource_derpy_silver.png"}}, target = ""},
+    {key = "last_bazaar", kind = "lasting", rare = "", use = "", name = "Grand Bazaar", gives = "Trade income +15%, for good", detail = "Trade income +15%, for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_silk.png", pool = "", goods = {{"silk", 120, "ui/campaign ui/effect_bundles/resource_derpy_silk.png"}, {"carpets", 120, "ui/campaign ui/effect_bundles/resource_derpy_carpets.png"}, {"dyes", 120, "ui/campaign ui/effect_bundles/resource_dyes.png"}, {"spices", 120, "ui/campaign ui/effect_bundles/resource_spices.png"}}, target = ""},
+    {key = "last_arsenal", kind = "lasting", rare = "", use = "", name = "Arsenal", gives = "Upkeep -10%, for good", detail = "Army upkeep -10%, for good", icon = "ui/campaign ui/effect_bundles/resource_iron.png", pool = "", goods = {{"iron", 150, "ui/campaign ui/effect_bundles/resource_iron.png"}, {"coal", 150, "ui/campaign ui/effect_bundles/resource_derpy_coal.png"}, {"brass", 150, "ui/campaign ui/effect_bundles/resource_derpy_brass.png"}, {"blackpowder", 150, "ui/campaign ui/effect_bundles/resource_derpy_blackpowder.png"}}, target = ""},
+    {key = "last_stables", kind = "lasting", rare = "", use = "", name = "Royal Stables", gives = "Cavalry cost -20%, for good", detail = "Cavalry recruitment cost -20%, for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_warhorses.png", pool = "", goods = {{"warhorses", 150, "ui/campaign ui/effect_bundles/resource_derpy_warhorses.png"}, {"furs", 150, "ui/campaign ui/effect_bundles/resource_furs.png"}, {"tusks", 150, "ui/campaign ui/effect_bundles/resource_ivory.png"}, {"timber", 150, "ui/campaign ui/effect_bundles/resource_timber.png"}}, target = ""},
+    {key = "research", kind = "research", rare = "", use = "luxuries", name = "Research", gives = "400 research points", detail = "400 research points, at once", icon = "ui/campaign ui/effect_bundles/resource_derpy_books.png", pool = "", goods = {}, target = ""},
+}
+DERPY_MR_STORES_USE_ICON = {
+    building = "ui/campaign ui/effect_bundles/construction.png",
+    luxuries = "ui/campaign ui/effect_bundles/public_order_jubilant.png",
+    mounts = "ui/campaign ui/effect_bundles/mount.png",
+    provisions = "ui/campaign ui/effect_bundles/growth.png",
+    war = "ui/campaign ui/effect_bundles/weapon_damage.png",
+}
 -- Derpy Resource Overhaul: the Stores panel. It shows what every settlement of the local
 -- faction holds of each good, what its buildings add each turn, and how much space it has.
 -- Read-only and local: nothing here writes the model, so it cannot desync multiplayer.
@@ -390,7 +482,7 @@ S.CCO = 'BuildingSlotList.JoinString(BuildingContext.EffectList.Filter(EffectKey
 S.NOTHING = "Nothing is stored yet. Stores fill each turn with what your buildings make."
 S.NO_REALM = "You hold no settlements, so you have no stores."
 S.FULL_TIP = "This store is full. Anything produced here beyond its space is lost."
-S.NO_HISTORY = "No history yet - check back next turn."
+S.NO_HISTORY = "No history yet. Check back next turn."
 S.view, S.focus = "goods", nil
 
 function S.say(msg)
@@ -421,10 +513,11 @@ function S.parse_made(str)
 end
 
 -- One settlement. A save from before the stores has no derpy_mr_store_ pools: space 0,
--- nothing held, and the panel says so rather than failing.
-function S.read_settlement(region)
+-- nothing held, and the panel says so rather than failing. `bare`: no display name, for the
+-- flows' turn-start snapshot - a loc read from a turn handler CTD'd turn 1 of a fresh campaign.
+function S.read_settlement(region, bare)
     local key = region:name()
-    local s = { key = key, name = loc("regions_onscreen_" .. key, key), level = 0, cap = 0,
+    local s = { key = key, name = bare and key or loc("regions_onscreen_" .. key, key), level = 0, cap = 0,
                 held = {}, made = {}, using = {} }
     -- what its stores give it (phase 4), in DERPY_MR_STORES_BUNDLES order
     for _, b in ipairs(DERPY_MR_STORES_BUNDLES) do
@@ -452,13 +545,13 @@ function S.read_settlement(region)
     return s
 end
 
-function S.read_realm(faction)
+function S.read_realm(faction, bare)
     local out = {}
     if not faction or faction:is_null_interface() then return out end
     local rl = faction:region_list()
     for i = 0, rl:num_items() - 1 do
         local r = rl:item_at(i)
-        if not r:is_null_interface() then out[#out + 1] = S.read_settlement(r) end
+        if not r:is_null_interface() then out[#out + 1] = S.read_settlement(r, bare) end
     end
     table.sort(out, function(a, b) return a.name < b.name end)
     return out
@@ -612,7 +705,8 @@ function S.chart_model(turns, totals, last)
         local v = totals[i] or 0
         local h = L.BAR_MIN
         if top > 0 then h = math.max(L.BAR_MIN, math.floor(v * L.bars[4] / top)) end
-        c.bars[i] = { h = h, tip = "Turn " .. t .. ": " .. S.num(v) .. " held" }
+        -- taken at the turn's start, before its eating and trade: the Held column is live
+        c.bars[i] = { h = h, tip = "Start of turn " .. t .. ": " .. S.num(v) .. " held" }
     end
     return c
 end
@@ -643,10 +737,12 @@ S.BULK = "derpy_mr_all_"
 S.BULK_ORDER = { { "export", "allow" }, { "export", "stop" }, { "import", "allow" }, { "import", "stop" } }
 S.BULK_LABEL = { allow = "Allow all ", stop = "Stop all " }
 S.BULK_TIP = {
-    export = { allow = "Let every resource leave your stores by trade.",
-               stop = "Keep every resource in your stores: none leaves by trade." },
-    import = { allow = "Take every resource your trade partners send.",
-               stop = "Refuse every resource your trade partners send." },
+    export = { allow = "Let every resource leave your stores by trade, and earn trade income again from next turn.",
+               stop = "Keep every resource in your stores, and out of your trade agreements from next turn: "
+                   .. "no trade income from any of them." },
+    import = { allow = "Take every resource your trade partners send to your stores.",
+               stop = "Refuse every resource your trade partners send to your stores. "
+                   .. "Trade agreement imports are not affected: you pay import duty on them." },
 }
 
 -- The flows script's function `name`, or nil without it: the panel must not need it to open.
@@ -681,17 +777,43 @@ function S.trade_line(l)
     return "sent " .. S.num(o) .. ", received " .. S.num(i)
 end
 
-function S.switch_tip(dir, stopped, name)
-    if dir == "export" then
-        if stopped then return name .. " stays in your stores. Click to allow it to leave by trade again." end
-        return name .. " may leave your stores by trade. Click to stop it leaving."
+S.DUTY_ICON = "ui/campaign ui/effect_bundles/income.png"
+S.RECRUIT_HEAD = "Recruits last turn"
+function S.duty_tip(d, pct)
+    local lines = { "Each turn you pay every trade partner " .. pct .. "% of the value of what its settlements make, "
+        .. "and each partner pays you the same on what yours make. Last turn:" }
+    local keys = {}
+    for k in pairs(d.by) do keys[#keys + 1] = k end
+    table.sort(keys)
+    for _, k in ipairs(keys) do
+        lines[#lines + 1] = loc("factions_screen_name_" .. k, k) .. ": paid " .. S.num(d.by[k].paid)
+            .. ", received " .. S.num(d.by[k].got)
     end
-    if stopped then return "Your trade partners send you no " .. name .. ". Click to allow it again." end
-    return "Your trade partners may send you " .. name .. ". Click to refuse it."
+    if #keys == 0 then lines[#lines + 1] = "Nothing paid or received." end
+    return table.concat(lines, "\n")
 end
 
--- which of DERPY_MR_STORES_L.VIEWS the panel shows: both drill-downs share "focus"
+function S.switch_tip(dir, stopped, name)
+    if dir == "export" then
+        if stopped then
+            return name .. " stays in your stores and out of your trade agreements: no trade income from it. "
+                .. "Click to allow it again, from next turn."
+        end
+        return name .. " may leave your stores by trade and earns trade income in your trade agreements. "
+            .. "Click to stop both, from next turn."
+    end
+    if stopped then
+        return "Your trade partners send no " .. name .. " to your stores. Click to allow it again. "
+            .. "Trade agreement imports are not affected: you pay import duty on them."
+    end
+    return "Your trade partners may send " .. name .. " to your stores. Click to refuse it. "
+        .. "Trade agreement imports are not affected: you pay import duty on them."
+end
+
+-- which of DERPY_MR_STORES_L.VIEWS the panel shows: both drill-downs share "focus"; the
+-- Workshop's upgrade drill-down has its own
 function S.view_key()
+    if S.view == "workshop" then return S.focus and "workshop_focus" or "workshop" end
     if S.focus then return "focus" end
     return S.view
 end
@@ -700,7 +822,7 @@ end
 S.SEND = "derpy_mr_sendhere"
 S.ORDER = "derpy_mr_order_"
 S.SELL = "derpy_mr_sell"
-S.NO_SHIPS = "Nothing on the road. Send here, on a settlement's resources, sends a shipment."
+S.NO_SHIPS = "Nothing on the road. To send a shipment, open a settlement's resources and press Send here."
 S.SUPPLY_KEY = {}
 for _, sp in ipairs(DERPY_MR_STORES_SUPPLY) do S.SUPPLY_KEY[sp.key] = true end
 S.USE_WORD = { provisions = "provisions", building = "building materials", war = "war materials",
@@ -777,6 +899,18 @@ function S.supply_on()
     return ok and type(r) == "table" and r.supply == true
 end
 
+-- WHICH GOODS PAY: every good of the use, each after its icon (author, 2026-10-07: "no icon for
+-- materials on what resource that is"). "War materials" alone does not say that Coal is one.
+-- A rare good never pays as its use (flows.lua F.bulk): only the Workshop's own works take it
+function S.use_goods(use)
+    local out = {}
+    for _, g in ipairs(DERPY_MR_STORES_GOODS) do
+        if g.use == use and not g.rare then out[#out + 1] ="[[img:" .. g.icon .. "]][[/img]] " .. S.name(g.stem) end
+    end
+    local word = S.USE_WORD[use] or use
+    return string.upper(string.sub(word, 1, 1)) .. string.sub(word, 2) .. ": " .. table.concat(out, ", ") .. ".\n"
+end
+
 function S.supply_tip(sp, st, name)
     local stores = "the stores of " .. name
     local out = sp.label .. "\n"
@@ -786,6 +920,7 @@ function S.supply_tip(sp, st, name)
     else
         out = out .. "Pay " .. S.num(st.cost) .. " " .. (S.USE_WORD[sp.use] or sp.use) .. " a turn from "
             .. stores .. ": " .. sp.what .. " in every settlement you hold in this province.\n"
+            .. S.use_goods(sp.use)
             .. "The stores of " .. name .. " hold " .. S.num(st.have[sp.use] or 0) .. ".\n"
         if st.short[sp.key] then
             out = out .. "Turned off on turn " .. st.short[sp.key] .. ": " .. stores .. " ran short.\n"
@@ -798,6 +933,7 @@ end
 function S.order_tip(o, st)
     local word = S.USE_WORD[st.use] or st.use
     local out = o.label .. "\nSpend " .. S.num(st.cost) .. " " .. word .. ": " .. o.what .. ", for " .. turns(o.turns) .. ".\n"
+        .. S.use_goods(st.use)
     if st.active then return out .. "Running: " .. turns(st.active) .. " left. Ready again in " .. turns(st.wait) .. "." end
     if st.wait then return out .. "Ready again in " .. turns(st.wait) .. "." end
     if not st.ok then return out .. "Your stores hold " .. S.num(st.have) .. " " .. word .. "." end
@@ -875,6 +1011,8 @@ function S.view_model(realm)
         if #realm == 0 then v.empty = S.NO_REALM end
     elseif S.view == "spending" then
         S.spending(v)
+    elseif S.view == "workshop" then
+        S.workshop(v, realm)
     elseif S.view == "map" then
         v.title = "Where your settlements and convoys are"
         v.heads = { "", "", "", "", "" }
@@ -891,6 +1029,13 @@ function S.view_model(realm)
             v.hint = "Tick to allow, untick to stop."
             v.bulk = true
         end
+        -- IMPORT DUTY, first: last turn's gold each way (flows.lua F.duty), while the rate is on
+        local rates, duty, f = S.flows("rates"), S.flows("duty_last"), S.local_faction()
+        if rates and duty and (rates().duty or 0) > 0 and f and S.ask("uses_stores", f) then
+            local d = duty(fk) or { paid = 0, got = 0, by = {} }
+            v.rows[#v.rows + 1] = { "Import duty", "", "", "", "paid " .. S.num(d.paid) .. ", received " .. S.num(d.got),
+                                    icon = S.DUTY_ICON, tip = S.duty_tip(d, rates().duty) }
+        end
         local rows = S.trade_rows(realm)
         local others = 0
         for _, g in ipairs(rows) do if not g.own then others = others + 1 end end
@@ -905,7 +1050,7 @@ function S.view_model(realm)
             end
             if not g.own and S.folded then break end
             local row = { g.name, S.num(g.held), "", "", S.trade_line(last and last(fk, g.stem) or {}),
-                          icon = g.icon, tip = S.good_tip(g), stem = g.stem }
+                          icon = g.icon, tip = S.good_tip(g), stem = g.stem, name = g.name }
             if not g.own then
                 for j = 1, 5 do row[j] = row[j] ~= "" and S.grey(row[j]) or "" end
                 row.dim = true
@@ -997,7 +1142,8 @@ function S.spending(v)
                 local pay = sp.use ~= "" and c.st.pay and c.st.pay[sp.use]
                 if pay then
                     row.supply[sp.key].pay = {
-                        icon = S.icon_of(pay.stem), short = pay.n < c.st.cost,
+                        -- short on the use's total, as F.supply decides: it pays across every good
+                        icon = S.icon_of(pay.stem), short = (c.st.have[sp.use] or 0) < c.st.cost,
                         tip = sp.label .. "\n" .. (pay.n > 0 and ("Paid from " .. S.name(pay.stem) .. " first, the fullest store.")
                             or ("Nothing to pay with: the stores of " .. c.name .. " hold none.")) }
                 end
@@ -1027,12 +1173,218 @@ function S.spending(v)
                                                  .. " on turn " .. s.due .. ". Click to see it on the map." } }
         end
     end
+    -- RECRUITS (workshop expansion spec section 3): what last turn's recruits took (flows.lua F.on_unit_trained)
+    local rl = S.flows("recruit_last")
+    local r = rl and rl(f:name())
+    if r and (r.goods > 0 or r.gold > 0 or next(r.paid)) then
+        local parts, lines, words = { S.num(r.goods) .. " resources" }, {}, {}
+        for w in pairs(r.paid) do words[#words + 1] = w end
+        table.sort(words)
+        for _, w in ipairs(words) do
+            parts[#parts + 1] = S.num(r.paid[w]) .. " " .. w
+            if r.line then lines[#lines + 1] = string.format(r.line, r.paid[w], w) end
+        end
+        if r.gold > 0 then parts[#parts + 1] = S.num(r.gold) .. " gold" end
+        v.rows[#v.rows + 1] = { S.section(S.RECRUIT_HEAD), "", "", "", "", section = true }
+        v.rows[#v.rows + 1] = { table.concat(parts, ", "), "", "", "", "", icon = S.DUTY_ICON,
+            tip = "Each unit you recruit takes resources from your stores by its type and worth. What the "
+                .. "stores lack is paid " .. (r.line and "in your own currency, then " or "") .. "in gold."
+                .. (#lines > 0 and ("\n" .. table.concat(lines, "\n")) or "") }
+    end
     if #v.rows == 0 or v.rows[1].section then v.heads = { "", "", "", "", "" } end
     if S.actions_on() then
         v.orders = {}
         for i, o in ipairs(DERPY_MR_STORES_ORDERS) do
             local st = S.ask("order_state", f, o.key)
             if st then v.orders[i] = { key = o.key, tip = S.order_tip(o, st), off = not st.ok, active = st.active } end
+        end
+    end
+end
+
+-- ---- THE WORKSHOP (spec 2026-10-07): a rare good and a bulk of its use buy something lasting --
+S.WORK_SECTION = { item = "Items", unit = "Units", upgrade = "Settlement upgrades", convert = "Your race's resources",
+                   army = "Army works", trait = "Lord and hero works", lasting = "Works that last", research = "Research" }
+S.WORK_ORDER = { "item", "unit", "upgrade", "convert", "army", "trait", "lasting", "research" }
+S.WORK_DONE = { item = "Forged", upgrade = "Built", lasting = "Built", trait = "Has it" }
+-- A FOLDED KIND shows its section row only (the spec's filter by kind). Kept while the campaign
+-- runs, not saved.
+S.work_fold = {}
+-- by the work's target: an army, any character, or a lord only (a general_to_force_own trait)
+S.AIM = { army = "Select one of your armies on the map first.",
+          character = "Select one of your lords or heroes on the map first.",
+          lord = "Select one of your lords on the map first." }
+
+-- The character selected on the campaign map, by cqi, or nil (CA's UI manager keeps it: -1 or
+-- nil when none). Local to this machine: a purchase carries it through F.request.
+function S.selected()
+    local ok, cqi = pcall(function() return cm:get_campaign_ui_manager():get_char_selected_cqi() end)
+    if ok and type(cqi) == "number" and cqi > 0 then return cqi end
+    return nil
+end
+
+-- "Karl Franz", or nil when the engine will not say
+function S.char_name(cqi)
+    local ok, n = pcall(function()
+        local c = cm:get_character_by_cqi(cqi)
+        local name = common.get_localised_string(c:get_forename())
+        local sur = common.get_localised_string(c:get_surname())
+        if sur ~= "" then name = name .. " " .. sur end
+        return name
+    end)
+    if ok and type(n) == "string" and n ~= "" then return n end
+    return nil
+end
+S.WORK_OFF = "Resource Vault actions are switched off in the mod's settings."
+
+-- a price part's figure, red where the stores are short of it
+function S.price_part(have, cost)
+    local n = S.num(cost)
+    if have < cost then return "[[col:red]]" .. n .. "[[/col]]" end
+    return n
+end
+
+-- why a row cannot be bought, in one line
+function S.work_why(w, st)
+    if st.why == "short" and st.goods then
+        for _, g in ipairs(st.goods) do
+            if g.have < g.cost then
+                return "Your stores hold " .. S.num(g.have) .. " of " .. S.num(g.cost) .. " " .. S.name(g.stem) .. "."
+            end
+        end
+    end
+    if st.why == "aim" then return S.AIM[w.target] or "" end
+    if st.why == "not_lord" then return "Only a lord can take this." end
+    if st.why == "no_pool" then return "Your faction cannot hold this." end
+    if st.why == "full" and w.kind == "convert" then return "You hold as much of it as you can." end
+    if st.why == "done" and w.kind == "trait" then return "They have this already." end
+    if st.why == "done" and w.kind == "lasting" then return "Built already." end
+    if st.why == "no_army" and w.kind == "army" then return "The selected character leads no army." end
+    if st.why == "not_yours" and w.target ~= "" then return "Not one of your characters." end
+    if st.why == "short" then
+        if st.rare and st.rare.have < st.rare.cost then
+            return "Your stores hold " .. S.num(st.rare.have) .. " of " .. S.num(st.rare.cost) .. " " .. S.name(w.rare) .. "."
+        end
+        return "Your stores hold " .. S.num(st.bulk.have) .. " of " .. S.num(st.bulk.cost) .. " "
+            .. (S.USE_WORD[w.use] or w.use) .. "."
+    end
+    if st.why == "wait" then return "Ready again in " .. turns(st.wait) .. "." end
+    if st.why == "done" then return "Already forged." end
+    if st.why == "built" then return "Built here already." end
+    if st.why == "full" then return "Your mercenary pool holds as many as it can." end
+    if st.why == "not_yours" then return "Not your settlement." end
+    if st.why == "no_army" then return "No army of yours has room for it." end
+    return ""
+end
+
+-- the panel a pool's units are recruited from, by the pool's own key
+function S.pool_name(pool)
+    if string.match(pool or "", "grudges") then return "Book of Grudges" end
+    return "Regiments of Renown"
+end
+
+function S.work_tip(w, st)
+    local out = w.name .. "\n" .. w.detail .. ".\n"
+    if st.route == "pool" then
+        out = out .. "Goes into your " .. S.pool_name(w.pool) .. " to recruit. Recruiting it still costs its gold.\n"
+    elseif st.route == "army" then
+        out = out .. "Goes straight into your largest army with room.\n"
+    end
+    if st.goods then
+        for _, g in ipairs(st.goods) do
+            out = out .. "Your stores hold " .. S.num(g.have) .. " of " .. S.num(g.cost) .. " " .. S.name(g.stem) .. ".\n"
+        end
+        return out
+    end
+    if st.rare then
+        out = out .. "Your stores hold " .. S.num(st.rare.have) .. " of " .. S.num(st.rare.cost) .. " " .. S.name(w.rare) .. ".\n"
+    end
+    out = out .. "Your stores hold " .. S.num(st.bulk.have) .. " of " .. S.num(st.bulk.cost) .. " "
+        .. (S.USE_WORD[w.use] or w.use) .. ", not counting rare resources.\n"
+    return out .. S.use_goods(w.use)
+end
+
+-- the Buy button: live when it can be bought and the actions are on, else greyed saying why
+function S.work_send(w, st, label)
+    local on = S.actions_on()
+    return { label = S.WORK_DONE[w.kind] and (st.why == "done" or st.why == "built") and S.WORK_DONE[w.kind] or label,
+             off = not (st.ok and on),
+             tip = not on and S.WORK_OFF or (st.ok and "Click to buy it." or S.work_why(w, st)) }
+end
+
+function S.workshop(v, realm)
+    local f = S.local_faction()
+    if not f then return end
+    if S.focus then                                   -- an upgrade's drill-down: where to build it
+        local w
+        for _, x in ipairs(DERPY_MR_STORES_WORKS) do if x.key == S.focus then w = x end end
+        if not w then
+            S.focus = nil
+            return S.workshop(v, realm)
+        end
+        v.title = "Where to build " .. w.name
+        v.heads = { "Settlement", "", "", "", "" }
+        local any
+        for _, s in ipairs(realm) do
+            local st = S.ask("work_state", f, w.key, s.key)
+            if st then
+                v.rows[#v.rows + 1] = { s.name, "", "", "", "", work = w.key, region = s.key,
+                                        tip = S.work_tip(w, st), send = S.work_send(w, st, "Buy here") }
+                any = any or st
+            end
+        end
+        -- THE PRICE, on the hint's line: it is the same wherever it is built
+        if any then
+            v.hint = "Paid from all your stores: " .. S.num(any.rare.cost) .. " " .. S.name(w.rare) .. " and "
+                .. S.num(any.bulk.cost) .. " " .. (S.USE_WORD[w.use] or w.use) .. "."
+        end
+        return
+    end
+    v.title = "What your stores can buy"
+    v.hint = "Rare resources are made only in their own buildings."
+    v.heads = { "", "Gives", "Price", "", "" }   -- one header over both price parts
+    local aim = S.selected()
+    for _, kind in ipairs(S.WORK_ORDER) do
+        local rows = {}
+        for _, w in ipairs(DERPY_MR_STORES_WORKS) do
+            local target = w.target ~= "" and aim or nil
+            local st = w.kind == kind and S.ask("work_state", f, w.key, nil, target)
+            if st and st.goods then
+                -- A NAMED RECIPE: up to four goods, each its icon and amount, from column 3
+                local r = { w.name, w.gives, "", "", "", icon = w.icon, tip = S.work_tip(w, st), work = w.key,
+                            price = {}, send = S.work_send(w, st, "Buy") }
+                for k, g in ipairs(st.goods) do
+                    r.price[k] = { icon = S.icon_of(g.stem), text = S.price_part(g.have, g.cost), short = g.have < g.cost }
+                end
+                if w.target ~= "" then
+                    r.aim = target
+                    r.tip = r.tip .. (target and ("Applies to: " .. (S.char_name(target) or "the selected character") .. ".")
+                                      or S.AIM[w.target])
+                end
+                rows[#rows + 1] = r
+            elseif st then
+                -- THE PRICE, two parts, each after its icon: the rare good in 3, the bulk's use in 4
+                local r = { w.name, w.gives, st.rare and S.price_part(st.rare.have, st.rare.cost) or "",
+                            S.price_part(st.bulk.have, st.bulk.cost), "", icon = w.icon, tip = S.work_tip(w, st),
+                            work = w.key, lead = { [3] = st.rare and S.icon_of(w.rare) or nil,
+                                                   [4] = DERPY_MR_STORES_USE_ICON[w.use] } }
+                if kind == "upgrade" then
+                    -- no Buy of its own: Choose opens the list of settlements it can be built in
+                    r.open, r.tip = w.key, r.tip .. "Click to choose a settlement."
+                    r.send = { label = "Choose", off = false, tip = "Choose the settlement to build it in." }
+                else
+                    r.send = S.work_send(w, st, "Buy")
+                end
+                rows[#rows + 1] = r
+            end
+        end
+        if #rows > 0 then
+            local folded = S.work_fold[kind] == true
+            v.rows[#v.rows + 1] = { S.section(S.WORK_SECTION[kind] .. (folded and S.FOLDED or "")), "", "", "", "",
+                                    section = true, fold = kind,
+                                    tip = folded and "Click to show these." or "Click to hide these." }
+            if not folded then
+                for _, r in ipairs(rows) do v.rows[#v.rows + 1] = r end
+            end
         end
     end
 end
@@ -1227,7 +1579,8 @@ S.PANEL = "derpy_mr_stores_panel"
 S.CLOSE = "derpy_mr_close"
 S.BACK = "derpy_mr_back"
 S.TAB = { goods = "derpy_mr_tab_goods", settlements = "derpy_mr_tab_settlements",
-          trade = "derpy_mr_tab_trade", spending = "derpy_mr_tab_spending", map = "derpy_mr_tab_map" }
+          trade = "derpy_mr_tab_trade", spending = "derpy_mr_tab_spending", map = "derpy_mr_tab_map",
+          workshop = "derpy_mr_tab_workshop" }
 S.MAP = { dot = "derpy_mr_mapdot_", cart = "derpy_mr_mapcart_", path = "derpy_mr_mappath_",
           label = "derpy_mr_maplabel_" }
 S.MAP_FILE = { dot = "derpy_mr_stores_mapdot", cart = "derpy_mr_stores_mapcart", path = "derpy_mr_stores_mappath",
@@ -1310,6 +1663,7 @@ function S.build()
     label(find_uicomponent(p, S.TAB.trade), "Trade")
     label(find_uicomponent(p, S.TAB.spending), "Spending")
     label(find_uicomponent(p, S.TAB.map), "Map")
+    label(find_uicomponent(p, S.TAB.workshop), "Workshop")
     label(find_uicomponent(p, S.BACK), "Back")
     -- the chart's twenty bars, made once and kept; draw_chart sizes, shows and hides them
     for i = 1, L.BARS do
@@ -1525,7 +1879,7 @@ local function draw_switches(r, rc, rx, ry, cols)
                 sw:SetImagePath(art[1], 0)
                 sw:SetImagePath(art[2], 1)
                 sw:SetOpacity(rc.dim and S.DIM or 255, true)
-                sw:SetTooltipText(S.switch_tip(d, rc[d], rc[1]), true)
+                sw:SetTooltipText(S.switch_tip(d, rc[d], rc.name or rc[1]), true)   -- rc[1] is greyed markup
             end
         end
     end
@@ -1573,7 +1927,8 @@ function S.draw_rows(p, rows, heads, cols)
             for j, col in ipairs(cols) do
                 local c = find_uicomponent(r, "c" .. j)
                 if is_uicomponent(c) then
-                    local dx = j == 1 and shift or 0
+                    -- a lead icon (the Workshop's price) puts the text after it
+                    local dx = j == 1 and shift or (rc.lead and rc.lead[j] and L.ICON_PITCH) or 0
                     c:MoveTo(rx + col[1] + dx, ry + 4)
                     sized(c, col[2] - dx, 20)
                     align(c, col[3])
@@ -1624,15 +1979,34 @@ function S.draw_rows(p, rows, heads, cols)
                     S.set_off(sb, rc.send.off)
                 end
             end
-            -- the Using column's icons: a Settlements row's bundles, in the third column
+            -- the Using column's icons: a Settlements row's bundles, in the third column; or a
+            -- row's lead icons, one at the start of each column that has one
+            local leads = {}
+            for j = 1, #cols do
+                if rc.lead and rc.lead[j] then leads[#leads + 1] = { rx + cols[j][1], rc.lead[j] } end
+            end
             for k = 1, L.USING do
                 local u = find_uicomponent(r, "use" .. k)
+                local pk = rc.price and rc.price[k]
                 if is_uicomponent(u) then
-                    local path = rc.using and rc.using[k]
+                    local path, x = rc.using and rc.using[k], rx + cols[3][1] + (k - 1) * L.ICON_PITCH
+                    if rc.lead then path, x = leads[k] and leads[k][2], leads[k] and leads[k][1] end
+                    -- A NAMED RECIPE'S PRICE: each good's icon, PRICE_PITCH apart from column 3, grey when short
+                    if rc.price then path, x = pk and pk.icon, rx + cols[3][1] + (k - 1) * L.PRICE_PITCH end
                     u:SetVisible(path ~= nil)
                     if path then
-                        u:MoveTo(rx + cols[3][1] + (k - 1) * L.ICON_PITCH, ry + L.icon[2])
+                        u:MoveTo(x, ry + L.icon[2])
                         u:SetImagePath(path, 0)
+                        S.fx(u, pk and pk.short and "off" or "live")
+                    end
+                end
+                -- and its amount after it
+                local n = find_uicomponent(r, "pn" .. k)
+                if is_uicomponent(n) then
+                    n:SetVisible(pk ~= nil)
+                    if pk then
+                        n:MoveTo(rx + cols[3][1] + (k - 1) * L.PRICE_PITCH + L.ICON_PITCH, ry + 4)
+                        set(n, pk.text)
                     end
                 end
             end
@@ -1674,17 +2048,22 @@ end
 -- EVERY SETTLEMENT NAMED, the province capitals first; a name that would overlap one already
 -- placed is left off (its dot and tooltip stay), and one that would run past the map's right
 -- edge goes on its dot's left, set against it.
+-- THE BOX IS THE NAME'S OWN WIDTH, measured in the label's font, so its left-aligned text ends
+-- where the box does on either side. Seen in game 2026-10-07: a name on its dot's left in a 160
+-- box with SetTextHAlign("right") still drew from the box's left edge, ~75px short of the dot.
 function S.map_names(p, m, bx, by, shown)
     local order = {}
     for _, d in ipairs(m.dots) do if d.cap then order[#order + 1] = d end end
     for _, d in ipairs(m.dots) do if not d.cap then order[#order + 1] = d end end
-    local lw, lh, taken = L.map_label[1], L.map_label[2], {}
+    local lh, taken = L.map_label[2], {}
+    local ruler = S.map_part(p, "label", 1)
     for _, d in ipairs(order) do
         local gap = math.floor((d.cap and L.MAP_CAP or L.MAP_DOT) / 2) + 4
-        local tw = S.label_w(d.name)
-        local right = d.x + gap + lw <= L.map[3]
-        local lx = right and d.x + gap or d.x - gap - lw
-        local tx, ly = right and lx or lx + lw - tw, d.y - math.floor(lh / 2)
+        local ok, w = false, nil
+        if ruler then ok, w = pcall(function() return ruler:WidthOfTextLine(d.name) end) end
+        local tw = (ok and type(w) == "number" and w > 0) and math.ceil(w) or S.label_w(d.name)
+        local right = d.x + gap + tw <= L.map[3]
+        local tx, ly = right and d.x + gap or d.x - gap - tw, d.y - math.floor(lh / 2)
         local free = true
         for _, b in ipairs(taken) do
             if tx < b[1] + b[3] and b[1] < tx + tw and ly < b[2] + lh and b[2] < ly + lh then
@@ -1697,9 +2076,8 @@ function S.map_names(p, m, bx, by, shown)
             shown.label = shown.label + 1
             local lab = S.map_part(p, "label", shown.label)
             if lab then
-                put(lab, bx, by, { lx, ly, lw, lh })
+                put(lab, bx, by, { tx, ly, tw + 2, lh })   -- 2 spare, so a rounding never clips a letter
                 set(lab, d.name)
-                lab:SetTextHAlign(right and "left" or "right")
                 lab:SetVisible(true)
             end
         end
@@ -1991,7 +2369,7 @@ end
 function S.is_mine(name)
     return type(name) == "string" and (name == S.BUTTON or name == S.CLOSE or name == S.BACK
         or name == S.TAB.goods or name == S.TAB.settlements or name == S.TAB.trade or name == S.TAB.spending
-        or name == S.TAB.map or S.map_hits[name] ~= nil
+        or name == S.TAB.map or name == S.TAB.workshop or S.map_hits[name] ~= nil
         or string.sub(name, 1, #S.ROW) == S.ROW or string.sub(name, 1, #S.SW) == S.SW
         or string.sub(name, 1, #S.BULK) == S.BULK or string.sub(name, 1, #S.ORDER) == S.ORDER
         or name == S.SEND or name == S.SELL or name == S.ZOOM_IN or name == S.ZOOM_OUT)
@@ -2033,6 +2411,24 @@ function S.click_send(component)
     local i = tonumber(string.match(row:Id() or "", "^derpy_mr_row_(%d+)$"))
     local rc = i and S.data[i]
     if rc and rc.send and rc.send.look then return S.look_at(rc.send.look[1], rc.send.look[2]) end
+    -- the Workshop: Buy names its row, Buy here its row and settlement
+    if rc and rc.work then
+        if rc.open then
+            S.focus = rc.open
+            return S.refresh()
+        end
+        if rc.send and not rc.send.off then
+            if rc.region then return S.request("upgrade", rc.work, rc.region) end
+            -- THE SELECTION MOVED since the rows were drawn (stage 2 final review): draw them again
+            -- rather than buy for the army the row was drawn for
+            if rc.aim then
+                if S.selected() ~= rc.aim then return S.refresh() end
+                return S.request("aim", rc.work, tostring(rc.aim))
+            end
+            return S.request("work", rc.work)
+        end
+        return
+    end
     if rc and rc.send and not rc.send.off then return S.request("send", rc.stem, S.focus) end
 end
 
@@ -2075,7 +2471,11 @@ function S.click(name, component)
         return S.refresh()
     end
     if row and row.fold then
-        S.folded = not S.folded
+        if type(row.fold) == "string" then
+            S.work_fold[row.fold] = not S.work_fold[row.fold]
+        else
+            S.folded = not S.folded
+        end
         return S.refresh()
     end
 end
@@ -2295,6 +2695,15 @@ function S.init()
             local done, e = pcall(S.click, context.string, context.component)
             if not done then S.say(e) end
         end, true)
+    -- the Workshop's army and character rows follow the map's selection while it is open
+    for _, ev in ipairs({ "CharacterSelected", "CharacterDeselected" }) do
+        core:add_listener("derpy_mr_stores_" .. ev, ev,
+            function() return S.view == "workshop" and S.is_open() end,
+            function()
+                local done, e = pcall(S.refresh)
+                if not done then S.say(e) end
+            end, true)
+    end
     core:add_listener("derpy_mr_stores_turn", "FactionTurnStart",
         function(context) return context:faction():name() == cm:get_local_faction_name(true) end,
         function()

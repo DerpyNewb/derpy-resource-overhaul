@@ -1,0 +1,17 @@
+choice_key	dilemma_key	id	payload_key	value	target_key
+#cdir_events_dilemma_payloads_tables;0;db/cdir_events_dilemma_payloads_tables/derpy_more_resources
+FIRST	derpy_mr_dil_feast	1519408562	TEXT_DISPLAY	LOOKUP[derpy_mr_dil_feast_cost]	default
+FIRST	derpy_mr_dil_feast	1279828040	TEXT_DISPLAY	LOOKUP[derpy_mr_dil_feast_reward]	default
+SECOND	derpy_mr_dil_feast	137446278	TEXT_DISPLAY	LOOKUP[derpy_mr_dil_keep]	default
+FIRST	derpy_mr_dil_siege	1528836775	TEXT_DISPLAY	LOOKUP[derpy_mr_dil_siege_cost]	default
+FIRST	derpy_mr_dil_siege	673952535	TEXT_DISPLAY	LOOKUP[derpy_mr_dil_siege_reward]	default
+SECOND	derpy_mr_dil_siege	1086310305	TEXT_DISPLAY	LOOKUP[derpy_mr_dil_keep]	default
+FIRST	derpy_mr_dil_tribute	298017256	TEXT_DISPLAY	LOOKUP[derpy_mr_dil_tribute_cost]	default
+FIRST	derpy_mr_dil_tribute	766028400	TEXT_DISPLAY	LOOKUP[derpy_mr_dil_tribute_reward]	default
+SECOND	derpy_mr_dil_tribute	1076760281	TEXT_DISPLAY	LOOKUP[derpy_mr_dil_keep]	default
+FIRST	derpy_mr_dil_arsenal	1520943742	TEXT_DISPLAY	LOOKUP[derpy_mr_dil_arsenal_cost]	default
+FIRST	derpy_mr_dil_arsenal	1164721882	TEXT_DISPLAY	LOOKUP[derpy_mr_dil_arsenal_reward]	default
+SECOND	derpy_mr_dil_arsenal	1649076041	TEXT_DISPLAY	LOOKUP[derpy_mr_dil_keep]	default
+FIRST	derpy_mr_dil_restore	1060151180	TEXT_DISPLAY	LOOKUP[derpy_mr_dil_restore_cost]	default
+FIRST	derpy_mr_dil_restore	1983673659	TEXT_DISPLAY	LOOKUP[derpy_mr_dil_restore_reward]	default
+SECOND	derpy_mr_dil_restore	1268688076	TEXT_DISPLAY	LOOKUP[derpy_mr_dil_keep]	default

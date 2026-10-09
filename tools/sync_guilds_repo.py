@@ -45,8 +45,16 @@ MANIFEST = [(p, p) for p in [
     "tools/sync_derpy_hub.py",
     # Each race's own panel and card (gen_guilds_ui.FRAMES) - text, naming CA art by path.
     *[_UI + "derpy_gg_%s_%s.twui.xml" % (kind, race)
-      for race in ("brt", "cth", "def", "dwf", "emp", "hef", "ksl")
+      for race in ("brt", "cth", "def", "dwf", "emp", "hef", "ksl", "skv")
       for kind in ("panel", "card")],
+    # The same files at MCT's Small and Large panel sizes (gen_guilds_ui.SIZES). Their resized
+    # CA art (derpy_gg_sized, ui/skins/*/derpy_gg_*) is art, so it stays out with the rest.
+    *[_UI + "derpy_gg_%s%s_%s.twui.xml" % (kind, race, sfx)
+      for sfx in ("sm", "lg")
+      for race in ("", "_brt", "_cth", "_def", "_dwf", "_emp", "_hef", "_ksl", "_skv")
+      for kind in ("panel", "card")],
+    *[_UI + "derpy_gg_%s_%s.twui.xml" % (kind, sfx)
+      for sfx in ("sm", "lg") for kind in ("row", "list", "frow")],
     # NO ART. The icons (derpy_gg_icons, and CA's originals in source/guild_icons) and the
     # panel grounds (derpy_gg_bg) are all derived from Creative Assembly's art, so none of
     # it goes into the public repo - the user's call, 2026-09-23. It ships in the pack only.
@@ -144,6 +152,36 @@ MANIFEST = [(p, p) for p in [
      "docs/history/HANDOFF_20261004_GUILDS_UI_POLISH_PREVIEW.md"),
     ("docs/sessions/HANDOFF_20261004_GUILDS_GLOW_PULSE.md",
      "docs/history/HANDOFF_20261004_GUILDS_GLOW_PULSE.md"),
+    ("docs/superpowers/specs/2026-10-04-great-guilds-halls-design.md",
+     "docs/design/2026-10-04-great-guilds-halls-design.md"),
+    ("docs/superpowers/plans/2026-10-04-great-guilds-halls-stage1.md",
+     "docs/plans/2026-10-04-great-guilds-halls-stage1.md"),
+    ("docs/superpowers/plans/2026-10-04-great-guilds-halls-stage2.md",
+     "docs/plans/2026-10-04-great-guilds-halls-stage2.md"),
+    ("docs/superpowers/specs/2026-10-04-great-guilds-temple-guild-design.md",
+     "docs/design/2026-10-04-great-guilds-temple-guild-design.md"),
+    ("docs/superpowers/plans/2026-10-04-great-guilds-temple-guild.md",
+     "docs/plans/2026-10-04-great-guilds-temple-guild.md"),
+    ("docs/superpowers/specs/2026-10-05-great-guilds-skaven-design.md",
+     "docs/design/2026-10-05-great-guilds-skaven-design.md"),
+    ("docs/superpowers/plans/2026-10-05-great-guilds-skaven.md",
+     "docs/plans/2026-10-05-great-guilds-skaven.md"),
+    ("docs/sessions/HANDOFF_20261004_GUILDS_DOCS_PUSH_AND_HALLS_BRAINSTORM.md",
+     "docs/history/HANDOFF_20261004_GUILDS_DOCS_PUSH_AND_HALLS_BRAINSTORM.md"),
+    ("docs/sessions/HANDOFF_20261004_GUILDS_HALLS_STAGE1.md",
+     "docs/history/HANDOFF_20261004_GUILDS_HALLS_STAGE1.md"),
+    ("docs/sessions/HANDOFF_20261004_GUILDS_HALLS_STAGE2.md",
+     "docs/history/HANDOFF_20261004_GUILDS_HALLS_STAGE2.md"),
+    ("docs/sessions/HANDOFF_20261004_GUILDS_TEMPLE.md",
+     "docs/history/HANDOFF_20261004_GUILDS_TEMPLE.md"),
+    ("docs/sessions/HANDOFF_20261005_GUILDS_SKAVEN.md",
+     "docs/history/HANDOFF_20261005_GUILDS_SKAVEN.md"),
+    ("docs/sessions/HANDOFF_20261007_GUILDS_TEXT_HUMANIZE_CODEX.md",
+     "docs/history/HANDOFF_20261007_GUILDS_TEXT_HUMANIZE_CODEX.md"),
+    ("docs/sessions/CODEX_GUILDS_TEXT_REPORT_20261007.md",
+     "docs/history/CODEX_GUILDS_TEXT_REPORT_20261007.md"),
+    ("docs/sessions/HANDOFF_20261007_GUILDS_TEXT_HUMANIZE_CLAUDE.md",
+     "docs/history/HANDOFF_20261007_GUILDS_TEXT_HUMANIZE_CLAUDE.md"),
 ]
 
 

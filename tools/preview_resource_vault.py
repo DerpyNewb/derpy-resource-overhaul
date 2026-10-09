@@ -31,7 +31,7 @@ sys.path.insert(0, os.path.join(ROOT, "tools"))
 import preview_guilds_panel as PG                                    # noqa: E402
 
 PREFIX = "derpy_mr_stores_"
-TABS = ("goods", "goods_focus", "settlements", "settlement_focus", "trade", "spending", "map",
+TABS = ("goods", "goods_focus", "settlements", "settlement_focus", "trade", "spending", "workshop", "workshop_focus", "map",
         "map_wh3_main_combi", "map_cr_combi_expanded", "map_wh3_main_chaos")
 # Where a campaign's minimap is: CA's data_maps.pack, or the map mod's own pack (IEE).
 MAP_PACKS = (os.path.join(PG.GAME, "data_maps.pack"),
@@ -199,8 +199,9 @@ def tab_faults(comps):
     top = [c for c in comps if c["depth"] == 1 and c["w"] is not None]
     tabs = [c for c in top if c["name"].startswith("derpy_mr_tab_")]
     out = []
-    if len(tabs) != 5:
-        out.append("%d tabs drawn, not 5" % len(tabs))
+    want = sum(1 for k in _gen().L if k.startswith("tab_"))   # the layout's tabs, not a typed count
+    if len(tabs) != want:
+        out.append("%d tabs drawn, not %d" % (len(tabs), want))
     for t in tabs:
         for o in top:
             if o is t or o["w"] >= pnl["w"] - 1:

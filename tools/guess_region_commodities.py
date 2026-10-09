@@ -54,11 +54,14 @@ RULES = [
      "Cane grows on hot coasts and is distilled in the harbours; the Vampire Coast and Sartosa run on grog."),
     ("amber", lambda g: g["coastal"] and g["areas"] & {"kislev", "norsca"},
      "Amber washes up on the Sea of Claws coasts of Kislev and Norsca."),
-    ("grain", lambda g: g["climate"] == "climate_temperate" and g["areas"] & OLD_WORLD_FARMLAND,
-     "The farmland of the Empire, Bretonnia, Kislev and the Border Princes feeds the Old World."),
+    ("grain", lambda g: (g["climate"] == "climate_temperate" and g["areas"] & OLD_WORLD_FARMLAND)
+     or g["origin"] == "dwf",
+     "The farmland of the Empire, Bretonnia, Kislev and the Border Princes feeds the Old World; "
+     "the Dwarf holds grow their own barley."),
     ("warhorses", lambda g: g["climate"] in ("climate_temperate", "climate_savannah", "climate_desert")
-     and (g["areas"] & {"bretonnia", "kislev", "araby"}),
-     "Bretonnian destriers, Kislevite steppe horses, Arabyan horses."),
+     and (g["areas"] & {"bretonnia", "kislev", "araby"}) or g["origin"] in ("hef", "emp", "def"),
+     "Bretonnian destriers, Kislevite steppe horses, Arabyan horses; Ellyrion's steeds, Averland's "
+     "herds and the Druchii's Dark Steeds."),
     ("pipeweed", R("the_moot"),
      "Halfling pipeweed comes from the Moot and nowhere else."),
     ("books", R("altdorf", "nuln", "middenheim", "talabheim", "marienburg", "white_tower_of_hoeth"),
@@ -75,10 +78,12 @@ RULES = [
      and g["climate"] == "climate_mountain",
      "Jade is quarried in Cathay's mountains."),
     ("coal", lambda g: "res_rom_iron" in g["deposits"]
-     or (g["origin"] in ("dwf", "chd") and g["climate"] in ("climate_mountain", "climate_wasteland")),
-     "Coal seams run beside iron, and every Dwarf and Chaos Dwarf hold digs its own fuel."),
-    ("silver", lambda g: g["climate"] == "climate_mountain" and g["deposits"] & MINED,
-     "Silver veins in mountains already mined for iron, gems or gold."),
+     or (g["origin"] in ("dwf", "chd") and g["climate"] in ("climate_mountain", "climate_wasteland"))
+     or g["origin"] == "dwf",
+     "Coal seams run beside iron, and every Dwarf and Chaos Dwarf hold digs its own fuel; Dwarf "
+     "Underdeep mines and Toolmakers' forges anywhere in their holds."),
+    ("silver", lambda g: (g["climate"] == "climate_mountain" and g["deposits"] & MINED) or g["origin"] == "dwf",
+     "Silver veins in mountains already mined for iron, gems or gold, and in the Dwarfs' Underdeep."),
     ("gromril", lambda g: g["origin"] == "dwf" and g["climate"] == "climate_mountain" and g["deposits"] & MINED,
      "Meteoric iron found only deep under the old Dwarf holds."),
     ("quicksilver", lambda g: g["deposits"] & {"res_gold", "res_gems", "res_obsidian"}
@@ -86,14 +91,16 @@ RULES = [
      "Cinnabar forms in volcanic and ore-bearing rock beside gold and gems."),
     ("brimstone", lambda g: "res_obsidian" in g["deposits"]
      or (g["areas"] & {"darklands", "northern_darklands", "southern_darklands"}
-         and g["climate"] in ("climate_wasteland", "climate_chaotic")),
-     "Sulphur crusts the vents of the Dark Lands and every obsidian field."),
-    ("brass", lambda g: g["origin"] == "chd" or g["tail"] == "the_copper_landing"
+         and g["climate"] in ("climate_wasteland", "climate_chaotic"))
+     or g["origin"] == "dwf",
+     "Sulphur crusts the vents of the Dark Lands and every obsidian field, and the Dwarfs' Underdeep."),
+    ("brass", lambda g: g["origin"] == "chd" or g["tail"] in ("the_copper_landing", "karak_izor")
      or (g["areas"] & {"darklands", "northern_darklands", "southern_darklands"} and "res_rom_iron" in g["deposits"]),
      "Hashut's metal, cast in the Chaos Dwarf forges; copper from the Copper Landing."),
     ("blackpowder", lambda g: ("res_rom_lead" in g["deposits"] and g["origin"] in ("dwf", "emp", "chd", "cth"))
-     or g["tail"] == "nuln",
-     "Saltpetre from salt pans, worked by the gunpowder races; Nuln's Imperial Gunnery School."),
+     or g["tail"] == "nuln" or g["origin"] == "dwf",
+     "Saltpetre from salt pans, worked by the gunpowder races; Nuln's Imperial Gunnery School; "
+     "the Dwarf Engineers' Guilds."),
     # Ulthuan is climate_island throughout (30 of 34), never mountain - so ore, not terrain.
     ("ithilmar", lambda g: g["areas"] & {"ulthuan"} and g["deposits"] & (MINED | {"res_rom_marble"})
      or g["tail"] == "vauls_anvil_ulthuan",
@@ -147,8 +154,10 @@ CA_RULES = [
     ("salt", lambda g: g["coastal"] and g["climate"] in ("climate_temperate", "climate_savannah", "climate_desert",
                                                          "climate_island"),
      "Sea salt raked from the pans of every warm or temperate coast."),
-    ("furs", lambda g: g["climate"] == "climate_frozen" or (g["climate"] == "climate_mountain" and g["origin"] == "ogr"),
-     "Trappers of the frozen north - Kislev, Norsca, Naggaroth - and the Ogre hunters' mountains."),
+    ("furs", lambda g: g["climate"] == "climate_frozen" or (g["climate"] == "climate_mountain" and g["origin"] == "ogr")
+     or g["origin"] == "chs",
+     "Trappers of the frozen north - Kislev, Norsca, Naggaroth - the Ogre hunters' mountains, and the "
+     "mutant pelts of the Chaos tribes' Fur Stashes."),
     ("pottery", lambda g: g["climate"] not in ("climate_frozen", "climate_chaotic", "climate_mountain")
      and (g["areas"] & (OLD_WORLD_FARMLAND | {"araby"}) or g["origin"] == "teb"),
      "Clay and kilns in every lowland town of the Old World, the Southern Realms and Araby."),

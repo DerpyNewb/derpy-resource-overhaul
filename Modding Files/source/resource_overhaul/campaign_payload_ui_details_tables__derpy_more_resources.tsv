@@ -1,0 +1,13 @@
+component	icon	state	sort_order
+#campaign_payload_ui_details_tables;2;db/campaign_payload_ui_details_tables/derpy_more_resources
+derpy_mr_dil_feast_cost	ui/campaign ui/effect_bundles/growth.png	negative	0
+derpy_mr_dil_feast_reward	ui/campaign ui/effect_bundles/public_order_jubilant.png	positive	0
+derpy_mr_dil_keep		default	0
+derpy_mr_dil_siege_cost	ui/campaign ui/effect_bundles/growth.png	negative	0
+derpy_mr_dil_siege_reward	ui/campaign ui/effect_bundles/siege_defence.png	positive	0
+derpy_mr_dil_tribute_cost	ui/campaign ui/effect_bundles/public_order_jubilant.png	negative	0
+derpy_mr_dil_tribute_reward	ui/campaign ui/effect_bundles/diplomacy.png	positive	0
+derpy_mr_dil_arsenal_cost	ui/campaign ui/effect_bundles/weapon_damage.png	negative	0
+derpy_mr_dil_arsenal_reward	ui/campaign ui/effect_bundles/experience.png	positive	0
+derpy_mr_dil_restore_cost	ui/campaign ui/effect_bundles/construction.png	negative	0
+derpy_mr_dil_restore_reward	ui/campaign ui/effect_bundles/public_order_happy.png	positive	0
