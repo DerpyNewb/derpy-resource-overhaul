@@ -118,8 +118,13 @@ cm = {
 core = {
     get_ui_root = function() return UI_ROOT end,
     get_screen_resolution = function() return 1920, 1080 end,
-    add_listener = function(_, _name, event, cond, fn)
+    -- AND CA'S QUEUE: core.event_listeners[event] is the list lib_core's dispatcher walks in
+    -- order, so a test can ask where in it a listener sits.
+    event_listeners = {},
+    add_listener = function(self, name, event, cond, fn)
         LISTENERS[#LISTENERS + 1] = { event = event, cond = cond, fn = fn }
+        self.event_listeners[event] = self.event_listeners[event] or {}
+        table.insert(self.event_listeners[event], { name = name, condition = cond, callback = fn })
     end,
 }
 
@@ -281,6 +286,7 @@ function UIC:IsDragged() return self.dragged == true end
 function UIC:ShaderTechniqueSet(t) self.shader = t end
 function UIC:ShaderVarsSet(a, b, c, d) self.vars = { a, b, c, d } end
 function UIC:SetImagePath(p, i) self.image = p; self.images = self.images or {}; self.images[i or 0] = p end
+function UIC:SetImageRotation(i, r) self.rot = self.rot or {}; self.rot[i] = r end
 function UIC:SetProperty(k, v) self[k] = v end
 function UIC:Layout() end
 function UIC:Adopt(c) unlink(c); c.parent = self; self.kids[#self.kids + 1] = c end
@@ -356,7 +362,7 @@ local function dump(tag)
         f:write(table.concat({ depth, c.file or "", c.xid or "", c.name, c.x, c.y,
                                c.sized and c.w or "nil", c.sized and c.h or "nil", clean(c.text),
                                clean((c.images or {})[0]), clean(c.tip), c.parent and c.parent.name or "",
-                               c.halign or "" },
+                               c.halign or "", (c.rot or {})[0] or 0 },
                              "\t"), "\n")
         for _, k in ipairs(c.kids) do walk(k, depth + 1) end
     end
@@ -364,8 +370,34 @@ local function dump(tag)
     f:close()
 end
 
+-- ANOTHER MOD'S CLICK HANDLER THAT THROWS, queued before the first tick as every listener
+-- registered at load is (Great Guilds player report, 2026-10-09: "click sound, nothing opens").
+-- Straight into CA's queue, not LISTENERS, so fire() below never meets it.
+core.event_listeners.ComponentLClickUp = core.event_listeners.ComponentLClickUp or {}
+table.insert(core.event_listeners.ComponentLClickUp,
+             { name = "stranger_throws", condition = true,
+               callback = function() error("another mod's click handler") end })
+
 -- the opener: made at first tick, right of the resource strip and centred on it
 for _, fn in ipairs(FIRST) do fn() end
+
+do
+    -- lib_core's call pass with no protection: in queue order, a throw ends it
+    local ran = {}
+    pcall(function()
+        for _, l in ipairs(core.event_listeners.ComponentLClickUp) do
+            local ctx = { string = "derpy_mr_close" }
+            if l.condition == true or l.condition(ctx) then
+                ran[#ran + 1] = l.name
+                l.callback(ctx)
+            end
+        end
+    end)
+    local reached = false
+    for _, n in ipairs(ran) do if n == "derpy_mr_stores_click" then reached = true end end
+    eq(reached, true, "a throwing click listener queued earlier starves the stores click: ran "
+       .. table.concat(ran, ","))
+end
 local b = find("derpy_mr_stores_button")
 eq(b ~= false, true, "button made"); eq(b.x, 1454, "right of the strip"); eq(b.y, 2, "centred on it")
 eq(b.visible, true, "shown once placed")
@@ -694,11 +726,29 @@ eq(string.find(switch(4, "import").tip, "[[col:", 1, true), nil, "its Imports to
 click("derpy_mr_row_1"); eq(find("sub_title").text, "What your settlements trade", "a Trade row opens nothing")
 -- THE SECTION ROW FOLDS: a click hides the resources you do not have, another shows them again
 eq(find("derpy_mr_row_3").tip, S.FOLD_TIP[false], "the section row says a click hides them")
+local function arrow(i) return find_uicomponent(find("derpy_mr_row_" .. i), "fold") end
+eq(arrow(3).visible, true, "a foldable section row carries an arrow")
+eq(arrow(3).rot[0], 0, "open: it points down, as drawn")
+eq(arrow(1).visible, false, "a resource row has none")
 click("derpy_mr_row_3"); eq(shown_rows(), 3, "folded: your two resources and the section row")
-eq(cell(3, 1).text, S.section("Resources you do not have (" .. others .. ")" .. S.FOLDED), "and it says so")
+eq(cell(3, 1).text, S.section("Resources you do not have (" .. others .. ")"), "the text stays as it was")
+eq(arrow(3).rot[0], math.pi * 3 / 2, "folded: it points right (CA's rotation is clockwise, lib_text_pointers)")
 eq(find("derpy_mr_row_3").tip, S.FOLD_TIP[true], "and that a click shows them")
 click("derpy_mr_close"); click("derpy_mr_stores_button"); eq(shown_rows(), 3, "kept folded while the campaign runs")
 click("derpy_mr_row_3"); eq(shown_rows(), #DERPY_MR_STORES_GOODS + 1, "unfolded again")
+eq(arrow(3).rot[0], 0, "and points down again")
+-- THE TABLE'S BORDER: a full-strength frame round the header and the list, a rule under the header
+do
+    local t, b, l, r = find("derpy_mr_frame_t"), find("derpy_mr_frame_b"), find("derpy_mr_frame_l"), find("derpy_mr_frame_r")
+    local L, hd, holder = DERPY_MR_STORES_L, find("hdr_1"), find("rows_holder")
+    eq(t.visible and b.visible and l.visible and r.visible, true, "the table is framed")
+    eq(t.y <= hd.y and t.x <= hd.x, true, "the frame's top edge is above the header")
+    eq(b.y >= holder.y + L.list[4] - L.FRAME and l.x + L.FRAME <= holder.x, true, "and its bottom and left edges outside the list")
+    eq(r.x >= holder.x + L.list[3] - L.FRAME, true, "its right edge outside the slider")
+    local rule = find("derpy_mr_frame_head")
+    eq(rule.visible, true, "a rule under the header")
+    eq(rule.y >= hd.y + 20 and rule.y + L.FRAME <= holder.y, true, "between the header and the first row")
+end
 do
     -- IMPORT DUTY: a first row with last turn's gold each way, its partners in the tooltip
     local fl = DERPY_MR_FLOWS
@@ -977,6 +1027,7 @@ SHIPS = { { id = "derpy_mr_ship_1", f = LOCAL, stem = "coal", n = 22, from = "re
             x = 110, y = 290 } }
 click("derpy_mr_tab_map")
 eq(find("derpy_mr_tab_map").text, "Map", "a fifth tab")
+eq(find("derpy_mr_frame_t").visible or find("derpy_mr_frame_head").visible, false, "no table frame on the map")
 eq(find("sub_title").text, "Where your settlements and convoys are", "its own title")
 eq(shown_rows(), 0, "no list rows on the map")
 eq(find("empty_text").visible, false, "and no empty-list text over it")
@@ -1546,9 +1597,13 @@ end)()
     -- FOLDING: a section's click hides its kind and says so
     click("derpy_mr_row_" .. sec_of("Works that last"))
     eq(row_of("last_granary"), nil, "folded: its rows hidden")
-    eq(string.find(S.data[sec_of("Works that last")][1], S.FOLDED, 1, true) ~= nil, true, "the section says so")
+    dump("workshop_folded")   -- the preview draws a folded section's arrow
+    local wl = find_uicomponent(find("derpy_mr_row_" .. sec_of("Works that last")), "fold")
+    eq(wl.visible and wl.rot[0], math.pi * 3 / 2, "the section's arrow points right")
+    eq(string.find(S.data[sec_of("Works that last")][1], "hidden", 1, true), nil, "and no word says so")
     eq(row_of("army_ammo") ~= nil, true, "other kinds stay")
     click("derpy_mr_row_" .. sec_of("Works that last")); eq(row_of("last_granary") ~= nil, true, "unfolded again")
+    eq(find_uicomponent(find("derpy_mr_row_" .. sec_of("Works that last")), "fold").rot[0], 0, "its arrow points down")
     eq(#ERRORS, 0, "no errors: " .. table.concat(ERRORS, "; "))
     FACTIONS.fac_a, DERPY_MR_FLOWS, cm.get_campaign_ui_manager = realm0, flows0, cuim0
     CHARS[91] = nil

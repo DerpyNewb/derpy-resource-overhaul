@@ -159,6 +159,8 @@ SELL_RATE = {"provisions": 1, "building": 2, "war": 3, "mounts": 4, "luxuries": 
 # THE LAYOUT, in panel coordinates: (x, y, w, h). The Lua MoveTo's every component from these;
 # the .twui.xml sizes are the same numbers. cols are (x, w) inside a row, which starts at list x.
 L = {
+    # THE TABLE'S BORDER, this thick, and a section row's fold arrow, this square (in the icon slot)
+    "FRAME": 2, "FOLD": 24,
     "W": 860, "H": 640, "PITCH": 28, "ROWS": 16, "SLIDER_W": 18, "HANDLE_H": 40,
     # THE SLIDER IS THE ZHARR EXCHANGE'S (asked 2026-10-04): CA's event message slider, an 18px
     # handle column with a frame cap and an arrow in SLIDER_CAP at each end, outside the track.
@@ -299,6 +301,10 @@ BTN_BG = "ui/skins/default/button_square_large_text_active.png"
 BTN_HOVER = "ui/skins/default/button_square_large_text_hover.png"
 WHITE = "ui/skins/default/1x1_blank_white.png"
 DIVIDER_COLOUR = "#6B583680"
+# THE TABLE'S EDGE: the divider's own colour at full strength, so the frame reads before the grid
+FRAME_COLOUR = "#6B5836FF"
+# a foldable section's arrow: CA's bronze one, drawn pointing down; the Lua turns it right when folded
+FOLD_ARROW = "ui/skins/default/icon_arrow_down.png"
 GRID_COLOUR = "#6B583640"         # the chart's top line: the divider at half its strength
 ICON_BG = "ui/campaign ui/effect_bundles/resource_gold.png"
 SLIDER_TRACK = "ui/skins/default/slider_vertical_mid.png"
@@ -377,6 +383,9 @@ def build_panel():
     for j in range(2, len(COLS) + 1):
         p.add(E.C("hdr_line_%d" % j, 1, 22, image=WHITE, colour_img=DIVIDER_COLOUR))
     p.add(E.C("rows_holder", L["list"][2], L["list"][3]))
+    # the table's frame and the rule under its header; the Lua places and sizes them
+    for k in ("t", "b", "l", "r", "head"):
+        p.add(E.C("derpy_mr_frame_" + k, L["FRAME"], L["FRAME"], image=WHITE, colour_img=FRAME_COLOUR))
     p.add(_cell(E, "empty_text", L["empty"][2], L["empty"][3], size=13))
     p.add(_cell(E, "hint_text", L["hint"][2], L["hint"][3], size=12, colour=MUTED, align="Right"))
     for d in ("export", "import"):
@@ -420,6 +429,7 @@ def build_row():
         r.add(E.C("icon%d" % j, L["icon"][2], L["icon"][3], image=ICON_BG))
     for j in range(1, L["USING"] + 1):
         r.add(E.C("use%d" % j, L["icon"][2], L["icon"][3], image=ICON_BG))
+    r.add(E.C("fold", L["FOLD"], L["FOLD"], image=FOLD_ARROW))
     for j, (_x, cw, _a) in enumerate(COLS, 1):
         r.add(_cell(E, "c%d" % j, cw, 20, size=12, align=ALIGN[j - 1]))
     for j in range(1, L["USING"] + 1):   # a named recipe's amounts, one after each use icon

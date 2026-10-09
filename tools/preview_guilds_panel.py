@@ -810,7 +810,7 @@ if __name__ == "__main__":
             page = int(args[at + 1])
             got = snapshot(tag, page)
             print("wrote %s" % render_tab(5, got[5], tag, os.path.join(
-                CACHE, "gg_help_p%d%s.png" % (page, tag))))
+                CACHE, "gg_help_p%d%s%s.png" % (page, tag, DSIZE))))
             for o in OVER:
                 print("  TOO WIDE " + o)
             for m in LOW:
@@ -819,7 +819,7 @@ if __name__ == "__main__":
         got = snapshot(tag, page=page)
         for tab in VIEWS:
             print("wrote %s" % render_tab(tab, got[tab], tag, None if not page else
-                  os.path.join(CACHE, "gg_%s%s_g%d.png" % (VIEWS[tab], tag, page))))
+                  os.path.join(CACHE, "gg_%s%s%s_g%d.png" % (VIEWS[tab], tag, DSIZE, page))))
         if not DSIZE:   # the pick card is drawn from Medium's coordinates
             pick, lines = render_pick(tag=tag)
             print("wrote %s  (the instruction takes %d of the card's 2 lines%s)"

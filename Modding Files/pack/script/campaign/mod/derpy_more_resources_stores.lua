@@ -9,6 +9,8 @@ DERPY_MR_STORES_L = {
     BUTTON = 48,
     CHART_ROWS = 9,
     CHECK = 26,
+    FOLD = 24,
+    FRAME = 2,
     GAP = 4,
     H = 640,
     HANDLE_H = 40,
@@ -728,7 +730,6 @@ function S.section(s) return "[[col:" .. S.BEIGE .. "]]" .. s .. "[[/col]]" end
 -- THE SECTION ROW FOLDS: a click hides the resources you do not have. Kept while the campaign
 -- runs, not saved.
 S.folded = false
-S.FOLDED = " - hidden"
 S.FOLD_TIP = { [false] = "Click to hide the resources you do not have.",
                [true] = "Click to show the resources you do not have." }
 
@@ -1043,9 +1044,8 @@ function S.view_model(realm)
             -- A SECTION ROW before the goods you neither hold nor make, which are all last
             if not g.own and others > 0 then
                 local text = "Resources you do not have (" .. others .. ")"
-                if S.folded then text = text .. S.FOLDED end
                 v.rows[#v.rows + 1] = { S.section(text), "", "", "", "", section = true, fold = true,
-                                        tip = S.FOLD_TIP[S.folded] }
+                                        folded = S.folded, tip = S.FOLD_TIP[S.folded] }
                 others = 0
             end
             if not g.own and S.folded then break end
@@ -1379,8 +1379,8 @@ function S.workshop(v, realm)
         end
         if #rows > 0 then
             local folded = S.work_fold[kind] == true
-            v.rows[#v.rows + 1] = { S.section(S.WORK_SECTION[kind] .. (folded and S.FOLDED or "")), "", "", "", "",
-                                    section = true, fold = kind,
+            v.rows[#v.rows + 1] = { S.section(S.WORK_SECTION[kind]), "", "", "", "",
+                                    section = true, fold = kind, folded = folded,
                                     tip = folded and "Click to show these." or "Click to hide these." }
             if not folded then
                 for _, r in ipairs(rows) do v.rows[#v.rows + 1] = r end
@@ -2020,6 +2020,16 @@ function S.draw_rows(p, rows, heads, cols)
             end
             local div = find_uicomponent(r, "divider")
             if is_uicomponent(div) then div:MoveTo(rx, ry + L.PITCH - 2) end
+            -- A FOLDABLE SECTION'S ARROW, in the icon slot: drawn pointing down (open), turned
+            -- clockwise by three quarters to point right (folded), as CA's lib_text_pointers turns its own
+            local ar = find_uicomponent(r, "fold")
+            if is_uicomponent(ar) then
+                ar:SetVisible(rc.fold ~= nil)
+                if rc.fold ~= nil then
+                    ar:MoveTo(rx + L.icon[1] + math.floor((L.icon[3] - L.FOLD) / 2), ry + math.floor((L.PITCH - L.FOLD) / 2))
+                    ar:SetImageRotation(0, rc.folded and math.pi * 3 / 2 or 0)
+                end
+            end
             r:SetTooltipText(rc.tip or "", true)
             r:SetVisible(true)
         end
@@ -2256,6 +2266,22 @@ function S.refresh()
         if is_uicomponent(hl) then
             hl:MoveTo(px + L.list[1] + S.line_x(v.cols, j), py + L.head_y)
             hl:SetVisible((v.heads[j] or "") ~= "")
+        end
+    end
+    -- THE TABLE'S BORDER round the header and the list, and a rule between them; none on the map
+    local F, top, bottom = L.FRAME, L.head_y - L.FRAME - 2, L.list[2] + L.list[4]
+    local edges = {
+        t = { L.list[1] - F, top, L.list[3] + F * 2, F },
+        b = { L.list[1] - F, bottom, L.list[3] + F * 2, F },
+        l = { L.list[1] - F, top, F, bottom - top + F },
+        r = { L.list[1] + L.list[3], top, F, bottom - top + F },
+        head = { L.list[1], L.list[2] - F - 1, L.list[3], F },
+    }
+    for k, box in pairs(edges) do
+        local e = find_uicomponent(p, "derpy_mr_frame_" .. k)
+        if is_uicomponent(e) then
+            put(e, px, py, box)
+            e:SetVisible(v.map == nil)
         end
     end
     set(find_uicomponent(p, "hint_text"), v.hint or "")
@@ -2675,6 +2701,23 @@ function S.plate_poll()
     end
 end
 
+-- FIRST IN THE CLICK QUEUE (Great Guilds player report, 2026-10-09: "click sound, nothing
+-- opens"). Since 9.1 lib_core calls listeners unprotected, so one mod's ComponentLClickUp
+-- handler that throws abandons every listener queued behind it, logging nothing - and this
+-- one registers at the first tick, behind every listener registered at load. The body is
+-- pcall'd, so being first cannot make this the handler that starves the rest.
+function S.click_first(name)
+    pcall(function()
+        local list = core.event_listeners.ComponentLClickUp
+        for i = #list, 2, -1 do
+            if list[i].name == name then
+                table.insert(list, 1, table.remove(list, i))
+                return
+            end
+        end
+    end)
+end
+
 function S.init()
     if S.started then return end
     S.started = true
@@ -2695,6 +2738,7 @@ function S.init()
             local done, e = pcall(S.click, context.string, context.component)
             if not done then S.say(e) end
         end, true)
+    S.click_first("derpy_mr_stores_click")
     -- the Workshop's army and character rows follow the map's selection while it is open
     for _, ev in ipairs({ "CharacterSelected", "CharacterDeselected" }) do
         core:add_listener("derpy_mr_stores_" .. ev, ev,

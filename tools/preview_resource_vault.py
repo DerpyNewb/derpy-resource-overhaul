@@ -22,6 +22,7 @@ drawn where the stub left it, which is the bug this exists to show.
 """
 import importlib.util
 import io
+import math
 import os
 import sys
 import tempfile
@@ -31,7 +32,7 @@ sys.path.insert(0, os.path.join(ROOT, "tools"))
 import preview_guilds_panel as PG                                    # noqa: E402
 
 PREFIX = "derpy_mr_stores_"
-TABS = ("goods", "goods_focus", "settlements", "settlement_focus", "trade", "spending", "workshop", "workshop_focus", "map",
+TABS = ("goods", "goods_focus", "settlements", "settlement_focus", "trade", "spending", "workshop", "workshop_focus", "workshop_folded", "map",
         "map_wh3_main_combi", "map_cr_combi_expanded", "map_wh3_main_chaos")
 # Where a campaign's minimap is: CA's data_maps.pack, or the map mod's own pack (IEE).
 MAP_PACKS = (os.path.join(PG.GAME, "data_maps.pack"),
@@ -66,7 +67,8 @@ def snapshot():
             f = line.rstrip("\n").split("\t")
             rows.append(dict(depth=int(f[0]), file=f[1], xid=f[2], name=f[3], x=float(f[4]), y=float(f[5]),
                              w=None if f[6] == "nil" else float(f[6]), h=None if f[7] == "nil" else float(f[7]),
-                             text=f[8], img=f[9] or None, tip=f[10], parent=f[11], halign=f[12] or None))
+                             text=f[8], img=f[9] or None, tip=f[10], parent=f[11], halign=f[12] or None,
+                             rot=float(f[13]) if len(f) > 13 and f[13] else 0.0))
         got[tab] = rows
     return got
 
@@ -169,6 +171,10 @@ def render(tab, comps, docs, path=None):
             else:
                 ox, oy = (w - iw) / 2, (h - ih) / 2
             img = rendering.raster(Path(art_path(p)), max(1, int(iw)), max(1, int(ih)), n)
+            # SetImageRotation turns image 0 clockwise in radians (CA's lib_text_pointers); PIL's
+            # rotate is counter-clockwise in degrees, about the centre, as the engine pivots by default
+            if i == 0 and c.get("rot"):
+                img = img.rotate(-math.degrees(c["rot"]), resample=Image.BICUBIC)
             target.alpha_composite(img, (int(c["x"] + ox), int(c["y"] + oy)))
         ct = st.child("component_text")
         if c["text"] and ct is not None:

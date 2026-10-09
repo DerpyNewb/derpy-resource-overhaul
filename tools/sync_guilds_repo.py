@@ -182,6 +182,12 @@ MANIFEST = [(p, p) for p in [
      "docs/history/CODEX_GUILDS_TEXT_REPORT_20261007.md"),
     ("docs/sessions/HANDOFF_20261007_GUILDS_TEXT_HUMANIZE_CLAUDE.md",
      "docs/history/HANDOFF_20261007_GUILDS_TEXT_HUMANIZE_CLAUDE.md"),
+    ("docs/superpowers/specs/2026-10-09-great-guilds-temple-lore-design.md",
+     "docs/design/2026-10-09-great-guilds-temple-lore-design.md"),
+    ("docs/superpowers/plans/2026-10-09-great-guilds-temple-lore.md",
+     "docs/plans/2026-10-09-great-guilds-temple-lore.md"),
+    ("anti-slop/audit-001-2026-10-09.md", "docs/history/ANTISLOP_AUDIT_001_20261009.md"),
+    ("anti-slop/audit-001-fixlog.md", "docs/history/ANTISLOP_AUDIT_001_FIXLOG.md"),
 ]
 
 

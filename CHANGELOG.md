@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-09 (evening)
+
+- Fixed: the Resource Vault button could do nothing when another mod's click script has an
+  error. Its click listener now runs first.
+- Vault tables have a frame, and Workshop sections fold.
+
 ## 2026-10-09
 
 - Fixed: a war machine took one resource too many when its draw split unevenly.
