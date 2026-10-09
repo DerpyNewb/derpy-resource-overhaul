@@ -15,3 +15,6 @@ SECOND	derpy_mr_dil_arsenal	1649076041	TEXT_DISPLAY	LOOKUP[derpy_mr_dil_keep]	de
 FIRST	derpy_mr_dil_restore	1060151180	TEXT_DISPLAY	LOOKUP[derpy_mr_dil_restore_cost]	default
 FIRST	derpy_mr_dil_restore	1983673659	TEXT_DISPLAY	LOOKUP[derpy_mr_dil_restore_reward]	default
 SECOND	derpy_mr_dil_restore	1268688076	TEXT_DISPLAY	LOOKUP[derpy_mr_dil_keep]	default
+FIRST	derpy_mr_dil_raid	681539279	TEXT_DISPLAY	LOOKUP[derpy_mr_dil_raid_cost]	default
+FIRST	derpy_mr_dil_raid	1958651022	TEXT_DISPLAY	LOOKUP[derpy_mr_dil_raid_reward]	default
+SECOND	derpy_mr_dil_raid	1572968039	TEXT_DISPLAY	LOOKUP[derpy_mr_dil_raid_pass]	default

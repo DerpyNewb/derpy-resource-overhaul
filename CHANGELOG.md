@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-09 (night)
+
+- Escort battles: shipments travel with an escort sized by cargo and turn, from each race's own army lists.
+- Raid: walking onto an enemy shipment asks first, then fights its escort; win and the cargo is yours.
+- Defence: an enemy army by your shipment at turn start fights its escort; retreat locked.
+- Spending tab: click a shipment to see its escort as unit cards.
+- MCT: Escort battles switch, default on.
+
 ## 2026-10-09 (evening)
 
 - Fixed: the Resource Vault button could do nothing when another mod's click script has an

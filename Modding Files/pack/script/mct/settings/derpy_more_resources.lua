@@ -129,3 +129,10 @@ o_recruit:set_tooltip_text("Every unit you recruit takes resources from your sto
 o_recruit:set_default_value(true)
 o_recruit:set_assigned_section("using")
 if IN_CAMPAIGN then o_recruit:set_locked(true, LOCK_REASON) end
+
+local o_escort = m:add_new_option("escort", "checkbox")
+o_escort:set_text("Escort battles")
+o_escort:set_tooltip_text("Every shipment travels with an escort of its owner's soldiers. An army that reaches it must beat the escort to take the cargo, and you are asked before your army attacks one. Off: an army at war takes a shipment without a fight.")
+o_escort:set_default_value(true)
+o_escort:set_assigned_section("using")
+if IN_CAMPAIGN then o_escort:set_locked(true, LOCK_REASON) end

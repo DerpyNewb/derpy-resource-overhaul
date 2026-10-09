@@ -11,3 +11,6 @@ derpy_mr_dil_arsenal_cost	ui/campaign ui/effect_bundles/weapon_damage.png	negati
 derpy_mr_dil_arsenal_reward	ui/campaign ui/effect_bundles/experience.png	positive	0
 derpy_mr_dil_restore_cost	ui/campaign ui/effect_bundles/construction.png	negative	0
 derpy_mr_dil_restore_reward	ui/campaign ui/effect_bundles/public_order_happy.png	positive	0
+derpy_mr_dil_raid_cost	ui/campaign ui/effect_bundles/weapon_damage.png	negative	0
+derpy_mr_dil_raid_reward	ui/campaign ui/effect_bundles/convoy_icon.png	positive	0
+derpy_mr_dil_raid_pass		default	0

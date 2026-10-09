@@ -7,6 +7,10 @@ DERPY_MR_STORES_L = {
     BAR_W = 33,
     BULK_GAP = 6,
     BUTTON = 48,
+    CARDS = 12,
+    CARD_GAP = 8,
+    CARD_H = 130,
+    CARD_W = 60,
     CHART_ROWS = 9,
     CHECK = 26,
     FOLD = 24,
@@ -45,6 +49,7 @@ DERPY_MR_STORES_L = {
     back = {720, 56, 120, 26},
     bars = {20, 420, 820, 120},
     bulk = {20, 598, 200, 30},
+    cards = {28, 214, 812, 130},
     chart_base = {20, 540, 820, 1},
     chart_from = {20, 542, 200, 18},
     chart_grid = {20, 420, 820, 1},
@@ -53,6 +58,7 @@ DERPY_MR_STORES_L = {
     chart_top = {20, 400, 300, 18},
     close = {818, 12, 30, 30},
     empty = {20, 154, 820, 60},
+    escort_line = {28, 150, 804, 50},
     head_y = 116,
     hint = {20, 90, 820, 22},
     icon = {6, 2, 24, 24},
@@ -463,6 +469,418 @@ DERPY_MR_STORES_USE_ICON = {
     mounts = "ui/campaign ui/effect_bundles/mount.png",
     provisions = "ui/campaign ui/effect_bundles/growth.png",
     war = "ui/campaign ui/effect_bundles/weapon_damage.png",
+}
+DERPY_MR_STORES_CARDS = {
+    wh2_dlc10_def_cav_doomfire_warlocks_0 = {card = "ui/units/icons/wh2_dlc10_def_cav_doomfire_warlocks.png", lu = "wh2_dlc10_def_cav_doomfire_warlocks_0"},
+    wh2_dlc10_def_inf_sisters_of_slaughter = {card = "ui/units/icons/wh2_dlc10_def_inf_sisters_of_slaughter.png", lu = "wh2_dlc10_def_inf_sisters_of_slaughter"},
+    wh2_dlc10_def_mon_kharibdyss_0 = {card = "ui/units/icons/wh2_dlc10_def_kharibdyss.png", lu = "wh2_dlc10_def_mon_kharibdyss_0"},
+    wh2_dlc10_dwf_inf_giant_slayers = {card = "ui/units/icons/wh2_dlc10_dwf_giant_slayers.png", lu = "wh2_dlc10_dwf_inf_giant_slayers"},
+    wh2_dlc10_hef_inf_shadow_warriors_0 = {card = "ui/units/icons/wh2_dlc10_hef_inf_shadow_warriors.png", lu = "wh2_dlc10_hef_inf_shadow_warriors_0"},
+    wh2_dlc10_hef_inf_sisters_of_avelorn_0 = {card = "ui/units/icons/wh2_dlc10_hef_inf_sisters_of_avelorn.png", lu = "wh2_dlc10_hef_inf_sisters_of_avelorn_0"},
+    wh2_dlc11_cst_art_carronade = {card = "ui/units/icons/wh2_dlc11_cst_carronade.png", lu = "wh2_dlc11_cst_art_carronade"},
+    wh2_dlc11_cst_art_mortar = {card = "ui/units/icons/wh2_dlc11_cst_mortar.png", lu = "wh2_dlc11_cst_art_mortar"},
+    wh2_dlc11_cst_cav_deck_droppers_0 = {card = "ui/units/icons/wh2_dlc11_cst_deck_droppers.png", lu = "wh2_dlc11_cst_cav_deck_droppers_0"},
+    wh2_dlc11_cst_cav_deck_droppers_1 = {card = "ui/units/icons/wh2_dlc11_cst_deck_droppers_bombers.png", lu = "wh2_dlc11_cst_cav_deck_droppers_1"},
+    wh2_dlc11_cst_cav_deck_droppers_2 = {card = "ui/units/icons/wh2_dlc11_cst_deck_droppers_handgunners.png", lu = "wh2_dlc11_cst_cav_deck_droppers_2"},
+    wh2_dlc11_cst_inf_deck_gunners_0 = {card = "ui/units/icons/wh2_dlc11_cst_deck_gunners.png", lu = "wh2_dlc11_cst_inf_deck_gunners_0"},
+    wh2_dlc11_cst_inf_depth_guard_0 = {card = "ui/units/icons/wh2_dlc11_cst_depth_guard.png", lu = "wh2_dlc11_cst_inf_depth_guard_0"},
+    wh2_dlc11_cst_inf_depth_guard_1 = {card = "ui/units/icons/wh2_dlc11_cst_depth_guard_polearm.png", lu = "wh2_dlc11_cst_inf_depth_guard_1"},
+    wh2_dlc11_cst_inf_syreens = {card = "ui/units/icons/wh2_dlc11_cst_syreens.png", lu = "wh2_dlc11_cst_inf_syreens"},
+    wh2_dlc11_cst_inf_zombie_deckhands_mob_0 = {card = "ui/units/icons/wh2_dlc11_cst_zombie_deckhands.png", lu = "wh2_dlc11_cst_inf_zombie_deckhands_mob_0"},
+    wh2_dlc11_cst_inf_zombie_deckhands_mob_1 = {card = "ui/units/icons/wh2_dlc11_cst_zombie_deckhands_polearm.png", lu = "wh2_dlc11_cst_inf_zombie_deckhands_mob_1"},
+    wh2_dlc11_cst_inf_zombie_gunnery_mob_0 = {card = "ui/units/icons/wh2_dlc11_cst_zombie_gunnery_mob.png", lu = "wh2_dlc11_cst_inf_zombie_gunnery_mob_0"},
+    wh2_dlc11_cst_inf_zombie_gunnery_mob_1 = {card = "ui/units/icons/wh2_dlc11_cst_zombie_gunnery_mob_handguns.png", lu = "wh2_dlc11_cst_inf_zombie_gunnery_mob_1"},
+    wh2_dlc11_cst_inf_zombie_gunnery_mob_2 = {card = "ui/units/icons/wh2_dlc11_cst_zombie_gunnery_mob_hand_cannon.png", lu = "wh2_dlc11_cst_inf_zombie_gunnery_mob_2"},
+    wh2_dlc11_cst_inf_zombie_gunnery_mob_3 = {card = "ui/units/icons/wh2_dlc11_cst_zombie_gunnery_mob_bombers.png", lu = "wh2_dlc11_cst_inf_zombie_gunnery_mob_3"},
+    wh2_dlc11_cst_mon_animated_hulks_0 = {card = "ui/units/icons/wh2_dlc11_cst_animated_hulks.png", lu = "wh2_dlc11_cst_mon_animated_hulks_0"},
+    wh2_dlc11_cst_mon_bloated_corpse_0 = {card = "ui/units/icons/wh2_dlc11_cst_bloated_corpse.png", lu = "wh2_dlc11_cst_mon_bloated_corpse_0"},
+    wh2_dlc11_cst_mon_fell_bats = {card = "ui/units/icons/wh_main_vmp_fell_bats.png", lu = "wh2_dlc11_cst_mon_fell_bats"},
+    wh2_dlc11_cst_mon_mournguls_0 = {card = "ui/units/icons/wh2_dlc11_cst_mournguls.png", lu = "wh2_dlc11_cst_mon_mournguls_0"},
+    wh2_dlc11_cst_mon_necrofex_colossus_0 = {card = "ui/units/icons/wh2_dlc11_cst_necrofex_colossus.png", lu = "wh2_dlc11_cst_mon_necrofex_colossus_0"},
+    wh2_dlc11_cst_mon_rotting_leviathan_0 = {card = "ui/units/icons/wh2_dlc11_cst_rotting_leviathan.png", lu = "wh2_dlc11_cst_mon_rotting_leviathan_0"},
+    wh2_dlc11_cst_mon_rotting_prometheans_0 = {card = "ui/units/icons/wh2_dlc11_cst_rotting_prometheans.png", lu = "wh2_dlc11_cst_mon_rotting_prometheans_0"},
+    wh2_dlc11_cst_mon_rotting_prometheans_gunnery_mob_0 = {card = "ui/units/icons/wh2_dlc11_cst_rotting_prometheans_gunnery_mob.png", lu = "wh2_dlc11_cst_mon_rotting_prometheans_gunnery_mob_0"},
+    wh2_dlc11_cst_mon_scurvy_dogs = {card = "ui/units/icons/wh2_dlc11_cst_scurvy_dogs.png", lu = "wh2_dlc11_cst_mon_scurvy_dogs"},
+    wh2_dlc11_cst_mon_terrorgheist = {card = "ui/units/icons/wh2_dlc11_cst_death_shriek_terrogheist.png", lu = "wh2_dlc11_cst_mon_terrorgheist"},
+    wh2_dlc12_lzd_cav_ripperdactyl_riders_0 = {card = "ui/units/icons/wh2_dlc12_lzd_cav_ripperdactyl_riders.png", lu = "wh2_dlc12_lzd_cav_ripperdactyl_riders_0"},
+    wh2_dlc12_lzd_inf_skink_red_crested_0 = {card = "ui/units/icons/wh2_dlc12_lzd_inf_red_crested_skinks.png", lu = "wh2_dlc12_lzd_inf_skink_red_crested_0"},
+    wh2_dlc12_lzd_mon_ancient_salamander_0 = {card = "ui/units/icons/wh2_dlc12_lzd_mon_ancient_salamander.png", lu = "wh2_dlc12_lzd_mon_ancient_salamander_0"},
+    wh2_dlc12_lzd_mon_ancient_stegadon_1 = {card = "ui/units/icons/wh2_dlc12_lzd_mon_ancient_stegadon_engine_gpds.png", lu = "wh2_dlc12_lzd_mon_ancient_stegadon_1"},
+    wh2_dlc12_lzd_mon_bastiladon_3 = {card = "ui/units/icons/wh2_dlc12_lzd_mon_bastiladon_ark_of_sotek.png", lu = "wh2_dlc12_lzd_mon_bastiladon_3"},
+    wh2_dlc12_lzd_mon_salamander_pack_0 = {card = "ui/units/icons/wh2_dlc12_lzd_mon_salamander_hunting_pack.png", lu = "wh2_dlc12_lzd_mon_salamander_pack_0"},
+    wh2_dlc12_skv_inf_ratling_gun_0 = {card = "ui/units/icons/wh2_dlc12_skv_ratling_gun_team.png", lu = "wh2_dlc12_skv_inf_ratling_gun_0"},
+    wh2_dlc12_skv_inf_warplock_jezzails_0 = {card = "ui/units/icons/wh2_dlc12_skv_warplock_jezzails.png", lu = "wh2_dlc12_skv_inf_warplock_jezzails_0"},
+    wh2_dlc12_skv_veh_doom_flayer_0 = {card = "ui/units/icons/wh2_dlc12_skv_doom_flayers.png", lu = "wh2_dlc12_skv_veh_doom_flayer_0"},
+    wh2_dlc13_lzd_mon_razordon_pack_0 = {card = "ui/units/icons/wh2_dlc13_lzd_razordon.png", lu = "wh2_dlc13_lzd_mon_razordon_pack_0"},
+    wh2_dlc13_lzd_mon_sacred_kroxigors_0 = {card = "ui/units/icons/wh2_dlc13_lzd_sacred_kroxigors.png", lu = "wh2_dlc13_lzd_mon_sacred_kroxigors_0"},
+    wh2_dlc14_def_cav_scourgerunner_chariot_0 = {card = "ui/units/icons/wh2_dlc14_def_cav_scourgerunner_chariot.png", lu = "wh2_dlc14_def_cav_scourgerunner_chariot_0"},
+    wh2_dlc14_def_mon_bloodwrack_medusa_0 = {card = "ui/units/icons/wh2_dlc14_def_mon_bloodwrack_medusa.png", lu = "wh2_dlc14_def_mon_bloodwrack_medusa_0"},
+    wh2_dlc14_def_veh_bloodwrack_shrine_0 = {card = "ui/units/icons/wh2_dlc14_def_veh_bloodwrack_shrine.png", lu = "wh2_dlc14_def_veh_bloodwrack_shrine_0"},
+    wh2_dlc14_skv_inf_eshin_triads_0 = {card = "ui/units/icons/wh2_dlc14_skv_inf_eshin_triads.png", lu = "wh2_dlc14_skv_inf_eshin_triads_0"},
+    wh2_dlc14_skv_inf_poison_wind_mortar_0 = {card = "ui/units/icons/wh2_dlc14_skv_inf_poison_wind_mortar.png", lu = "wh2_dlc14_skv_inf_poison_wind_mortar_0"},
+    wh2_dlc14_skv_inf_warp_grinder_0 = {card = "ui/units/icons/wh2_dlc14_skv_inf_warp_grinder.png", lu = "wh2_dlc14_skv_inf_warp_grinder_0"},
+    wh2_dlc15_grn_mon_river_trolls_0 = {card = "ui/units/icons/wh2_dlc15_grn_mon_river_trolls.png", lu = "wh2_dlc15_grn_mon_river_trolls_0"},
+    wh2_dlc15_grn_mon_rogue_idol_0 = {card = "ui/units/icons/wh2_dlc15_grn_mon_rogue_idol.png", lu = "wh2_dlc15_grn_mon_rogue_idol_0"},
+    wh2_dlc15_grn_mon_stone_trolls_0 = {card = "ui/units/icons/wh2_dlc15_grn_mon_stone_trolls.png", lu = "wh2_dlc15_grn_mon_stone_trolls_0"},
+    wh2_dlc15_grn_veh_snotling_pump_wagon_0 = {card = "ui/units/icons/wh2_dlc15_grn_veh_snotling_pump_wagon.png", lu = "wh2_dlc15_grn_veh_snotling_pump_wagon_0"},
+    wh2_dlc15_grn_veh_snotling_pump_wagon_flappas_0 = {card = "ui/units/icons/wh2_dlc15_grn_veh_snotling_pump_wagon_flappas.png", lu = "wh2_dlc15_grn_veh_snotling_pump_wagon_flappas_0"},
+    wh2_dlc15_grn_veh_snotling_pump_wagon_roller_0 = {card = "ui/units/icons/wh2_dlc15_grn_veh_snotling_pump_wagon_roller.png", lu = "wh2_dlc15_grn_veh_snotling_pump_wagon_roller_0"},
+    wh2_dlc15_hef_inf_rangers_0 = {card = "ui/units/icons/wh2_dlc15_hef_inf_rangers.png", lu = "wh2_dlc15_hef_inf_rangers_0"},
+    wh2_dlc15_hef_inf_silverin_guard_0 = {card = "ui/units/icons/wh2_dlc15_hef_inf_silverin_guard.png", lu = "wh2_dlc15_hef_inf_silverin_guard_0"},
+    wh2_dlc15_hef_mon_arcane_phoenix_0 = {card = "ui/units/icons/wh2_dlc15_hef_mon_arcane_phoenix.png", lu = "wh2_dlc15_hef_mon_arcane_phoenix_0"},
+    wh2_dlc15_hef_veh_lion_chariot_of_chrace_0 = {card = "ui/units/icons/wh2_dlc15_hef_veh_lion_chariot.png", lu = "wh2_dlc15_hef_veh_lion_chariot_of_chrace_0"},
+    wh2_dlc16_skv_mon_brood_horror_0 = {card = "ui/units/icons/wh2_dlc16_skv_brood_horror.png", lu = "wh2_dlc16_skv_mon_brood_horror_0"},
+    wh2_dlc16_skv_mon_rat_ogre_mutant = {card = "ui/units/icons/wh2_dlc16_skv_rat_ogre_mutant.png", lu = "wh2_dlc16_skv_mon_rat_ogre_mutant"},
+    wh2_dlc16_skv_mon_wolf_rats_0 = {card = "ui/units/icons/wh2_dlc16_skv_wolf_rats.png", lu = "wh2_dlc16_skv_mon_wolf_rats_0"},
+    wh2_dlc16_skv_mon_wolf_rats_1 = {card = "ui/units/icons/wh2_dlc16_skv_wolf_rats_poison.png", lu = "wh2_dlc16_skv_mon_wolf_rats_1"},
+    wh2_dlc17_lzd_inf_chameleon_stalkers_0 = {card = "ui/units/icons/wh2_dlc17_lzd_inf_chameleon_stalkers.png", lu = "wh2_dlc17_lzd_inf_chameleon_stalkers_0"},
+    wh2_dlc17_lzd_mon_coatl_0 = {card = "ui/units/icons/wh2_dlc17_lzd_mon_coatl.png", lu = "wh2_dlc17_lzd_mon_coatl_0"},
+    wh2_dlc17_lzd_mon_troglodon_0 = {card = "ui/units/icons/wh2_dlc17_lzd_mon_troglodon.png", lu = "wh2_dlc17_lzd_mon_troglodon_0"},
+    wh2_main_def_art_reaper_bolt_thrower = {card = "ui/units/icons/wh2_main_def_reaper_bolt_thrower.png", lu = "wh2_main_def_art_reaper_bolt_thrower"},
+    wh2_main_def_cav_cold_one_chariot = {card = "ui/units/icons/wh2_main_def_cold_one_chariot.png", lu = "wh2_main_def_cav_cold_one_chariot"},
+    wh2_main_def_cav_cold_one_knights_1 = {card = "ui/units/icons/wh2_main_def_cold_one_dread_knights.png", lu = "wh2_main_def_cav_cold_one_knights_1"},
+    wh2_main_def_cav_dark_riders_0 = {card = "ui/units/icons/wh2_main_def_dark_riders.png", lu = "wh2_main_def_cav_dark_riders_0"},
+    wh2_main_def_cav_dark_riders_1 = {card = "ui/units/icons/wh2_main_def_dark_riders_shield.png", lu = "wh2_main_def_cav_dark_riders_1"},
+    wh2_main_def_cav_dark_riders_2 = {card = "ui/units/icons/wh2_main_def_dark_riders_crossbow.png", lu = "wh2_main_def_cav_dark_riders_2"},
+    wh2_main_def_inf_black_ark_corsairs_0 = {card = "ui/units/icons/wh2_main_def_black_ark_corsairs.png", lu = "wh2_main_def_inf_black_ark_corsairs_0"},
+    wh2_main_def_inf_black_ark_corsairs_1 = {card = "ui/units/icons/wh2_main_def_black_ark_corsairs_handbows.png", lu = "wh2_main_def_inf_black_ark_corsairs_1"},
+    wh2_main_def_inf_black_guard_0 = {card = "ui/units/icons/wh2_main_def_black_guard.png", lu = "wh2_main_def_inf_black_guard_0"},
+    wh2_main_def_inf_bleakswords_0 = {card = "ui/units/icons/wh2_main_def_bleakswords.png", lu = "wh2_main_def_inf_bleakswords_0"},
+    wh2_main_def_inf_darkshards_0 = {card = "ui/units/icons/wh2_main_def_darkshards.png", lu = "wh2_main_def_inf_darkshards_0"},
+    wh2_main_def_inf_darkshards_1 = {card = "ui/units/icons/wh2_main_def_darkshards_shields.png", lu = "wh2_main_def_inf_darkshards_1"},
+    wh2_main_def_inf_dreadspears_0 = {card = "ui/units/icons/wh2_main_def_dreadspears.png", lu = "wh2_main_def_inf_dreadspears_0"},
+    wh2_main_def_inf_har_ganeth_executioners_0 = {card = "ui/units/icons/wh2_main_def_har_ganeth_executioners.png", lu = "wh2_main_def_inf_har_ganeth_executioners_0"},
+    wh2_main_def_inf_harpies = {card = "ui/units/icons/wh2_main_def_harpies.png", lu = "wh2_main_def_inf_harpies"},
+    wh2_main_def_inf_shades_0 = {card = "ui/units/icons/wh2_main_def_shades.png", lu = "wh2_main_def_inf_shades_0"},
+    wh2_main_def_inf_shades_1 = {card = "ui/units/icons/wh2_main_def_shades_dual_weapons.png", lu = "wh2_main_def_inf_shades_1"},
+    wh2_main_def_inf_shades_2 = {card = "ui/units/icons/wh2_main_def_shades_great_weapons.png", lu = "wh2_main_def_inf_shades_2"},
+    wh2_main_def_inf_witch_elves_0 = {card = "ui/units/icons/wh2_main_def_witch_elves.png", lu = "wh2_main_def_inf_witch_elves_0"},
+    wh2_main_def_mon_black_dragon = {card = "ui/units/icons/wh2_main_def_black_dragon.png", lu = "wh2_main_def_mon_black_dragon"},
+    wh2_main_hef_art_eagle_claw_bolt_thrower = {card = "ui/units/icons/wh2_main_hef_art_eagle_claw_bolt_thrower.png", lu = "wh2_main_hef_art_eagle_claw_bolt_thrower"},
+    wh2_main_hef_cav_dragon_princes = {card = "ui/units/icons/wh2_main_hef_cav_dragon_princes.png", lu = "wh2_main_hef_cav_dragon_princes"},
+    wh2_main_hef_cav_ellyrian_reavers_0 = {card = "ui/units/icons/wh2_main_hef_ellyrian_reavers.png", lu = "wh2_main_hef_cav_ellyrian_reavers_0"},
+    wh2_main_hef_cav_ellyrian_reavers_1 = {card = "ui/units/icons/wh2_main_hef_ellyrian_reavers_bow.png", lu = "wh2_main_hef_cav_ellyrian_reavers_1"},
+    wh2_main_hef_cav_ithilmar_chariot = {card = "ui/units/icons/wh2_main_hef_cav_ithilmar_tiranoc_chariot.png", lu = "wh2_main_hef_cav_ithilmar_chariot"},
+    wh2_main_hef_cav_silver_helms_0 = {card = "ui/units/icons/wh2_main_hef_silver_helms.png", lu = "wh2_main_hef_cav_silver_helms_0"},
+    wh2_main_hef_cav_silver_helms_1 = {card = "ui/units/icons/wh2_main_hef_silver_helms_shield.png", lu = "wh2_main_hef_cav_silver_helms_1"},
+    wh2_main_hef_cav_tiranoc_chariot = {card = "ui/units/icons/wh2_main_hef_cav_tiranoc_chariot.png", lu = "wh2_main_hef_cav_tiranoc_chariot"},
+    wh2_main_hef_inf_archers_0 = {card = "ui/units/icons/wh2_main_hef_archers.png", lu = "wh2_main_hef_inf_archers_0"},
+    wh2_main_hef_inf_archers_1 = {card = "ui/units/icons/wh2_main_hef_archers_light_armour.png", lu = "wh2_main_hef_inf_archers_1"},
+    wh2_main_hef_inf_lothern_sea_guard_0 = {card = "ui/units/icons/wh2_main_hef_lothern_sea_guard.png", lu = "wh2_main_hef_inf_lothern_sea_guard_0"},
+    wh2_main_hef_inf_lothern_sea_guard_1 = {card = "ui/units/icons/wh2_main_hef_lothern_sea_guard_shields.png", lu = "wh2_main_hef_inf_lothern_sea_guard_1"},
+    wh2_main_hef_inf_phoenix_guard = {card = "ui/units/icons/wh2_main_hef_phoenix_guard.png", lu = "wh2_main_hef_inf_phoenix_guard"},
+    wh2_main_hef_inf_spearmen_0 = {card = "ui/units/icons/wh2_main_hef_spearmen.png", lu = "wh2_main_hef_inf_spearmen_0"},
+    wh2_main_hef_inf_swordmasters_of_hoeth_0 = {card = "ui/units/icons/wh2_main_hef_swordmasters_of_hoeth.png", lu = "wh2_main_hef_inf_swordmasters_of_hoeth_0"},
+    wh2_main_hef_inf_white_lions_of_chrace_0 = {card = "ui/units/icons/wh2_main_hef_white_lions_of_chrace.png", lu = "wh2_main_hef_inf_white_lions_of_chrace_0"},
+    wh2_main_hef_mon_great_eagle = {card = "ui/units/icons/wh2_main_hef_mon_great_eagle.png", lu = "wh2_main_hef_mon_great_eagle"},
+    wh2_main_hef_mon_moon_dragon = {card = "ui/units/icons/wh2_main_hef_mon_moon_dragon.png", lu = "wh2_main_hef_mon_moon_dragon"},
+    wh2_main_hef_mon_phoenix_flamespyre = {card = "ui/units/icons/wh2_main_hef_mon_phoenix_flamespyre.png", lu = "wh2_main_hef_mon_phoenix_flamespyre"},
+    wh2_main_hef_mon_phoenix_frostheart = {card = "ui/units/icons/wh2_main_hef_mon_phoenix_frostheart.png", lu = "wh2_main_hef_mon_phoenix_frostheart"},
+    wh2_main_hef_mon_star_dragon = {card = "ui/units/icons/wh2_main_hef_star_dragon.png", lu = "wh2_main_hef_mon_star_dragon"},
+    wh2_main_hef_mon_sun_dragon = {card = "ui/units/icons/wh2_main_hef_mon_sun_dragon.png", lu = "wh2_main_hef_mon_sun_dragon"},
+    wh2_main_lzd_cav_cold_ones_1 = {card = "ui/units/icons/wh2_main_lzd_cav_cold_one_riders.png", lu = "wh2_main_lzd_cav_cold_ones_1"},
+    wh2_main_lzd_cav_cold_ones_feral_0 = {card = "ui/units/icons/wh2_main_lzd_cav_cold_ones_feral.png", lu = "wh2_main_lzd_cav_cold_ones_feral_0"},
+    wh2_main_lzd_cav_horned_ones_0 = {card = "ui/units/icons/wh2_main_lzd_cav_horned_ones.png", lu = "wh2_main_lzd_cav_horned_ones_0"},
+    wh2_main_lzd_cav_terradon_riders_0 = {card = "ui/units/icons/wh2_main_lzd_mon_terradon.png", lu = "wh2_main_lzd_cav_terradon_riders_0"},
+    wh2_main_lzd_cav_terradon_riders_1 = {card = "ui/units/icons/wh2_main_lzd_mon_terradon_fireleech.png", lu = "wh2_main_lzd_cav_terradon_riders_1"},
+    wh2_main_lzd_inf_chameleon_skinks_0 = {card = "ui/units/icons/wh2_main_lzd_inf_chameleon_skinks.png", lu = "wh2_main_lzd_inf_chameleon_skinks_0"},
+    wh2_main_lzd_inf_saurus_spearmen_0 = {card = "ui/units/icons/wh2_main_lzd_inf_saurus_spearmen.png", lu = "wh2_main_lzd_inf_saurus_spearmen_0"},
+    wh2_main_lzd_inf_saurus_spearmen_1 = {card = "ui/units/icons/wh2_main_lzd_inf_saurus_spearmen_shields.png", lu = "wh2_main_lzd_inf_saurus_spearmen_1"},
+    wh2_main_lzd_inf_saurus_warriors_0 = {card = "ui/units/icons/wh2_main_lzd_inf_saurus_warriors.png", lu = "wh2_main_lzd_inf_saurus_warriors_0"},
+    wh2_main_lzd_inf_saurus_warriors_1 = {card = "ui/units/icons/wh2_main_lzd_inf_saurus_warriors_shields.png", lu = "wh2_main_lzd_inf_saurus_warriors_1"},
+    wh2_main_lzd_inf_skink_cohort_0 = {card = "ui/units/icons/wh2_main_lzd_inf_skink_cohort.png", lu = "wh2_main_lzd_inf_skink_cohort_0"},
+    wh2_main_lzd_inf_skink_cohort_1 = {card = "ui/units/icons/wh2_main_lzd_inf_skink_cohort_javelins.png", lu = "wh2_main_lzd_inf_skink_cohort_1"},
+    wh2_main_lzd_inf_skink_skirmishers_0 = {card = "ui/units/icons/wh2_main_lzd_inf_skink_skirmishers.png", lu = "wh2_main_lzd_inf_skink_skirmishers_0"},
+    wh2_main_lzd_inf_temple_guards = {card = "ui/units/icons/wh2_main_lzd_inf_temple_guards.png", lu = "wh2_main_lzd_inf_temple_guards"},
+    wh2_main_lzd_mon_ancient_stegadon = {card = "ui/units/icons/wh2_main_lzd_mon_ancient_stegadon.png", lu = "wh2_main_lzd_mon_ancient_stegadon"},
+    wh2_main_lzd_mon_bastiladon_0 = {card = "ui/units/icons/wh2_main_lzd_mon_bastiladon_feral.png", lu = "wh2_main_lzd_mon_bastiladon_0"},
+    wh2_main_lzd_mon_bastiladon_1 = {card = "ui/units/icons/wh2_main_lzd_mon_bastiladon_healing_platform.png", lu = "wh2_main_lzd_mon_bastiladon_1"},
+    wh2_main_lzd_mon_bastiladon_2 = {card = "ui/units/icons/wh2_main_lzd_mon_bastiladon_solar.png", lu = "wh2_main_lzd_mon_bastiladon_2"},
+    wh2_main_lzd_mon_carnosaur_0 = {card = "ui/units/icons/wh2_main_lzd_mon_carnosaur.png", lu = "wh2_main_lzd_mon_carnosaur_0"},
+    wh2_main_lzd_mon_kroxigors = {card = "ui/units/icons/wh2_main_lzd_mon_kroxigors.png", lu = "wh2_main_lzd_mon_kroxigors"},
+    wh2_main_lzd_mon_stegadon_0 = {card = "ui/units/icons/wh2_main_lzd_mon_stegadon_feral.png", lu = "wh2_main_lzd_mon_stegadon_0"},
+    wh2_main_lzd_mon_stegadon_1 = {card = "ui/units/icons/wh2_main_lzd_mon_stegadon.png", lu = "wh2_main_lzd_mon_stegadon_1"},
+    wh2_main_skv_art_plagueclaw_catapult = {card = "ui/units/icons/wh2_main_skv_art_plagueclaw_catapult.png", lu = "wh2_main_skv_art_plagueclaw_catapult"},
+    wh2_main_skv_art_warp_lightning_cannon = {card = "ui/units/icons/wh2_main_skv_art_warp_lightning_cannon.png", lu = "wh2_main_skv_art_warp_lightning_cannon"},
+    wh2_main_skv_inf_clanrat_spearmen_0 = {card = "ui/units/icons/wh2_main_skv_inf_clanrat_spearmen.png", lu = "wh2_main_skv_inf_clanrat_spearmen_0"},
+    wh2_main_skv_inf_clanrat_spearmen_1 = {card = "ui/units/icons/wh2_main_skv_inf_clanrat_spearmen_shields.png", lu = "wh2_main_skv_inf_clanrat_spearmen_1"},
+    wh2_main_skv_inf_clanrats_0 = {card = "ui/units/icons/wh2_main_skv_inf_clanrats.png", lu = "wh2_main_skv_inf_clanrats_0"},
+    wh2_main_skv_inf_clanrats_1 = {card = "ui/units/icons/wh2_main_skv_inf_clanrats_shields.png", lu = "wh2_main_skv_inf_clanrats_1"},
+    wh2_main_skv_inf_death_globe_bombardiers = {card = "ui/units/icons/wh2_main_skv_inf_death_globe_bombardiers.png", lu = "wh2_main_skv_inf_death_globe_bombardiers"},
+    wh2_main_skv_inf_death_runners_0 = {card = "ui/units/icons/wh2_main_skv_inf_death_runners.png", lu = "wh2_main_skv_inf_death_runners_0"},
+    wh2_main_skv_inf_gutter_runner_slingers_0 = {card = "ui/units/icons/wh2_main_skv_inf_gutter_runner_slingers.png", lu = "wh2_main_skv_inf_gutter_runner_slingers_0"},
+    wh2_main_skv_inf_gutter_runner_slingers_1 = {card = "ui/units/icons/wh2_main_skv_inf_gutter_runner_slingers_poison.png", lu = "wh2_main_skv_inf_gutter_runner_slingers_1"},
+    wh2_main_skv_inf_gutter_runners_0 = {card = "ui/units/icons/wh2_main_skv_inf_gutter_runners.png", lu = "wh2_main_skv_inf_gutter_runners_0"},
+    wh2_main_skv_inf_gutter_runners_1 = {card = "ui/units/icons/wh2_main_skv_inf_gutter_runners_poison.png", lu = "wh2_main_skv_inf_gutter_runners_1"},
+    wh2_main_skv_inf_night_runners_0 = {card = "ui/units/icons/wh2_main_skv_inf_night_runners.png", lu = "wh2_main_skv_inf_night_runners_0"},
+    wh2_main_skv_inf_night_runners_1 = {card = "ui/units/icons/wh2_main_skv_inf_night_runners_slings.png", lu = "wh2_main_skv_inf_night_runners_1"},
+    wh2_main_skv_inf_plague_monk_censer_bearer = {card = "ui/units/icons/wh2_main_skv_inf_plague_monk_censer_bearer.png", lu = "wh2_main_skv_inf_plague_monk_censer_bearer"},
+    wh2_main_skv_inf_plague_monks = {card = "ui/units/icons/wh2_main_skv_inf_plague_monks.png", lu = "wh2_main_skv_inf_plague_monks"},
+    wh2_main_skv_inf_poison_wind_globadiers = {card = "ui/units/icons/wh2_main_skv_inf_poison_wind_globadiers.png", lu = "wh2_main_skv_inf_poison_wind_globadiers"},
+    wh2_main_skv_inf_skavenslave_slingers_0 = {card = "ui/units/icons/wh2_main_skv_inf_skavenslave_slingers.png", lu = "wh2_main_skv_inf_skavenslave_slingers_0"},
+    wh2_main_skv_inf_skavenslave_spearmen_0 = {card = "ui/units/icons/wh2_main_skv_inf_skavenslave_spearmen.png", lu = "wh2_main_skv_inf_skavenslave_spearmen_0"},
+    wh2_main_skv_inf_skavenslaves_0 = {card = "ui/units/icons/wh2_main_skv_inf_skavenslaves.png", lu = "wh2_main_skv_inf_skavenslaves_0"},
+    wh2_main_skv_inf_stormvermin_0 = {card = "ui/units/icons/wh2_main_skv_inf_stormvermin_halberds.png", lu = "wh2_main_skv_inf_stormvermin_0"},
+    wh2_main_skv_inf_stormvermin_1 = {card = "ui/units/icons/wh2_main_skv_inf_stormvermin_shields.png", lu = "wh2_main_skv_inf_stormvermin_1"},
+    wh2_main_skv_inf_warpfire_thrower = {card = "ui/units/icons/wh2_main_skv_inf_warpfire_thrower.png", lu = "wh2_main_skv_inf_warpfire_thrower"},
+    wh2_main_skv_mon_hell_pit_abomination = {card = "ui/units/icons/wh2_main_skv_mon_hell_pit_abomination.png", lu = "wh2_main_skv_mon_hell_pit_abomination"},
+    wh2_main_skv_mon_rat_ogres = {card = "ui/units/icons/wh2_main_skv_mon_rat_ogres.png", lu = "wh2_main_skv_mon_rat_ogres"},
+    wh2_main_skv_veh_doomwheel = {card = "ui/units/icons/wh2_main_skv_veh_doomwheel.png", lu = "wh2_main_skv_veh_doomwheel"},
+    wh3_dlc23_chd_cav_bull_centaurs_axe = {card = "ui/units/icons/wh3_dlc23_chd_cav_bull_centaurs_axe.png", lu = "wh3_dlc23_chd_cav_bull_centaurs_axe"},
+    wh3_dlc23_chd_inf_chaos_dwarf_blunderbusses = {card = "ui/units/icons/wh3_dlc23_chd_inf_chaos_dwarf_blunderbusses.png", lu = "wh3_dlc23_chd_inf_chaos_dwarf_blunderbusses"},
+    wh3_dlc23_chd_inf_chaos_dwarf_warriors = {card = "ui/units/icons/wh3_dlc23_chd_inf_chaos_dwarf_warriors.png", lu = "wh3_dlc23_chd_inf_chaos_dwarf_warriors"},
+    wh3_dlc23_chd_inf_chaos_dwarf_warriors_great_weapons = {card = "ui/units/icons/wh3_dlc23_chd_inf_chaos_dwarf_warriors_great_weapons.png", lu = "wh3_dlc23_chd_inf_chaos_dwarf_warriors_great_weapons"},
+    wh3_dlc23_chd_inf_goblin_labourers = {card = "ui/units/icons/wh3_dlc23_chd_inf_goblin_labourers.png", lu = "wh3_dlc23_chd_inf_goblin_labourers"},
+    wh3_dlc23_chd_inf_hobgoblin_archers = {card = "ui/units/icons/wh3_dlc23_chd_inf_hobgoblin_archers.png", lu = "wh3_dlc23_chd_inf_hobgoblin_archers"},
+    wh3_dlc23_chd_inf_hobgoblin_cutthroats = {card = "ui/units/icons/wh3_dlc23_chd_inf_hobgoblin_cutthroats.png", lu = "wh3_dlc23_chd_inf_hobgoblin_cutthroats"},
+    wh3_dlc23_chd_inf_infernal_guard = {card = "ui/units/icons/wh3_dlc23_chd_inf_infernal_guard.png", lu = "wh3_dlc23_chd_inf_infernal_guard"},
+    wh3_dlc23_chd_inf_infernal_guard_fireglaives = {card = "ui/units/icons/wh3_dlc23_chd_inf_infernal_guard_fireglaives.png", lu = "wh3_dlc23_chd_inf_infernal_guard_fireglaives"},
+    wh3_dlc23_chd_inf_orc_labourers = {card = "ui/units/icons/wh3_dlc23_chd_inf_orc_labourers.png", lu = "wh3_dlc23_chd_inf_orc_labourers"},
+    wh3_dlc23_chd_mon_bale_taurus = {card = "ui/units/icons/wh3_dlc23_chd_mon_bale_taurus.png", lu = "wh3_dlc23_chd_mon_bale_taurus"},
+    wh3_dlc23_chd_mon_great_taurus = {card = "ui/units/icons/wh3_dlc23_chd_mon_great_taurus.png", lu = "wh3_dlc23_chd_mon_great_taurus"},
+    wh3_dlc23_chd_mon_kdaai_destroyer = {card = "ui/units/icons/wh3_dlc23_chd_mon_kdaai_destroyer.png", lu = "wh3_dlc23_chd_mon_kdaai_destroyer"},
+    wh3_dlc23_chd_mon_kdaai_fireborn = {card = "ui/units/icons/wh3_dlc23_chd_mon_kdaai_fireborn.png", lu = "wh3_dlc23_chd_mon_kdaai_fireborn"},
+    wh3_dlc23_chd_veh_deathshrieker_rocket_launcher = {card = "ui/units/icons/wh3_dlc23_chd_veh_deathshrieker_rocket_launcher.png", lu = "wh3_dlc23_chd_veh_deathshrieker_rocket_launcher"},
+    wh3_dlc23_chd_veh_dreadquake_mortar = {card = "ui/units/icons/wh3_dlc23_chd_veh_dreadquake_mortar.png", lu = "wh3_dlc23_chd_veh_dreadquake_mortar"},
+    wh3_dlc23_chd_veh_iron_daemon = {card = "ui/units/icons/wh3_dlc23_chd_veh_iron_daemon.png", lu = "wh3_dlc23_chd_veh_iron_daemon"},
+    wh3_dlc23_chd_veh_magma_cannon = {card = "ui/units/icons/wh3_dlc23_chd_veh_magma_cannon.png", lu = "wh3_dlc23_chd_veh_magma_cannon"},
+    wh3_dlc23_chd_veh_skullcracker = {card = "ui/units/icons/wh3_dlc23_chd_veh_skullcracker.png", lu = "wh3_dlc23_chd_veh_skullcracker"},
+    wh3_main_cth_art_fire_rain_rocket_battery_0 = {card = "ui/units/icons/wh3_main_cth_art_fire_rain_rocket_battery_0.png", lu = "wh3_main_cth_art_fire_rain_rocket_battery_0"},
+    wh3_main_cth_art_grand_cannon_0 = {card = "ui/units/icons/wh3_main_cth_art_grand_cannon_0.png", lu = "wh3_main_cth_art_grand_cannon_0"},
+    wh3_main_cth_cav_jade_lancers_0 = {card = "ui/units/icons/wh3_main_cth_cav_jade_lancers_0.png", lu = "wh3_main_cth_cav_jade_lancers_0"},
+    wh3_main_cth_cav_jade_longma_riders_0 = {card = "ui/units/icons/wh3_main_cth_cav_great_longma_riders_0.png", lu = "wh3_main_cth_cav_jade_longma_riders_0"},
+    wh3_main_cth_cav_peasant_horsemen_0 = {card = "ui/units/icons/wh3_main_cth_cav_peasant_horsemen_0.png", lu = "wh3_main_cth_cav_peasant_horsemen_0"},
+    wh3_main_cth_inf_crane_gunners_0 = {card = "ui/units/icons/wh3_main_cth_inf_crane_gunners_0.png", lu = "wh3_main_cth_inf_crane_gunners_0"},
+    wh3_main_cth_inf_dragon_guard_0 = {card = "ui/units/icons/wh3_main_cth_inf_dragon_guard_0.png", lu = "wh3_main_cth_inf_dragon_guard_0"},
+    wh3_main_cth_inf_dragon_guard_crossbowmen_0 = {card = "ui/units/icons/wh3_main_cth_inf_dragon_guard_crossbowmen_0.png", lu = "wh3_main_cth_inf_dragon_guard_crossbowmen_0"},
+    wh3_main_cth_inf_iron_hail_gunners_0 = {card = "ui/units/icons/wh3_main_cth_inf_iron_hail_gunners_0.png", lu = "wh3_main_cth_inf_iron_hail_gunners_0"},
+    wh3_main_cth_inf_jade_warrior_crossbowmen_0 = {card = "ui/units/icons/wh3_main_cth_inf_jade_warrior_crossbowmen_0.png", lu = "wh3_main_cth_inf_jade_warrior_crossbowmen_0"},
+    wh3_main_cth_inf_jade_warrior_crossbowmen_1 = {card = "ui/units/icons/wh3_main_cth_inf_jade_warrior_crossbowmen_1.png", lu = "wh3_main_cth_inf_jade_warrior_crossbowmen_1"},
+    wh3_main_cth_inf_jade_warriors_0 = {card = "ui/units/icons/wh3_main_cth_inf_jade_warriors_0.png", lu = "wh3_main_cth_inf_jade_warriors_0"},
+    wh3_main_cth_inf_jade_warriors_1 = {card = "ui/units/icons/wh3_main_cth_inf_jade_warriors_1.png", lu = "wh3_main_cth_inf_jade_warriors_1"},
+    wh3_main_cth_inf_peasant_archers_0 = {card = "ui/units/icons/wh3_main_cth_inf_peasant_archers_0.png", lu = "wh3_main_cth_inf_peasant_archers_0"},
+    wh3_main_cth_inf_peasant_spearmen_1 = {card = "ui/units/icons/wh3_main_cth_inf_peasant_spearmen_1.png", lu = "wh3_main_cth_inf_peasant_spearmen_1"},
+    wh3_main_ksl_inf_armoured_kossars_0 = {card = "ui/units/icons/wh3_main_ksl_inf_armoured_kossars_0.png", lu = "wh3_main_ksl_inf_armoured_kossars_0"},
+    wh3_main_ksl_inf_armoured_kossars_1 = {card = "ui/units/icons/wh3_main_ksl_inf_armoured_kossars_1.png", lu = "wh3_main_ksl_inf_armoured_kossars_1"},
+    wh3_main_ksl_inf_ice_guard_1 = {card = "ui/units/icons/wh3_main_ksl_inf_ice_guard_0.png", lu = "wh3_main_ksl_inf_ice_guard_1"},
+    wh3_main_ksl_mon_elemental_bear_0 = {card = "ui/units/icons/wh3_main_ksl_mon_elemental_bear_0.png", lu = "wh3_main_ksl_mon_elemental_bear_0"},
+    wh3_main_ksl_mon_snow_leopard_0 = {card = "ui/units/icons/wh3_main_ksl_mon_snow_leopard_0.png", lu = "wh3_main_ksl_mon_snow_leopard_0"},
+    wh3_main_ogr_cav_crushers_1 = {card = "ui/units/icons/wh3_main_ogr_cav_crushers_1.png", lu = "wh3_main_ogr_cav_crushers_1"},
+    wh3_main_ogr_cav_mournfang_cavalry_2 = {card = "ui/units/icons/wh3_main_ogr_cav_mournfang_cavalry_2.png", lu = "wh3_main_ogr_cav_mournfang_cavalry_2"},
+    wh3_main_ogr_inf_gnoblars_0 = {card = "ui/units/icons/wh3_main_ogr_inf_gnoblars_0.png", lu = "wh3_main_ogr_inf_gnoblars_0"},
+    wh3_main_ogr_inf_gnoblars_1 = {card = "ui/units/icons/wh3_main_ogr_inf_gnoblars_1.png", lu = "wh3_main_ogr_inf_gnoblars_1"},
+    wh3_main_ogr_inf_ironguts_0 = {card = "ui/units/icons/wh3_main_ogr_inf_ironguts_0.png", lu = "wh3_main_ogr_inf_ironguts_0"},
+    wh3_main_ogr_inf_leadbelchers_0 = {card = "ui/units/icons/wh3_main_ogr_inf_leadbelchers_0.png", lu = "wh3_main_ogr_inf_leadbelchers_0"},
+    wh3_main_ogr_inf_maneaters_3 = {card = "ui/units/icons/wh3_main_ogr_inf_maneaters_3.png", lu = "wh3_main_ogr_inf_maneaters_3"},
+    wh3_main_ogr_inf_ogres_0 = {card = "ui/units/icons/wh3_main_ogr_inf_ogres_0.png", lu = "wh3_main_ogr_inf_ogres_0"},
+    wh3_main_ogr_inf_ogres_1 = {card = "ui/units/icons/wh3_main_ogr_inf_ogres_1.png", lu = "wh3_main_ogr_inf_ogres_1"},
+    wh3_main_ogr_inf_ogres_2 = {card = "ui/units/icons/wh3_main_ogr_inf_ogres_2.png", lu = "wh3_main_ogr_inf_ogres_2"},
+    wh3_main_ogr_mon_giant_0 = {card = "ui/units/icons/wh3_main_ogr_mon_giant_0.png", lu = "wh3_main_ogr_mon_giant_0"},
+    wh3_main_ogr_mon_gorgers_0 = {card = "ui/units/icons/wh3_main_ogr_mon_gorger_0.png", lu = "wh3_main_ogr_mon_gorgers_0"},
+    wh3_main_ogr_mon_sabretusk_pack_0 = {card = "ui/units/icons/wh3_main_ogr_mon_sabretusk_pack_0.png", lu = "wh3_main_ogr_mon_sabretusk_pack_0"},
+    wh3_main_ogr_mon_stonehorn_1 = {card = "ui/units/icons/wh3_main_ogr_mon_stonehorn_1.png", lu = "wh3_main_ogr_mon_stonehorn_1"},
+    wh3_main_ogr_veh_gnoblar_scraplauncher_0 = {card = "ui/units/icons/wh3_main_ogr_veh_gnoblar_scraplauncher_0.png", lu = "wh3_main_ogr_veh_gnoblar_scraplauncher_0"},
+    wh3_main_pro_ksl_inf_kossars_0 = {card = "ui/units/icons/wh3_main_ksl_inf_kossars_0.png", lu = "wh3_main_pro_ksl_inf_kossars_0"},
+    wh3_main_pro_ksl_inf_kossars_1 = {card = "ui/units/icons/wh3_main_ksl_inf_kossars_1.png", lu = "wh3_main_pro_ksl_inf_kossars_1"},
+    wh3_main_pro_ksl_inf_streltsi_0 = {card = "ui/units/icons/wh3_main_ksl_inf_streltsi_0.png", lu = "wh3_main_pro_ksl_inf_streltsi_0"},
+    wh3_main_pro_ksl_inf_tzar_guard_0 = {card = "ui/units/icons/wh3_main_ksl_inf_tsar_guard_0.png", lu = "wh3_main_pro_ksl_inf_tzar_guard_0"},
+    wh3_main_pro_ksl_veh_little_grom_0 = {card = "ui/units/icons/wh3_main_ksl_veh_little_grom_0.png", lu = "wh3_main_pro_ksl_veh_little_grom_0"},
+    wh_dlc01_chs_cav_gorebeast_chariot = {card = "ui/units/icons/wh_dlc01_chs_gorebeast_chariot.png", lu = "wh_dlc01_chs_cav_gorebeast_chariot"},
+    wh_dlc01_chs_inf_chaos_warriors_2 = {card = "ui/units/icons/wh_dlc01_chs_warriors_great_weapons.png", lu = "wh_dlc01_chs_inf_chaos_warriors_2"},
+    wh_dlc01_chs_inf_chosen_2 = {card = "ui/units/icons/wh_dlc01_chs_chosen_halberd.png", lu = "wh_dlc01_chs_inf_chosen_2"},
+    wh_dlc01_chs_inf_forsaken_0 = {card = "ui/units/icons/wh_dlc01_chs_forsaken.png", lu = "wh_dlc01_chs_inf_forsaken_0"},
+    wh_dlc01_chs_mon_dragon_ogre = {card = "ui/units/icons/wh_dlc01_chs_dragon_ogre.png", lu = "wh_dlc01_chs_mon_dragon_ogre"},
+    wh_dlc01_chs_mon_dragon_ogre_shaggoth = {card = "ui/units/icons/wh_dlc01_chs_dragon_ogre_shaggoth.png", lu = "wh_dlc01_chs_mon_dragon_ogre_shaggoth"},
+    wh_dlc01_chs_mon_trolls_1 = {card = "ui/units/icons/wh_dlc01_chs_trolls_mace.png", lu = "wh_dlc01_chs_mon_trolls_1"},
+    wh_dlc02_vmp_cav_blood_knights_0 = {card = "ui/units/icons/wh_dlc02_vmp_blood_knights.png", lu = "wh_dlc02_vmp_cav_blood_knights_0"},
+    wh_dlc04_emp_cav_knights_blazing_sun_0 = {card = "ui/units/icons/wh_dlc04_emp_knights_blazing_sun.png", lu = "wh_dlc04_emp_cav_knights_blazing_sun_0"},
+    wh_dlc04_emp_inf_flagellants_0 = {card = "ui/units/icons/wh_dlc04_emp_flagellants.png", lu = "wh_dlc04_emp_inf_flagellants_0"},
+    wh_dlc04_emp_inf_free_company_militia_0 = {card = "ui/units/icons/wh_dlc04_emp_free_company_militia.png", lu = "wh_dlc04_emp_inf_free_company_militia_0"},
+    wh_dlc04_vmp_veh_corpse_cart_0 = {card = "ui/units/icons/wh_dlc04_vmp_corpse_cart.png", lu = "wh_dlc04_vmp_veh_corpse_cart_0"},
+    wh_dlc04_vmp_veh_corpse_cart_1 = {card = "ui/units/icons/wh_dlc04_vmp_corpse_cart_balefire.png", lu = "wh_dlc04_vmp_veh_corpse_cart_1"},
+    wh_dlc04_vmp_veh_corpse_cart_2 = {card = "ui/units/icons/wh_dlc04_vmp_corpse_cart_lodestone.png", lu = "wh_dlc04_vmp_veh_corpse_cart_2"},
+    wh_dlc04_vmp_veh_mortis_engine_0 = {card = "ui/units/icons/wh_dlc04_vmp_mortis_engine.png", lu = "wh_dlc04_vmp_veh_mortis_engine_0"},
+    wh_dlc05_wef_cav_glade_riders_0 = {card = "ui/units/icons/wh_dlc05_wef_glade_riders.png", lu = "wh_dlc05_wef_cav_glade_riders_0"},
+    wh_dlc05_wef_cav_glade_riders_1 = {card = "ui/units/icons/wh_dlc05_wef_glade_riders_poison.png", lu = "wh_dlc05_wef_cav_glade_riders_1"},
+    wh_dlc05_wef_cav_hawk_riders_0 = {card = "ui/units/icons/wh_dlc05_wef_hawk_riders.png", lu = "wh_dlc05_wef_cav_hawk_riders_0"},
+    wh_dlc05_wef_cav_sisters_thorn_0 = {card = "ui/units/icons/wh_dlc05_wef_sisters_thorn.png", lu = "wh_dlc05_wef_cav_sisters_thorn_0"},
+    wh_dlc05_wef_cav_wild_riders_0 = {card = "ui/units/icons/wh_dlc05_wef_wild_riders.png", lu = "wh_dlc05_wef_cav_wild_riders_0"},
+    wh_dlc05_wef_cav_wild_riders_1 = {card = "ui/units/icons/wh_dlc05_wef_wild_riders_shield.png", lu = "wh_dlc05_wef_cav_wild_riders_1"},
+    wh_dlc05_wef_forest_dragon_0 = {card = "ui/units/icons/wh_dlc05_wef_forest_dragon.png", lu = "wh_dlc05_wef_forest_dragon_0"},
+    wh_dlc05_wef_inf_deepwood_scouts_0 = {card = "ui/units/icons/wh_dlc05_wef_deepwood_scouts.png", lu = "wh_dlc05_wef_inf_deepwood_scouts_0"},
+    wh_dlc05_wef_inf_deepwood_scouts_1 = {card = "ui/units/icons/wh_dlc05_wef_deepwood_scouts_dual.png", lu = "wh_dlc05_wef_inf_deepwood_scouts_1"},
+    wh_dlc05_wef_inf_dryads_0 = {card = "ui/units/icons/wh_dlc05_wef_dryads.png", lu = "wh_dlc05_wef_inf_dryads_0"},
+    wh_dlc05_wef_inf_eternal_guard_0 = {card = "ui/units/icons/wh_dlc05_wef_eternal_guard.png", lu = "wh_dlc05_wef_inf_eternal_guard_0"},
+    wh_dlc05_wef_inf_eternal_guard_1 = {card = "ui/units/icons/wh_dlc05_wef_eternal_guard_shield.png", lu = "wh_dlc05_wef_inf_eternal_guard_1"},
+    wh_dlc05_wef_inf_glade_guard_0 = {card = "ui/units/icons/wh_dlc05_wef_glade_guard.png", lu = "wh_dlc05_wef_inf_glade_guard_0"},
+    wh_dlc05_wef_inf_glade_guard_1 = {card = "ui/units/icons/wh_dlc05_wef_glade_guard_flaming.png", lu = "wh_dlc05_wef_inf_glade_guard_1"},
+    wh_dlc05_wef_inf_glade_guard_2 = {card = "ui/units/icons/wh_dlc05_wef_glade_guard_poison.png", lu = "wh_dlc05_wef_inf_glade_guard_2"},
+    wh_dlc05_wef_inf_wardancers_0 = {card = "ui/units/icons/wh_dlc05_wef_wardancers.png", lu = "wh_dlc05_wef_inf_wardancers_0"},
+    wh_dlc05_wef_inf_wardancers_1 = {card = "ui/units/icons/wh_dlc05_wef_wardancers_spear.png", lu = "wh_dlc05_wef_inf_wardancers_1"},
+    wh_dlc05_wef_inf_waywatchers_0 = {card = "ui/units/icons/wh_dlc05_wef_waywatchers.png", lu = "wh_dlc05_wef_inf_waywatchers_0"},
+    wh_dlc05_wef_inf_wildwood_rangers_0 = {card = "ui/units/icons/wh_dlc05_wef_wildwood_ranger.png", lu = "wh_dlc05_wef_inf_wildwood_rangers_0"},
+    wh_dlc05_wef_mon_great_eagle_0 = {card = "ui/units/icons/wh_dlc05_wef_great_eagle.png", lu = "wh_dlc05_wef_mon_great_eagle_0"},
+    wh_dlc05_wef_mon_treekin_0 = {card = "ui/units/icons/wh_dlc05_wef_treekin.png", lu = "wh_dlc05_wef_mon_treekin_0"},
+    wh_dlc05_wef_mon_treeman_0 = {card = "ui/units/icons/wh_dlc05_wef_treeman.png", lu = "wh_dlc05_wef_mon_treeman_0"},
+    wh_dlc06_chs_cav_marauder_horsemasters_0 = {card = "ui/units/icons/wh_dlc06_chs_marauder_horsemasters.png", lu = "wh_dlc06_chs_cav_marauder_horsemasters_0"},
+    wh_dlc06_chs_feral_manticore = {card = "ui/units/icons/wh_dlc03_bst_feral_manticore.png", lu = "wh_dlc06_chs_feral_manticore"},
+    wh_dlc06_chs_inf_aspiring_champions_0 = {card = "ui/units/icons/wh_dlc06_chs_aspiring_champions.png", lu = "wh_dlc06_chs_inf_aspiring_champions_0"},
+    wh_dlc06_dwf_inf_bugmans_rangers_0 = {card = "ui/units/icons/wh_dlc06_dwf_rangers_bugmans.png", lu = "wh_dlc06_dwf_inf_bugmans_rangers_0"},
+    wh_dlc06_dwf_inf_rangers_0 = {card = "ui/units/icons/wh_dlc06_dwf_rangers.png", lu = "wh_dlc06_dwf_inf_rangers_0"},
+    wh_dlc06_dwf_inf_rangers_1 = {card = "ui/units/icons/wh_dlc06_dwf_rangers_great_axe.png", lu = "wh_dlc06_dwf_inf_rangers_1"},
+    wh_dlc06_grn_cav_squig_hoppers_0 = {card = "ui/units/icons/wh_dlc06_grn_squig_hoppers.png", lu = "wh_dlc06_grn_cav_squig_hoppers_0"},
+    wh_dlc06_grn_inf_nasty_skulkers_0 = {card = "ui/units/icons/wh_dlc06_grn_nasty_skulkers.png", lu = "wh_dlc06_grn_inf_nasty_skulkers_0"},
+    wh_dlc06_grn_inf_squig_herd_0 = {card = "ui/units/icons/wh_dlc06_grn_squig_herd.png", lu = "wh_dlc06_grn_inf_squig_herd_0"},
+    wh_dlc07_brt_art_blessed_field_trebuchet_0 = {card = "ui/units/icons/wh_dlc07_brt_blessed_field_trebuchet.png", lu = "wh_dlc07_brt_art_blessed_field_trebuchet_0"},
+    wh_dlc07_brt_cav_grail_guardians_0 = {card = "ui/units/icons/wh_dlc07_brt_grail_guardians.png", lu = "wh_dlc07_brt_cav_grail_guardians_0"},
+    wh_dlc07_brt_cav_knights_errant_0 = {card = "ui/units/icons/wh_dlc07_brt_knights_errant.png", lu = "wh_dlc07_brt_cav_knights_errant_0"},
+    wh_dlc07_brt_cav_questing_knights_0 = {card = "ui/units/icons/wh_dlc07_brt_questing_knights.png", lu = "wh_dlc07_brt_cav_questing_knights_0"},
+    wh_dlc07_brt_cav_royal_hippogryph_knights_0 = {card = "ui/units/icons/wh_dlc07_brt_royal_hippogryph_knights.png", lu = "wh_dlc07_brt_cav_royal_hippogryph_knights_0"},
+    wh_dlc07_brt_cav_royal_pegasus_knights_0 = {card = "ui/units/icons/wh_dlc07_brt_royal_pegasus_knights.png", lu = "wh_dlc07_brt_cav_royal_pegasus_knights_0"},
+    wh_dlc07_brt_inf_battle_pilgrims_0 = {card = "ui/units/icons/wh_dlc07_brt_battle_pilgrims.png", lu = "wh_dlc07_brt_inf_battle_pilgrims_0"},
+    wh_dlc07_brt_inf_foot_squires_0 = {card = "ui/units/icons/wh_dlc07_brt_foot_squires.png", lu = "wh_dlc07_brt_inf_foot_squires_0"},
+    wh_dlc07_brt_inf_grail_reliquae_0 = {card = "ui/units/icons/wh_dlc07_brt_grail_reliquae.png", lu = "wh_dlc07_brt_inf_grail_reliquae_0"},
+    wh_dlc07_brt_inf_men_at_arms_1 = {card = "ui/units/icons/wh_dlc07_brt_men_at_arms.png", lu = "wh_dlc07_brt_inf_men_at_arms_1"},
+    wh_dlc07_brt_inf_men_at_arms_2 = {card = "ui/units/icons/wh_dlc07_brt_men_at_arms_shields.png", lu = "wh_dlc07_brt_inf_men_at_arms_2"},
+    wh_dlc07_brt_inf_peasant_bowmen_1 = {card = "ui/units/icons/wh_dlc07_brt_bowmen_fire.png", lu = "wh_dlc07_brt_inf_peasant_bowmen_1"},
+    wh_dlc07_brt_inf_peasant_bowmen_2 = {card = "ui/units/icons/wh_dlc07_brt_bowmen_pox.png", lu = "wh_dlc07_brt_inf_peasant_bowmen_2"},
+    wh_dlc07_brt_inf_spearmen_at_arms_1 = {card = "ui/units/icons/wh_dlc07_brt_spearmen_at_arms.png", lu = "wh_dlc07_brt_inf_spearmen_at_arms_1"},
+    wh_dlc08_nor_cav_marauder_horsemasters_0 = {card = "ui/units/icons/wh_dlc06_chs_marauder_horsemasters.png", lu = "wh_dlc08_nor_cav_marauder_horsemasters_0"},
+    wh_dlc08_nor_feral_manticore = {card = "ui/units/icons/wh_dlc03_bst_feral_manticore.png", lu = "wh_dlc08_nor_feral_manticore"},
+    wh_dlc08_nor_inf_marauder_berserkers_0 = {card = "ui/units/icons/wh_dlc08_nor_marauder_berserkers.png", lu = "wh_dlc08_nor_inf_marauder_berserkers_0"},
+    wh_dlc08_nor_inf_marauder_champions_0 = {card = "ui/units/icons/wh_dlc08_nor_marauder_champions.png", lu = "wh_dlc08_nor_inf_marauder_champions_0"},
+    wh_dlc08_nor_inf_marauder_champions_1 = {card = "ui/units/icons/wh_dlc08_nor_marauder_champions_great_weapons.png", lu = "wh_dlc08_nor_inf_marauder_champions_1"},
+    wh_dlc08_nor_inf_marauder_hunters_0 = {card = "ui/units/icons/wh_dlc08_nor_marauder_hunters.png", lu = "wh_dlc08_nor_inf_marauder_hunters_0"},
+    wh_dlc08_nor_inf_marauder_hunters_1 = {card = "ui/units/icons/wh_dlc08_nor_marauder_hunters_javelin.png", lu = "wh_dlc08_nor_inf_marauder_hunters_1"},
+    wh_dlc08_nor_inf_marauder_spearman_0 = {card = "ui/units/icons/wh_dlc08_nor_marauder_spearmen.png", lu = "wh_dlc08_nor_inf_marauder_spearman_0"},
+    wh_dlc08_nor_mon_fimir_0 = {card = "ui/units/icons/wh_dlc08_nor_fimir_warriors.png", lu = "wh_dlc08_nor_mon_fimir_0"},
+    wh_dlc08_nor_mon_fimir_1 = {card = "ui/units/icons/wh_dlc08_nor_fimir_warriors_great_weapons.png", lu = "wh_dlc08_nor_mon_fimir_1"},
+    wh_dlc08_nor_mon_frost_wyrm_0 = {card = "ui/units/icons/wh_dlc08_nor_frost_wyrm.png", lu = "wh_dlc08_nor_mon_frost_wyrm_0"},
+    wh_dlc08_nor_mon_norscan_giant_0 = {card = "ui/units/icons/wh_dlc08_nor_giant.png", lu = "wh_dlc08_nor_mon_norscan_giant_0"},
+    wh_dlc08_nor_mon_norscan_ice_trolls_0 = {card = "ui/units/icons/wh_dlc08_nor_ice_trolls.png", lu = "wh_dlc08_nor_mon_norscan_ice_trolls_0"},
+    wh_dlc08_nor_mon_skinwolves_0 = {card = "ui/units/icons/wh_dlc08_nor_skin_wolves.png", lu = "wh_dlc08_nor_mon_skinwolves_0"},
+    wh_dlc08_nor_mon_skinwolves_1 = {card = "ui/units/icons/wh_dlc08_nor_skin_wolves_armoured.png", lu = "wh_dlc08_nor_mon_skinwolves_1"},
+    wh_dlc08_nor_mon_war_mammoth_0 = {card = "ui/units/icons/wh_dlc08_nor_war_mammoth_feral.png", lu = "wh_dlc08_nor_mon_war_mammoth_0"},
+    wh_dlc08_nor_mon_war_mammoth_1 = {card = "ui/units/icons/wh_dlc08_nor_war_mammoth_howdah.png", lu = "wh_dlc08_nor_mon_war_mammoth_1"},
+    wh_dlc08_nor_mon_war_mammoth_2 = {card = "ui/units/icons/wh_dlc08_nor_war_mammoth_warshrine.png", lu = "wh_dlc08_nor_mon_war_mammoth_2"},
+    wh_main_brt_art_field_trebuchet = {card = "ui/units/icons/wh_main_brt_trebuchet.png", lu = "wh_main_brt_art_field_trebuchet"},
+    wh_main_brt_cav_grail_knights = {card = "ui/units/icons/wh_main_brt_grail_knights.png", lu = "wh_main_brt_cav_grail_knights"},
+    wh_main_brt_cav_knights_of_the_realm = {card = "ui/units/icons/wh_main_brt_knights_realm.png", lu = "wh_main_brt_cav_knights_of_the_realm"},
+    wh_main_brt_cav_mounted_yeomen_0 = {card = "ui/units/icons/wh_main_brt_mounted_yeomen.png", lu = "wh_main_brt_cav_mounted_yeomen_0"},
+    wh_main_brt_cav_mounted_yeomen_1 = {card = "ui/units/icons/wh_main_brt_mounted_yeomen_archers.png", lu = "wh_main_brt_cav_mounted_yeomen_1"},
+    wh_main_brt_cav_pegasus_knights = {card = "ui/units/icons/wh_main_brt_pegasus_knights.png", lu = "wh_main_brt_cav_pegasus_knights"},
+    wh_main_brt_inf_men_at_arms = {card = "ui/units/icons/wh_main_brt_men_at_arms_halberd.png", lu = "wh_main_brt_inf_men_at_arms"},
+    wh_main_brt_inf_peasant_bowmen = {card = "ui/units/icons/wh_main_brt_bowmen.png", lu = "wh_main_brt_inf_peasant_bowmen"},
+    wh_main_brt_inf_spearmen_at_arms = {card = "ui/units/icons/wh_main_brt_spearmen_at_arms_shield.png", lu = "wh_main_brt_inf_spearmen_at_arms"},
+    wh_main_chs_art_hellcannon = {card = "ui/units/icons/wh_main_chs_hellcannon.png", lu = "wh_main_chs_art_hellcannon"},
+    wh_main_chs_cav_chaos_chariot = {card = "ui/units/icons/wh_main_chs_chariot.png", lu = "wh_main_chs_cav_chaos_chariot"},
+    wh_main_chs_cav_chaos_knights_0 = {card = "ui/units/icons/wh_main_chs_knights.png", lu = "wh_main_chs_cav_chaos_knights_0"},
+    wh_main_chs_cav_chaos_knights_1 = {card = "ui/units/icons/wh_main_chs_knights_lance.png", lu = "wh_main_chs_cav_chaos_knights_1"},
+    wh_main_chs_cav_marauder_horsemen_0 = {card = "ui/units/icons/wh_main_chs_marauder_horsemen.png", lu = "wh_main_chs_cav_marauder_horsemen_0"},
+    wh_main_chs_cav_marauder_horsemen_1 = {card = "ui/units/icons/wh_main_chs_marauder_horsemen_throwing_axe.png", lu = "wh_main_chs_cav_marauder_horsemen_1"},
+    wh_main_chs_inf_chaos_marauders_0 = {card = "ui/units/icons/wh_main_chs_marauder.png", lu = "wh_main_chs_inf_chaos_marauders_0"},
+    wh_main_chs_inf_chaos_marauders_1 = {card = "ui/units/icons/wh_main_chs_marauder_great_weapons.png", lu = "wh_main_chs_inf_chaos_marauders_1"},
+    wh_main_chs_inf_chaos_warriors_0 = {card = "ui/units/icons/wh_main_chs_warriors.png", lu = "wh_main_chs_inf_chaos_warriors_0"},
+    wh_main_chs_inf_chaos_warriors_1 = {card = "ui/units/icons/wh_main_chs_warriors_halberd.png", lu = "wh_main_chs_inf_chaos_warriors_1"},
+    wh_main_chs_inf_chosen_0 = {card = "ui/units/icons/wh_main_chs_chosen.png", lu = "wh_main_chs_inf_chosen_0"},
+    wh_main_chs_inf_chosen_1 = {card = "ui/units/icons/wh_main_chs_chosen_great_weapons.png", lu = "wh_main_chs_inf_chosen_1"},
+    wh_main_chs_mon_chaos_spawn = {card = "ui/units/icons/wh_main_chs_spawn.png", lu = "wh_main_chs_mon_chaos_spawn"},
+    wh_main_chs_mon_chaos_warhounds_0 = {card = "ui/units/icons/wh_main_chs_warhounds.png", lu = "wh_main_chs_mon_chaos_warhounds_0"},
+    wh_main_chs_mon_chaos_warhounds_1 = {card = "ui/units/icons/wh_main_chs_warhounds_poison.png", lu = "wh_main_chs_mon_chaos_warhounds_1"},
+    wh_main_chs_mon_giant = {card = "ui/units/icons/wh_main_chs_giant.png", lu = "wh_main_chs_mon_giant"},
+    wh_main_chs_mon_trolls = {card = "ui/units/icons/wh_main_chs_trolls.png", lu = "wh_main_chs_mon_trolls"},
+    wh_main_dwf_art_cannon = {card = "ui/units/icons/wh_main_dwf_cannon.png", lu = "wh_main_dwf_art_cannon"},
+    wh_main_dwf_art_flame_cannon = {card = "ui/units/icons/wh_main_dwf_flame_cannon.png", lu = "wh_main_dwf_art_flame_cannon"},
+    wh_main_dwf_art_grudge_thrower = {card = "ui/units/icons/wh_main_dwf_grudge_thrower.png", lu = "wh_main_dwf_art_grudge_thrower"},
+    wh_main_dwf_art_organ_gun = {card = "ui/units/icons/wh_main_dwf_organ_gun.png", lu = "wh_main_dwf_art_organ_gun"},
+    wh_main_dwf_inf_dwarf_warrior_0 = {card = "ui/units/icons/wh_main_dwf_warriors.png", lu = "wh_main_dwf_inf_dwarf_warrior_0"},
+    wh_main_dwf_inf_dwarf_warrior_1 = {card = "ui/units/icons/wh_main_dwf_warriors_great_weapons.png", lu = "wh_main_dwf_inf_dwarf_warrior_1"},
+    wh_main_dwf_inf_hammerers = {card = "ui/units/icons/wh_main_dwf_hammerers.png", lu = "wh_main_dwf_inf_hammerers"},
+    wh_main_dwf_inf_ironbreakers = {card = "ui/units/icons/wh_main_dwf_ironbreakers.png", lu = "wh_main_dwf_inf_ironbreakers"},
+    wh_main_dwf_inf_irondrakes_0 = {card = "ui/units/icons/wh_main_dwf_irondrakes.png", lu = "wh_main_dwf_inf_irondrakes_0"},
+    wh_main_dwf_inf_irondrakes_2 = {card = "ui/units/icons/wh_main_dwf_irondrakes_troll_hammer.png", lu = "wh_main_dwf_inf_irondrakes_2"},
+    wh_main_dwf_inf_longbeards = {card = "ui/units/icons/wh_main_dwf_longbeards.png", lu = "wh_main_dwf_inf_longbeards"},
+    wh_main_dwf_inf_longbeards_1 = {card = "ui/units/icons/wh_main_dwf_longbeards_great_weapons.png", lu = "wh_main_dwf_inf_longbeards_1"},
+    wh_main_dwf_inf_miners_0 = {card = "ui/units/icons/wh_main_dwf_miners.png", lu = "wh_main_dwf_inf_miners_0"},
+    wh_main_dwf_inf_miners_1 = {card = "ui/units/icons/wh_main_dwf_miners_blasting_charges.png", lu = "wh_main_dwf_inf_miners_1"},
+    wh_main_dwf_inf_quarrellers_0 = {card = "ui/units/icons/wh_main_dwf_quarrellers.png", lu = "wh_main_dwf_inf_quarrellers_0"},
+    wh_main_dwf_inf_quarrellers_1 = {card = "ui/units/icons/wh_main_dwf_quarrellers_great_weapons.png", lu = "wh_main_dwf_inf_quarrellers_1"},
+    wh_main_dwf_inf_slayers = {card = "ui/units/icons/wh_main_dwf_slayers.png", lu = "wh_main_dwf_inf_slayers"},
+    wh_main_dwf_inf_thunderers_0 = {card = "ui/units/icons/wh_main_dwf_thunderers.png", lu = "wh_main_dwf_inf_thunderers_0"},
+    wh_main_dwf_veh_gyrobomber = {card = "ui/units/icons/wh_main_dwf_gyrobomber.png", lu = "wh_main_dwf_veh_gyrobomber"},
+    wh_main_dwf_veh_gyrocopter_0 = {card = "ui/units/icons/wh_main_dwf_gyrocopter.png", lu = "wh_main_dwf_veh_gyrocopter_0"},
+    wh_main_dwf_veh_gyrocopter_1 = {card = "ui/units/icons/wh_main_dwf_gyrocopter_brimstone.png", lu = "wh_main_dwf_veh_gyrocopter_1"},
+    wh_main_emp_art_great_cannon = {card = "ui/units/icons/wh_main_emp_cannon.png", lu = "wh_main_emp_art_great_cannon"},
+    wh_main_emp_art_helblaster_volley_gun = {card = "ui/units/icons/wh_main_emp_helblaster_volley_gun.png", lu = "wh_main_emp_art_helblaster_volley_gun"},
+    wh_main_emp_art_helstorm_rocket_battery = {card = "ui/units/icons/wh_main_emp_helstorm_rocket.png", lu = "wh_main_emp_art_helstorm_rocket_battery"},
+    wh_main_emp_art_mortar = {card = "ui/units/icons/wh_main_emp_mortar.png", lu = "wh_main_emp_art_mortar"},
+    wh_main_emp_cav_demigryph_knights_0 = {card = "ui/units/icons/wh_main_emp_demigryph_knights.png", lu = "wh_main_emp_cav_demigryph_knights_0"},
+    wh_main_emp_cav_demigryph_knights_1 = {card = "ui/units/icons/wh_main_emp_demigryph_knights_halberd.png", lu = "wh_main_emp_cav_demigryph_knights_1"},
+    wh_main_emp_cav_empire_knights = {card = "ui/units/icons/wh_main_emp_empire_knights.png", lu = "wh_main_emp_cav_empire_knights"},
+    wh_main_emp_cav_outriders_0 = {card = "ui/units/icons/wh_main_emp_outriders.png", lu = "wh_main_emp_cav_outriders_0"},
+    wh_main_emp_cav_outriders_1 = {card = "ui/units/icons/wh_main_emp_outriders_grenade_launcher.png", lu = "wh_main_emp_cav_outriders_1"},
+    wh_main_emp_cav_pistoliers_1 = {card = "ui/units/icons/wh_main_emp_pistoliers_brace_pistols.png", lu = "wh_main_emp_cav_pistoliers_1"},
+    wh_main_emp_cav_reiksguard = {card = "ui/units/icons/wh_main_emp_reiksguard.png", lu = "wh_main_emp_cav_reiksguard"},
+    wh_main_emp_inf_crossbowmen = {card = "ui/units/icons/wh_main_emp_crossbowmen.png", lu = "wh_main_emp_inf_crossbowmen"},
+    wh_main_emp_inf_greatswords = {card = "ui/units/icons/wh_main_emp_greatswords.png", lu = "wh_main_emp_inf_greatswords"},
+    wh_main_emp_inf_halberdiers = {card = "ui/units/icons/wh_main_emp_halberd.png", lu = "wh_main_emp_inf_halberdiers"},
+    wh_main_emp_inf_handgunners = {card = "ui/units/icons/wh_main_emp_handgunners.png", lu = "wh_main_emp_inf_handgunners"},
+    wh_main_emp_inf_spearmen_0 = {card = "ui/units/icons/wh_main_emp_spearmen.png", lu = "wh_main_emp_inf_spearmen_0"},
+    wh_main_emp_inf_spearmen_1 = {card = "ui/units/icons/wh_main_emp_spearmen_shield.png", lu = "wh_main_emp_inf_spearmen_1"},
+    wh_main_emp_inf_swordsmen = {card = "ui/units/icons/wh_main_emp_swordsmen.png", lu = "wh_main_emp_inf_swordsmen"},
+    wh_main_emp_veh_luminark_of_hysh_0 = {card = "ui/units/icons/wh_main_emp_luminark.png", lu = "wh_main_emp_veh_luminark_of_hysh_0"},
+    wh_main_grn_art_doom_diver_catapult = {card = "ui/units/icons/wh_main_grn_doom_diver.png", lu = "wh_main_grn_art_doom_diver_catapult"},
+    wh_main_grn_art_goblin_rock_lobber = {card = "ui/units/icons/wh_main_grn_goblin_rock_lobber.png", lu = "wh_main_grn_art_goblin_rock_lobber"},
+    wh_main_grn_cav_forest_goblin_spider_riders_0 = {card = "ui/units/icons/wh_main_grn_goblin_spider_rider_spear.png", lu = "wh_main_grn_cav_forest_goblin_spider_riders_0"},
+    wh_main_grn_cav_forest_goblin_spider_riders_1 = {card = "ui/units/icons/wh_main_grn_goblin_spider_rider_bow.png", lu = "wh_main_grn_cav_forest_goblin_spider_riders_1"},
+    wh_main_grn_cav_goblin_wolf_chariot = {card = "ui/units/icons/wh_main_grn_goblin_wolf_chariot.png", lu = "wh_main_grn_cav_goblin_wolf_chariot"},
+    wh_main_grn_cav_goblin_wolf_riders_0 = {card = "ui/units/icons/wh_main_grn_goblin_wolf_rider_spear.png", lu = "wh_main_grn_cav_goblin_wolf_riders_0"},
+    wh_main_grn_cav_goblin_wolf_riders_1 = {card = "ui/units/icons/wh_main_grn_goblin_wolf_rider_bow.png", lu = "wh_main_grn_cav_goblin_wolf_riders_1"},
+    wh_main_grn_cav_orc_boar_boy_big_uns = {card = "ui/units/icons/wh_main_grn_boar_boyz_big_uns.png", lu = "wh_main_grn_cav_orc_boar_boy_big_uns"},
+    wh_main_grn_cav_orc_boar_boyz = {card = "ui/units/icons/wh_main_grn_boar_boyz.png", lu = "wh_main_grn_cav_orc_boar_boyz"},
+    wh_main_grn_cav_orc_boar_chariot = {card = "ui/units/icons/wh_main_grn_boar_chariot.png", lu = "wh_main_grn_cav_orc_boar_chariot"},
+    wh_main_grn_cav_savage_orc_boar_boy_big_uns = {card = "ui/units/icons/wh_main_grn_savage_orc_boar_boyz_big_uns.png", lu = "wh_main_grn_cav_savage_orc_boar_boy_big_uns"},
+    wh_main_grn_cav_savage_orc_boar_boyz = {card = "ui/units/icons/wh_main_grn_savage_orc_boar_boyz.png", lu = "wh_main_grn_cav_savage_orc_boar_boyz"},
+    wh_main_grn_inf_black_orcs = {card = "ui/units/icons/wh_main_grn_black_orc.png", lu = "wh_main_grn_inf_black_orcs"},
+    wh_main_grn_inf_goblin_archers = {card = "ui/units/icons/wh_main_grn_goblins_bow.png", lu = "wh_main_grn_inf_goblin_archers"},
+    wh_main_grn_inf_goblin_spearmen = {card = "ui/units/icons/wh_main_grn_goblins_spear.png", lu = "wh_main_grn_inf_goblin_spearmen"},
+    wh_main_grn_inf_night_goblin_archers = {card = "ui/units/icons/wh_main_grn_night_goblins_bow.png", lu = "wh_main_grn_inf_night_goblin_archers"},
+    wh_main_grn_inf_night_goblin_fanatics = {card = "ui/units/icons/wh_main_grn_night_goblins_sword.png", lu = "wh_main_grn_inf_night_goblin_fanatics"},
+    wh_main_grn_inf_night_goblin_fanatics_1 = {card = "ui/units/icons/wh_main_grn_night_goblins_bow.png", lu = "wh_main_grn_inf_night_goblin_fanatics_1"},
+    wh_main_grn_inf_night_goblins = {card = "ui/units/icons/wh_main_grn_night_goblins_sword.png", lu = "wh_main_grn_inf_night_goblins"},
+    wh_main_grn_inf_orc_arrer_boyz = {card = "ui/units/icons/wh_main_grn_orc_boyz_bow.png", lu = "wh_main_grn_inf_orc_arrer_boyz"},
+    wh_main_grn_inf_orc_big_uns = {card = "ui/units/icons/wh_main_grn_orc_boyz_big_uns.png", lu = "wh_main_grn_inf_orc_big_uns"},
+    wh_main_grn_inf_orc_boyz = {card = "ui/units/icons/wh_main_grn_orc_boyz_sword.png", lu = "wh_main_grn_inf_orc_boyz"},
+    wh_main_grn_inf_savage_orc_arrer_boyz = {card = "ui/units/icons/wh_main_grn_savage_orc_boyz_bow.png", lu = "wh_main_grn_inf_savage_orc_arrer_boyz"},
+    wh_main_grn_inf_savage_orc_big_uns = {card = "ui/units/icons/wh_main_grn_savage_orc_boyz_big_uns.png", lu = "wh_main_grn_inf_savage_orc_big_uns"},
+    wh_main_grn_inf_savage_orcs = {card = "ui/units/icons/wh_main_grn_savage_orc_boyz_sword.png", lu = "wh_main_grn_inf_savage_orcs"},
+    wh_main_grn_mon_arachnarok_spider_0 = {card = "ui/units/icons/wh_main_grn_arachnarok_spider.png", lu = "wh_main_grn_mon_arachnarok_spider_0"},
+    wh_main_grn_mon_giant = {card = "ui/units/icons/wh_main_grn_giant.png", lu = "wh_main_grn_mon_giant"},
+    wh_main_grn_mon_trolls = {card = "ui/units/icons/wh_main_grn_trolls.png", lu = "wh_main_grn_mon_trolls"},
+    wh_main_nor_cav_chaos_chariot = {card = "ui/units/icons/wh_main_chs_chariot.png", lu = "wh_main_nor_cav_chaos_chariot"},
+    wh_main_nor_cav_marauder_horsemen_0 = {card = "ui/units/icons/wh_main_chs_marauder_horsemen.png", lu = "wh_main_nor_cav_marauder_horsemen_0"},
+    wh_main_nor_cav_marauder_horsemen_1 = {card = "ui/units/icons/wh_main_chs_marauder_horsemen_throwing_axe.png", lu = "wh_main_nor_cav_marauder_horsemen_1"},
+    wh_main_nor_inf_chaos_marauders_0 = {card = "ui/units/icons/wh_main_chs_marauder.png", lu = "wh_main_nor_inf_chaos_marauders_0"},
+    wh_main_nor_inf_chaos_marauders_1 = {card = "ui/units/icons/wh_main_chs_marauder_great_weapons.png", lu = "wh_main_nor_inf_chaos_marauders_1"},
+    wh_main_nor_mon_chaos_trolls = {card = "ui/units/icons/wh_main_chs_trolls.png", lu = "wh_main_nor_mon_chaos_trolls"},
+    wh_main_nor_mon_chaos_warhounds_0 = {card = "ui/units/icons/wh_dlc08_nor_warhounds.png", lu = "wh_main_nor_mon_chaos_warhounds_0"},
+    wh_main_vmp_cav_black_knights_0 = {card = "ui/units/icons/wh_main_vmp_black_knights.png", lu = "wh_main_vmp_cav_black_knights_0"},
+    wh_main_vmp_cav_black_knights_3 = {card = "ui/units/icons/wh_main_vmp_black_knights_barded_lance.png", lu = "wh_main_vmp_cav_black_knights_3"},
+    wh_main_vmp_cav_hexwraiths = {card = "ui/units/icons/wh_main_vmp_hexwraiths.png", lu = "wh_main_vmp_cav_hexwraiths"},
+    wh_main_vmp_inf_cairn_wraiths = {card = "ui/units/icons/wh_main_vmp_cairn_wraith.png", lu = "wh_main_vmp_inf_cairn_wraiths"},
+    wh_main_vmp_inf_crypt_ghouls = {card = "ui/units/icons/wh_main_vmp_crypt_ghoul.png", lu = "wh_main_vmp_inf_crypt_ghouls"},
+    wh_main_vmp_inf_grave_guard_0 = {card = "ui/units/icons/wh_main_vmp_grave_guard.png", lu = "wh_main_vmp_inf_grave_guard_0"},
+    wh_main_vmp_inf_grave_guard_1 = {card = "ui/units/icons/wh_main_vmp_grave_guard_great_weapons.png", lu = "wh_main_vmp_inf_grave_guard_1"},
+    wh_main_vmp_inf_skeleton_warriors_0 = {card = "ui/units/icons/wh_main_vmp_skeleton_warrior_sword.png", lu = "wh_main_vmp_inf_skeleton_warriors_0"},
+    wh_main_vmp_inf_skeleton_warriors_1 = {card = "ui/units/icons/wh_main_vmp_skeleton_warrior_spear.png", lu = "wh_main_vmp_inf_skeleton_warriors_1"},
+    wh_main_vmp_inf_zombie = {card = "ui/units/icons/wh_main_vmp_zombies.png", lu = "wh_main_vmp_inf_zombie"},
+    wh_main_vmp_mon_crypt_horrors = {card = "ui/units/icons/wh_main_vmp_crypt_horrors.png", lu = "wh_main_vmp_mon_crypt_horrors"},
+    wh_main_vmp_mon_dire_wolves = {card = "ui/units/icons/wh_main_vmp_dire_wolves.png", lu = "wh_main_vmp_mon_dire_wolves"},
+    wh_main_vmp_mon_fell_bats = {card = "ui/units/icons/wh_main_vmp_fell_bats.png", lu = "wh_main_vmp_mon_fell_bats"},
+    wh_main_vmp_mon_terrorgheist = {card = "ui/units/icons/wh_main_vmp_terrorgheist.png", lu = "wh_main_vmp_mon_terrorgheist"},
+    wh_main_vmp_mon_vargheists = {card = "ui/units/icons/wh_main_vmp_vargheists.png", lu = "wh_main_vmp_mon_vargheists"},
+    wh_main_vmp_mon_varghulf = {card = "ui/units/icons/wh_main_vmp_varghulf.png", lu = "wh_main_vmp_mon_varghulf"},
+    wh_main_vmp_veh_black_coach = {card = "ui/units/icons/wh_main_vmp_black_coach.png", lu = "wh_main_vmp_veh_black_coach"},
 }
 -- Derpy Resource Overhaul: the Stores panel. It shows what every settlement of the local
 -- faction holds of each good, what its buildings add each turn, and how much space it has.
@@ -1011,7 +1429,7 @@ function S.view_model(realm)
         end
         if #realm == 0 then v.empty = S.NO_REALM end
     elseif S.view == "spending" then
-        S.spending(v)
+        if S.focus then S.escort_view(v) else S.spending(v) end
     elseif S.view == "workshop" then
         S.workshop(v, realm)
     elseif S.view == "map" then
@@ -1117,6 +1535,46 @@ function S.icon_of(stem)
     end
 end
 
+-- A SHIPMENT'S ESCORT (escort battles, spec 2026-10-09): a shipment row opens it, one CA unit card a
+-- unit, as CA's army strip draws an army. The cards are 60x130 and cannot fit a 28px row.
+S.CARD = "derpy_mr_card_"
+S.ESCORT_FOCUS = "ship:"
+S.NO_ESCORT = "No escort travels with this shipment. An army at war with you can take it without a fight."
+S.ESCORT_LINE = "These soldiers guard the shipment. An army that tries to take the cargo must beat them first; "
+    .. "if they win, the shipment goes on its way."
+
+function S.unit_name(unit)
+    local c = DERPY_MR_STORES_CARDS[unit]
+    return c and loc("land_units_onscreen_name_" .. c.lu, unit) or unit
+end
+
+-- the escort's units in the order they were rolled, from the shipment's saved list
+function S.escort_units(s)
+    local out = {}
+    for u in string.gmatch(s.escort or "", "[^,]+") do out[#out + 1] = u end
+    return out
+end
+
+function S.escort_view(v)
+    local id, ship = string.sub(S.focus, #S.ESCORT_FOCUS + 1), nil
+    for _, s in ipairs(S.ask("ships") or {}) do
+        if s.id == id then ship = s end
+    end
+    if not ship then                                  -- arrived or taken since: back to the list
+        S.focus = nil
+        return S.spending(v)
+    end
+    v.title = "Escort of " .. S.num(ship.n) .. " " .. S.name(ship.stem) .. ", " .. S.place(ship.from)
+        .. " to " .. S.place(ship.to)
+    v.heads = { "", "", "", "", "" }
+    v.cards = {}
+    for _, u in ipairs(S.escort_units(ship)) do
+        local c = DERPY_MR_STORES_CARDS[u]
+        if c then v.cards[#v.cards + 1] = { card = c.card, tip = S.unit_name(u) } end
+    end
+    v.empty = #v.cards > 0 and S.ESCORT_LINE or S.NO_ESCORT
+end
+
 -- CA's greyscale (the Exchange's EX.set_off shader): greyed and faded, or back in colour
 S.PAYIC = "derpy_mr_supic_"   -- a Spending row's icon of the good a supply pays with
 
@@ -1168,6 +1626,7 @@ function S.spending(v)
                 if g.stem == s.stem then icon = g.icon end
             end
             v.rows[#v.rows + 1] = { S.num(s.n) .. " " .. S.name(s.stem), from, to, "turn " .. s.due, "", icon = icon,
+                                    open = S.ESCORT_FOCUS .. s.id, tip = "Click to see its escort.",
                                     send = { label = "Show", look = { s.x, s.y },
                                              tip = "Now beside " .. (s.leg == 2 and to or from) .. ". It reaches " .. to
                                                  .. " on turn " .. s.due .. ". Click to see it on the map." } }
@@ -1670,6 +2129,12 @@ function S.build()
         pcall(function() p:CreateComponent(S.BAR .. i, S.PATH .. "derpy_mr_stores_bar") end)
         local b = find_uicomponent(p, S.BAR .. i)
         if is_uicomponent(b) then b:SetVisible(false) end
+    end
+    -- an escort's cards, made once and kept; draw_cards shows, places and hides them
+    for i = 1, L.CARDS do
+        pcall(function() p:CreateComponent(S.CARD .. i, S.PATH .. "derpy_mr_stores_card") end)
+        local c = find_uicomponent(p, S.CARD .. i)
+        if is_uicomponent(c) then c:SetVisible(false) end
     end
     -- the box for CA's map, made before any map dot so the engine draws it beneath them
     local clip = S.map_clip(p)
@@ -2336,6 +2801,7 @@ function S.refresh()
     if is_uicomponent(empty) then
         set(empty, v.empty)
         empty:SetVisible(#v.rows == 0 and v.map == nil)
+        put(empty, px, py, v.cards and L.escort_line or L.empty)   -- over an escort's cards, not on them
     end
     -- THE HOLDER STARTS AT THE TOP; a kept list's poll puts it back where the bar is.
     put(find_uicomponent(p, "rows_holder"), px, py, L.list)
@@ -2348,6 +2814,25 @@ function S.refresh()
     S.draw_rows(p, v.rows, v.heads, v.cols)
     S.draw_chart(p, v.chart)
     S.draw_map(p, v.map)
+    S.draw_cards(p, v.cards)
+end
+
+-- THE ESCORT'S CARDS in one row, CARD_GAP apart as CA's army strip; the ones past it go hidden.
+function S.draw_cards(p, cards)
+    local px, py = p:Position()
+    cards = cards or {}
+    for i = 1, L.CARDS do
+        local c = find_uicomponent(p, S.CARD .. i)
+        if is_uicomponent(c) then
+            c:SetVisible(cards[i] ~= nil)
+            if cards[i] then
+                c:MoveTo(px + L.cards[1] + (i - 1) * (L.CARD_W + L.CARD_GAP), py + L.cards[2])
+                sized(c, L.CARD_W, L.CARD_H)
+                c:SetImagePath(cards[i].card, 0)
+                c:SetTooltipText(cards[i].tip, true)
+            end
+        end
+    end
 end
 
 function S.is_open()

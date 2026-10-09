@@ -1165,6 +1165,8 @@ local function field(f, x, y, cqi, garrison)
              has_general = function() return true end,
              force_type = function() return { key = function() return "ARMY" end } end,
              command_queue_index = function() return cqi + 1000 end,
+             has_garrison_residence = function() return false end,
+             active_stance = function() return (STANCES or {})[cqi + 1000] or "MILITARY_FORCE_ACTIVE_STANCE_TYPE_DEFAULT" end,
              unit_list = function() return list({ 1 }) end,
              general_character = function() return {
                  command_queue_index = function() return cqi end,
@@ -1400,6 +1402,345 @@ eq(SAVED.derpy_mr_flows.supply.pP.prov_p.materials, true, "the switches are kept
 eq(SAVED.derpy_mr_flows.ships[#SAVED.derpy_mr_flows.ships].f, "gP", "and the shipments on the road")
 F.state.rates.supply = false
 eq(#ERRORS, 0, "no script errors in phase 5: " .. table.concat(ERRORS, "; "))
+
+-- ---- escort battles: the escort rolled at departure (spec 2026-10-09) ---------------------
+-- random_army_manager as CA's: a force is a flat list, one entry per weight point, kept by key
+RAM = { forces = {}, made = {}, calls = 0 }
+random_army_manager = {
+    get_force_by_key = function(_, k) return RAM.forces[k] or false end,
+    new_force = function(_, k) if RAM.forces[k] then return false end; RAM.forces[k] = { units = {} }; return true end,
+    add_unit = function(_, k, u, w)
+        if not RAM.forces[k] then RAM.forces[k] = { units = {} } end
+        for _ = 1, w do table.insert(RAM.forces[k].units, u) end
+    end,
+    generate_force = function(_, k, n, as_table)
+        local f = RAM.forces[k]
+        if not f then error("attempt to index local 'force_data' (a boolean value)") end   -- as CA's does
+        if #f.units == 0 then return false end
+        local t = {}
+        for i = 1, n do t[i] = f.units[1 + (i - 1) % #f.units] end
+        RAM.made[#RAM.made + 1] = { key = k, n = n }
+        return as_table and t or table.concat(t, ",")
+    end,
+}
+-- CA's generator: it ADDS to a force it already holds, on every call, and names a stale unit
+WH_Random_Army_Generator = {
+    generate_random_army = function(_, key, tpl, n, power, thresholds, as_table)
+        random_army_manager:new_force(key)
+        random_army_manager:add_unit(key, "wh_main_emp_veh_steam_tank", 1)
+        random_army_manager:add_unit(key, tpl .. "_unit", 2)
+        RAM.calls = RAM.calls + 1
+        return random_army_manager:generate_force(key, n, as_table)
+    end,
+}
+F.state.rates.escort = true
+;(function()
+    local function units_in(s) return select(2, string.gsub(s, ",", ",")) + 1 end
+    local eP = faction("eP", { human = true, sc = "wh_main_sc_dwf_dwarfs" })
+    local e1 = region("e1", 30000, 0, 400, { coal = 200 }); own(eP, e1, true)
+    local e2 = region("e2", 30100, 0, 400, {}); own(eP, e2)
+    TURN = 8000; F.request("eP", "send", "coal", "e2"); local es = last_ship()
+    eq(es.escort ~= nil and es.escort ~= "", true, "a cart leaves with its escort")
+    eq(units_in(es.escort), F.escort_size(es), "as many units as the cargo's value buys")
+    eq(F.escort_size({ stem = "coal", n = 1 }), DERPY_MR_FLOWS_ESCORT.min, "never fewer than the least")
+    eq(F.escort_size({ stem = "coal", n = 100000 }), DERPY_MR_FLOWS_ESCORT.max, "never more than the most")
+    eq(F.escort_size({ stem = "no_such_good", n = 80 }), DERPY_MR_FLOWS_ESCORT.min + 2, "a good with no rate counts 1")
+    eq(F.escort_size({ stem = "coal", n = 80 }), DERPY_MR_FLOWS_ESCORT.min + 6, "war materials count 3 a unit")
+    eq(F.escort_power(1), 1, "turn 1: the weakest"); eq(F.escort_power(200), 10, "and never past 10")
+    eq(F.escort_power(25), 3, "turn 25: CA's turn / 10, rounded")
+    eq(RAM.made[#RAM.made].key, "derpy_mr_esc_wh_main_sc_dwf_dwarfs_10", "the key carries the template and the power")
+    eq(string.find(es.escort, "steam_tank"), nil, "a stale unit in CA's template is never rolled")
+    local calls = RAM.calls
+    e1.held.coal = 200; F.request("eP", "send", "coal", "e2")
+    eq(RAM.calls, calls, "a second roll of one key does not run CA's generator again")
+    eq(#RAM.forces["derpy_mr_esc_wh_main_sc_dwf_dwarfs_10"].units, 2, "so the force does not grow with every cart")
+    -- the escort is rolled once: a turn start does not roll it again
+    local esc0 = es.escort; TURN = 8001; turn_start(eP); eq(es.escort, esc0, "the same escort the next turn")
+    -- no template: no escort
+    local nP = faction("nP", { human = true, sc = "wh_main_sc_none_here" })
+    local n1 = region("n1", 31000, 0, 400, { coal = 50 }); own(nP, n1, true)
+    local n2 = region("n2", 31010, 0, 400, {}); own(nP, n2)
+    F.request("nP", "send", "coal", "n2"); eq(last_ship().escort, "", "a race with no template has no escort")
+    -- Cathay: our own template, CA's tiers
+    local cP = faction("cP", { human = true, sc = "wh3_main_sc_cth_cathay" })
+    local c1 = region("c1", 32000, 0, 400, { coal = 200 }); own(cP, c1, true)
+    local c2 = region("c2", 32010, 0, 400, {}); own(cP, c2)
+    TURN = 30; F.request("cP", "send", "coal", "c2"); local cs = last_ship()
+    eq(string.find(cs.escort, "wh3_main_cth_") ~= nil, true, "Cathay rolls its own roster")
+    eq(string.find(cs.escort, "dragon_guard"), nil, "at power 3 no top-tier unit")
+    local mids = #RAM.forces["derpy_mr_escort_cth_3"].units
+    eq(mids, 40 + 3 * 15, "low at 1 and mid at the power, CA's weights")
+    TURN = 80; c1.held.coal = 200; F.state.ships = {}; F.request("cP", "send", "coal", "c2")
+    eq(string.find(last_ship().escort, "peasant"), nil, "at power 8 no low-tier unit")
+    -- a save from before escorts: rolled at the next turn start
+    F.state.ships = { es }; es.escort = nil; TURN = 8002; turn_start(eP); eq(es.escort ~= nil, true, "an old shipment gets its escort")
+    -- CA's generator absent (a campaign root that does not load it): no escort
+    local wg = WH_Random_Army_Generator; WH_Random_Army_Generator = nil
+    local xP = faction("xP", { human = true, sc = "wh_main_sc_emp_empire" })
+    local x1 = region("x1", 33500, 0, 400, { coal = 200 }); own(xP, x1, true)
+    local x2 = region("x2", 33510, 0, 400, {}); own(xP, x2)
+    F.state.ships = {}; TURN = 8100; F.request("xP", "send", "coal", "x2")
+    eq(last_ship().escort, "", "no generator, no escort")
+    lose(xP, x1); lose(xP, x2)
+    WH_Random_Army_Generator = wg
+    F.state.ships = {}
+    eq(#ERRORS, 0, "no script errors in the escort roll: " .. table.concat(ERRORS, "; "))
+end)()
+
+-- ---- escort battles: raid, defence, the outcome (spec 2026-10-09) -----------------------
+FBM_LOG, KILLED, CA_LOST, CA_ARMED = {}, {}, 0, false
+-- CA's Forced_Battle_Manager as it behaves: trigger_battle spawns the escort (stage 2 gives it a cqi)
+-- and ARMS a one-shot BattleCompleted handler that is added AFTER ours, so in the same session ours
+-- runs first; after a battle fought in 3D the campaign reloads and CA's (load_listeners) runs first.
+-- The handler unlocks the retreat, then get_battle(active_battle): a key no longer in the list is a
+-- script error and NO clear-up - the escort stays and the slot stays taken.
+Forced_Battle_Manager = { active_battle = "", forced_battles_list = {} }
+function Forced_Battle_Manager:setup_new_battle(key)
+    if self.forced_battles_list[key] then return false end    -- CA's: a key it holds is refused
+    local fb = { key = key, forces = {}, attacker = {}, target = {} }
+    function fb:add_new_force(k, units, fk, destroy) self.forces[k] = { units = units, f = fk, destroy = destroy } end
+    function fb:trigger_battle(att, target, x, y, ambush)
+        self.target = { cqi = 5000 + #FBM_LOG }
+        FBM_LOG[#FBM_LOG + 1] = { key = self.key, att = att, target = target, x = x, y = y, ambush = ambush,
+                                  force = self.forces[target], escort = self.target.cqi }
+        Forced_Battle_Manager.active_battle = self.key
+        CA_ARMED = true
+    end
+    self.forced_battles_list[key] = fb
+    return fb
+end
+local function ca_handler()
+    CA_ARMED = false
+    RETREAT_LOCKED = false
+    local b = Forced_Battle_Manager.forced_battles_list[Forced_Battle_Manager.active_battle]
+    if not b then CA_LOST = CA_LOST + 1 return end
+    KILLED[b.key] = true                                     -- destroy_after_battle
+    Forced_Battle_Manager.active_battle = ""
+    b.attacker, b.target = {}, {}
+end
+invasion_manager = { kill_invasion_by_key = function(_, k) KILLED[k] = true end, remove_invasion = function() end }
+RETREAT_LOCKED, FEED_OFF, BATTLE = false, {}, { fought = true, attacker_won = true, involved = {} }
+cm.get_campaign_ui_manager = function() return { override = function(_, k)
+    return { lock = function() if k == "retreat" then RETREAT_LOCKED = true end end,
+             unlock = function() if k == "retreat" then RETREAT_LOCKED = false end end } end } end
+cm.disable_event_feed_events = function(_, on, cat) FEED_OFF[#FEED_OFF + 1] = { on, cat } end
+cm.pending_battle_cache_attacker_victory = function() return BATTLE.attacker_won end
+cm.pending_battle_cache_mf_is_involved = function(_, cqi) return BATTLE.involved[cqi] == true end
+FORCES, STANCES, GARRISON = {}, {}, {}   -- cqi -> a live force; force cqi -> its stance; -> in a settlement
+local real_model = cm.model
+cm.model = function()
+    local m = real_model()
+    m.pending_battle = function() return { has_been_fought = function() return BATTLE.fought end } end
+    m.military_force_for_command_queue_index = function(_, cqi) return FORCES[cqi] or NULL end
+    return m
+end
+;(function()
+    -- opts.reload: CA's handler first (a battle fought in 3D); opts.not_ours: the escort was not in it
+    local function battle_done(attacker_won, fought, involved, opts)
+        opts = opts or {}
+        local last = FBM_LOG[#FBM_LOG]
+        if last and not opts.not_ours then involved[last.escort] = true end
+        fire("PendingBattle", {})
+        BATTLE = { attacker_won = attacker_won, fought = fought, involved = involved }
+        if opts.reload and CA_ARMED then ca_handler() end
+        fire("BattleCompleted", {})
+        if CA_ARMED then ca_handler() end
+    end
+    local function raider(f, cqi)
+        FORCES[cqi] = { is_null_interface = function() return false end, command_queue_index = function() return cqi end,
+                        has_garrison_residence = function() return GARRISON[cqi] == true end,
+                        active_stance = function() return STANCES[cqi] or "MILITARY_FORCE_ACTIVE_STANCE_TYPE_DEFAULT" end }
+        return { is_null_interface = function() return false end, faction = function() return f.iface end,
+                 has_military_force = function() return true end,
+                 military_force = function() return FORCES[cqi] end }
+    end
+    local RD = DERPY_MR_FLOWS_EVENTS.raid.dilemma
+    -- RAID: a player's army walks onto a computer's cart; the dilemma first
+    local rP = faction("rP", { human = true, sc = "wh_main_sc_emp_empire" })
+    local rp1 = region("rp1", 33000, 0, 4000, {}); own(rP, rp1, true)
+    local oA = faction("oA", { sc = "wh_main_sc_dwf_dwarfs" })
+    local oa1 = region("oa1", 33100, 0, 4000, { coal = 2000 }); own(oA, oa1, true)
+    local oa2 = region("oa2", 33200, 0, 4000, {}); own(oA, oa2)
+    war(rP, oA); DILEMMAS = {}; F.state.ships = {}
+    TURN = 9000; local os1 = F.ship(oA.iface, oa1.iface, oa2.iface, "coal", 60)
+    eq(os1.escort ~= "", true, "the computer's cart has its escort")
+    enter(os1.id, raider(rP, 777))
+    eq(ships_of("oA"), 1, "a player's army does not take an escorted cart by walking in")
+    eq(DILEMMAS[#DILEMMAS].key, RD, "it is asked first"); eq(DILEMMAS[#DILEMMAS].fcqi, rP.cqi, "the player is asked")
+    eq(DILEMMAS[#DILEMMAS].faction, oA.cqi, "naming the cart's owner")
+    enter(os1.id, raider(rP, 777)); eq(#DILEMMAS, 1, "one raid offer at a time")
+    answer(rP, RD, "SECOND")
+    eq(#FBM_LOG, 0, "Let it pass: no battle"); eq(ships_of("oA"), 1, "and the cart goes on")
+    TURN = 9001; enter(os1.id, raider(rP, 777)); eq(#DILEMMAS, 2, "asked again on a later turn")
+    answer(rP, RD, "FIRST")
+    local b = FBM_LOG[#FBM_LOG]
+    eq(b.att, 777, "the player's army attacks"); eq(b.target, b.key, "the escort it spawns")
+    eq(b.force.f, "oA", "the escort is the owner's"); eq(b.force.units, os1.escort, "the escort rolled at departure")
+    eq(b.force.destroy, true, "and it goes after the battle"); eq(b.x, os1.x, "at the cart"); eq(b.y, os1.y, "at the cart")
+    eq(b.ambush, false, "a pitched battle, not an ambush")
+    eq(RETREAT_LOCKED, false, "a raider may retreat")
+    battle_done(true, true, { [777] = true })
+    eq(ships_of("oA"), 0, "won: the cargo is taken"); eq(rp1.held.coal, os1.n, "into the raider's settlement")
+    eq(Forced_Battle_Manager.active_battle, "", "CA's own handler finds its battle and frees its slot")
+    eq(KILLED[b.key], true, "and removes the escort"); eq(CA_LOST, 0, "CA's handler never loses our battle")
+    eq(F.state.fight, nil, "the record is cleared")
+    -- raid lost, and a raid retreated from
+    TURN = 9002; local os2 = F.ship(oA.iface, oa1.iface, oa2.iface, "coal", 60)
+    enter(os2.id, raider(rP, 777)); answer(rP, RD, "FIRST")
+    battle_done(false, true, { [777] = true }); eq(ships_of("oA"), 1, "lost: the cart stays")
+    TURN = 9003; enter(os2.id, raider(rP, 777)); answer(rP, RD, "FIRST")
+    battle_done(true, false, { [777] = true }); eq(ships_of("oA"), 1, "retreated before the fight: nothing taken")
+    -- a raid that cannot start: the cart goes on, nothing taken
+    Forced_Battle_Manager.active_battle = "wh3_someone_elses_battle"; local nlog = #FBM_LOG
+    TURN = 9004; enter(os2.id, raider(rP, 777)); answer(rP, RD, "FIRST")
+    eq(#FBM_LOG, nlog, "CA's manager busy: no battle"); eq(ships_of("oA"), 1, "and the raid is never free")
+    Forced_Battle_Manager.active_battle = ""
+    -- a raider in a stance CA's manager cannot attack from (raiding, ambush, encamped): no battle, nothing taken
+    STANCES[782] = "MILITARY_FORCE_ACTIVE_STANCE_TYPE_LAND_RAID"; nlog = #FBM_LOG
+    TURN = 9008; enter(os2.id, raider(rP, 782)); answer(rP, RD, "FIRST")
+    eq(#FBM_LOG, nlog, "a raider that cannot attack starts no battle"); eq(ships_of("oA"), 1, "and takes nothing")
+    GARRISON[784] = true
+    TURN = 9011; enter(os2.id, raider(rP, 784)); answer(rP, RD, "FIRST")
+    eq(#FBM_LOG, nlog, "a garrisoned raider starts no battle")
+    STANCES[785] = "MILITARY_FORCE_ACTIVE_STANCE_TYPE_MARCH"
+    TURN = 9012; enter(os2.id, raider(rP, 785)); answer(rP, RD, "FIRST")
+    eq(#FBM_LOG, nlog + 1, "a marching raider attacks: CA's manager locks its retreat itself")
+    battle_done(false, true, { [785] = true }); nlog = #FBM_LOG
+    -- the raiding army gone by the answer
+    TURN = 9005; enter(os2.id, raider(rP, 778)); FORCES[778] = nil; answer(rP, RD, "FIRST")
+    eq(#FBM_LOG, nlog, "the army is gone: no battle")
+    -- a human army standing by a computer's cart at the computer's turn start does not take it
+    F.state.ships = {}; TURN = 9006; local os3 = F.ship(oA.iface, oa1.iface, oa2.iface, "coal", 60)
+    rP.armies = { field(rP, os3.x, os3.y, 779) }
+    TURN = 9007; turn_start(oA); eq(F.ship_by_id(os3.id) ~= nil, true, "a player takes a computer's cart only by walking in")
+    eq(os3.leg, 2, "and it moves on")
+    rP.armies = {}
+    -- a computer army still walks in and takes it
+    local kA = faction("kA", { sc = "wh_main_sc_grn_greenskins" }); local ka1 = region("ka1", 33300, 0, 4000, {}); own(kA, ka1, true)
+    war(kA, oA); enter(os3.id, raider(kA, 780)); eq(F.ship_by_id(os3.id), nil, "a computer army takes it without a fight")
+    eq(ka1.held.coal, os3.n, "into its settlement")
+
+    -- DEFENCE: a computer army by the player's cart at the player's turn start
+    local dPl = faction("dPl", { human = true, sc = "wh_main_sc_emp_empire" })
+    local dp1 = region("dp1", 34000, 0, 4000, { coal = 2000 }); own(dPl, dp1, true)
+    local dp2 = region("dp2", 34100, 0, 4000, {}); own(dPl, dp2)
+    local aE = faction("aE", { sc = "wh_main_sc_grn_greenskins" }); local ae1 = region("ae1", 34500, 0, 4000, {}); own(aE, ae1, true)
+    war(dPl, aE)
+    TURN = 9100; dp1.held.coal = 100; F.request("dPl", "send", "coal", "dp2"); local ds1 = last_ship()
+    aE.armies = { field(aE, ds1.x, ds1.y, 600) }; FEED_OFF = {}
+    TURN = 9101; turn_start(dPl)
+    local d = FBM_LOG[#FBM_LOG]
+    eq(d.att, 1600, "the enemy army attacks"); eq(d.force.f, "dPl", "the player's escort defends")
+    eq(d.force.units, ds1.escort, "the escort rolled at departure")
+    eq(RETREAT_LOCKED, true, "retreat is locked: a retreat would read as a win")
+    eq(FEED_OFF[1][1], true, "the escort's own messages are held back"); eq(FEED_OFF[1][2], "wh_event_category_character", "the character ones")
+    eq(ships_of("dPl"), 1, "the cart waits for the battle"); eq(ds1.leg, 1, "and does not move yet")
+    battle_done(false, true, { [1600] = true })
+    eq(ships_of("dPl"), 1, "defended: the cart goes on"); eq(ds1.leg, 2, "it moves as it would have")
+    TURN = 9102; aE.armies = { field(aE, ds1.x, ds1.y, 601) }; turn_start(dPl)
+    battle_done(true, true, { [1601] = true })
+    eq(ships_of("dPl"), 0, "lost: the enemy takes it"); eq(ae1.held.coal, ds1.n, "into its settlement")
+    -- A BATTLE FOUGHT IN 3D: the campaign reloads and CA's handler runs first; still ours
+    aE.armies = {}
+    TURN = 9103; dp1.held.coal = 100; F.request("dPl", "send", "coal", "dp2"); local dr = last_ship()
+    aE.armies = { field(aE, dr.x, dr.y, 608) }
+    TURN = 9104; turn_start(dPl)
+    battle_done(false, true, { [1608] = true }, { reload = true })
+    eq(F.state.fight, nil, "CA's handler first: our record still read"); eq(dr.leg, 2, "and the defended cart moves on")
+    -- the same attacker's OTHER battle (the escort not in it) is not ours
+    aE.armies = {}
+    TURN = 9105; dp1.held.coal = 100; F.request("dPl", "send", "coal", "dp2"); local du = last_ship()
+    aE.armies = { field(aE, du.x, du.y, 609) }
+    TURN = 9106; turn_start(dPl)
+    battle_done(true, true, { [1609] = true }, { not_ours = true, reload = true })
+    eq(F.ship_by_id(du.id) ~= nil, true, "the attacker's other battle takes nothing")
+    eq(F.state.fight, nil, "and CA's manager has dropped ours, so the record goes now")
+    eq(RETREAT_LOCKED, false, "retreat unlocked"); eq(FEED_OFF[#FEED_OFF][1], false, "the messages back on")
+    -- A COMPUTER ARMY WALKING ONTO THE PLAYER'S ESCORTED CART: it waits for the turn-start battle
+    aE.armies = {}; F.state.ships = {}
+    TURN = 9107; dp1.held.coal = 100; F.request("dPl", "send", "coal", "dp2"); local dw = last_ship()
+    enter(dw.id, raider(aE, 783)); eq(F.ship_by_id(dw.id) ~= nil, true, "a computer army does not take an escorted cart by walking in")
+    aE.armies = { field(aE, dw.x, dw.y, 610) }; local nw = #FBM_LOG
+    TURN = 9108; turn_start(dPl); eq(#FBM_LOG, nw + 1, "it fights the escort at the player's turn start")
+    battle_done(true, true, { [1610] = true }); eq(F.ship_by_id(dw.id), nil, "and takes it only by winning")
+    -- AN ATTACKER IN A STANCE THAT CANNOT ATTACK: the cart is taken as before, no battle hangs
+    aE.armies = {}
+    TURN = 9109; dp1.held.coal = 100; F.request("dPl", "send", "coal", "dp2"); local ds = last_ship()
+    STANCES[1611] = "MILITARY_FORCE_ACTIVE_STANCE_TYPE_LAND_RAID"; aE.armies = { field(aE, ds.x, ds.y, 611) }; nw = #FBM_LOG
+    TURN = 9110; turn_start(dPl); eq(#FBM_LOG, nw, "no battle"); eq(F.ship_by_id(ds.id), nil, "taken as before")
+    aE.armies = {}
+    -- a defence won on the arrival turn: it arrives
+    aE.armies = {}
+    TURN = 9120; dp1.held.coal = 100; F.request("dPl", "send", "coal", "dp2"); local da = last_ship()
+    TURN = 9122; aE.armies = { field(aE, da.x, da.y, 602) }; local held2 = dp2.held.coal or 0; turn_start(dPl)
+    battle_done(false, true, { [1602] = true })
+    eq(ships_of("dPl"), 0, "defended on its last turn: it arrives"); eq(dp2.held.coal, held2 + da.n, "in full")
+    -- two carts threatened in one turn start: the first fights, the second is taken
+    aE.armies = {}
+    TURN = 9200; dp1.held.coal = 100; F.request("dPl", "send", "coal", "dp2"); local t1 = last_ship()
+    dp1.held.coal = 100; F.request("dPl", "send", "coal", "dp2"); local t2 = last_ship()
+    aE.armies = { field(aE, t1.x, t1.y, 603) }; local nb = #FBM_LOG
+    TURN = 9201; turn_start(dPl)
+    eq(#FBM_LOG, nb + 1, "one battle"); eq(ships_of("dPl"), 1, "the other cart is taken as before")
+    -- a battle that is not ours leaves the record alone
+    battle_done(true, true, { [99999] = true }); eq(F.state.fight ~= nil, true, "another battle: our record kept")
+    eq(ships_of("dPl"), 1, "and the cart is not touched")
+    aE.armies = {}
+    TURN = 9202; turn_start(dPl); eq(F.state.fight, nil, "a record whose battle went elsewhere goes next turn")
+    -- A BATTLE THAT NEVER FIRES: the next turn start undoes what F.fight set up
+    F.state.ships = {}; TURN = 9203; dp1.held.coal = 100; F.request("dPl", "send", "coal", "dp2"); local sv = last_ship()
+    aE.armies = { field(aE, sv.x, sv.y, 612) }
+    TURN = 9204; turn_start(dPl); local sk = F.state.fight.key
+    eq(RETREAT_LOCKED, true, "set up: retreat locked"); eq(KILLED[sk], nil, "and the escort out")
+    CA_ARMED = false; aE.armies = {}
+    Forced_Battle_Manager.forced_battles_list.wh3_ca_own_battle = {}
+    turn_start(dPl)
+    eq(F.state.fight ~= nil, true, "the turn it was set up, the record is kept")
+    eq(Forced_Battle_Manager.forced_battles_list[sk] ~= nil, true, "and so is CA's entry for the battle to come")
+    TURN = 9205; turn_start(dPl)
+    eq(F.state.fight, nil, "stale record cleared"); eq(Forced_Battle_Manager.active_battle, "", "and CA's slot freed")
+    eq(KILLED[sk], true, "the escort it spawned removed")
+    eq(RETREAT_LOCKED, false, "the retreat unlocked"); eq(FEED_OFF[#FEED_OFF][1], false, "the messages back on")
+    local ours = 0
+    for k in pairs(Forced_Battle_Manager.forced_battles_list) do if string.sub(k, 1, 16) == "derpy_mr_escort_" then ours = ours + 1 end end
+    eq(ours, 0, "our finished battles leave CA's saved list at the next turn start")
+    eq(Forced_Battle_Manager.forced_battles_list.wh3_ca_own_battle ~= nil, true, "and CA's own are left alone")
+    Forced_Battle_Manager.forced_battles_list.wh3_ca_own_battle = nil
+    -- a cart with no escort is taken as before
+    F.state.ships = {}
+    TURN = 9300; dp1.held.coal = 100; F.request("dPl", "send", "coal", "dp2"); local ne = last_ship(); ne.escort = ""
+    aE.armies = { field(aE, ne.x, ne.y, 604) }; nb = #FBM_LOG
+    TURN = 9301; turn_start(dPl); eq(#FBM_LOG, nb, "no escort: no battle"); eq(ships_of("dPl"), 0, "taken as before")
+    -- the switch off: today's rule
+    F.state.rates.escort = false; aE.armies = {}
+    TURN = 9400; dp1.held.coal = 100; F.request("dPl", "send", "coal", "dp2"); local o1 = last_ship()
+    aE.armies = { field(aE, o1.x, o1.y, 605) }; nb = #FBM_LOG
+    TURN = 9401; turn_start(dPl); eq(#FBM_LOG, nb, "off: no battle"); eq(ships_of("dPl"), 0, "taken as before")
+    TURN = 9402; dp1.held.coal = 100; F.request("dPl", "send", "coal", "dp2"); local o2 = last_ship(); DILEMMAS = {}
+    war(rP, dPl); enter(o2.id, raider(rP, 781)); eq(#DILEMMAS, 0, "off: no raid offer"); eq(ships_of("dPl"), 0, "walked in and taken")
+    F.state.rates.escort = true; aE.armies = {}
+    -- CA's manager absent (a campaign root that does not load it): taken as before
+    local fbm = Forced_Battle_Manager; Forced_Battle_Manager = nil
+    TURN = 9500; dp1.held.coal = 100; F.request("dPl", "send", "coal", "dp2"); local o3 = last_ship()
+    aE.armies = { field(aE, o3.x, o3.y, 606) }
+    TURN = 9501; turn_start(dPl); eq(ships_of("dPl"), 0, "no battle manager: taken as before")
+    Forced_Battle_Manager = fbm; aE.armies = {}
+    -- CA's override list without "retreat" (its override() returns nil): the battle still starts
+    local uim = cm.get_campaign_ui_manager
+    cm.get_campaign_ui_manager = function() return { override = function() return nil end } end
+    F.state.ships = {}; dp1.held.coal = 100; TURN = 9600; F.request("dPl", "send", "coal", "dp2"); local o4 = last_ship()
+    aE.armies = { field(aE, o4.x, o4.y, 607) }; nb = #FBM_LOG
+    TURN = 9601; turn_start(dPl); eq(#FBM_LOG, nb + 1, "no retreat override: the battle still starts")
+    battle_done(false, true, { [1607] = true }); cm.get_campaign_ui_manager = uim; aE.armies = {}
+    -- spawning the escort is not a recruit
+    F.state.fight = { id = "x", side = "defend", key = "k", taker = "aE", force = 1, turn = TURN }
+    F.state.fight.owner = "aE"
+    eq(F.recruit_paused("aE"), true, "the escort's owner is not charged while it spawns")
+    eq(F.recruit_paused("dPl"), false, "every other faction still is")
+    F.state.fight = nil
+    F.state.ships = {}
+    eq(#ERRORS, 0, "no script errors in escort battles: " .. table.concat(ERRORS, "; "))
+end)()
 
 -- ---- phase 6, part 2: Restore on capture ------------------------------------------------
 -- Occupying a settlement whose captured stores hold the cost in building materials offers a

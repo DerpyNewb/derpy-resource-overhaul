@@ -480,6 +480,14 @@ EVENTS = (
          bundle=("derpy_mr_event_restore", "public_order_happy.png", "Restored", 5,
                  "Repaired from this settlement's own stores: public order is up.",
                  [("wh_main_effect_public_order_events", "region_to_province_own_unseen", 5)])),
+    # ESCORT BATTLES (spec 2026-10-09): offered when a player's army walks onto an enemy cart, so not in
+    # the turn-start order and keeping no gap. Nothing is spent; FIRST starts the battle (flows.lua
+    # F.raid_answer). `use` only picks the cost line's icon: CA's weapon glyph.
+    dict(key="raid", use="war", cost=0, where="ship", image="food_merchant",
+         title="An Enemy Shipment", text="Your army has caught up with a shipment of "
+         "{{CcoCampaignEventDilemma:FirstTargetFactionNameWithIcon}}. Its escort will fight for the cargo.",
+         accept=("Attack the escort", "Fight the escort: win and the cargo goes to your nearest settlement."),
+         bundle=None, icon="convoy_icon.png", decline=("Let it pass", "The shipment goes on its way.")),
 )
 EVENT_DECLINE = ("Keep the stores", "Nothing is spent.")
 
@@ -1286,6 +1294,7 @@ def n_loc():
     return (LOC_PER_GOOD * len(GOODS) + 2 * len(UNITS) + LOC_PER_RARE_GOOD * len(RARE)
             + LOC_PER_CHAIN * chains + 5 * (len(GOODS) + len(CA_STEMS)) + 3 + 2 * len(FLOW_FACTORS)
             + 2 * len(USE_BUNDLES) + 2 * len(ORDERS) + 2 * len(event_bundles()) + 8 * len(EVENTS) + 1   # 8: 6 dilemma lines, cost and reward; 1: Nothing is spent
+            + sum(1 for e in EVENTS if e.get("decline"))   # an event's own decline line (the raid)
             + 2 * len(SUPPLY) + 2 + len(MINT_FX) + 2 + 2 * len(store_stems())   # Exports held; the hidden markers
             + 2 * len(WORK_UPGRADES) + 2 * sum(1 for w in WORK_ITEMS if not w[3])
             + 2   # Recruits
@@ -2130,7 +2139,7 @@ def _dilemmas(add, loc):
                                     override_icon="", generate=False, prioritized=False, event_category="Event",
                                     is_large_dilemma=False))
         loc += [("dilemmas_localised_title_" + k, e["title"]), ("dilemmas_localised_description_" + k, e["text"])]
-        for choice, (label, line) in (("FIRST", e["accept"]), ("SECOND", EVENT_DECLINE)):
+        for choice, (label, line) in (("FIRST", e["accept"]), ("SECOND", e.get("decline", EVENT_DECLINE))):
             add("cdir_events_dilemma_choice_details_tables",
                 {"choice_key": choice, "dilemma_key": k, "audio_event_hover": "", "audio_choice_vo": ""})
             pre = "cdir_events_dilemma_choice_details_localised_choice_"
@@ -2153,6 +2162,8 @@ def event_lines(e, choice):
     both read off the accept line, or 'Nothing is spent.' under the decline."""
     import gen_mr_ui
     if choice == "SECOND":
+        if e.get("decline"):   # its own words, so its own component: derpy_mr_dil_keep reads "Nothing is spent"
+            return [(event_dilemma(e["key"]) + "_pass", "", "default", e["decline"][1].rstrip("."))]
         return [("derpy_mr_dil_keep", "", "default", EVENT_DECLINE[1].rstrip("."))]
     cost, reward = e["accept"][1].rstrip(".").split(": ", 1)
     icon_ = e["bundle"][1] if e["bundle"] else e["icon"]
@@ -2173,7 +2184,7 @@ def check_dilemmas(t, loc):
     choices = t["cdir_events_dilemma_choice_details_tables"][2]
     pays = t["cdir_events_dilemma_payloads_tables"][2]
     target ={"region": "RegionTargetName", "tribute": "FirstTargetFactionNameWithIcon",
-              "arsenal": "CharacterTargetName"}
+              "arsenal": "CharacterTargetName", "raid": "FirstTargetFactionNameWithIcon"}
     for e in EVENTS:
         k = event_dilemma(e["key"])
         assert rows[k]["ui_image"] in images, "no CA dilemma image %s" % rows[k]["ui_image"]

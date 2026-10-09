@@ -978,6 +978,52 @@ SUP_ON = false; click("derpy_mr_tab_goods"); click("derpy_mr_tab_spending")
 eq(cell(1, 1).text, S.section("On the road (0 of 3)"), "province supplies off: the road comes first")
 eq(find("hdr_2").text, "", "and no supply headings stand over it")
 SUP_ON = true
+-- THE ESCORT VIEW (escort battles, spec 2026-10-09): a shipment row opens its escort, one CA card a unit
+do
+    local W, Q = "wh_main_dwf_inf_dwarf_warrior_0", "wh_main_dwf_inf_quarrellers_0"
+    local ships0 = SHIPS
+    SHIPS = { { id = "derpy_mr_ship_1", f = LOCAL, stem = "coal", n = 22, from = "reg_b", to = "reg_a", due = 52,
+                leg = 1, x = 40, y = 50 } }
+    SHIPS[1].escort = W .. "," .. W .. "," .. Q
+    LOC["land_units_onscreen_name_" .. DERPY_MR_STORES_CARDS[W].lu] = "Dwarf Warriors"
+    click("derpy_mr_tab_goods"); click("derpy_mr_tab_spending")
+    eq(find("derpy_mr_row_3").tip, "Click to see its escort.", "the shipment row says it opens")
+    eq(find("derpy_mr_card_1").visible, false, "no card on the Spending tab itself")
+    click("derpy_mr_row_3")
+    eq(find("sub_title").text, "Escort of 22 Coal, Bravo to Alpha", "the view names the shipment")
+    local p = find("derpy_mr_stores_panel")
+    local c1, c2, c3 = find("derpy_mr_card_1"), find("derpy_mr_card_2"), find("derpy_mr_card_3")
+    eq(c1.visible and c2.visible and c3.visible, true, "a card per unit")
+    eq(find("derpy_mr_card_4").visible, false, "no card past the escort")
+    eq(c1.images[0], DERPY_MR_STORES_CARDS[W].card, "CA's card for the unit, not its key")
+    eq(c3.images[0], DERPY_MR_STORES_CARDS[Q].card, "in the order it was rolled")
+    eq(c1.tip, "Dwarf Warriors", "its name on hover"); eq(c3.tip, Q, "a name with no loc falls back to the key")
+    eq(c1.x, p.x + LL.cards[1], "the row starts at the list's left"); eq(c1.y, p.y + LL.cards[2], "under the line")
+    eq(c2.x - c1.x, LL.CARD_W + LL.CARD_GAP, "spaced as CA's army strip")
+    eq(c1.w, LL.CARD_W, "at the card's own width"); eq(c1.h, LL.CARD_H, "and height")
+    eq(shown_rows(), 0, "no list under the cards")
+    local line = find("empty_text")
+    eq(line.visible, true, "a line says what the escort does"); eq(line.text, S.ESCORT_LINE, "this line")
+    eq(line.y, p.y + LL.escort_line[2], "over the cards, not on them")
+    eq(find("derpy_mr_back").visible, true, "Back leads out")
+    dump("escort")
+    click("derpy_mr_back")
+    eq(find("derpy_mr_card_1").visible, false, "Back hides the cards"); eq(shown_rows() > 0, true, "and the list is back")
+    eq(find("empty_text").y, p.y + LL.empty[2], "the empty line back in its own place")
+    -- no escort
+    SHIPS[1].escort = ""
+    click("derpy_mr_row_3")
+    eq(find("empty_text").text, S.NO_ESCORT, "no escort: says the cart is taken without a fight")
+    eq(find("derpy_mr_card_1").visible, false, "and draws no card")
+    -- the shipment arrived while the view was open: back to the list, no error
+    local keep = SHIPS; SHIPS = {}
+    click("derpy_mr_tab_spending")
+    S.focus = "ship:derpy_mr_ship_1"; S.refresh()
+    eq(S.focus, nil, "a shipment gone drops the view"); eq(find("derpy_mr_card_1").visible, false, "with its cards")
+    SHIPS = ships0
+    click("derpy_mr_tab_goods"); click("derpy_mr_tab_spending")
+    eq(#ERRORS, 0, "no panel errors in the escort view: " .. table.concat(ERRORS, "; "))
+end
 do
     -- RECRUITS (workshop expansion spec section 3): last turn's draw, at the foot of the Spending tab
     local fl = DERPY_MR_FLOWS

@@ -545,7 +545,7 @@ function S.view_model(realm)
         end
         if #realm == 0 then v.empty = S.NO_REALM end
     elseif S.view == "spending" then
-        S.spending(v)
+        if S.focus then S.escort_view(v) else S.spending(v) end
     elseif S.view == "workshop" then
         S.workshop(v, realm)
     elseif S.view == "map" then
@@ -651,6 +651,46 @@ function S.icon_of(stem)
     end
 end
 
+-- A SHIPMENT'S ESCORT (escort battles, spec 2026-10-09): a shipment row opens it, one CA unit card a
+-- unit, as CA's army strip draws an army. The cards are 60x130 and cannot fit a 28px row.
+S.CARD = "derpy_mr_card_"
+S.ESCORT_FOCUS = "ship:"
+S.NO_ESCORT = "No escort travels with this shipment. An army at war with you can take it without a fight."
+S.ESCORT_LINE = "These soldiers guard the shipment. An army that tries to take the cargo must beat them first; "
+    .. "if they win, the shipment goes on its way."
+
+function S.unit_name(unit)
+    local c = DERPY_MR_STORES_CARDS[unit]
+    return c and loc("land_units_onscreen_name_" .. c.lu, unit) or unit
+end
+
+-- the escort's units in the order they were rolled, from the shipment's saved list
+function S.escort_units(s)
+    local out = {}
+    for u in string.gmatch(s.escort or "", "[^,]+") do out[#out + 1] = u end
+    return out
+end
+
+function S.escort_view(v)
+    local id, ship = string.sub(S.focus, #S.ESCORT_FOCUS + 1), nil
+    for _, s in ipairs(S.ask("ships") or {}) do
+        if s.id == id then ship = s end
+    end
+    if not ship then                                  -- arrived or taken since: back to the list
+        S.focus = nil
+        return S.spending(v)
+    end
+    v.title = "Escort of " .. S.num(ship.n) .. " " .. S.name(ship.stem) .. ", " .. S.place(ship.from)
+        .. " to " .. S.place(ship.to)
+    v.heads = { "", "", "", "", "" }
+    v.cards = {}
+    for _, u in ipairs(S.escort_units(ship)) do
+        local c = DERPY_MR_STORES_CARDS[u]
+        if c then v.cards[#v.cards + 1] = { card = c.card, tip = S.unit_name(u) } end
+    end
+    v.empty = #v.cards > 0 and S.ESCORT_LINE or S.NO_ESCORT
+end
+
 -- CA's greyscale (the Exchange's EX.set_off shader): greyed and faded, or back in colour
 S.PAYIC = "derpy_mr_supic_"   -- a Spending row's icon of the good a supply pays with
 
@@ -702,6 +742,7 @@ function S.spending(v)
                 if g.stem == s.stem then icon = g.icon end
             end
             v.rows[#v.rows + 1] = { S.num(s.n) .. " " .. S.name(s.stem), from, to, "turn " .. s.due, "", icon = icon,
+                                    open = S.ESCORT_FOCUS .. s.id, tip = "Click to see its escort.",
                                     send = { label = "Show", look = { s.x, s.y },
                                              tip = "Now beside " .. (s.leg == 2 and to or from) .. ". It reaches " .. to
                                                  .. " on turn " .. s.due .. ". Click to see it on the map." } }
@@ -1204,6 +1245,12 @@ function S.build()
         pcall(function() p:CreateComponent(S.BAR .. i, S.PATH .. "derpy_mr_stores_bar") end)
         local b = find_uicomponent(p, S.BAR .. i)
         if is_uicomponent(b) then b:SetVisible(false) end
+    end
+    -- an escort's cards, made once and kept; draw_cards shows, places and hides them
+    for i = 1, L.CARDS do
+        pcall(function() p:CreateComponent(S.CARD .. i, S.PATH .. "derpy_mr_stores_card") end)
+        local c = find_uicomponent(p, S.CARD .. i)
+        if is_uicomponent(c) then c:SetVisible(false) end
     end
     -- the box for CA's map, made before any map dot so the engine draws it beneath them
     local clip = S.map_clip(p)
@@ -1870,6 +1917,7 @@ function S.refresh()
     if is_uicomponent(empty) then
         set(empty, v.empty)
         empty:SetVisible(#v.rows == 0 and v.map == nil)
+        put(empty, px, py, v.cards and L.escort_line or L.empty)   -- over an escort's cards, not on them
     end
     -- THE HOLDER STARTS AT THE TOP; a kept list's poll puts it back where the bar is.
     put(find_uicomponent(p, "rows_holder"), px, py, L.list)
@@ -1882,6 +1930,25 @@ function S.refresh()
     S.draw_rows(p, v.rows, v.heads, v.cols)
     S.draw_chart(p, v.chart)
     S.draw_map(p, v.map)
+    S.draw_cards(p, v.cards)
+end
+
+-- THE ESCORT'S CARDS in one row, CARD_GAP apart as CA's army strip; the ones past it go hidden.
+function S.draw_cards(p, cards)
+    local px, py = p:Position()
+    cards = cards or {}
+    for i = 1, L.CARDS do
+        local c = find_uicomponent(p, S.CARD .. i)
+        if is_uicomponent(c) then
+            c:SetVisible(cards[i] ~= nil)
+            if cards[i] then
+                c:MoveTo(px + L.cards[1] + (i - 1) * (L.CARD_W + L.CARD_GAP), py + L.cards[2])
+                sized(c, L.CARD_W, L.CARD_H)
+                c:SetImagePath(cards[i].card, 0)
+                c:SetTooltipText(cards[i].tip, true)
+            end
+        end
+    end
 end
 
 function S.is_open()

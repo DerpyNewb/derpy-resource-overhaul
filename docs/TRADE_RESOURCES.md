@@ -1663,3 +1663,60 @@ Food caps at 100) or the faction has no such pool ("no_pool"); Spice-hardened an
 only (`lord = true`, `character_type("general")`), since their effects are `general_to_force_own`; the Workshop
 redraws on `CharacterSelected`/`CharacterDeselected` and a click whose selection moved since the draw redraws
 instead of buying for the old army. Deployed `aae632d2` (backup `Backup/resource_overhaul_20261008_rare_works/`).
+
+## 34. Escort battles (built and in `data/` 2026-10-09, not yet seen in game)
+
+Spec `superpowers/specs/2026-10-09-resource-overhaul-escort-battles-design.md`, plan
+`superpowers/plans/2026-10-09-resource-overhaul-escort-battles.md`. Taking a shipment's cargo costs a
+battle whenever a player is one side; computer against computer is still a free seizure.
+
+- **The escort is rolled when the cart leaves** (`F.escort_roll`) and saved on it as CA's unit list:
+  `clamp(4 + cargo x SELL_RATE / 40, 4, 12)` units at CA's Nagash power rule (turn / 10, 1-10), from
+  CA's own `WH_Random_Army_Generator` templates by subculture (`gen_mr_ui.escort_templates`, 19).
+  Border Princes use the Empire's; Cathay, which CA gives no template, uses ours (`ESCORT_OWN`, CA's
+  tier weights). A subculture with neither has no escort and its carts are taken free.
+- **Two traps in CA's library:** `generate_random_army` appends to a force it already holds on every
+  call, so it runs once per key per session and later rolls use `random_army_manager:generate_force`;
+  and five keys in CA's templates (`wh_main_emp_veh_steam_tank`, not `_driver`, and four more) have
+  no `unit_variants` row, so they are pruned from our copy of the force (`ESCORT_DROP`).
+- **Raid:** a player's army walking onto an enemy cart gets the DB dilemma `derpy_mr_dil_raid`
+  ("Attack the escort" / "Let it pass"). Attack spawns the escort for the owner at the cart through
+  CA's `Forced_Battle_Manager` and the player's army attacks it; a win seizes as before, a loss or a
+  retreat leaves the cart. A raid that cannot start (CA's manager busy, the army gone) takes nothing.
+  A human army standing by a computer's escorted cart at its turn start no longer takes it. A raider
+  garrisoned or in a stance CA's manager cannot attack from (raiding, ambush, encamped) starts no
+  battle; march and double time do.
+- **Defence:** an enemy army by a player's cart at the player's turn start fights the player's own
+  spawned escort, retreat locked; a win moves the cart on as that turn would have, a loss seizes it.
+  One battle a turn start; a second threatened cart is seized as before, and so is one whose attacker
+  is garrisoned or in a stance that cannot attack. A computer army that walks onto a player's escorted
+  cart does not take it there; it waits for the player's turn start and fights the escort.
+- **The outcome** is read in our `BattleCompleted` listener from CA's pending-battle cache, only when
+  `pending_battle_cache_mf_is_involved` holds for BOTH the attacker and the escort (its cqi copied on
+  `PendingBattle`, since CA's clean-up wipes it) - the attacker alone matches its other battles.
+- **CA's list entry is left for CA.** Its manager arms a one-shot `BattleCompleted` handler at trigger
+  time that runs after ours in the same session (before ours after a 3D battle's reload) and reads
+  `forced_battles_list[active_battle]` to kill the escort and free the slot. The first build deleted
+  that entry in our handler: CA's then hit a missing key, the escort stayed on the map and the slot
+  stayed taken, so no escort battle could start again that campaign. Found by the final review; the
+  harness stub now runs CA's handler as CA does. Our finished keys are pruned at the next human turn
+  start instead.
+- **A fight that never happens** (a record older than this turn, or a battle not ours once CA has
+  dropped ours) is undone: escort killed through `invasion_manager`, retreat unlocked, character
+  messages back on, CA's slot freed if still ours. `UnitTrained` charges nothing for the escort's
+  owner while a fight is pending (the escort is not a recruit); every other faction is charged.
+- **Panel:** a Spending tab shipment row opens its escort - one CA unit card a unit (60x130, the
+  faction-less `unit_variants.unit_card`), the unit's name on hover. Preview `mr_escort.png`.
+- **MCT:** "Escort battles" in Using stores, default on, frozen with the rest.
+- **Checked:** flows harness (escort roll, raid, defence, outcome, switch, absent CA libraries),
+  stores harness (the escort view), 39 mutants across the three tasks, every one caught after two
+  test fixes and one redundant guard deleted (`F.defends`); then 17 more against the review fixes,
+  all caught after seven survivors were pinned (garrison, march, the clear's escort and retreat, the
+  same-turn and CA-key pruning rules).
+- **Deployed to `data/`** (md5 `cd4b8ab7` / `209d6349` / `1160df9f`), byte-compared; the one file
+  added is `ui/derpy_mr_stores_card.twui.xml`, none dropped. The pre-escort build is backed up in
+  `Modding Files/Backup/resource_overhaul_20261009_escorts/`.
+- **To see in game** (spec section 9, none measured yet): the defence battle opening at turn start
+  with the player as defender; the winner read correctly both ways; whether spawning the escort fires
+  `UnitTrained`; the retreat lock holding; the escort's general; a raid from `AreaEntered` through the
+  dilemma; the raid dilemma's text and the escort view's cards.

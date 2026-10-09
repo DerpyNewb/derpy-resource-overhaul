@@ -1114,6 +1114,7 @@ function F.on_unit_trained(context)
     local unit = context:unit()
     local faction = unit:faction()
     if not faction or faction:is_null_interface() then return end
+    if F.recruit_paused(faction:name()) then return end
     local r = F.rates()
     if not r.recruit or not F.uses_stores(faction) or not (r.ai or faction:is_human()) then return end
     local fkey = faction:name()
@@ -1484,6 +1485,7 @@ function F.on_dilemma(context)
     local p = key and F.pending(fkey, key)
     if not p then return end
     F.clear_pending(fkey, key)
+    if key == "raid" then return F.raid_answer(faction, p, context:choice_key()) end
     if context:choice_key() == "FIRST" then F.event_apply(faction, p) end
 end
 
@@ -1707,6 +1709,214 @@ function F.mark(s)
     cm:add_interactable_campaign_marker(s.id, F.SHIP.info, s.x, s.y, F.SHIP.radius, "", "")
 end
 
+-- ---- escort battles (spec 2026-10-09) ------------------------------------------------------
+-- A cart's escort is rolled when it leaves and saved on it as CA's unit list, so the cards the
+-- Spending tab shows are the army a raider fights. CA's random-army templates by subculture
+-- (DERPY_MR_FLOWS_ESCORT_SC); "" is no escort, and such a cart is taken without a fight.
+F.ESCORT = DERPY_MR_FLOWS_ESCORT
+
+function F.escort_template(faction) return DERPY_MR_FLOWS_ESCORT_SC[faction:subculture()] end
+
+-- units by the cargo's value at the fixed Sell rates, never the Exchange's market
+function F.escort_size(s)
+    local g = F.GOOD[s.stem]
+    local per = (g and DERPY_MR_FLOWS_SELL_RATE[g.use]) or 1
+    local n = F.ESCORT.min + math.floor(s.n * per / F.ESCORT.per)
+    return math.max(F.ESCORT.min, math.min(F.ESCORT.max, n))
+end
+
+-- CA's rule in episode_nagash_sandbox.lua: turn / 10, rounded, 1 to 10
+function F.escort_power(turn)
+    return math.max(1, math.min(10, math.floor(turn / F.ESCORT.turns + 0.5)))
+end
+
+-- OUR OWN TEMPLATE (Cathay), weighted as CA's generate_random_army weights its tiers: low 1, mid
+-- the power, high twice the power, with its thresholds.
+function F.escort_own(key, power)
+    local m = { low = 1, mid = power, high = power * 2 }
+    if power <= 2 then m.mid = 0 end
+    if power <= 6 then m.high = 0 end
+    if power >= 7 then m.low = 0 end
+    if power >= 10 then m.mid = 0 end
+    random_army_manager:new_force(key)
+    for _, u in ipairs(DERPY_MR_FLOWS_ESCORT_OWN) do
+        if m[u[3]] > 0 then random_army_manager:add_unit(key, u[1], u[2] * m[u[3]]) end
+    end
+end
+
+-- STALE KEYS IN CA'S TEMPLATES (wh_main_emp_veh_steam_tank, not _driver) have no variant and no
+-- card: taken out of our copy of the force once, when it is made.
+function F.escort_prune(key)
+    local f = random_army_manager:get_force_by_key(key)
+    if not f then return end
+    for i = #f.units, 1, -1 do
+        if DERPY_MR_FLOWS_ESCORT_DROP[f.units[i]] then table.remove(f.units, i) end
+    end
+end
+
+-- CA's generate_random_army ADDS to a force it already holds on every call, so it runs once per key
+-- per session and later rolls draw from the force it made (its own opt_use_pre_generated_template).
+-- The key carries the power: one key for every power would roll every escort at the first one's.
+function F.escort_roll(faction, s)
+    s.escort = ""
+    local tpl = F.escort_template(faction)
+    if not tpl or type(random_army_manager) ~= "table" then return end
+    local power = F.escort_power(cm:model():turn_number())
+    local key = "derpy_mr_esc_" .. tpl .. "_" .. power
+    if tpl == F.ESCORT.own then key = tpl .. "_" .. power end
+    if not random_army_manager:get_force_by_key(key) then
+        if tpl == F.ESCORT.own then
+            F.escort_own(key, power)
+        elseif type(WH_Random_Army_Generator) == "table" then
+            WH_Random_Army_Generator:generate_random_army(key, tpl, 1, power, true, false)
+            F.escort_prune(key)
+        else
+            return
+        end
+    end
+    local units = random_army_manager:generate_force(key, F.escort_size(s), false)
+    if type(units) == "string" then s.escort = units end
+end
+
+function F.ship_by_id(id)
+    for _, s in ipairs(F.ships()) do
+        if s.id == id then return s end
+    end
+    return nil
+end
+
+F.FIGHT_PREFIX = "derpy_mr_escort_"
+
+function F.escorts_on() return F.rates().escort == true end
+
+-- CA's manager (wh2_campaign_forced_battle_manager.lua) holds one battle at a time, shared with
+-- its own episodes; a campaign root that does not load it has no escort battles at all.
+function F.fight_ready()
+    return F.escorts_on() and F.state.fight == nil and type(Forced_Battle_Manager) == "table"
+        and (Forced_Battle_Manager.active_battle or "") == ""
+end
+
+-- CA's manager: "attacking forces must be able to attack (not garrisoned or in a stance)". It locks
+-- the retreat itself for march and double time, so those are allowed; raiding, ambush, encamped and
+-- the rest would leave a battle that never starts.
+F.CAN_ATTACK = { MILITARY_FORCE_ACTIVE_STANCE_TYPE_DEFAULT = true, MILITARY_FORCE_ACTIVE_STANCE_TYPE_MARCH = true,
+                 MILITARY_FORCE_ACTIVE_STANCE_TYPE_DOUBLE_TIME = true }
+
+-- The escort spawns at the cart for its owner and `mf` attacks it: a raid, the player's army; a
+-- defence, the enemy's. `taker`: the faction the cargo goes to if the attacker wins.
+function F.fight(s, side, mf, taker)
+    if not F.fight_ready() or (s.escort or "") == "" then return false end
+    if mf:has_garrison_residence() or not F.CAN_ATTACK[mf:active_stance()] then return false end
+    local key, fbm = F.FIGHT_PREFIX .. s.id, Forced_Battle_Manager
+    fbm.forced_battles_list[key] = nil            -- one left behind by a battle that never started
+    local fb = fbm:setup_new_battle(key)
+    if not fb then return false end
+    fb:add_new_force(key, s.escort, s.f, true)
+    F.state.fight = { id = s.id, side = side, key = key, taker = taker, force = mf:command_queue_index(),
+                      owner = s.f, turn = cm:model():turn_number() }
+    if side == "defend" then
+        -- the escort is the player's own new army: no messages for its general
+        cm:disable_event_feed_events(true, "wh_event_category_character", "", "")
+        -- A RETREAT IS NEVER FOUGHT and would read as the escort's win: locked, as CA locks it for
+        -- its caravan battles; the manager's own listener unlocks it. CA's override() is in its lib
+        -- (lib_campaign_ui_overrides.lua), not its docs: if it ever answers nil, the battle still starts.
+        pcall(function() cm:get_campaign_ui_manager():override("retreat"):lock() end)
+    end
+    fb:trigger_battle(mf:command_queue_index(), key, s.x, s.y, false)
+    return true
+end
+
+-- THE ESCORT'S CQI, kept when the battle is about to be fought: CA's manager gives its spawned force
+-- one and wipes it again in its own clean-up, which after a reload runs before ours.
+function F.on_pending_battle()
+    local f = F.state.fight
+    if not f or f.escort or type(Forced_Battle_Manager) ~= "table" then return end
+    local fb = Forced_Battle_Manager.forced_battles_list[f.key]
+    if fb and fb.target and fb.target.cqi then f.escort = fb.target.cqi end
+end
+
+-- WHO WON, from CA's cache of the battle just fought: ours only when the attacker AND the escort were
+-- in it. CA's entry is left alone - its own handler (often after this one) needs it to remove the
+-- escort and free its slot; F.fight_stale prunes it later. An attacker that retreats has not fought,
+-- and has not won.
+function F.on_battle_done()
+    local f = F.state.fight
+    if not f then return end
+    if not (f.escort and cm:pending_battle_cache_mf_is_involved(f.force)
+            and cm:pending_battle_cache_mf_is_involved(f.escort)) then
+        -- not ours; and if CA's manager no longer holds ours, that battle will never be fought
+        if type(Forced_Battle_Manager) ~= "table" or Forced_Battle_Manager.active_battle ~= f.key then F.fight_clear() end
+        return
+    end
+    F.state.fight = nil
+    if f.side == "defend" then
+        cm:callback(function() cm:disable_event_feed_events(false, "wh_event_category_character", "", "") end, 0.2)
+    end
+    local s = F.ship_by_id(f.id)
+    if not s then return end
+    local won = cm:model():pending_battle():has_been_fought() and cm:pending_battle_cache_attacker_victory()
+    if won then
+        local taker = cm:get_faction(f.taker)
+        if taker and not taker:is_null_interface() then F.seize(s, taker) end
+    elseif f.side == "defend" then
+        local owner = cm:get_faction(s.f)
+        if owner and not owner:is_null_interface() then F.ship_step(owner, s, cm:model():turn_number()) end
+    end
+end
+
+-- A FIGHT THAT WILL NEVER BE FOUGHT: the record goes, and what F.fight set up is undone - the escort,
+-- if it spawned, the retreat lock, the muted messages and CA's slot if it is still ours.
+function F.fight_clear()
+    local f = F.state.fight
+    if not f then return end
+    F.state.fight = nil
+    if type(invasion_manager) == "table" then
+        pcall(function() invasion_manager:kill_invasion_by_key(f.key); invasion_manager:remove_invasion(f.key) end)
+    end
+    pcall(function() cm:get_campaign_ui_manager():override("retreat"):unlock() end)
+    if f.side == "defend" then cm:disable_event_feed_events(false, "wh_event_category_character", "", "") end
+    if type(Forced_Battle_Manager) == "table" and Forced_Battle_Manager.active_battle == f.key then
+        Forced_Battle_Manager.active_battle = ""
+    end
+end
+
+-- At a human turn start: a record whose battle never started is cleared, and our finished battles
+-- leave CA's saved list (it keeps every battle it was given, and refuses a key it holds).
+function F.fight_stale(turn)
+    local f = F.state.fight
+    if f and f.turn < turn then F.fight_clear() end
+    if type(Forced_Battle_Manager) ~= "table" then return end
+    local list, active = Forced_Battle_Manager.forced_battles_list, Forced_Battle_Manager.active_battle
+    for k in pairs(list) do
+        if string.sub(k, 1, #F.FIGHT_PREFIX) == F.FIGHT_PREFIX and k ~= active then list[k] = nil end
+    end
+end
+
+-- SPAWNING AN ESCORT IS NOT A RECRUIT: its owner's UnitTrained is skipped while a fight is pending
+function F.recruit_paused(fkey) return F.state.fight ~= nil and F.state.fight.owner == fkey end
+
+-- ONE RAID OFFER AT A TIME: the answer does not say which cart it is for.
+function F.raid_offer(s, ch, captor, owner)
+    local fkey, turn = captor:name(), cm:model():turn_number()
+    local p = F.pending(fkey, "raid")
+    if p and p.turn == turn then return end
+    F.set_pending(fkey, { key = "raid", id = s.id, force = ch:military_force():command_queue_index(), turn = turn })
+    if not cm:trigger_dilemma_with_targets(captor:command_queue_index(), DERPY_MR_FLOWS_EVENTS.raid.dilemma,
+                                           owner:command_queue_index(), 0, 0, 0, 0, 0, function() end) then
+        F.clear_pending(fkey, "raid")   -- never issued (multiplayer returns false)
+    end
+end
+
+-- FIRST: the battle, if the cart and the army are still there and CA's manager is free. Anything
+-- else, nothing: a raid the player chose is never a free seizure.
+function F.raid_answer(faction, p, choice)
+    if choice ~= "FIRST" then return end
+    local s = F.ship_by_id(p.id)
+    local mf = cm:model():military_force_for_command_queue_index(p.force)
+    if not s or mf:is_null_interface() then return end
+    F.fight(s, "raid", mf, faction:name())
+end
+
 -- Send n of a good from one of the faction's settlements to another: taken at once, a tenth lost
 -- on the road, the rest arriving SHIP.turns later. nil when the faction has its full number of
 -- shipments on the road, or nothing would arrive.
@@ -1722,6 +1932,7 @@ function F.ship(faction, from, to, stem, n)
                 to = to:name(), at = cm:model():turn_number(), leg = 1 }
     s.due = s.at + F.SHIP.turns
     s.x, s.y = F.spot(fkey, from)
+    F.escort_roll(faction, s)
     local list = F.ships()
     list[#list + 1] = s
     F.mark(s)
@@ -1743,20 +1954,25 @@ function F.seize(s, captor)
     F.move(nil, F.nearest(captor, s.x, s.y), s.stem, s.n, KIND.raid, nil, captor:name())
 end
 
--- An army in the field (no garrison) of a faction at war with the owner, within SHIP.near.
+-- An army in the field (no garrison) of a faction at war with the owner, within SHIP.near: the
+-- faction and the force. A PLAYER TAKES A COMPUTER'S ESCORTED CART ONLY BY WALKING IN, where the
+-- raid is asked first, so a human army standing by one at the computer's turn start is passed over.
 function F.captor(owner, s)
     local wars = owner:factions_at_war_with()
     if type(wars) ~= "table" and type(wars) ~= "userdata" then return nil end
+    local skip_human = F.escorts_on() and not owner:is_human() and (s.escort or "") ~= ""
     local r2 = F.SHIP.near * F.SHIP.near
     for i = 0, wars:num_items() - 1 do
         local o = wars:item_at(i)
-        local mfl = o:military_force_list()
-        for j = 0, mfl:num_items() - 1 do
-            local mf = mfl:item_at(j)
-            if not mf:is_armed_citizenry() and mf:has_general() then
-                local ch = mf:general_character()
-                local dx, dy = ch:logical_position_x() - s.x, ch:logical_position_y() - s.y
-                if dx * dx + dy * dy <= r2 then return o end
+        if not (skip_human and o:is_human()) then
+            local mfl = o:military_force_list()
+            for j = 0, mfl:num_items() - 1 do
+                local mf = mfl:item_at(j)
+                if not mf:is_armed_citizenry() and mf:has_general() then
+                    local ch = mf:general_character()
+                    local dx, dy = ch:logical_position_x() - s.x, ch:logical_position_y() - s.y
+                    if dx * dx + dy * dy <= r2 then return o, mf end
+                end
             end
         end
     end
@@ -1778,7 +1994,22 @@ function F.arrive(owner, s)
     F.move(nil, to, s.stem, s.n, KIND.move, nil, owner:name())
 end
 
--- At its owner's turn start each shipment is seized, arrives, or moves to its second spot.
+-- Arrives, or moves to its second spot; nothing yet on the turn it left.
+function F.ship_step(faction, s, turn)
+    if turn - s.at >= F.SHIP.turns then
+        F.arrive(faction, s)
+    elseif turn - s.at >= 1 and s.leg == 1 then
+        cm:remove_interactable_campaign_marker(s.id)
+        local to = F.owned(faction, s.to) or cm:get_region(s.to)
+        if to then s.x, s.y = F.spot(faction:name(), to) end
+        s.leg = 2
+        F.mark(s)
+    end
+end
+
+-- At its owner's turn start each shipment is fought for, seized, arrives, or moves to its second
+-- spot. ONE BATTLE A TURN START: F.fight_ready is false once one starts, so a second cart
+-- threatened in the same turn start is seized as before.
 function F.ships_turn(faction)
     local fkey, turn = faction:name(), cm:model():turn_number()
     local mine = {}
@@ -1786,17 +2017,15 @@ function F.ships_turn(faction)
         if s.f == fkey then mine[#mine + 1] = s end
     end
     for _, s in ipairs(mine) do
-        local captor = F.captor(faction, s)
-        if captor then
+        if s.escort == nil then F.escort_roll(faction, s) end   -- a save from before escorts
+        local captor, force = F.captor(faction, s)
+        -- a computer's cart is defended by nobody: computer against computer is a free seizure
+        if captor and faction:is_human() and F.fight(s, "defend", force, captor:name()) then
+            -- the battle decides: F.on_battle_done moves the cart on or seizes it
+        elseif captor then
             F.seize(s, captor)
-        elseif turn - s.at >= F.SHIP.turns then
-            F.arrive(faction, s)
-        elseif turn - s.at >= 1 and s.leg == 1 then
-            cm:remove_interactable_campaign_marker(s.id)
-            local to = F.owned(faction, s.to) or cm:get_region(s.to)
-            if to then s.x, s.y = F.spot(fkey, to) end
-            s.leg = 2
-            F.mark(s)
+        else
+            F.ship_step(faction, s, turn)
         end
     end
 end
@@ -1832,6 +2061,13 @@ function F.on_area(context)
     if ch:is_null_interface() or not ch:has_military_force() then return end
     local owner, captor = cm:get_faction(s.f), ch:faction()
     if not owner or owner:is_null_interface() or not captor:at_war_with(owner) then return end
+    if s.escort == nil then F.escort_roll(owner, s) end
+    -- A PLAYER IS ASKED before fighting an escort; a computer army, or any army when escorts are
+    -- off or the cart has none, takes it as before
+    if F.escorts_on() and captor:is_human() and s.escort ~= "" then return F.raid_offer(s, ch, captor, owner) end
+    -- A COMPUTER ARMY ON A PLAYER'S ESCORTED CART waits for the player's turn start, where F.ships_turn
+    -- finds it within SHIP.near and the escort fights it
+    if F.escorts_on() and owner:is_human() and s.escort ~= "" then return end
     F.seize(s, captor)
 end
 
@@ -1971,6 +2207,7 @@ function F.on_faction_turn_start(faction)
         F.round_cost, F.cost = F.cost, { raid = 0, turn = 0 }
         F.guard(F.sweep)
         F.guard(F.hold_exports, faction:name())   -- a save from before the bundle existed catches up
+        F.guard(F.fight_stale, cm:model():turn_number())
     end
     -- eat before trading, so a partner is sent what is left; its own guard, so a throw in one
     -- settlement cannot stop the trade every machine must run alike
@@ -2014,6 +2251,10 @@ function F.init()
     core:add_listener("derpy_mr_flows_ship", "AreaEntered",
         function(context) return string.sub(context:area_key(), 1, #F.SHIP_PREFIX) == F.SHIP_PREFIX end,
         function(context) F.guard(F.on_area, context) end, true)
+    core:add_listener("derpy_mr_flows_escort", "BattleCompleted", true,
+        function() F.guard(F.on_battle_done) end, true)
+    core:add_listener("derpy_mr_flows_escort_pending", "PendingBattle", true,
+        function() F.guard(F.on_pending_battle) end, true)
     core:add_listener("derpy_mr_flows_region", "RegionFactionChangeEvent", true,
         function(context) F.guard(F.on_region_change, context:region()) end, true)
     core:add_listener("derpy_mr_flows_recruit", "UnitTrained", true,
