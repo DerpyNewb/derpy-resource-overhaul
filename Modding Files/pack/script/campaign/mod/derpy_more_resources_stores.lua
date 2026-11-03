@@ -12,7 +12,9 @@ DERPY_MR_STORES_L = {
     CARD_H = 130,
     CARD_W = 60,
     CHART_ROWS = 9,
+    CHAR_W = 7,
     CHECK = 26,
+    EDICT_W = 100,
     FOLD = 24,
     FRAME = 2,
     GAP = 4,
@@ -39,13 +41,14 @@ DERPY_MR_STORES_L = {
     MAP_ZOOM_STEP = 1.5,
     PAY_GAP = 4,
     PITCH = 28,
+    POLICY_W = {90, 130, 114},
     PRICE_PITCH = 50,
     ROWS = 16,
     SLIDER_CAP = 24,
     SLIDER_PARTS = {{"frame_top", -1, -24}, {"frame_bottom", -1, 0}, {"top", 1, -23}, {"bottom", 1, -1}},
     SLIDER_W = 18,
     USING = 4,
-    VIEWS = {focus = {{36, 230, "left"}, {276, 120, "right"}, {406, 90, "right"}, {506, 80, "right"}, {596, 204, "left"}}, goods = {{36, 204, "left"}, {244, 90, "right"}, {338, 100, "right"}, {442, 110, "right"}, {556, 240, "right"}}, map = {{36, 204, "left"}, {244, 90, "right"}, {338, 100, "right"}, {442, 110, "right"}, {556, 240, "right"}}, production = {{36, 200, "left"}, {240, 150, "left"}, {394, 150, "left"}, {550, 110, "left"}, {668, 132, "left"}}, settlements = {{36, 230, "left"}, {276, 46, "right"}, {330, 90, "left"}, {430, 80, "right"}, {520, 280, "right"}}, spending = {{36, 230, "left"}, {276, 126, "centre"}, {408, 126, "centre"}, {540, 126, "centre"}, {672, 128, "centre"}}, trade = {{36, 230, "left"}, {276, 60, "right"}, {346, 90, "centre"}, {446, 90, "centre"}, {546, 254, "left"}}, trade_focus = {{36, 240, "left"}, {286, 150, "left"}, {446, 90, "centre"}, {546, 130, "centre"}, {686, 114, "centre"}}, workshop = {{36, 210, "left"}, {252, 200, "left"}, {458, 100, "left"}, {564, 98, "left"}, {668, 132, "left"}}, workshop_focus = {{36, 300, "left"}, {344, 120, "left"}, {472, 100, "left"}, {580, 60, "left"}, {668, 132, "left"}}},
+    VIEWS = {focus = {{36, 230, "left"}, {276, 120, "right"}, {406, 90, "right"}, {506, 80, "right"}, {596, 204, "left"}}, goods = {{36, 204, "left"}, {244, 96, "right"}, {344, 100, "right"}, {448, 110, "right"}, {562, 234, "right"}}, map = {{36, 204, "left"}, {244, 90, "right"}, {338, 100, "right"}, {442, 110, "right"}, {556, 240, "right"}}, production = {{36, 200, "left"}, {240, 150, "left"}, {394, 150, "left"}, {550, 110, "left"}, {668, 132, "left"}}, settlements = {{36, 230, "left"}, {276, 46, "right"}, {330, 90, "left"}, {430, 80, "right"}, {520, 280, "right"}}, spending = {{36, 230, "left"}, {276, 126, "centre"}, {408, 126, "centre"}, {540, 126, "centre"}, {672, 128, "centre"}}, trade = {{36, 230, "left"}, {276, 60, "right"}, {346, 90, "centre"}, {446, 90, "centre"}, {546, 254, "left"}}, trade_focus = {{36, 240, "left"}, {286, 150, "left"}, {446, 90, "centre"}, {546, 130, "centre"}, {686, 114, "centre"}}, workshop = {{36, 210, "left"}, {252, 200, "left"}, {458, 100, "left"}, {564, 98, "left"}, {668, 132, "left"}}, workshop_focus = {{36, 300, "left"}, {344, 120, "left"}, {472, 100, "left"}, {580, 60, "left"}, {668, 132, "left"}}},
     W = 860,
     back = {720, 56, 120, 26},
     bars = {20, 420, 820, 120},
@@ -80,6 +83,177 @@ DERPY_MR_STORES_L = {
     title_rule = {20, 46, 820, 2},
     zoom_in = {800, 516, 30, 30},
     zoom_out = {800, 550, 30, 30},
+}
+DERPY_MR_STORES_SIZES = {
+    small = {f = 0.8571428571428571, suffix = "_sm", layout = {
+        BARS = 20,
+        BAR_MIN = 2,
+        BAR_PITCH = 35,
+        BAR_W = 28,
+        BULK_GAP = 5,
+        BUTTON = 41,
+        CARDS = 12,
+        CARD_GAP = 7,
+        CARD_H = 111,
+        CARD_W = 51,
+        CHART_ROWS = 9,
+        CHAR_W = 5.833,
+        CHECK = 22,
+        EDICT_W = 86,
+        FOLD = 21,
+        FRAME = 2,
+        GAP = 3,
+        H = 549,
+        HANDLE_H = 34,
+        HEAD_CHAR_W = 6.667,
+        ICONS = 4,
+        ICON_PITCH = 22,
+        MAP_ART_ZOOM = 2,
+        MAP_CAP = 22,
+        MAP_CAP_ICON = "ui/skins/default/icon_offscreen_capital.png",
+        MAP_CART = "ui/campaign ui/effect_bundles/convoy_icon.png",
+        MAP_CART_SIZE = 24,
+        MAP_CHAR_W = 6.5,
+        MAP_DOT = 17,
+        MAP_FRAME_OUT = 4,
+        MAP_MIN_SPAN = 40,
+        MAP_PAD = 21,
+        MAP_PATH = 5,
+        MAP_PATH_COLOURS = 16,
+        MAP_PATH_MAX = 400,
+        MAP_TOWN_ICON = "ui/skins/default/icon_marker_settlement.png",
+        MAP_ZOOM_MAX = 3,
+        MAP_ZOOM_STEP = 1.5,
+        PAY_GAP = 3,
+        PITCH = 24,
+        POLICY_W = {77, 111, 98},
+        PRICE_PITCH = 43,
+        ROWS = 16,
+        SLIDER_CAP = 21,
+        SLIDER_PARTS = {{"frame_top", -1, -21}, {"frame_bottom", -1, 0}, {"top", 1, -20}, {"bottom", 1, -1}},
+        SLIDER_W = 15,
+        USING = 4,
+        VIEWS = {focus = {{31, 197, "left"}, {237, 103, "right"}, {348, 77, "right"}, {434, 69, "right"}, {511, 175, "left"}}, goods = {{31, 175, "left"}, {209, 82, "right"}, {295, 86, "right"}, {384, 94, "right"}, {482, 201, "right"}}, map = {{31, 175, "left"}, {209, 77, "right"}, {290, 86, "right"}, {379, 94, "right"}, {477, 206, "right"}}, production = {{31, 171, "left"}, {206, 129, "left"}, {338, 129, "left"}, {471, 94, "left"}, {573, 113, "left"}}, settlements = {{31, 197, "left"}, {237, 39, "right"}, {283, 77, "left"}, {369, 69, "right"}, {446, 240, "right"}}, spending = {{31, 197, "left"}, {237, 108, "centre"}, {350, 108, "centre"}, {463, 108, "centre"}, {576, 110, "centre"}}, trade = {{31, 197, "left"}, {237, 51, "right"}, {297, 77, "centre"}, {382, 77, "centre"}, {468, 218, "left"}}, trade_focus = {{31, 206, "left"}, {245, 129, "left"}, {382, 77, "centre"}, {468, 111, "centre"}, {588, 98, "centre"}}, workshop = {{31, 180, "left"}, {216, 171, "left"}, {393, 86, "left"}, {483, 84, "left"}, {573, 113, "left"}}, workshop_focus = {{31, 257, "left"}, {295, 103, "left"}, {405, 86, "left"}, {497, 51, "left"}, {573, 113, "left"}}},
+        W = 737,
+        back = {617, 48, 103, 22},
+        bars = {17, 360, 703, 103},
+        bulk = {17, 513, 171, 26},
+        cards = {24, 183, 696, 111},
+        chart_base = {17, 463, 703, 1},
+        chart_from = {17, 465, 171, 15},
+        chart_grid = {17, 360, 703, 1},
+        chart_line = {17, 483, 703, 19},
+        chart_to = {549, 465, 171, 15},
+        chart_top = {17, 343, 257, 15},
+        close = {701, 10, 26, 26},
+        empty = {17, 132, 703, 51},
+        escort_line = {24, 129, 689, 43},
+        head_y = 99,
+        hint = {17, 77, 703, 19},
+        icon = {5, 2, 21, 21},
+        list = {17, 122, 703, 384},
+        map = {17, 122, 703, 384},
+        map_key = {cap = {{17, 514, 22, 22}, {43, 516, 103, 19}}, cart = {{252, 513, 24, 24}, {279, 516, 86, 19}}, town = {{154, 517, 17, 17}, {175, 516, 69, 19}}},
+        map_label = {137, 14},
+        send = {111, 22},
+        sub_title = {17, 77, 703, 19},
+        tab_goods = {17, 48, 85, 22},
+        tab_map = {362, 48, 69, 22},
+        tab_production = {515, 48, 92, 22},
+        tab_settlements = {105, 48, 99, 22},
+        tab_spending = {280, 48, 78, 22},
+        tab_trade = {208, 48, 69, 22},
+        tab_workshop = {434, 48, 78, 22},
+        title = {17, 12, 429, 24},
+        title_rule = {17, 39, 703, 2},
+        zoom_in = {686, 442, 26, 26},
+        zoom_out = {686, 471, 26, 26},
+    }},
+    medium = {f = 1, suffix = "", layout = DERPY_MR_STORES_L},
+    large = {f = 1.3333333333333333, suffix = "_lg", layout = {
+        BARS = 20,
+        BAR_MIN = 3,
+        BAR_PITCH = 55,
+        BAR_W = 44,
+        BULK_GAP = 8,
+        BUTTON = 64,
+        CARDS = 12,
+        CARD_GAP = 11,
+        CARD_H = 173,
+        CARD_W = 80,
+        CHART_ROWS = 9,
+        CHAR_W = 9.333,
+        CHECK = 35,
+        EDICT_W = 133,
+        FOLD = 32,
+        FRAME = 3,
+        GAP = 5,
+        H = 853,
+        HANDLE_H = 53,
+        HEAD_CHAR_W = 10.667,
+        ICONS = 4,
+        ICON_PITCH = 35,
+        MAP_ART_ZOOM = 2,
+        MAP_CAP = 35,
+        MAP_CAP_ICON = "ui/skins/default/icon_offscreen_capital.png",
+        MAP_CART = "ui/campaign ui/effect_bundles/convoy_icon.png",
+        MAP_CART_SIZE = 37,
+        MAP_CHAR_W = 7.8,
+        MAP_DOT = 27,
+        MAP_FRAME_OUT = 4,
+        MAP_MIN_SPAN = 40,
+        MAP_PAD = 32,
+        MAP_PATH = 8,
+        MAP_PATH_COLOURS = 16,
+        MAP_PATH_MAX = 400,
+        MAP_TOWN_ICON = "ui/skins/default/icon_marker_settlement.png",
+        MAP_ZOOM_MAX = 3,
+        MAP_ZOOM_STEP = 1.5,
+        PAY_GAP = 5,
+        PITCH = 37,
+        POLICY_W = {120, 173, 152},
+        PRICE_PITCH = 67,
+        ROWS = 16,
+        SLIDER_CAP = 32,
+        SLIDER_PARTS = {{"frame_top", -1, -32}, {"frame_bottom", -1, 0}, {"top", 1, -31}, {"bottom", 1, -1}},
+        SLIDER_W = 24,
+        USING = 4,
+        VIEWS = {focus = {{48, 307, "left"}, {368, 160, "right"}, {541, 120, "right"}, {675, 107, "right"}, {795, 272, "left"}}, goods = {{48, 272, "left"}, {325, 128, "right"}, {459, 133, "right"}, {597, 147, "right"}, {749, 312, "right"}}, map = {{48, 272, "left"}, {325, 120, "right"}, {451, 133, "right"}, {589, 147, "right"}, {741, 320, "right"}}, production = {{48, 267, "left"}, {320, 200, "left"}, {525, 200, "left"}, {733, 147, "left"}, {891, 176, "left"}}, settlements = {{48, 307, "left"}, {368, 61, "right"}, {440, 120, "left"}, {573, 107, "right"}, {693, 373, "right"}}, spending = {{48, 307, "left"}, {368, 168, "centre"}, {544, 168, "centre"}, {720, 168, "centre"}, {896, 171, "centre"}}, trade = {{48, 307, "left"}, {368, 80, "right"}, {461, 120, "centre"}, {595, 120, "centre"}, {728, 339, "left"}}, trade_focus = {{48, 320, "left"}, {381, 200, "left"}, {595, 120, "centre"}, {728, 173, "centre"}, {915, 152, "centre"}}, workshop = {{48, 280, "left"}, {336, 267, "left"}, {611, 133, "left"}, {752, 131, "left"}, {891, 176, "left"}}, workshop_focus = {{48, 400, "left"}, {459, 160, "left"}, {629, 133, "left"}, {773, 80, "left"}, {891, 176, "left"}}},
+        W = 1147,
+        back = {960, 75, 160, 35},
+        bars = {27, 560, 1093, 160},
+        bulk = {27, 797, 267, 40},
+        cards = {37, 285, 1083, 173},
+        chart_base = {27, 720, 1093, 1},
+        chart_from = {27, 723, 267, 24},
+        chart_grid = {27, 560, 1093, 1},
+        chart_line = {27, 752, 1093, 29},
+        chart_to = {853, 723, 267, 24},
+        chart_top = {27, 533, 400, 24},
+        close = {1091, 16, 40, 40},
+        empty = {27, 205, 1093, 80},
+        escort_line = {37, 200, 1072, 67},
+        head_y = 155,
+        hint = {27, 120, 1093, 29},
+        icon = {8, 3, 32, 32},
+        list = {27, 189, 1093, 597},
+        map = {27, 189, 1093, 597},
+        map_key = {cap = {{27, 800, 35, 35}, {67, 803, 160, 29}}, cart = {{392, 799, 37, 37}, {435, 803, 133, 29}}, town = {{240, 804, 27, 27}, {272, 803, 107, 29}}},
+        map_label = {213, 21},
+        send = {173, 35},
+        sub_title = {27, 120, 1093, 29},
+        tab_goods = {27, 75, 132, 35},
+        tab_map = {563, 75, 107, 35},
+        tab_production = {801, 75, 143, 35},
+        tab_settlements = {164, 75, 155, 35},
+        tab_spending = {436, 75, 121, 35},
+        tab_trade = {324, 75, 107, 35},
+        tab_workshop = {675, 75, 121, 35},
+        title = {27, 19, 667, 37},
+        title_rule = {27, 61, 1093, 3},
+        zoom_in = {1067, 688, 40, 40},
+        zoom_out = {1067, 733, 40, 40},
+    }},
 }
 DERPY_MR_STORES_GOODS = {
     {stem = "salted_fish", res = "res_derpy_salted_fish", icon = "ui/campaign ui/effect_bundles/resource_derpy_salted_fish.png", use = "provisions", rare = false},
@@ -255,6 +429,7 @@ DERPY_MR_CAPTURE_KIND = {
     [891798250] = "raze",
     [922680816] = "occupy",
     [998467618] = "occupy",
+    [1008924141] = "occupy",
     [1017060144] = "sack",
     [1033089891] = "occupy",
     [1036292950] = "occupy",
@@ -301,6 +476,7 @@ DERPY_MR_CAPTURE_KIND = {
     [1489372626] = "occupy",
     [1509766842] = "occupy",
     [1517426446] = "occupy",
+    [1535387811] = "occupy",
     [1537682911] = "occupy",
     [1552158562] = "sack",
     [1574012279] = "raze",
@@ -374,6 +550,7 @@ DERPY_MR_STORES_BUNDLES = {
     {key = "derpy_mr_well_fed", icon = "ui/campaign ui/effect_bundles/growth.png"},
     {key = "derpy_mr_garrison_stocked", icon = "ui/campaign ui/effect_bundles/siege_defence.png"},
     {key = "derpy_mr_comforts", icon = "ui/campaign ui/effect_bundles/public_order_happy.png"},
+    {key = "derpy_mr_well_fed_chd", icon = "ui/campaign ui/effect_bundles/public_order_happy.png"},
 }
 DERPY_MR_STORES_ORDERS = {
     {key = "festival", use = "luxuries", label = "Festival", what = "public order +4 in every province", turns = 5},
@@ -382,7 +559,7 @@ DERPY_MR_STORES_ORDERS = {
 }
 DERPY_MR_STORES_SUPPLY = {
     {key = "materials", label = "Materials on hand", use = "building", what = "construction cost -25%"},
-    {key = "stable", label = "Stable stocked", use = "mounts", what = "recruit cost -15% for cavalry and monsters"},
+    {key = "stable", label = "Stable stocked", use = "mounts", what = "recruit cost -15% for cavalry, monsters and gyrocopters"},
     {key = "arms", label = "Arms stocked", use = "war", what = "recruit cost -15% for infantry and artillery"},
     {key = "standing", label = "Supply the capital", use = "", what = ""},
 }
@@ -416,58 +593,63 @@ DERPY_MR_STORES_WORKS = {
     {key = "item_glittering_scales", kind = "item", rare = "wyvern_scales", use = "mounts", name = "Glittering Scales", gives = "Armour", detail = "Armour for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_wyvern_scales.png", pool = "", goods = {}, target = ""},
     {key = "item_venom_sword", kind = "item", rare = "black_lotus", use = "luxuries", name = "Venom Sword", gives = "Weapon", detail = "Weapon for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_black_lotus.png", pool = "", goods = {}, target = ""},
     {key = "item_corrosive_blade", kind = "item", rare = "black_lotus", use = "luxuries", name = "Corrosive Blade", gives = "Weapon", detail = "Weapon for a lord or hero", icon = "ui/campaign ui/effect_bundles/resource_derpy_black_lotus.png", pool = "", goods = {}, target = ""},
-    {key = "unit_wh_main_dwf_inf_ironbreakers", kind = "unit", rare = "gromril", use = "war", name = "Ironbreakers", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_gromril.png", pool = "wh3_dlc25_dwf_book_of_grudges_mercenary_pool", goods = {}, target = ""},
-    {key = "unit_wh_main_dwf_inf_hammerers", kind = "unit", rare = "gromril", use = "war", name = "Hammerers", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_gromril.png", pool = "wh3_dlc25_dwf_book_of_grudges_mercenary_pool", goods = {}, target = ""},
-    {key = "unit_wh2_main_hef_inf_swordmasters_of_hoeth_0", kind = "unit", rare = "ithilmar", use = "war", name = "Swordmasters of Hoeth", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_ithilmar.png", pool = "wh2_main_hef_units_of_renown_pool", goods = {}, target = ""},
-    {key = "unit_wh2_main_hef_inf_phoenix_guard", kind = "unit", rare = "ithilmar", use = "war", name = "Phoenix Guard", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_ithilmar.png", pool = "wh2_main_hef_units_of_renown_pool", goods = {}, target = ""},
-    {key = "unit_wh2_main_hef_cav_dragon_princes", kind = "unit", rare = "dragon_bone", use = "mounts", name = "Dragon Princes", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "wh2_main_hef_units_of_renown_pool", goods = {}, target = ""},
-    {key = "unit_wh3_dlc23_chd_mon_lammasu", kind = "unit", rare = "dragon_bone", use = "mounts", name = "Lammasu", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "wh3_dlc23_chd_units_of_renown_pool", goods = {}, target = ""},
-    {key = "unit_wh3_dlc23_chd_mon_bale_taurus", kind = "unit", rare = "dragon_bone", use = "mounts", name = "Bale Taurus", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "wh3_dlc23_chd_units_of_renown_pool", goods = {}, target = ""},
-    {key = "unit_wh2_main_def_inf_black_ark_corsairs_0", kind = "unit", rare = "sea_dragon_hide", use = "mounts", name = "Black Ark Corsairs", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_sea_dragon_hide.png", pool = "wh2_main_def_units_of_renown_pool", goods = {}, target = ""},
-    {key = "unit_wh2_main_def_inf_witch_elves_0", kind = "unit", rare = "black_lotus", use = "luxuries", name = "Witch Elves", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_black_lotus.png", pool = "wh2_main_def_units_of_renown_pool", goods = {}, target = ""},
-    {key = "unit_wh2_main_skv_inf_gutter_runners_0", kind = "unit", rare = "black_lotus", use = "luxuries", name = "Gutter Runners", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_black_lotus.png", pool = "wh2_dlc12_skv_units_of_renown_pool", goods = {}, target = ""},
-    {key = "unit_wh_dlc05_wef_inf_glade_guard_0", kind = "unit", rare = "starwood", use = "building", name = "Glade Guard", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_starwood.png", pool = "wh_dlc05_wef_units_of_renown_pool", goods = {}, target = ""},
-    {key = "unit_wh_main_brt_cav_pegasus_knights", kind = "unit", rare = "feathers", use = "mounts", name = "Pegasus Knights", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_feathers.png", pool = "wh_dlc07_brt_units_of_renown_pool", goods = {}, target = ""},
-    {key = "unit_wh_main_emp_cav_demigryph_knights_0", kind = "unit", rare = "feathers", use = "mounts", name = "Demigryph Knights", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_feathers.png", pool = "wh_dlc04_emp_units_of_renown_pool", goods = {}, target = ""},
-    {key = "unit_wh_main_grn_inf_black_orcs", kind = "unit", rare = "wyvern_scales", use = "mounts", name = "Black Orcs (Great Weapons)", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_wyvern_scales.png", pool = "wh_dlc06_grn_units_of_renown_pool", goods = {}, target = ""},
-    {key = "unit_wh3_main_ogr_mon_stonehorn_0", kind = "unit", rare = "wyvern_scales", use = "mounts", name = "Stonehorn", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_wyvern_scales.png", pool = "wh3_main_ogr_units_of_renown_pool", goods = {}, target = ""},
-    {key = "unit_wh3_dlc26_ogr_mon_thundertusk", kind = "unit", rare = "wyvern_scales", use = "mounts", name = "Thundertusk", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_wyvern_scales.png", pool = "wh3_main_ogr_units_of_renown_pool", goods = {}, target = ""},
-    {key = "unit_wh_main_dwf_inf_irondrakes_0", kind = "unit", rare = "gromril", use = "war", name = "Irondrakes", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_gromril.png", pool = "wh3_dlc25_dwf_book_of_grudges_mercenary_pool", goods = {}, target = ""},
-    {key = "unit_wh2_main_hef_cav_silver_helms_0", kind = "unit", rare = "ithilmar", use = "war", name = "Silver Helms", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_ithilmar.png", pool = "wh2_main_hef_units_of_renown_pool", goods = {}, target = ""},
-    {key = "unit_wh3_dlc29_vmp_mon_zombie_dragon", kind = "unit", rare = "dragon_bone", use = "mounts", name = "Zombie Dragon", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "wh_dlc04_vmp_units_of_renown_pool", goods = {}, target = ""},
-    {key = "unit_wh3_main_cth_inf_dragon_guard_0", kind = "unit", rare = "dragon_bone", use = "mounts", name = "Celestial Dragon Guard", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "wh3_main_cth_units_of_renown_pool", goods = {}, target = ""},
-    {key = "unit_wh_dlc08_nor_mon_frost_wyrm_0", kind = "unit", rare = "dragon_bone", use = "mounts", name = "Chaos Frost Dragon", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "wh_dlc08_nor_units_of_renown_pool", goods = {}, target = ""},
-    {key = "unit_wh2_main_def_inf_black_ark_corsairs_1", kind = "unit", rare = "sea_dragon_hide", use = "mounts", name = "Black Ark Corsairs (Handbows)", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_sea_dragon_hide.png", pool = "wh2_main_def_units_of_renown_pool", goods = {}, target = ""},
-    {key = "unit_wh_dlc05_wef_inf_waywatchers_0", kind = "unit", rare = "starwood", use = "building", name = "Waywatchers", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_starwood.png", pool = "wh_dlc05_wef_units_of_renown_pool", goods = {}, target = ""},
-    {key = "unit_wh2_main_skv_inf_poison_wind_globadiers", kind = "unit", rare = "black_lotus", use = "luxuries", name = "Poisoned Wind Globadiers", gives = "Unit, 2 at most", detail = "2 at most at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_black_lotus.png", pool = "wh2_dlc12_skv_units_of_renown_pool", goods = {}, target = ""},
-    {key = "up_gromril", kind = "upgrade", rare = "gromril", use = "war", name = "Gromril Gate", gives = "Melee defence and armour", detail = "Melee defence +10 for your armies here, armour +10 in the province, for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_gromril.png", pool = "", goods = {}, target = ""},
-    {key = "up_ithilmar", kind = "upgrade", rare = "ithilmar", use = "war", name = "Ithilmar Spire", gives = "Public order and income", detail = "Public order +3 in the province, income +10% here, for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_ithilmar.png", pool = "", goods = {}, target = ""},
-    {key = "up_dragon_bone", kind = "upgrade", rare = "dragon_bone", use = "mounts", name = "Dragon Bone Shrine", gives = "Recruits gain a rank", detail = "Units recruited in the province gain a rank, for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "", goods = {}, target = ""},
-    {key = "up_sea_dragon_hide", kind = "upgrade", rare = "sea_dragon_hide", use = "mounts", name = "Sea Dragon Moorings", gives = "Income +15% here", detail = "Income +15% here, for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_sea_dragon_hide.png", pool = "", goods = {}, target = ""},
-    {key = "up_black_lotus", kind = "upgrade", rare = "black_lotus", use = "luxuries", name = "Black Lotus Gardens", gives = "Hero actions succeed more", detail = "Hero actions from here succeed more often (+10), for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_black_lotus.png", pool = "", goods = {}, target = ""},
-    {key = "up_starwood", kind = "upgrade", rare = "starwood", use = "building", name = "Starwood Grove", gives = "Growth +20", detail = "Growth +20 in the province, for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_starwood.png", pool = "", goods = {}, target = ""},
-    {key = "up_feathers", kind = "upgrade", rare = "feathers", use = "mounts", name = "Eyrie", gives = "Recruitment cost -15%", detail = "Recruitment cost -15% in the province, for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_feathers.png", pool = "", goods = {}, target = ""},
-    {key = "up_wyvern_scales", kind = "upgrade", rare = "wyvern_scales", use = "mounts", name = "Wyvern Roost", gives = "Army upkeep -5%", detail = "Upkeep -5% for your armies here, for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_wyvern_scales.png", pool = "", goods = {}, target = ""},
-    {key = "conv_armaments", kind = "convert", rare = "", use = "", name = "Armaments", gives = "30 Armaments", detail = "Makes 30 Armaments from your stores, once a turn", icon = "ui/campaign ui/effect_bundles/resource_derpy_coal.png", pool = "wh3_dlc23_chd_armaments", goods = {{"coal", 20, "ui/campaign ui/effect_bundles/resource_derpy_coal.png"}, {"brimstone", 20, "ui/campaign ui/effect_bundles/resource_derpy_brimstone.png"}, {"iron", 20, "ui/campaign ui/effect_bundles/resource_iron.png"}}, target = ""},
-    {key = "conv_food", kind = "convert", rare = "", use = "", name = "Food", gives = "4 Food", detail = "Makes 4 Food from your stores, once a turn", icon = "ui/campaign ui/effect_bundles/resource_derpy_grain.png", pool = "skaven_food", goods = {{"grain", 30, "ui/campaign ui/effect_bundles/resource_derpy_grain.png"}, {"salted_fish", 30, "ui/campaign ui/effect_bundles/resource_derpy_salted_fish.png"}}, target = ""},
-    {key = "conv_oathgold", kind = "convert", rare = "", use = "", name = "Oathgold", gives = "30 Oathgold", detail = "Makes 30 Oathgold from your stores, once a turn", icon = "ui/campaign ui/effect_bundles/resource_gold_idols.png", pool = "dwf_oathgold", goods = {{"gold_idols", 30, "ui/campaign ui/effect_bundles/resource_gold_idols.png"}, {"silver", 30, "ui/campaign ui/effect_bundles/resource_derpy_silver.png"}}, target = ""},
-    {key = "conv_infamy", kind = "convert", rare = "", use = "", name = "Infamy", gives = "50 Infamy", detail = "Makes 50 Infamy from your stores, once a turn", icon = "ui/campaign ui/effect_bundles/resource_derpy_rum.png", pool = "cst_infamy", goods = {{"rum", 30, "ui/campaign ui/effect_bundles/resource_derpy_rum.png"}, {"pearls", 30, "ui/campaign ui/effect_bundles/resource_derpy_pearls.png"}}, target = ""},
+    {key = "unit_wh_main_dwf_inf_ironbreakers", kind = "unit", rare = "gromril", use = "war", name = "Ironbreakers", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_gromril.png", pool = "wh3_dlc25_dwf_book_of_grudges_mercenary_pool", goods = {}, target = ""},
+    {key = "unit_wh_main_dwf_inf_hammerers", kind = "unit", rare = "gromril", use = "war", name = "Hammerers", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_gromril.png", pool = "wh3_dlc25_dwf_book_of_grudges_mercenary_pool", goods = {}, target = ""},
+    {key = "unit_wh2_main_hef_inf_swordmasters_of_hoeth_0", kind = "unit", rare = "ithilmar", use = "war", name = "Swordmasters of Hoeth", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_ithilmar.png", pool = "wh2_main_hef_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh2_main_hef_inf_phoenix_guard", kind = "unit", rare = "ithilmar", use = "war", name = "Phoenix Guard", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_ithilmar.png", pool = "wh2_main_hef_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh2_main_hef_cav_dragon_princes", kind = "unit", rare = "dragon_bone", use = "mounts", name = "Dragon Princes", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "wh2_main_hef_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh3_dlc23_chd_mon_lammasu", kind = "unit", rare = "dragon_bone", use = "mounts", name = "Lammasu", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "wh3_dlc23_chd_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh3_dlc23_chd_mon_bale_taurus", kind = "unit", rare = "dragon_bone", use = "mounts", name = "Bale Taurus", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "wh3_dlc23_chd_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh2_main_def_inf_black_ark_corsairs_0", kind = "unit", rare = "sea_dragon_hide", use = "mounts", name = "Black Ark Corsairs", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_sea_dragon_hide.png", pool = "wh2_main_def_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh2_main_def_inf_witch_elves_0", kind = "unit", rare = "black_lotus", use = "luxuries", name = "Witch Elves", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_black_lotus.png", pool = "wh2_main_def_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh2_main_skv_inf_gutter_runners_0", kind = "unit", rare = "black_lotus", use = "luxuries", name = "Gutter Runners", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_black_lotus.png", pool = "wh2_dlc12_skv_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh_dlc05_wef_inf_glade_guard_0", kind = "unit", rare = "starwood", use = "building", name = "Glade Guard", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_starwood.png", pool = "wh_dlc05_wef_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh_main_brt_cav_pegasus_knights", kind = "unit", rare = "feathers", use = "mounts", name = "Pegasus Knights", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_feathers.png", pool = "wh_dlc07_brt_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh_main_emp_cav_demigryph_knights_0", kind = "unit", rare = "feathers", use = "mounts", name = "Demigryph Knights", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_feathers.png", pool = "wh_dlc04_emp_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh_main_grn_inf_black_orcs", kind = "unit", rare = "wyvern_scales", use = "mounts", name = "Black Orcs (Great Weapons)", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_wyvern_scales.png", pool = "wh_dlc06_grn_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh3_main_ogr_mon_stonehorn_0", kind = "unit", rare = "wyvern_scales", use = "mounts", name = "Stonehorn", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_wyvern_scales.png", pool = "wh3_main_ogr_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh3_dlc26_ogr_mon_thundertusk", kind = "unit", rare = "wyvern_scales", use = "mounts", name = "Thundertusk", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_wyvern_scales.png", pool = "wh3_main_ogr_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh_main_dwf_inf_irondrakes_0", kind = "unit", rare = "gromril", use = "war", name = "Irondrakes", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_gromril.png", pool = "wh3_dlc25_dwf_book_of_grudges_mercenary_pool", goods = {}, target = ""},
+    {key = "unit_wh2_main_hef_cav_silver_helms_0", kind = "unit", rare = "ithilmar", use = "war", name = "Silver Helms", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_ithilmar.png", pool = "wh2_main_hef_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh3_dlc29_vmp_mon_zombie_dragon", kind = "unit", rare = "dragon_bone", use = "mounts", name = "Zombie Dragon", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "wh_dlc04_vmp_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh3_main_cth_inf_dragon_guard_0", kind = "unit", rare = "dragon_bone", use = "mounts", name = "Celestial Dragon Guard", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "wh3_main_cth_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh_dlc08_nor_mon_frost_wyrm_0", kind = "unit", rare = "dragon_bone", use = "mounts", name = "Chaos Frost Dragon", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "wh_dlc08_nor_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh2_main_def_inf_black_ark_corsairs_1", kind = "unit", rare = "sea_dragon_hide", use = "mounts", name = "Black Ark Corsairs (Handbows)", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_sea_dragon_hide.png", pool = "wh2_main_def_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh_dlc05_wef_inf_waywatchers_0", kind = "unit", rare = "starwood", use = "building", name = "Waywatchers", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_starwood.png", pool = "wh_dlc05_wef_units_of_renown_pool", goods = {}, target = ""},
+    {key = "unit_wh2_main_skv_inf_poison_wind_globadiers", kind = "unit", rare = "black_lotus", use = "luxuries", name = "Poisoned Wind Globadiers", gives = "Unit (2 at most)", detail = "Up to 2 at a time", icon = "ui/campaign ui/effect_bundles/resource_derpy_black_lotus.png", pool = "wh2_dlc12_skv_units_of_renown_pool", goods = {}, target = ""},
+    {key = "up_gromril", kind = "upgrade", rare = "gromril", use = "war", name = "Gromril Gate", gives = "Melee defence and armour", detail = "Melee defence +10 for your armies here and armour +10 in the province. Permanent", icon = "ui/campaign ui/effect_bundles/resource_derpy_gromril.png", pool = "", goods = {}, target = ""},
+    {key = "up_ithilmar", kind = "upgrade", rare = "ithilmar", use = "war", name = "Ithilmar Spire", gives = "Public order and income", detail = "Public order +3 in the province and income +10% here. Permanent", icon = "ui/campaign ui/effect_bundles/resource_derpy_ithilmar.png", pool = "", goods = {}, target = ""},
+    {key = "up_dragon_bone", kind = "upgrade", rare = "dragon_bone", use = "mounts", name = "Dragon Bone Shrine", gives = "Recruits gain a rank", detail = "Units recruited in the province gain a rank. Permanent", icon = "ui/campaign ui/effect_bundles/resource_derpy_dragon_bone.png", pool = "", goods = {}, target = ""},
+    {key = "up_sea_dragon_hide", kind = "upgrade", rare = "sea_dragon_hide", use = "mounts", name = "Sea Dragon Moorings", gives = "Income +15% here", detail = "Income +15% here. Permanent", icon = "ui/campaign ui/effect_bundles/resource_derpy_sea_dragon_hide.png", pool = "", goods = {}, target = ""},
+    {key = "up_black_lotus", kind = "upgrade", rare = "black_lotus", use = "luxuries", name = "Black Lotus Gardens", gives = "Hero actions succeed more", detail = "Hero actions from here succeed more often (+10). Permanent", icon = "ui/campaign ui/effect_bundles/resource_derpy_black_lotus.png", pool = "", goods = {}, target = ""},
+    {key = "up_starwood", kind = "upgrade", rare = "starwood", use = "building", name = "Starwood Grove", gives = "Growth +20", detail = "Growth +20 in the province. Permanent", icon = "ui/campaign ui/effect_bundles/resource_derpy_starwood.png", pool = "", goods = {}, target = ""},
+    {key = "up_feathers", kind = "upgrade", rare = "feathers", use = "mounts", name = "Eyrie", gives = "Recruitment cost -15%", detail = "Recruitment cost -15% in the province. Permanent", icon = "ui/campaign ui/effect_bundles/resource_derpy_feathers.png", pool = "", goods = {}, target = ""},
+    {key = "up_wyvern_scales", kind = "upgrade", rare = "wyvern_scales", use = "mounts", name = "Wyvern Roost", gives = "Army upkeep -5%", detail = "Upkeep -5% for your armies here. Permanent", icon = "ui/campaign ui/effect_bundles/resource_derpy_wyvern_scales.png", pool = "", goods = {}, target = ""},
+    {key = "conv_armaments", kind = "convert", rare = "", use = "", name = "Armaments", gives = "30 Armaments", detail = "Makes 30 Armaments from your stores once a turn", icon = "ui/campaign ui/effect_bundles/resource_derpy_coal.png", pool = "wh3_dlc23_chd_armaments", goods = {{"coal", 20, "ui/campaign ui/effect_bundles/resource_derpy_coal.png"}, {"brimstone", 20, "ui/campaign ui/effect_bundles/resource_derpy_brimstone.png"}, {"iron", 20, "ui/campaign ui/effect_bundles/resource_iron.png"}}, target = ""},
+    {key = "conv_food", kind = "convert", rare = "", use = "", name = "Food", gives = "4 Food", detail = "Makes 4 Food from your stores once a turn", icon = "ui/campaign ui/effect_bundles/resource_derpy_grain.png", pool = "skaven_food", goods = {{"grain", 30, "ui/campaign ui/effect_bundles/resource_derpy_grain.png"}, {"salted_fish", 30, "ui/campaign ui/effect_bundles/resource_derpy_salted_fish.png"}}, target = ""},
+    {key = "conv_oathgold", kind = "convert", rare = "", use = "", name = "Oathgold", gives = "30 Oathgold", detail = "Makes 30 Oathgold from your stores once a turn", icon = "ui/campaign ui/effect_bundles/resource_gold_idols.png", pool = "dwf_oathgold", goods = {{"gold_idols", 30, "ui/campaign ui/effect_bundles/resource_gold_idols.png"}, {"silver", 30, "ui/campaign ui/effect_bundles/resource_derpy_silver.png"}}, target = ""},
+    {key = "conv_infamy", kind = "convert", rare = "", use = "", name = "Infamy", gives = "50 Infamy", detail = "Makes 50 Infamy from your stores once a turn", icon = "ui/campaign ui/effect_bundles/resource_derpy_rum.png", pool = "cst_infamy", goods = {{"rum", 30, "ui/campaign ui/effect_bundles/resource_derpy_rum.png"}, {"pearls", 30, "ui/campaign ui/effect_bundles/resource_derpy_pearls.png"}}, target = ""},
     {key = "army_rations", kind = "army", rare = "", use = "", name = "Rations and Drill", gives = "The army gains a rank", detail = "Every unit in the selected army gains a rank", icon = "ui/campaign ui/effect_bundles/resource_derpy_grain.png", pool = "", goods = {{"grain", 35, "ui/campaign ui/effect_bundles/resource_derpy_grain.png"}, {"salt", 35, "ui/campaign ui/effect_bundles/resource_salt.png"}, {"beer", 35, "ui/campaign ui/effect_bundles/resource_dwarf_beer.png"}}, target = "army"},
-    {key = "army_ammo", kind = "army", rare = "", use = "", name = "Ammunition Train", gives = "Ammunition +20%, 5 turns", detail = "The selected army's ammunition +20% for 5 turns", icon = "ui/campaign ui/effect_bundles/resource_derpy_blackpowder.png", pool = "", goods = {{"blackpowder", 50, "ui/campaign ui/effect_bundles/resource_derpy_blackpowder.png"}, {"brass", 50, "ui/campaign ui/effect_bundles/resource_derpy_brass.png"}}, target = "army"},
-    {key = "army_forge", kind = "army", rare = "", use = "", name = "Field Forge", gives = "Armour +15, 5 turns", detail = "The selected army's armour +15 for 5 turns", icon = "ui/campaign ui/effect_bundles/resource_iron.png", pool = "", goods = {{"iron", 50, "ui/campaign ui/effect_bundles/resource_iron.png"}, {"coal", 50, "ui/campaign ui/effect_bundles/resource_derpy_coal.png"}}, target = "army"},
-    {key = "army_remounts", kind = "army", rare = "", use = "", name = "Remounts", gives = "Replenishment +10%, 5 turns", detail = "The selected army replenishes 10% faster for 5 turns", icon = "ui/campaign ui/effect_bundles/resource_derpy_warhorses.png", pool = "", goods = {{"warhorses", 50, "ui/campaign ui/effect_bundles/resource_derpy_warhorses.png"}, {"animals", 50, "ui/campaign ui/effect_bundles/resource_animals.png"}}, target = "army"},
-    {key = "army_medicine", kind = "army", rare = "", use = "", name = "Medicine Chests", gives = "Attrition -25%, 5 turns", detail = "The selected army suffers 25% less attrition for 5 turns", icon = "ui/campaign ui/effect_bundles/resource_medicine.png", pool = "", goods = {{"medicine", 50, "ui/campaign ui/effect_bundles/resource_medicine.png"}, {"wine", 50, "ui/campaign ui/effect_bundles/resource_wine.png"}}, target = "army"},
+    {key = "army_ammo", kind = "army", rare = "", use = "", name = "Ammunition Train", gives = "Ammunition +20% (5 turns)", detail = "The selected army's ammunition +20% for 5 turns", icon = "ui/campaign ui/effect_bundles/resource_derpy_blackpowder.png", pool = "", goods = {{"blackpowder", 50, "ui/campaign ui/effect_bundles/resource_derpy_blackpowder.png"}, {"brass", 50, "ui/campaign ui/effect_bundles/resource_derpy_brass.png"}}, target = "army"},
+    {key = "army_forge", kind = "army", rare = "", use = "", name = "Field Forge", gives = "Armour +15 (5 turns)", detail = "The selected army's armour +15 for 5 turns", icon = "ui/campaign ui/effect_bundles/resource_iron.png", pool = "", goods = {{"iron", 50, "ui/campaign ui/effect_bundles/resource_iron.png"}, {"coal", 50, "ui/campaign ui/effect_bundles/resource_derpy_coal.png"}}, target = "army"},
+    {key = "army_remounts", kind = "army", rare = "", use = "", name = "Remounts", gives = "Replenishment +10% (5 turns)", detail = "The selected army replenishes 10% faster for 5 turns", icon = "ui/campaign ui/effect_bundles/resource_derpy_warhorses.png", pool = "", goods = {{"warhorses", 50, "ui/campaign ui/effect_bundles/resource_derpy_warhorses.png"}, {"animals", 50, "ui/campaign ui/effect_bundles/resource_animals.png"}}, target = "army"},
+    {key = "army_medicine", kind = "army", rare = "", use = "", name = "Medicine Chests", gives = "Attrition -25% (5 turns)", detail = "The selected army suffers 25% less attrition for 5 turns", icon = "ui/campaign ui/effect_bundles/resource_medicine.png", pool = "", goods = {{"medicine", 50, "ui/campaign ui/effect_bundles/resource_medicine.png"}, {"wine", 50, "ui/campaign ui/effect_bundles/resource_wine.png"}}, target = "army"},
     {key = "trait_silk", kind = "trait", rare = "", use = "", name = "Silk-robed", gives = "Diplomacy +10", detail = "A trait for the selected lord or hero: diplomatic relations +10", icon = "ui/campaign ui/effect_bundles/resource_derpy_silk.png", pool = "", goods = {{"silk", 50, "ui/campaign ui/effect_bundles/resource_derpy_silk.png"}, {"dyes", 50, "ui/campaign ui/effect_bundles/resource_dyes.png"}, {"jade", 50, "ui/campaign ui/effect_bundles/resource_derpy_jade.png"}}, target = "character"},
     {key = "trait_steel", kind = "trait", rare = "", use = "", name = "Steel-shod", gives = "Armour +10", detail = "A trait for the selected lord or hero: armour +10", icon = "ui/campaign ui/effect_bundles/resource_iron.png", pool = "", goods = {{"iron", 80, "ui/campaign ui/effect_bundles/resource_iron.png"}, {"brass", 80, "ui/campaign ui/effect_bundles/resource_derpy_brass.png"}}, target = "character"},
     {key = "trait_read", kind = "trait", rare = "", use = "", name = "Well-read", gives = "Experience +20%", detail = "A trait for the selected lord or hero: experience gained +20%", icon = "ui/campaign ui/effect_bundles/resource_derpy_books.png", pool = "", goods = {{"books", 80, "ui/campaign ui/effect_bundles/resource_derpy_books.png"}, {"glassware", 80, "ui/campaign ui/effect_bundles/resource_derpy_glassware.png"}}, target = "character"},
-    {key = "trait_spice", kind = "trait", rare = "", use = "", name = "Spice-hardened", gives = "Leadership +4, movement -5%", detail = "A trait for the selected lord: leadership +4 for the army, movement -5%", icon = "ui/campaign ui/effect_bundles/resource_spices.png", pool = "", goods = {{"spices", 60, "ui/campaign ui/effect_bundles/resource_spices.png"}, {"incense", 60, "ui/campaign ui/effect_bundles/resource_derpy_incense.png"}}, target = "lord"},
+    {key = "trait_spice", kind = "trait", rare = "", use = "", name = "Spice-hardened", gives = "Leadership +4 (movement -5%)", detail = "A trait for the selected lord: leadership +4 for the army and movement -5%", icon = "ui/campaign ui/effect_bundles/resource_spices.png", pool = "", goods = {{"spices", 60, "ui/campaign ui/effect_bundles/resource_spices.png"}, {"incense", 60, "ui/campaign ui/effect_bundles/resource_derpy_incense.png"}}, target = "lord"},
     {key = "trait_fur", kind = "trait", rare = "", use = "", name = "Furred and Booted", gives = "Attrition -25%", detail = "A trait for the selected lord: their army suffers 25% less attrition", icon = "ui/campaign ui/effect_bundles/resource_furs.png", pool = "", goods = {{"furs", 60, "ui/campaign ui/effect_bundles/resource_furs.png"}, {"wool", 60, "ui/campaign ui/effect_bundles/resource_derpy_wool.png"}}, target = "lord"},
-    {key = "last_granary", kind = "lasting", rare = "", use = "", name = "Great Granary", gives = "Growth +15, for good", detail = "Growth +15 in every province, for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_grain.png", pool = "", goods = {{"grain", 120, "ui/campaign ui/effect_bundles/resource_derpy_grain.png"}, {"salt", 120, "ui/campaign ui/effect_bundles/resource_salt.png"}, {"salted_meat", 120, "ui/campaign ui/effect_bundles/resource_derpy_salted_meat.png"}, {"pottery", 120, "ui/campaign ui/effect_bundles/resource_pottery.png"}}, target = ""},
-    {key = "last_records", kind = "lasting", rare = "", use = "", name = "Hall of Records", gives = "Research +15%, for good", detail = "Research rate +15%, for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_books.png", pool = "", goods = {{"books", 150, "ui/campaign ui/effect_bundles/resource_derpy_books.png"}, {"glassware", 150, "ui/campaign ui/effect_bundles/resource_derpy_glassware.png"}, {"silver", 150, "ui/campaign ui/effect_bundles/resource_derpy_silver.png"}}, target = ""},
-    {key = "last_bazaar", kind = "lasting", rare = "", use = "", name = "Grand Bazaar", gives = "Trade income +15%, for good", detail = "Trade income +15%, for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_silk.png", pool = "", goods = {{"silk", 120, "ui/campaign ui/effect_bundles/resource_derpy_silk.png"}, {"carpets", 120, "ui/campaign ui/effect_bundles/resource_derpy_carpets.png"}, {"dyes", 120, "ui/campaign ui/effect_bundles/resource_dyes.png"}, {"spices", 120, "ui/campaign ui/effect_bundles/resource_spices.png"}}, target = ""},
-    {key = "last_arsenal", kind = "lasting", rare = "", use = "", name = "Arsenal", gives = "Upkeep -10%, for good", detail = "Army upkeep -10%, for good", icon = "ui/campaign ui/effect_bundles/resource_iron.png", pool = "", goods = {{"iron", 150, "ui/campaign ui/effect_bundles/resource_iron.png"}, {"coal", 150, "ui/campaign ui/effect_bundles/resource_derpy_coal.png"}, {"brass", 150, "ui/campaign ui/effect_bundles/resource_derpy_brass.png"}, {"blackpowder", 150, "ui/campaign ui/effect_bundles/resource_derpy_blackpowder.png"}}, target = ""},
-    {key = "last_stables", kind = "lasting", rare = "", use = "", name = "Royal Stables", gives = "Cavalry cost -20%, for good", detail = "Cavalry recruitment cost -20%, for good", icon = "ui/campaign ui/effect_bundles/resource_derpy_warhorses.png", pool = "", goods = {{"warhorses", 150, "ui/campaign ui/effect_bundles/resource_derpy_warhorses.png"}, {"furs", 150, "ui/campaign ui/effect_bundles/resource_furs.png"}, {"tusks", 150, "ui/campaign ui/effect_bundles/resource_ivory.png"}, {"timber", 150, "ui/campaign ui/effect_bundles/resource_timber.png"}}, target = ""},
-    {key = "research", kind = "research", rare = "", use = "luxuries", name = "Research", gives = "400 research points", detail = "400 research points, at once", icon = "ui/campaign ui/effect_bundles/resource_derpy_books.png", pool = "", goods = {}, target = ""},
+    {key = "last_granary", kind = "lasting", rare = "", use = "", name = "Great Granary", gives = "Growth +15 Permanent", detail = "Growth +15 in every province. Grain is safe from spoiling up to half of each store. Permanent", icon = "ui/campaign ui/effect_bundles/resource_derpy_grain.png", pool = "", goods = {{"grain", 120, "ui/campaign ui/effect_bundles/resource_derpy_grain.png"}, {"salt", 120, "ui/campaign ui/effect_bundles/resource_salt.png"}, {"salted_meat", 120, "ui/campaign ui/effect_bundles/resource_derpy_salted_meat.png"}, {"pottery", 120, "ui/campaign ui/effect_bundles/resource_pottery.png"}}, target = ""},
+    {key = "last_granary_chd", kind = "lasting", rare = "", use = "", name = "Great Granary", gives = "Battle Labour +15% Permanent", detail = "Labour taken after battles +15%. Grain is safe from spoiling up to half of each store. Permanent", icon = "ui/campaign ui/effect_bundles/resource_derpy_grain.png", pool = "", goods = {{"grain", 120, "ui/campaign ui/effect_bundles/resource_derpy_grain.png"}, {"salt", 120, "ui/campaign ui/effect_bundles/resource_salt.png"}, {"salted_meat", 120, "ui/campaign ui/effect_bundles/resource_derpy_salted_meat.png"}, {"pottery", 120, "ui/campaign ui/effect_bundles/resource_pottery.png"}}, target = ""},
+    {key = "last_records", kind = "lasting", rare = "", use = "", name = "Hall of Records", gives = "Research +15% Permanent", detail = "Research rate +15%. Permanent", icon = "ui/campaign ui/effect_bundles/resource_derpy_books.png", pool = "", goods = {{"books", 150, "ui/campaign ui/effect_bundles/resource_derpy_books.png"}, {"glassware", 150, "ui/campaign ui/effect_bundles/resource_derpy_glassware.png"}, {"silver", 150, "ui/campaign ui/effect_bundles/resource_derpy_silver.png"}}, target = ""},
+    {key = "last_bazaar", kind = "lasting", rare = "", use = "", name = "Grand Bazaar", gives = "Trade income +15% Permanent", detail = "Trade income +15%. Permanent", icon = "ui/campaign ui/effect_bundles/resource_derpy_silk.png", pool = "", goods = {{"silk", 120, "ui/campaign ui/effect_bundles/resource_derpy_silk.png"}, {"carpets", 120, "ui/campaign ui/effect_bundles/resource_derpy_carpets.png"}, {"dyes", 120, "ui/campaign ui/effect_bundles/resource_dyes.png"}, {"spices", 120, "ui/campaign ui/effect_bundles/resource_spices.png"}}, target = ""},
+    {key = "last_loot", kind = "lasting", rare = "", use = "", name = "Loot Hoard", gives = "Loot income +15% Permanent", detail = "Income from sacking and looting settlements +15%. Permanent", icon = "ui/campaign ui/effect_bundles/resource_trinkets.png", pool = "", goods = {{"trinkets", 120, "ui/campaign ui/effect_bundles/resource_trinkets.png"}, {"silver", 120, "ui/campaign ui/effect_bundles/resource_derpy_silver.png"}, {"gems", 120, "ui/campaign ui/effect_bundles/resource_gemstones.png"}, {"gold_idols", 120, "ui/campaign ui/effect_bundles/resource_gold_idols.png"}}, target = ""},
+    {key = "last_arsenal", kind = "lasting", rare = "", use = "", name = "Arsenal", gives = "Upkeep -10% Permanent", detail = "Army upkeep -10%. Permanent", icon = "ui/campaign ui/effect_bundles/resource_iron.png", pool = "", goods = {{"iron", 150, "ui/campaign ui/effect_bundles/resource_iron.png"}, {"coal", 150, "ui/campaign ui/effect_bundles/resource_derpy_coal.png"}, {"brass", 150, "ui/campaign ui/effect_bundles/resource_derpy_brass.png"}, {"blackpowder", 150, "ui/campaign ui/effect_bundles/resource_derpy_blackpowder.png"}}, target = ""},
+    {key = "last_stables", kind = "lasting", rare = "", use = "", name = "Royal Stables", gives = "Cavalry cost -20% Permanent", detail = "Cavalry recruitment cost -20%. Permanent", icon = "ui/campaign ui/effect_bundles/resource_derpy_warhorses.png", pool = "", goods = {{"warhorses", 150, "ui/campaign ui/effect_bundles/resource_derpy_warhorses.png"}, {"furs", 150, "ui/campaign ui/effect_bundles/resource_furs.png"}, {"tusks", 150, "ui/campaign ui/effect_bundles/resource_ivory.png"}, {"timber", 150, "ui/campaign ui/effect_bundles/resource_timber.png"}}, target = ""},
+    {key = "last_engineers", kind = "lasting", rare = "", use = "", name = "Engineers' Yard", gives = "Artillery -20% Permanent", detail = "Artillery recruitment cost -20%. Permanent", icon = "ui/campaign ui/effect_bundles/resource_timber.png", pool = "", goods = {{"timber", 150, "ui/campaign ui/effect_bundles/resource_timber.png"}, {"iron", 150, "ui/campaign ui/effect_bundles/resource_iron.png"}, {"tools", 150, "ui/campaign ui/effect_bundles/resource_derpy_tools.png"}, {"brass", 150, "ui/campaign ui/effect_bundles/resource_derpy_brass.png"}}, target = ""},
+    {key = "last_pens", kind = "lasting", rare = "", use = "", name = "Beast Pens", gives = "Monster cost -20% Permanent", detail = "Monster recruitment cost -20%. Permanent", icon = "ui/campaign ui/effect_bundles/resource_animals.png", pool = "", goods = {{"animals", 150, "ui/campaign ui/effect_bundles/resource_animals.png"}, {"salted_meat", 150, "ui/campaign ui/effect_bundles/resource_derpy_salted_meat.png"}, {"leather", 150, "ui/campaign ui/effect_bundles/resource_derpy_leather.png"}, {"timber", 150, "ui/campaign ui/effect_bundles/resource_timber.png"}}, target = ""},
+    {key = "last_boneyard", kind = "lasting", rare = "", use = "", name = "Bone Yard", gives = "Monster cost -20% Permanent", detail = "Monster recruitment cost -20%. Permanent", icon = "ui/campaign ui/effect_bundles/resource_ivory.png", pool = "", goods = {{"tusks", 150, "ui/campaign ui/effect_bundles/resource_ivory.png"}, {"timber", 150, "ui/campaign ui/effect_bundles/resource_timber.png"}, {"salt", 150, "ui/campaign ui/effect_bundles/resource_salt.png"}, {"whale_oil", 150, "ui/campaign ui/effect_bundles/resource_derpy_whale_oil.png"}}, target = ""},
+    {key = "research", kind = "research", rare = "", use = "luxuries", name = "Research", gives = "400 research points", detail = "400 research points at once", icon = "ui/campaign ui/effect_bundles/resource_derpy_books.png", pool = "", goods = {}, target = ""},
 }
 DERPY_MR_STORES_USE_ICON = {
     building = "ui/campaign ui/effect_bundles/construction.png",
@@ -898,6 +1080,11 @@ DERPY_MR_STORES_FOUND = {
     starwood = {"Glade of Gifts", "Starwood Grove", "Grove of the Willing"},
     wyvern_scales = {"Scale Scavengers", "Wyvern Roost", "Wyvern Hunters' Lodge"},
 }
+DERPY_MR_STORES_EDICTS = {
+    {key = "rations", name = "Rations", tip = "How much your settlements eat each turn.", options = {{key = "plenty", label = "Plenty", tip = "Settlements eat 3 provisions a turn for each level.\nGrowth +10 in every province.", tip_chd = "Settlements eat 3 provisions a turn for each level.\nControl +2 in every province."}, {key = "normal", label = "Normal", tip = "Settlements eat 2 provisions a turn for each level."}, {key = "rationing", label = "Rationing", tip = "Settlements eat 1 provision a turn for each level.\nControl -2 in every province."}}},
+    {key = "workshops", name = "Workshops", tip = "What your workshops and trade favour.", options = {{key = "war", label = "War economy", tip = "Workshops that make blackpowder, tools or leather make half as much again.\nTrade income -10%."}, {key = "balanced", label = "Balanced", tip = "Workshops make their usual amounts."}, {key = "merchant", label = "Merchant", tip = "Trade agreements send twice their usual share.\nRecruits take a quarter more from your stores."}}},
+    {key = "roads", name = "Roads", tip = "Who may cross your lands with trade.", options = {{key = "open", label = "Open", tip = "Trade crossing your lands pays no tolls.\nTrade income +5%."}, {key = "tolled", label = "Tolled", tip = "Trade crossing your lands pays you tolls."}, {key = "closed", label = "Closed", tip = "Other factions' trade cannot cross your lands.\nControl +1 in every province."}}},
+}
 -- Derpy Resource Overhaul: the Stores panel. It shows what every settlement of the local
 -- faction holds of each good, what its buildings add each turn, and how much space it has.
 -- Read-only and local: nothing here writes the model, so it cannot desync multiplayer.
@@ -915,10 +1102,10 @@ S.PREFIX = "derpy_mr_store_"
 -- The measured route (docs/TRADE_RESOURCES.md section 19): it lists only the rows whose lore
 -- condition holds, at their real value. The capacity effect has no "_stocked" and is skipped.
 S.CCO = 'BuildingSlotList.JoinString(BuildingContext.EffectList.Filter(EffectKey.StartsWith("derpy_mr_store_")).JoinString(EffectKey + "=" + Value, ","), ",")'
-S.NOTHING = "Nothing is stored yet. Stores fill each turn with what your buildings make."
-S.NO_REALM = "You hold no settlements, so you have no stores."
-S.FULL_TIP = "This store is full. Anything produced here beyond its space is lost."
-S.NO_HISTORY = "No history yet. Check back next turn."
+S.NOTHING = "Nothing is stored here yet."
+S.NO_REALM = "You hold no settlements and so have no stores."
+S.FULL_TIP = "This store is full and anything more made here is lost."
+S.NO_HISTORY = "The history starts next turn."
 S.view, S.focus = "goods", nil
 
 function S.say(msg)
@@ -1107,7 +1294,7 @@ end
 
 -- A tooltip with one more line, the first line when it has none yet.
 local function add_line(tip, line)
-    if not line then return tip end
+    if not line or line == "" then return tip end
     if tip == "" then return line end
     return tip .. "\n" .. line
 end
@@ -1148,11 +1335,26 @@ function S.last_line(l)
     add("traded in", l.traded_in or 0)
     add("traded out", -(l.traded_out or 0))
     add("eaten", -(l.eaten_out or 0))
+    add("spoiled", -(l.spoiled_out or 0))
     add("moved", (l.moved_in or 0) - (l.moved_out or 0))      -- netted: what the road lost
     add("spent", -(l.spent_out or 0))
     add("sold", -(l.sold_out or 0))
     if #parts == 0 then return "Last turn: no change" end
-    return "Last turn: " .. table.concat(parts, ", ")
+    local line = "Last turn: " .. table.concat(parts, ", ")
+    -- a busy turn drops its last parts rather than run past the chart line
+    while #line * L.CHAR_W > L.chart_line[3] and #parts > 1 do
+        parts[#parts] = nil
+        line = "Last turn: " .. table.concat(parts, ", ") .. ", ..."
+    end
+    return line
+end
+
+-- "Grain over 250 spoils at 4% a turn, about 6 next turn." nil for a good that keeps.
+function S.spoil_sentence(info, name)
+    if not info then return nil end
+    local s = name .. " over " .. S.num(info.keep) .. " spoils at " .. S.num(info.rate) .. "% a turn"
+    if info.due > 0 then return s .. " and about " .. S.num(info.due) .. " will spoil next turn." end
+    return s .. "."
 end
 
 -- One bar a turn, oldest left, on one scale whose top is the series' highest total. A turn
@@ -1201,12 +1403,10 @@ S.BULK = "derpy_mr_all_"
 S.BULK_ORDER = { { "export", "allow" }, { "export", "stop" }, { "import", "allow" }, { "import", "stop" } }
 S.BULK_LABEL = { allow = "Allow all ", stop = "Stop all " }
 S.BULK_TIP = {
-    export = { allow = "Let every resource leave your stores by trade, and earn trade income again from next turn.",
-               stop = "Keep every resource in your stores, and out of your trade agreements from next turn: "
-                   .. "no trade income from any of them." },
+    export = { allow = "From next turn every resource can be traded again and earn trade income.",
+               stop = "From next turn no resource can be traded or earn trade income." },
     import = { allow = "Take every resource your trade partners send to your stores.",
-               stop = "Refuse every resource your trade partners send to your stores. "
-                   .. "Trade agreement imports are not affected: you pay import duty on them." },
+               stop = "Refuse every resource your trade partners send.\nTrade agreement imports still come in with import duty." },
 }
 
 -- The flows script's function `name`, or nil without it: the panel must not need it to open.
@@ -1238,16 +1438,49 @@ end
 function S.trade_line(l)
     local o, i = l.traded_out or 0, l.traded_in or 0
     if o == 0 and i == 0 then return "-" end
-    return "sent " .. S.num(o) .. ", received " .. S.num(i)
+    return "sent " .. S.num(o) .. " and received " .. S.num(i)
 end
 
 S.DUTY_ICON = "ui/campaign ui/effect_bundles/income.png"
 S.RECRUIT_HEAD = "Recruits last turn"
 S.CUT_ICON = "ui/campaign ui/effect_bundles/trade_agreement.png"
+-- ROAD GUARDS (Part D 7.4): a sword, for armed men riding with the cargo (CA's shield icon draws as a blank disc)
+S.GUARD_ICON = "ui/campaign ui/effect_bundles/attribute_unyielding_assault.png"
+S.GUARDS_TIP = "Guards ride with every cart and convoy you send.\nThey cost 5% of the cargo's value when it leaves.\n"
+    .. "They make trouble on the road half as likely."
 function S.cut_tip(cut, turns)
-    local lines = { "No resources or import duty move with these trade partners: the road between your capitals "
-        .. "takes more than " .. turns .. " turns, or crosses lands at war with, or very unfriendly to, one of you." }
-    for _, c in ipairs(cut) do lines[#lines + 1] = loc("factions_screen_name_" .. c.key, c.key) .. ": " .. c.why end
+    local lines = { "Nothing moves between you and these partners.",
+        "The road takes more than " .. turns .. " turns, crosses hostile lands or has an enemy army on it." }
+    for _, c in ipairs(cut) do
+        -- BLOCKADED (Part C): an enemy army on the road this turn, named
+        local why = c.why or ("Blockaded by " .. loc("factions_screen_name_" .. tostring(c.by), tostring(c.by)))
+        lines[#lines + 1] = loc("factions_screen_name_" .. c.key, c.key) .. ": " .. why
+    end
+    return table.concat(lines, "\n")
+end
+
+-- "Tolls: 30 to Name, 12 to Name.": a cargo's tolls, the most first, equal amounts by key (Part C)
+function S.tolls_text(t)
+    local keys = {}
+    for k in pairs(t) do keys[#keys + 1] = k end
+    table.sort(keys, function(a, b)
+        if t[a] ~= t[b] then return t[a] > t[b] end
+        return a < b
+    end)
+    local parts = {}
+    for _, k in ipairs(keys) do parts[#parts + 1] = S.num(t[k]) .. " to " .. loc("factions_screen_name_" .. k, k) end
+    return "Tolls: " .. table.concat(parts, ", ") .. "."
+end
+
+-- Last turn's tolls one way: a line per faction that paid or was paid.
+function S.toll_tip(d, way)
+    local lines = { way == "paid" and "Last turn you paid these factions to cross their lands."
+                    or "Last turn these factions paid you to cross your lands." }
+    local keys = {}
+    for k, b in pairs(d.by) do if (b[way] or 0) > 0 then keys[#keys + 1] = k end end
+    table.sort(keys)
+    for _, k in ipairs(keys) do lines[#lines + 1] = loc("factions_screen_name_" .. k, k) .. ": " .. S.num(d.by[k][way]) end
+    if #keys == 0 then lines[#lines + 1] = "Nothing last turn." end
     return table.concat(lines, "\n")
 end
 
@@ -1277,9 +1510,8 @@ S.CONVOY_LINES = 8   -- convoys a Cargo on the road tooltip names, soonest first
 
 function S.convoy_tip(convoys)
     local sh = S.flows("SHIP")
-    local lines = { "What your trade agreements have on the road. Each lands in the buyer's capital on the turn shown, "
-        .. "and an army at war with the sender, within " .. ((sh and sh.near) or 3)
-        .. " hexes of it when the sender's turn begins, can seize it." }
+    local lines = { "An army at war with the sender can seize these goods from within "
+        .. ((sh and sh.near) or 3) .. " hexes when the sender begins its turn." }
     local soon = {}
     for i, c in ipairs(convoys) do soon[i] = c end
     -- equal turns in the order the convoys left: by the number in the id, since "10" sorts before "9" as text
@@ -1291,8 +1523,9 @@ function S.convoy_tip(convoys)
     end)
     for i = 1, math.min(#soon, S.CONVOY_LINES) do
         local c = soon[i]
-        lines[#lines + 1] = "From " .. S.place(c.from) .. " to " .. S.place(c.to) .. ", arrives turn " .. tostring(c.due)
+        lines[#lines + 1] = "From " .. S.place(c.from) .. " to " .. S.place(c.to) .. " by turn " .. tostring(c.due)
             .. ": " .. S.basket_text(c.basket)
+        if type(c.tolls) == "table" and next(c.tolls) then lines[#lines + 1] = S.tolls_text(c.tolls) end
     end
     local more = #soon - S.CONVOY_LINES
     if more > 0 then lines[#lines + 1] = "and " .. more .. " more " .. (more == 1 and "convoy" or "convoys") end
@@ -1300,14 +1533,14 @@ function S.convoy_tip(convoys)
 end
 
 function S.duty_tip(d, pct)
-    local lines = { "Each turn you pay every trade partner within reach " .. pct .. "% of the value of what its settlements make, "
-        .. "and each partner pays you the same on what yours make. Last turn:" }
+    local lines = { "Each turn you and each trade partner you can reach pay " .. pct .. "% of the value of what the other makes.",
+        "Last turn:" }
     local keys = {}
     for k in pairs(d.by) do keys[#keys + 1] = k end
     table.sort(keys)
     for _, k in ipairs(keys) do
         lines[#lines + 1] = loc("factions_screen_name_" .. k, k) .. ": paid " .. S.num(d.by[k].paid)
-            .. ", received " .. S.num(d.by[k].got)
+            .. " and received " .. S.num(d.by[k].got)
     end
     if #keys == 0 then lines[#lines + 1] = "Nothing paid or received." end
     return table.concat(lines, "\n")
@@ -1316,18 +1549,15 @@ end
 function S.switch_tip(dir, stopped, name)
     if dir == "export" then
         if stopped then
-            return name .. " stays in your stores and out of your trade agreements: no trade income from it. "
-                .. "Click to allow it again, from next turn."
+            return name .. " is kept out of trade and earns no trade income.\nClick to trade it again from next turn."
         end
-        return name .. " may leave your stores by trade and earns trade income in your trade agreements. "
-            .. "Click to stop both, from next turn."
+        return name .. " can be traded and earns trade income.\nClick to keep it out of trade from next turn."
     end
     if stopped then
-        return "Your trade partners send no " .. name .. " to your stores. Click to allow it again. "
-            .. "Trade agreement imports are not affected: you pay import duty on them."
+        return "Your trade partners send you no " .. name .. ".\nTrade agreement imports still come in.\n"
+            .. "Click to take it again."
     end
-    return "Your trade partners may send " .. name .. " to your stores. Click to refuse it. "
-        .. "Trade agreement imports are not affected: you pay import duty on them."
+    return "Your trade partners can send you " .. name .. ".\nClick to refuse it."
 end
 
 -- which of DERPY_MR_STORES_L.VIEWS the panel shows: both drill-downs share "focus"; the
@@ -1346,7 +1576,7 @@ S.SEND = "derpy_mr_sendhere"
 S.POLICY = "derpy_mr_policy_"
 S.ORDER = "derpy_mr_order_"
 S.SELL = "derpy_mr_sell"
-S.NO_SHIPS = "Nothing on the road. To send a shipment, open a settlement's resources and press Send here."
+S.NO_SHIPS = "Use Send here in a settlement to put goods on the road."
 S.SUPPLY_KEY = {}
 for _, sp in ipairs(DERPY_MR_STORES_SUPPLY) do S.SUPPLY_KEY[sp.key] = true end
 S.USE_WORD = { provisions = "provisions", building = "building materials", war = "war materials",
@@ -1394,14 +1624,14 @@ function S.send_tip(plan, d, coming)
     local out
     if plan and plan.busy then
         local f = S.local_faction()
-        out = "You have " .. S.num((f and S.ask("ship_cap", f)) or 0)
-            .. " shipments on the road already, the most you can have."
+        out = "You already have " .. S.num((f and S.ask("ship_cap", f)) or 0)
+            .. " shipments on the road and cannot send more."
     elseif plan then
         local from = loc("regions_onscreen_" .. plan.from:name(), plan.from:name())
         local sh = S.flows("SHIP")
-        out = "Ship " .. S.num(plan.n) .. " " .. d.name .. " from " .. from .. ": " .. S.num(plan.got)
-            .. " arrive in at least " .. turns(plan.turns or (sh and sh.turns) or 2) .. ", " .. S.num(plan.n - plan.got)
-            .. " are lost on the way. An army at war with you can seize it on the road."
+        out = "Send " .. S.num(plan.n) .. " " .. d.name .. " from " .. from .. ".\n" .. S.num(plan.n - plan.got)
+            .. " are lost on the way and the rest arrive in " .. turns(plan.turns or (sh and sh.turns) or 2)
+            .. " or more.\nAn army at war with you can seize it."
     elseif d.full then
         out = "This store of " .. d.name .. " is full."
     elseif d.cap > 0 and d.held + S.coming_total(coming) >= d.cap then
@@ -1410,7 +1640,7 @@ function S.send_tip(plan, d, coming)
         out = "No other settlement of yours can send " .. d.name .. "."
     end
     for _, s in ipairs(coming or {}) do
-        out = out .. "\nOn the road here: " .. S.num(s.n) .. ", arriving on turn " .. tostring(S.ask("ship_due", s) or s.due) .. "."
+        out = out .. "\n" .. S.num(s.n) .. " more arrive here on turn " .. tostring(S.ask("ship_due", s) or s.due) .. "."
     end
     return out
 end
@@ -1439,45 +1669,52 @@ function S.supply_tip(sp, st, name)
     local stores = "the stores of " .. name
     local out = sp.label .. "\n"
     if sp.use == "" then
-        out = out .. "When " .. stores .. " run low on a supply that is on, the other settlements you hold "
-            .. "in this province send more by shipment.\n"
+        out = out .. "Your other settlements in this province send more when " .. stores .. " run low.\n"
     else
         out = out .. "Pay " .. S.num(st.cost) .. " " .. (S.USE_WORD[sp.use] or sp.use) .. " a turn from "
             .. stores .. ": " .. sp.what .. " in every settlement you hold in this province.\n"
             .. S.use_goods(sp.use)
             .. "The stores of " .. name .. " hold " .. S.num(st.have[sp.use] or 0) .. ".\n"
         if st.short[sp.key] then
-            out = out .. "Turned off on turn " .. st.short[sp.key] .. ": " .. stores .. " ran short.\n"
+            out = out .. "Turned off on turn " .. st.short[sp.key] .. " because " .. stores .. " ran short.\n"
         end
     end
-    if st.on[sp.key] then return out .. "On. Click to stop it." end
-    return out .. "Off. Click to start it."
+    if st.on[sp.key] then return out .. "Click to stop it." end
+    return out .. "Click to start it."
 end
 
 function S.order_tip(o, st)
     local word = S.USE_WORD[st.use] or st.use
-    local out = o.label .. "\nSpend " .. S.num(st.cost) .. " " .. word .. ": " .. o.what .. ", for " .. turns(o.turns) .. ".\n"
+    local out = o.label .. "\nSpend " .. S.num(st.cost) .. " " .. word .. ": " .. o.what .. " for " .. turns(o.turns) .. ".\n"
         .. S.use_goods(st.use)
-    if st.active then return out .. "Running: " .. turns(st.active) .. " left. Ready again in " .. turns(st.wait) .. "." end
+    if st.active then return out .. "Running for " .. turns(st.active) .. " more and ready again in " .. turns(st.wait) .. "." end
     if st.wait then return out .. "Ready again in " .. turns(st.wait) .. "." end
-    if not st.ok then return out .. "Your stores hold " .. S.num(st.have) .. " " .. word .. "." end
-    return out .. "Your stores hold " .. S.num(st.have) .. ". Click to buy it."
+    if not st.ok then return out .. "You have " .. S.num(st.have) .. " " .. word .. "." end
+    return out .. "You have " .. S.num(st.have) .. ".\nClick to buy it."
 end
 
 -- Cover is turns of the good's use in store (bulk goods), counted over the whole category; fullness is the store's percent (the rest).
+-- "The price is 2.85 instead of 3.00." then "It is cheap because the store is 53% full." A full store is
+-- cheap and an empty one expensive (flows.lua F.quote), so the reason is the store. One sentence a line (author).
 function S.price_tip(q, use)
-    local word = q.mult < 100 and "cheap here" or q.mult > 100 and "dear here" or "fair price"
-    local state = q.cover and (turns(q.cover) .. " of " .. (S.USE_WORD[use] or use) .. " in store") or ("Store " .. S.num(q.fullness) .. "% full")
-    return "Price " .. S.money(q.price) .. " (" .. S.num(q.mult) .. "% of " .. S.money(q.base) .. "). "
-        .. state .. ", " .. word .. ". Buyers pay " .. S.money(q.buy) .. ", sellers get " .. S.money(q.sell) .. "."
+    local out
+    if q.mult == 100 then
+        out = "The price is the normal " .. S.money(q.price) .. "."
+    else
+        local why = q.cover and ("the stores hold " .. (q.mult > 100 and "only " or "") .. turns(q.cover) .. " of "
+            .. (S.USE_WORD[use] or use)) or ("the store is " .. S.num(q.fullness) .. "% full")
+        out = "The price is " .. S.money(q.price) .. " instead of " .. S.money(q.base) .. ".\nIt is "
+            .. (q.mult < 100 and "cheap" or "expensive") .. " because " .. why .. "."
+    end
+    return out .. "\nYou buy for " .. S.money(q.buy) .. " and sell for " .. S.money(q.sell) .. "."
 end
 
 S.SELL_LOTS = 8   -- lots a Sell tooltip names; any more are counted
 
 function S.sell_tip(sale, name)
     if sale then
-        local out = "Sell " .. S.num(sale.n) .. " " .. name .. " for " .. S.num(sale.gold)
-            .. " gold, " .. S.money(sale.price) .. " each: what your stores hold above half their space."
+        local out = "Sell the " .. S.num(sale.n) .. " " .. name .. " your stores hold over half full for "
+            .. S.num(sale.gold) .. " gold (" .. S.money(sale.price) .. " each)."
         local lots = sale.lots or {}
         for i = 1, math.min(#lots, S.SELL_LOTS) do
             out = out .. "\n" .. S.num(lots[i].n) .. " from " .. S.place(lots[i].region) .. " at " .. S.money(lots[i].price)
@@ -1486,7 +1723,7 @@ function S.sell_tip(sale, name)
         if more > 0 then out = out .. "\nand " .. more .. " more " .. (more == 1 and "store" or "stores") end
         return out
     end
-    return "Nothing to sell: your stores of " .. name .. " hold no more than half their space, or what is over would not fetch a whole gold."
+    return "There is nothing worth selling.\nOnly what your stores of " .. name .. " hold over half full can be sold."
 end
 
 -- THE PANEL'S SHADERS, CA's own, at the values CA's ui packs use most for that meaning (counted
@@ -1525,15 +1762,14 @@ end
 -- an icon, a tooltip, and what a click on it opens). Pure, so the harness reads it directly.
 -- FOUNDING A RARE BUILDING (spec 2026-10-09): a lore region no building slot offers it in gets one
 -- row above its goods. The flows script decides; this only words it.
-S.FOUND_WHY = { gold = "Needs %s gold.", tier = "Needs a level %d settlement.", slot = "Needs an empty building slot." }
+S.FOUND_WHY = { gold = "It needs %s gold.", tier = "It needs a level %d settlement.", slot = "It needs an empty building slot." }
 function S.found_row(fs, rkey)
     local names, price = DERPY_MR_STORES_FOUND[fs.good], S.num(fs.cost) .. " gold"
     local tip
     if fs.level == 0 then
-        tip = "Found " .. names[1] .. " here for " .. price .. ". No building slot in this region normally takes it;"
-              .. " it is built at once."
+        tip = "Build " .. names[1] .. " here at once for " .. price .. " even though no building slot here normally takes it."
     else
-        tip = "Upgrade to " .. names[fs.next] .. " for " .. price .. ". It is built at once."
+        tip = "Upgrade to " .. names[fs.next] .. " at once for " .. price .. "."
     end
     if fs.why == "gold" then tip = string.format(S.FOUND_WHY.gold, S.num(fs.cost))
     elseif fs.why == "tier" then tip = string.format(S.FOUND_WHY.tier, fs.tier_need)
@@ -1563,37 +1799,37 @@ end
 function S.trade_focus(v)
     v.title = "Stock rules: " .. S.name(S.focus)
     v.heads = { "Rule", "Amount", "Less", "Default", "More" }
-    v.empty = "Stock rules are unavailable without the stores model and an owned capital."
+    v.empty = "You need to hold a capital to set these."
     local c = S.policy_context(S.focus)
     if not c then return end
     local shared = not c.good.rare
     local word = S.USE_WORD[c.good.use] or c.good.use
-    for _, item in ipairs({ { "keep", "Keep in each store" }, { "target", "Import target at capital" } }) do
+    for _, item in ipairs({ { "keep", "Keep in each store" }, { "target", "Wanted at your capital" } }) do
         local field, label = item[1], item[2]
         local n = c.policy[field]
         local value = n ~= nil and S.num(n) or ("Auto: " .. S.num(c[field]))
-        local tip = field == "keep" and "Protects outgoing trade, shipments and surplus sales in every settlement. Spending and enemy seizure can use this stock."
-            or ("Trade partners deliver toward this target at " .. S.place(c.capital) .. " while it is worth at least 10% more here than in their stores. Domestic shipments use free space. Zero stops requests for this resource.")
-        if n == nil and shared then tip = tip .. " Auto is shared by common " .. word .. ", not reserved for each good." end
+        local tip = field == "keep" and "Every settlement keeps at least this much out of trade and sales.\nYour own spending and enemy raids can still take it."
+            or ("Your trade partners send it to " .. S.place(c.capital) .. " until you have this much.\nSet it to 0 to stop them.")
+        if n == nil and shared then tip = tip .. "\nOn Auto this amount covers all common " .. word .. " together." end
         v.rows[#v.rows + 1] = { label, value, "", "", "", policy = field, stem = S.focus, tip = tip }
     end
-    v.hint = "Step: 10. Auto restores the calculated rule."
+    v.hint = "Less and More change it by 10 and Default sets it back to Auto."
     local x, stem = c.view, S.focus
     v.rows[#v.rows + 1] = { "Capital: " .. S.place(c.capital), "", "", "", "" }
-    v.rows[#v.rows + 1] = { "Held / incoming", S.num(x.held[stem] or 0) .. " / " .. S.num(x.incoming[stem] or 0), "", "", "" }
-    v.rows[#v.rows + 1] = { "Remaining import need", S.num(S.ask("import_need", x, stem) or 0), "", "", "" }
+    v.rows[#v.rows + 1] = { "Held / on the way", S.num(x.held[stem] or 0) .. " / " .. S.num(x.incoming[stem] or 0), "", "", "" }
+    v.rows[#v.rows + 1] = { "Still wanted", S.num(S.ask("import_need", x, stem) or 0), "", "", "" }
     local q = S.ask("quote", x.faction, x.region, stem)
     v.rows[#v.rows + 1] = { "Price at capital", q and S.money(q.price) or "-", "", "", "",
-        tip = "Partners send this good only while it is worth at least 10% more here than in their stores. A full store is cheap and an empty one dear." }
+        tip = "Partners only send it while it sells for at least 10% more here than at home." }
     local stopped = S.flows("stopped")
     if stopped then
         local fk = x.faction:name()
         v.rows[#v.rows + 1] = { "Trade switches", (stopped(fk, "export", stem) and "Exports stopped" or "Exports allowed"), "", "", "",
-            tip = stopped(fk, "import", stem) and "Imports stopped: the target cannot request stock." or "Imports allowed; target and free space still apply." }
+            tip = stopped(fk, "import", stem) and "Nothing is asked for because imports are stopped." or "Imports are allowed up to the wanted amount and the free space." }
     end
     if shared then
-        v.rows[#v.rows + 1] = { "Auto category: " .. word, S.num(x.totals[c.good.use] or 0) .. " held", "", "", "",
-            tip = "Common goods in this category share one reserve and import target. Rare goods do not count." }
+        v.rows[#v.rows + 1] = { "All " .. word, S.num(x.totals[c.good.use] or 0) .. " held", "", "", "",
+            tip = "On Auto all common " .. word .. " share one reserve and one wanted amount.\nRare resources are not counted." }
     else
         local names = {}
         local f = x.faction
@@ -1602,20 +1838,22 @@ function S.trade_focus(v)
             local work = catalog and catalog[w.key]
             if work and work.rare == stem and S.ask("work_open", f, work) then names[#names + 1] = w.name end
         end
-        v.rows[#v.rows + 1] = { "Auto: one Workshop batch", S.num(c.target), "", "", "", tip = table.concat(names, ", ") }
+        v.rows[#v.rows + 1] = { "Auto: enough for one Workshop purchase", S.num(c.target), "", "", "",
+            tip = #names > 0 and ("Used by: " .. table.concat(names, ", ") .. ".") or "" }
     end
     for _, ship in ipairs(x.due or {}) do
-        if ship.stem == stem then v.rows[#v.rows + 1] = { "Incoming on turn " .. tostring(ship.due), S.num(ship.n), "", "", "" } end
+        if ship.stem == stem then v.rows[#v.rows + 1] = { "Arriving on turn " .. tostring(ship.due), S.num(ship.n), "", "", "" } end
     end
-    if S.actions_on() then v.rows[#v.rows + 1] = { "Supply routes and partner contracts", "", "", "", "",
-        open = "routes:" .. c.capital .. ":" .. stem, tip = "Choose a named source for recurring deliveries to this capital." } end
+    if S.actions_on() then v.rows[#v.rows + 1] = { "Set up a regular supply", "", "", "", "",
+        open = "routes:" .. c.capital .. ":" .. stem, tip = "Pick one of your settlements or a trade partner to keep sending it here." } end
 end
 
-S.ROUTE_TIP = "Each cart carries up to 100 gross units; 10% is lost at dispatch. A cart takes 1 to 6 turns, by the length of its road. Source Keep, trade holds and cart limits apply."
+S.ROUTE_TIP = "Each cart carries up to 100 and loses a tenth as it sets out.\nA cart takes 1 to 6 turns depending on the road."
+S.CART_PRICE = "You pay the selling price plus 10% or your own store price if that is higher.\nYou get your gold back if the cart is lost."
 
 function S.route_offers(v)
-    v.title, v.heads = "Create a supply route", { "Source", "Surplus", "Travel", "Gold / unit", "" }
-    v.hint, v.empty = "Click Create to accept a recurring order. Edit it under Spending.", "No source has exportable surplus."
+    v.title, v.heads = "Set up a regular supply", { "From", "Spare", "Takes", "Price each", "" }
+    v.hint, v.empty = "Press Create to start it and change it later under Spending.", "Nobody has any to spare."
     local rkey, stem = string.match(S.focus, "^routes:([%w_]+):([%w_]+)$")
     local f = S.local_faction()
     local to = f and rkey and S.ask("owned", f, rkey)
@@ -1644,9 +1882,9 @@ function S.route_offers(v)
                 for _, o in ipairs(S.ask("routes", f) or {}) do
                     if o.from == from:name() and o.to == rkey and o.stem == stem then valid = nil end
                 end
-                local tip = S.name(stem) .. " to " .. S.place(rkey) .. ". Target " .. target .. "; batch 100. " .. S.ROUTE_TIP .. " Travel shows the least it can take."
-                if partner then tip = tip .. "\nEach cart costs the seller's price plus 10% when it leaves, or what the goods would sell for at your store if that is more. Only dispatched carts reserve gold; at most 90 units per cart. The seller is paid after delivery. Cancellation or loss refunds unpaid escrow. War or a lost destination returns net cargo to the seller." end
-                v.rows[#v.rows + 1] = { S.place(from:name()), S.num(available), "at least " .. turns(S.ask("route_turns", from, to) or 2), partner and (price and S.money(price) or "-") or "Internal",
+                local tip = "Sends " .. S.name(stem) .. " to " .. S.place(rkey) .. " until you hold " .. target .. ".\n" .. S.ROUTE_TIP
+                if partner then tip = tip .. "\n" .. S.CART_PRICE end
+                v.rows[#v.rows + 1] = { S.place(from:name()), S.num(available), "at least " .. turns(S.ask("route_turns", from, to) or 2), partner and (price and S.money(price) or "-") or "Your own",
                     "", tip = tip, route_request = { "route_new", from:name(), rkey, stem, tostring(target), "100" },
                     send = { label = "Create", tip = tip, off = not valid } }
             end
@@ -1655,38 +1893,50 @@ function S.route_offers(v)
 end
 
 function S.route_view(v)
-    v.title, v.heads = "Recurring supply order", { "Rule", "Amount", "Less", "Default", "More" }
+    v.title, v.heads = "Regular supply", { "Rule", "Amount", "Less", "Default", "More" }
+    v.hint = "Less and More change it by 10 and Default sets it to 100."
     local id = string.sub(S.focus, 7)
     local f, order = S.local_faction(), nil
     for _, o in ipairs(f and S.ask("routes", f) or {}) do if o.id == id then order = o end end
-    if not order then v.empty = "Order no longer exists."; return end
+    if not order then v.empty = "This supply has ended."; return end
     local o = order
-    local summary = S.place(o.from) .. " → " .. S.place(o.to) .. ": " .. S.name(o.stem)
-    v.rows[#v.rows + 1] = { summary, o.status or "Not dispatched yet", "", "", "", tip = S.ROUTE_TIP }
+    local summary = S.place(o.from) .. " to " .. S.place(o.to) .. ": " .. S.name(o.stem)
+    v.rows[#v.rows + 1] = { summary, o.status or "No cart sent yet", "", "", "", tip = S.ROUTE_TIP }
     for _, field in ipairs({"target", "batch"}) do
-        v.rows[#v.rows + 1] = { field == "target" and "Net stock target" or "Gross batch limit", S.num(o[field]), "", "", "",
-            policy = field, route = id, tip = "Step 10. Default 100. Target subtracts stock and incoming net cargo; batch is 2–100 gross." }
+        v.rows[#v.rows + 1] = { field == "target" and "Stop at" or "Cart size", S.num(o[field]), "", "", "",
+            policy = field, route = id, tip = field == "target" and "Carts stop once you hold this much including what is on the way."
+                or "Each cart carries this much (2 to 100)." }
     end
     if o.seller ~= f:name() then
         local terms = S.ask("route_status", f, o, "show")
         local now = terms and S.ask("cart_price", terms.seller, terms.from, f, terms.to, o.stem)
-        v.rows[#v.rows + 1] = { "Price per delivered unit", o.last_price_c and S.money(o.last_price_c) or "Set per cart", "", "", "",
-            tip = "Each cart costs the seller's price plus 10% when it leaves, or what the goods would sell for at your store if that is more. Shows the last cart's price. Next cart: " .. (now and S.money(now) or "-") .. "." }
+        v.rows[#v.rows + 1] = { "Price each", o.last_price_c and S.money(o.last_price_c) or "Set per cart", "", "", "",
+            tip = "The last cart cost this and the next one costs "
+                .. (now and (S.money(now) .. " each") or "an unknown amount") .. "." }
     else
-        v.rows[#v.rows + 1] = { "Internal transfer: no gold", "", "", "", "" }
+        v.rows[#v.rows + 1] = { "Your own goods: free", "", "", "", "" }
     end
     local escrow = 0
     for _, s in ipairs(S.ask("ships") or {}) do
         if s.f == f:name() and s.route == id then escrow = escrow + (s.escrow or 0) end
     end
-    v.rows[#v.rows + 1] = { "Gold currently in escrow", S.num(escrow), "", "", "" }
-    v.rows[#v.rows + 1] = { o.enabled and "Dispatch enabled" or "Dispatch paused", "", "", "", "", route_request={"route_ctl",id,"toggle"},
-        send={label=o.enabled and "Pause" or "Resume",tip="Pausing stops future dispatch; travelling cargo completes its journey."} }
-    v.rows[#v.rows + 1] = { "Cancel this order", "", "", "", "", route_request={"route_ctl",id,"cancel"},
-        send={label="Cancel",tip="Removes the order. Partner cargo returns to the seller and refunds unpaid escrow. Internal cargo already travelling still arrives."} }
+    v.rows[#v.rows + 1] = { "Gold set aside", S.num(escrow), "", "", "" }
+    v.rows[#v.rows + 1] = { o.enabled and "Sending" or "Paused", "", "", "", "", route_request={"route_ctl",id,"toggle"},
+        send={label=o.enabled and "Pause" or "Resume",tip="Pause stops new carts but carts on the road still arrive."} }
+    v.rows[#v.rows + 1] = { "End this supply", "", "", "", "", route_request={"route_ctl",id,"cancel"},
+        send={label="Cancel",tip="End this supply and get back any gold set aside.\nYour own carts on the road still arrive."} }
 end
 
-function S.forecast_tip(f, region, settlement)
+-- "a, b and c"
+function S.join(parts)
+    if #parts < 2 then return parts[1] or "" end
+    return table.concat(parts, ", ", 1, #parts - 1) .. " and " .. parts[#parts]
+end
+
+-- WHAT ONE CATEGORY DOES HERE EACH TURN, a sentence a line, for the category the tooltip is about and
+-- the shipments of `stem` (or of the whole category without one). It was five categories of
+-- "4 used/turn; net 2; stable" on every good, which the author called garbled (2026-11-01).
+function S.forecast_tip(f, region, settlement, use, stem)
     local v = S.ask("stock_view", f, region)
     if not v then return "" end
     local made
@@ -1696,35 +1946,35 @@ function S.forecast_tip(f, region, settlement)
             if not g.rare then made[g.use] = (made[g.use] or 0) + (settlement.made[g.stem] or 0) end
         end
     end
-    local forecasts = S.ask("stock_forecast", v, made)
-    if not forecasts then return "" end
-    local lines = {}
-    for _, use in ipairs({ "provisions", "building", "war", "mounts", "luxuries" }) do
-        local fc = forecasts[use]
-        if fc then
-            local cover = fc.cover and (S.num(fc.cover) .. (fc.mode == "stored" and " turns stored" or " turns cover"))
-                or (fc.mode == "stable" and "stable" or "no recurring use")
-            lines[#lines + 1] = (S.USE_WORD[use] or use) .. ": " .. S.num(fc.held) .. " held; "
-                .. S.num(fc.use_per_turn) .. " used/turn; " .. (fc.production ~= nil and
-                (S.num(fc.production) .. " made; net " .. S.num(fc.net)) or "production unknown") .. "; " .. cover
-                .. "; incoming " .. S.num(fc.incoming) .. "."
+    local fc = (S.ask("stock_forecast", v, made) or {})[use]
+    if not fc then return "" end
+    local lines = { S.place(region:name()) .. " holds " .. S.num(fc.held) .. " " .. (S.USE_WORD[use] or use) .. "." }
+    local parts = {}
+    if (fc.production or 0) > 0 then parts[#parts + 1] = "makes " .. S.num(fc.production) end
+    if fc.use_per_turn > 0 then parts[#parts + 1] = "uses " .. S.num(fc.use_per_turn) end
+    if #parts > 0 then lines[#lines + 1] = "It " .. table.concat(parts, " and ") .. " each turn." end
+    if (fc.spoil or 0) > 0 then lines[#lines + 1] = "It loses " .. S.num(fc.spoil) .. " to spoiling each turn." end
+    if fc.mode == "declining" then lines[#lines + 1] = "At this rate it runs out in " .. turns(fc.cover) .. "."
+    elseif fc.mode == "stored" then lines[#lines + 1] = "That is enough for " .. turns(fc.cover) .. "." end
+    if use == "provisions" and (v.recurring.army_need or 0) > 0 then
+        lines[#lines + 1] = "Armies refilling here take " .. S.num(v.recurring.army_need) .. " of that each turn."
+    end
+    local named = (v.recurring or {}).named or {}
+    if stem and named[stem] then
+        lines[#lines + 1] = "Your production here uses " .. S.num(named[stem]) .. " " .. S.name(stem) .. " a turn."
+    end
+    local due = {}
+    for _, ship in ipairs(v.due or {}) do
+        if ship.stem == stem or (not stem and S.use_of(ship.stem) == use) then
+            local k = ship.stem .. "," .. ship.due
+            if not due[k] then due[k] = { stem = ship.stem, due = ship.due, n = 0 }; due[#due + 1] = due[k] end
+            due[k].n = due[k].n + ship.n
         end
     end
-    for _, ship in ipairs(v.due or {}) do lines[#lines + 1] = S.name(ship.stem) .. " " .. S.num(ship.n) .. " due turn " .. tostring(ship.due) .. "." end
-    local named, stems = (v.recurring or {}).named or {}, {}
-    if (v.recurring.army_need or 0) > 0 then
-        lines[#lines + 1] = "Local armies on Auto: " .. S.num(v.recurring.army_need)
-            .. " provisions per turn included. Army loading can spend its army reserve; settlement Keep remains protected."
+    table.sort(due, function(a, b) return a.due < b.due or (a.due == b.due and a.stem < b.stem) end)
+    for _, d in ipairs(due) do
+        lines[#lines + 1] = S.num(d.n) .. " " .. S.name(d.stem) .. " arrive on turn " .. tostring(d.due) .. "."
     end
-    for stem in pairs(named) do stems[#stems + 1] = stem end
-    table.sort(stems)
-    if #stems > 0 then
-        local parts = {}
-        for _, stem in ipairs(stems) do parts[#parts + 1] = S.num(named[stem]) .. " " .. S.name(stem) end
-        lines[#lines + 1] = "Enabled batch/service input budget: " .. table.concat(parts, ", ")
-            .. " per turn. Paused orders may use less; processing output is conditional. Named inputs are kept separately."
-    end
-    lines[#lines + 1] = "Estimates assume unchanged production and switches; exclude future trade, recruits, battles and purchases. Incoming cargo is separate from current cover."
     return table.concat(lines, "\n")
 end
 
@@ -1751,6 +2001,7 @@ function S.view_model(realm)
         v.title = "Every resource your settlements keep"
         v.heads = { "Resource", "Held", "Per turn", "Space", "Stored in" }
         v.hint = "Click a resource to see where it is kept."
+        if #realm > 0 then S.edict_rows(v) end
         for _, g in ipairs(S.goods_rows(realm)) do
             v.rows[#v.rows + 1] = { g.name, S.num(g.held), per_turn(g.made),
                                     S.num(g.held) .. " / " .. S.num(g.cap), g.n .. " of " .. g.of,
@@ -1779,15 +2030,29 @@ function S.view_model(realm)
         local fk = cm:get_local_faction_name(true)
         local switches = stopped ~= nil and S.flows("send") ~= nil
         if switches then
-            v.hint = "Tick to allow. Click a resource for rules."
+            v.hint = "Tick a box to allow trade or click a resource for its rules."
             v.bulk = true
         end
         -- IMPORT DUTY, first: last turn's gold each way (flows.lua F.duty), while the rate is on
         local rates, duty, f = S.flows("rates"), S.flows("duty_last"), S.local_faction()
         if rates and duty and (rates().duty or 0) > 0 and f and S.ask("uses_stores", f) then
             local d = duty(fk) or { paid = 0, got = 0, by = {} }
-            v.rows[#v.rows + 1] = { "Import duty", "", "", "", "paid " .. S.num(d.paid) .. ", received " .. S.num(d.got),
+            v.rows[#v.rows + 1] = { "Import duty", "", "", "", "paid " .. S.num(d.paid) .. " and received " .. S.num(d.got),
                                     icon = S.DUTY_ICON, tip = S.duty_tip(d, rates().duty) }
+        end
+        -- TOLLS (flows.lua F.tolls_last, Part C): last turn's gold each way. A row shows when it is above 0, and both
+        -- at 0 while tolls are on and the player has a partner
+        local tolls = S.flows("tolls_last")
+        if rates and tolls and f and S.ask("uses_stores", f) then
+            local t = tolls(fk) or { paid = 0, got = 0, by = {} }
+            local r, ps = rates(), f:factions_trading_with()
+            local on = r.tolls and (r.toll or 0) > 0 and type(ps) ~= "boolean" and ps:num_items() > 0
+            for _, w in ipairs({ { "paid", "Tolls paid" }, { "got", "Tolls received" } }) do
+                if t[w[1]] > 0 or on then
+                    v.rows[#v.rows + 1] = { w[2], "", "", "", S.num(t[w[1]]) .. " gold", icon = S.DUTY_ICON,
+                                            tip = S.toll_tip(t, w[1]) }
+                end
+            end
         end
         -- TRADE REACH: agreements moving nothing because the road is too long or blocked (flows.lua F.cut_off)
         local cut = rates and f and S.ask("cut_off", f)
@@ -1800,8 +2065,14 @@ function S.view_model(realm)
         if #convoys > 0 then
             local out = 0
             for _, c in ipairs(convoys) do if c.f == fk then out = out + 1 end end
-            v.rows[#v.rows + 1] = { "Cargo on the road", "", "", "", S.num(out) .. " out, " .. S.num(#convoys - out) .. " in",
+            v.rows[#v.rows + 1] = { "Cargo on the road", "", "", "", S.num(out) .. " out and " .. S.num(#convoys - out) .. " in",
                                     icon = L.MAP_CART, tip = S.convoy_tip(convoys) }
+        end
+        -- ROAD GUARDS (flows.lua F.guards_on, Part D): the player's switch, while the bandits are on
+        if rates and f and rates().bandits and S.ask("uses_stores", f) then
+            local on = S.ask("guards_on", fk) == true
+            v.rows[#v.rows + 1] = { "Road guards", on and "On" or "Off", "", "", "", icon = S.GUARD_ICON, tip = S.GUARDS_TIP,
+                                    guards = on and "off" or "on", send = { label = on and "Dismiss" or "Hire", tip = S.GUARDS_TIP } }
         end
         local rows = S.trade_rows(realm)
         local others = 0
@@ -1838,7 +2109,6 @@ function S.view_model(realm)
         v.heads = { "Resource", "Held / Space", "Per turn", "Price", "" }
         local model_faction = S.local_faction()
         local region = model_faction and S.ask("owned", model_faction, s.key)
-        local forecast = region and S.forecast_tip(model_faction, region, s) or ""
         local f = S.actions_on() and model_faction
         local fs = f and S.ask("found_state", f, s.key)
         if fs then v.rows[#v.rows + 1] = S.found_row(fs, s.key) end
@@ -1848,11 +2118,13 @@ function S.view_model(realm)
             if d.full then tip = S.FULL_TIP end
             local price, sentence = S.price_of(model_faction, region, d.stem)
             tip = add_line(tip, sentence)
+            if region then tip = add_line(tip, S.spoil_sentence(S.ask("spoil_info", model_faction, region, d.stem), d.name)) end
+            if region then tip = add_line(tip, S.forecast_tip(model_faction, region, s, S.use_of(d.stem), d.stem)) end
             local row = { d.name, held_space(d), per_turn(d.made), price, "", icon = d.icon,
-                          tip = tip .. "\n" .. forecast, stem = d.stem,
+                          tip = tip, stem = d.stem,
                           open = f and ("routes:" .. s.key .. ":" .. d.stem) or nil }
             if f then
-                row.tip = row.tip .. "\nClick the resource to choose a recurring source or partner contract."
+                row.tip = row.tip .. "\nClick to set up a regular supply."
                 local plan = S.ask("send_plan", f, s.key, d.stem)
                 row.send = { tip = S.send_tip(plan, d, S.ask("ships_to", f:name(), s.key, d.stem)),
                              off = plan == nil or plan.busy == true }
@@ -1904,8 +2176,8 @@ S.SERVICE_UNITS = {
 S.ECON_CLOSED = { ["Needs an undamaged workshop"] = "No workshop", ["Province capital only"] = "Capital only",
                   ["Disabled for this campaign"] = "Switched off" }
 S.ECON_WHY = { ["Needs an undamaged workshop"] = "None of your settlements has an undamaged building that runs this.",
-               ["Province capital only"] = "It runs only in a province capital, and you hold none.",
-               ["Disabled for this campaign"] = "Switched off in the mod's settings for this campaign." }
+               ["Province capital only"] = "It runs only in a province capital and you hold none.",
+               ["Disabled for this campaign"] = "Switched off in the mod settings for this campaign." }
 
 -- A RECIPE'S STATE in a word: the economy's own admission check (flows.lua F.economy_state)
 function S.economy_status(st)
@@ -1925,18 +2197,21 @@ function S.economy_cells(st)
         parts[#parts + 1] = S.num(d.cost[stem]) .. " " .. S.name(stem)
         amounts[#amounts + 1] = S.num(d.cost[stem])
     end
-    local result = d.output and (S.num(d.output[2]) .. " " .. S.name(d.output[1])) or d.benefit
+    -- WHAT A BATCH MAKES NOW: the War economy edict makes half as much again of a war material (F.output_n)
+    local made = d.output and (st.made or d.output[2])
+    local result = d.output and (S.num(made) .. " " .. S.name(d.output[1])) or d.benefit
     local reason = st.reason or st.short or ""
     for _, stem in ipairs(stems) do reason = string.gsub(reason, stem, S.name(stem)) end
     local unit = S.SERVICE_UNITS[d.effect]
     return {
         stems = stems, reason = reason,
         amount = table.concat(amounts, " + ") .. (d.output and " / batch" or " / turn"),
-        head = d.label .. "\n" .. (d.output and "Additional batch: " or "Service each turn: ")
-            .. table.concat(parts, ", ") .. " -> " .. result .. ".",
-        note = d.output and "\nPassive building production is unchanged. Full batches only; Keep is respected."
-            or "\nPaid locally after essential upkeep. An unpaid service gives no bonus.",
-        benefit = d.output and (S.num(d.output[2]) .. " made") or
+        head = d.label .. "\n" .. (d.output and ("Turns " .. S.join(parts) .. " into " .. result .. ".")
+            or ("Uses " .. S.join(parts) .. " a turn for " .. string.lower(string.sub(result, 1, 1))
+                .. string.sub(result, 2) .. ".")),
+        note = d.output and "\nYour buildings still make their usual goods.\nThis only runs when it has everything it needs."
+            or "\nIt is paid from this settlement after upkeep.\nIt gives nothing in a turn it cannot be paid.",
+        benefit = d.output and (S.num(made) .. " made") or
             (unit and ((d.value > 0 and "+" or "") .. S.num(d.value) .. unit) or d.benefit),
         -- realm-wide the good has to be named: the Production tab's Gives, after the good's icon or
         -- the one the service's own bonus carries (gen_resource_overhaul.SERVICES)
@@ -1997,8 +2272,8 @@ function S.production_row(f, r, actions)
         row.price[k] = { icon = S.icon_of(stem), short = short,
                          text = short and ("[[col:red]]" .. S.num(need) .. "[[/col]]") or S.num(need) }
         if type(have) == "number" then
-            lines[#lines + 1] = r.s.name .. " can spend " .. S.num(have) .. " of the " .. S.num(need) .. " "
-                .. S.name(stem) .. (d.output and " a batch takes." or " it takes each turn.")
+            lines[#lines + 1] = "It needs " .. S.num(need) .. " " .. S.name(stem) .. (d.output and "" or " a turn") .. " and "
+                .. r.s.name .. " has " .. S.num(have) .. " to spare."
         end
     end
     -- the reason first, unless it is a shortage the lines already show
@@ -2031,7 +2306,7 @@ end
 
 function S.production(v, realm)
     v.title = "What your settlements can make"
-    v.hint = "Processing makes resources; services spend them each turn for a bonus."
+    v.hint = "Workshops make new resources and services spend them for a bonus."
     v.heads = { "Settlement", "Gives", "Inputs", "State", "" }
     v.empty = #realm == 0 and S.NO_REALM or S.NO_RECIPES
     local f = S.local_faction()
@@ -2072,9 +2347,8 @@ end
 -- unit, as CA's army strip draws an army. The cards are 60x130 and cannot fit a 28px row.
 S.CARD = "derpy_mr_card_"
 S.ESCORT_FOCUS = "ship:"
-S.NO_ESCORT = "No escort travels with this shipment. An army at war with you can take it without a fight."
-S.ESCORT_LINE = "These soldiers guard the shipment. An army that tries to take the cargo must beat them first; "
-    .. "if they win, the shipment goes on its way."
+S.NO_ESCORT = "An army at war with you can take this unguarded shipment without a fight."
+S.ESCORT_LINE = "An army has to beat these soldiers to take the shipment."
 
 function S.unit_name(unit)
     local c = DERPY_MR_STORES_CARDS[unit]
@@ -2111,10 +2385,12 @@ end
 -- CA's greyscale (the Exchange's EX.set_off shader): greyed and faded, or back in colour
 S.PAYIC = "derpy_mr_supic_"   -- a Spending row's icon of the good a supply pays with
 
-S.ARMY_TIP = "One ration per four units, rounded up. Auto-refill aims for five turns after eating, up to ten turns capacity. "
-    .. "Only your own unsieged local settlement can load or unload, above its Keep. At sea or without settlements, Load buys field rations: 10 gold each, up to two meals, once per turn. Player Auto never buys. "
-    .. "First missed meal: warning; second: -5% movement; third: -10% movement and -10% replenishment. "
-    .. "A full meal resets shortages. Destroyed or merged-away armies lose their cargo: unload locally before merging."
+-- ONE SENTENCE A LINE (author, 2026-11-01): the rules were one paragraph of fragments on every row.
+-- Each row now says only its own rule.
+S.ARMY_TIP = "An army eats 1 provision a turn for every 4 units and refills in your own settlements."
+S.ARMY_AUTO = "On Auto the army refills to 5 turns of provisions after eating.\nIt carries at most 10 turns and never buys rations."
+S.ARMY_BUY = "Buy up to two meals of rations once a turn at 10 gold each."
+S.ARMY_HUNGER = "After two missed meals the army moves 5% slower.\nAfter three it moves and recovers 10% slower.\nOne full meal ends this."
 
 function S.army_name(row)
     if row.force then
@@ -2129,21 +2405,25 @@ function S.army_view(v)
     local row
     for _, r in ipairs(f and S.ask("provision_rows", f) or {}) do if r.id == id then row = r end end
     if not row then S.focus = nil; return S.spending(v) end
-    v.title = S.army_name(row) .. ": carried provisions"
-    v.heads = { "Action", "Held", "Per turn", "Cover", "" }
-    v.hint = "Unload before merging away this army."
-    local tip = S.ARMY_TIP .. "\n" .. row.reason
-    local source = row.source and "Local stores" or (row.mobile and "Field rations" or "Unavailable")
-    if row.source then tip = tip .. "\n" .. S.place(row.source:name()) end
+    v.title = S.army_name(row) .. ": provisions"
+    v.heads = { "Action", "Held", "Per turn", "Lasts", "" }
+    v.hint = "Unload before you merge this army or its provisions are lost."
+    local here = row.source and S.place(row.source:name())
+    local auto = S.ARMY_AUTO .. "\n" .. row.reason
+    local load = (row.mobile and S.ARMY_BUY or (here and ("Load provisions from " .. here .. " without touching its reserve.")
+        or "This army cannot load here.")) .. "\n" .. row.reason
+    local unload = here and ("Put the provisions back into " .. here .. " and pause Auto.")
+        or "This army can only unload in one of your settlements."
+    local source = row.source and "Local stores" or (row.mobile and "Rations" or "Unavailable")
     v.rows[#v.rows + 1] = { "Auto-refill", S.num(row.held) .. " / " .. S.num(row.cap),
-        S.num(row.need), S.num(math.floor(row.held / row.need)) .. " turns", provisions = "auto", army = id, tip = tip,
+        S.num(row.need), S.num(math.floor(row.held / row.need)) .. " turns", provisions = "auto", army = id, tip = auto,
         icon = S.icon_of("grain"),
-        send = { label = row.auto and "Pause" or "Enable", off = not S.actions_on(), tip = tip } }
-    v.rows[#v.rows + 1] = { row.mobile and "Buy field rations" or "Load here", source, row.mobile and (S.num(row.price) .. " gold") or "", "", provisions = "load", army = id, tip = tip,
-        send = { label = row.mobile and "Buy" or "Load", off = (not row.source and (row.buy or 0) == 0) or not S.actions_on(), tip = tip } }
-    v.rows[#v.rows + 1] = { "Unload here", "Pauses refill", "", "", provisions = "unload", army = id, tip = tip,
-        send = { label = "Unload", off = not row.source or row.held == 0 or not S.actions_on(), tip = tip } }
-    v.rows[#v.rows + 1] = { "Missed meals", S.num(row.short), "", "", "", tip = tip }
+        send = { label = row.auto and "Pause" or "Enable", off = not S.actions_on(), tip = auto } }
+    v.rows[#v.rows + 1] = { row.mobile and "Buy rations" or "Load here", source, row.mobile and (S.num(row.price) .. " gold") or "", "", provisions = "load", army = id, tip = load,
+        send = { label = row.mobile and "Buy" or "Load", off = (not row.source and (row.buy or 0) == 0) or not S.actions_on(), tip = load } }
+    v.rows[#v.rows + 1] = { "Unload here", "Pauses refill", "", "", provisions = "unload", army = id, tip = unload,
+        send = { label = "Unload", off = not row.source or row.held == 0 or not S.actions_on(), tip = unload } }
+    v.rows[#v.rows + 1] = { "Missed meals", S.num(row.short), "", "", "", tip = S.ARMY_HUNGER }
 end
 
 function S.spending(v)
@@ -2154,10 +2434,11 @@ function S.spending(v)
     if not f then return end
     local routes = S.ask("routes", f) or {}
     if #routes > 0 then
-        v.rows[#v.rows + 1] = { S.section("Recurring routes and contracts"), "", "", "", "", section=true }
+        v.rows[#v.rows + 1] = { S.section("Regular supplies"), "", "", "", "", section=true }
         for _, o in ipairs(routes) do
-            v.rows[#v.rows + 1] = { S.name(o.stem), S.place(o.from), S.place(o.to), o.enabled and "Enabled" or "Paused", "",
-                open="route:" .. o.id, tip="Target " .. o.target .. "; gross batch " .. o.batch .. ". " .. (o.status or "Not dispatched yet") .. ". Click to edit." }
+            v.rows[#v.rows + 1] = { S.name(o.stem), S.place(o.from), S.place(o.to), o.enabled and "Sending" or "Paused", "",
+                open="route:" .. o.id, tip="Sends carts of " .. o.batch .. " until you hold " .. o.target .. ".\n"
+                    .. (o.status or "No cart sent yet") .. ".\nClick to change it." }
         end
     end
     if S.supply_on() then
@@ -2170,19 +2451,19 @@ function S.spending(v)
         for _, c in ipairs(caps) do
             local row = { c.name, "", "", "", "", capital = c.key, supply = {},
                           tip = "Each supply costs " .. S.num(c.st.cost) .. " a turn from the stores of " .. c.name
-                              .. ", 2 for each settlement you hold in its province." }
+                              .. ".\nThat is 2 for each settlement you hold in its province." }
             local region = S.ask("owned", f, c.key)
             local settlement = region and S.read_settlement(region)
-            local forecast = region and S.forecast_tip(f, region, settlement) or ""
             for _, sp in ipairs(DERPY_MR_STORES_SUPPLY) do
-                row.supply[sp.key] = { on = c.st.on[sp.key] == true, tip = S.supply_tip(sp, c.st, c.name) .. "\n" .. forecast }
+                local forecast = region and sp.use ~= "" and S.forecast_tip(f, region, settlement, sp.use) or ""
+                row.supply[sp.key] = { on = c.st.on[sp.key] == true, tip = add_line(S.supply_tip(sp, c.st, c.name), forecast) }
                 local pay = sp.use ~= "" and c.st.pay and c.st.pay[sp.use]
                 if pay then
                     row.supply[sp.key].pay = {
                         -- short on the use's total, as F.supply decides: it pays across every good
                         icon = S.icon_of(pay.stem), short = (c.st.have[sp.use] or 0) < c.st.cost,
-                        tip = sp.label .. "\n" .. (pay.n > 0 and ("Paid from " .. S.name(pay.stem) .. " first, the fullest store.")
-                            or ("Nothing to pay with: the stores of " .. c.name .. " hold none.")) }
+                        tip = sp.label .. "\n" .. (pay.n > 0 and ("It pays with " .. S.name(pay.stem) .. " first because that store is the fullest.")
+                            or ("The stores of " .. c.name .. " have nothing to pay with.")) }
                 end
             end
             v.rows[#v.rows + 1] = row
@@ -2208,23 +2489,23 @@ function S.spending(v)
             v.rows[#v.rows + 1] = { S.num(s.n) .. " " .. S.name(s.stem), from, to, "turn " .. due, "", icon = icon,
                                     open = S.ESCORT_FOCUS .. s.id, tip = "Click to see its escort.",
                                     send = { label = "Show", look = { s.x, s.y },
-                                             tip = (s.road and "Travelling from " .. from .. " to " .. to
-                                                 or "Now beside " .. (s.leg == 2 and to or from)) .. ". It reaches " .. to
-                                                 .. " on turn " .. due .. ". Click to see it on the map." } }
+                                             tip = (s.road and "It is travelling from " .. from
+                                                 or "It is now beside " .. (s.leg == 2 and to or from)) .. " and reaches " .. to
+                                                 .. " on turn " .. due .. ".\nClick to see it on the map." } }
         end
     end
     local armies = S.ask("provision_rows", f) or {}
     if #armies > 0 or (S.ask("rates") or {}).army_provisions then
-    v.rows[#v.rows + 1] = { S.section("Army provisions"), S.section("Held"), S.section("Per turn"), S.section("Cover"), "", section = true }
+    v.rows[#v.rows + 1] = { S.section("Army provisions"), S.section("Held"), S.section("Per turn"), S.section("Lasts"), "", section = true }
     if #armies == 0 then
-        v.rows[#v.rows + 1] = { "No provisioned armies", "", "", "", "",
-            tip = "Carried army provisions is enabled by default for new campaigns. Existing saved switches are retained. " .. S.ARMY_TIP }
+        v.rows[#v.rows + 1] = { "No armies carry provisions", "", "", "", "", tip = S.ARMY_TIP }
     end
     for _, a in ipairs(armies) do
         v.rows[#v.rows + 1] = { S.army_name(a), S.num(a.held) .. " / " .. S.num(a.cap), S.num(a.need),
             S.num(math.floor(a.held / a.need)) .. " turns", "", open = "army:" .. a.id,
             icon = S.icon_of("grain"),
-            tip = "Needed per turn: " .. a.need .. " common provisions\n" .. a.reason .. "\nMissed meals: " .. a.short .. "\n" .. S.ARMY_TIP }
+            tip = "This army eats " .. a.need .. " provisions a turn.\n" .. a.reason
+                .. (a.short > 0 and ("\nMissed meals: " .. a.short .. ".") or "") .. "\nClick to manage its provisions." }
     end
     end
     -- RECRUITS (workshop expansion spec section 3): what last turn's recruits took (flows.lua F.on_unit_trained)
@@ -2241,8 +2522,8 @@ function S.spending(v)
         if r.gold > 0 then parts[#parts + 1] = S.num(r.gold) .. " gold" end
         v.rows[#v.rows + 1] = { S.section(S.RECRUIT_HEAD), "", "", "", "", section = true }
         v.rows[#v.rows + 1] = { table.concat(parts, ", "), "", "", "", "", icon = S.DUTY_ICON,
-            tip = "Each unit you recruit takes resources from your stores by its type and worth. What the "
-                .. "stores lack is paid " .. (r.line and "in your own currency, then " or "") .. "in gold."
+            tip = "Each recruit takes resources from your stores by its type and cost.\nAnything missing is paid "
+                .. (r.line and "in your own currency and then " or "") .. "in gold."
                 .. (#lines > 0 and ("\n" .. table.concat(lines, "\n")) or "") }
     end
     if #v.rows == 0 or v.rows[1].section then v.heads = { "", "", "", "", "" } end
@@ -2256,8 +2537,8 @@ function S.spending(v)
 end
 
 -- ---- THE WORKSHOP (spec 2026-10-07): a rare good and a bulk of its use buy something lasting --
-S.WORK_SECTION = { item = "Items", unit = "Units", upgrade = "Settlement upgrades", convert = "Your race's resources",
-                   army = "Army works", trait = "Lord and hero works", lasting = "Works that last", research = "Research" }
+S.WORK_SECTION = { item = "Items", unit = "Units", upgrade = "Settlement upgrades", convert = "Race resources",
+                   army = "Army works", trait = "Lord and hero works", lasting = "Permanent works", research = "Research" }
 S.WORK_ORDER = { "item", "unit", "upgrade", "convert", "army", "trait", "lasting", "research" }
 S.WORK_DONE = { item = "Forged", upgrade = "Built", lasting = "Built", trait = "Has it" }
 -- A FOLDED KIND shows its section row only (the spec's filter by kind). Kept while the campaign
@@ -2288,7 +2569,7 @@ function S.char_name(cqi)
     if ok and type(n) == "string" and n ~= "" then return n end
     return nil
 end
-S.WORK_OFF = "Resource Vault actions are switched off in the mod's settings."
+S.WORK_OFF = "Resource Vault actions are switched off in the mod settings."
 
 -- a price part's figure, red where the stores are short of it
 function S.price_part(have, cost)
@@ -2297,13 +2578,16 @@ function S.price_part(have, cost)
     return n
 end
 
+-- "It needs 120 Grain, and you have 165."
+function S.need_line(cost, what, have)
+    return "It needs " .. S.num(cost) .. " " .. what .. " and you have " .. S.num(have) .. "."
+end
+
 -- why a row cannot be bought, in one line
 function S.work_why(w, st)
     if st.why == "short" and st.goods then
         for _, g in ipairs(st.goods) do
-            if g.have < g.cost then
-                return "Your stores hold " .. S.num(g.have) .. " of " .. S.num(g.cost) .. " " .. S.name(g.stem) .. "."
-            end
+            if g.have < g.cost then return S.need_line(g.cost, S.name(g.stem), g.have) end
         end
     end
     if st.why == "aim" then return S.AIM[w.target] or "" end
@@ -2316,10 +2600,9 @@ function S.work_why(w, st)
     if st.why == "not_yours" and w.target ~= "" then return "Not one of your characters." end
     if st.why == "short" then
         if st.rare and st.rare.have < st.rare.cost then
-            return "Your stores hold " .. S.num(st.rare.have) .. " of " .. S.num(st.rare.cost) .. " " .. S.name(w.rare) .. "."
+            return S.need_line(st.rare.cost, S.name(w.rare), st.rare.have)
         end
-        return "Your stores hold " .. S.num(st.bulk.have) .. " of " .. S.num(st.bulk.cost) .. " "
-            .. (S.USE_WORD[w.use] or w.use) .. "."
+        return S.need_line(st.bulk.cost, "common " .. (S.USE_WORD[w.use] or w.use), st.bulk.have)
     end
     if st.why == "wait" then return "Ready again in " .. turns(st.wait) .. "." end
     if st.why == "done" then return "Already forged." end
@@ -2339,21 +2622,16 @@ end
 function S.work_tip(w, st)
     local out = w.name .. "\n" .. w.detail .. ".\n"
     if st.route == "pool" then
-        out = out .. "Goes into your " .. S.pool_name(w.pool) .. " to recruit. Recruiting it still costs its gold.\n"
+        out = out .. "It goes into your " .. S.pool_name(w.pool) .. ".\nRecruiting it there still costs its gold.\n"
     elseif st.route == "army" then
-        out = out .. "Goes straight into your largest army with room.\n"
+        out = out .. "It goes straight into your largest army with room.\n"
     end
     if st.goods then
-        for _, g in ipairs(st.goods) do
-            out = out .. "Your stores hold " .. S.num(g.have) .. " of " .. S.num(g.cost) .. " " .. S.name(g.stem) .. ".\n"
-        end
+        for _, g in ipairs(st.goods) do out = out .. S.need_line(g.cost, S.name(g.stem), g.have) .. "\n" end
         return out
     end
-    if st.rare then
-        out = out .. "Your stores hold " .. S.num(st.rare.have) .. " of " .. S.num(st.rare.cost) .. " " .. S.name(w.rare) .. ".\n"
-    end
-    out = out .. "Your stores hold " .. S.num(st.bulk.have) .. " of " .. S.num(st.bulk.cost) .. " "
-        .. (S.USE_WORD[w.use] or w.use) .. ", not counting rare resources.\n"
+    if st.rare then out = out .. S.need_line(st.rare.cost, S.name(w.rare), st.rare.have) .. "\n" end
+    out = out .. S.need_line(st.bulk.cost, "common " .. (S.USE_WORD[w.use] or w.use), st.bulk.have) .. "\n"
     return out .. S.use_goods(w.use)
 end
 
@@ -2388,7 +2666,7 @@ function S.workshop(v, realm)
         end
         -- THE PRICE, on the hint's line: it is the same wherever it is built
         if any then
-            v.hint = "Paid from all your stores: " .. S.num(any.rare.cost) .. " " .. S.name(w.rare) .. " and "
+            v.hint = "It is paid from all your stores: " .. S.num(any.rare.cost) .. " " .. S.name(w.rare) .. " and "
                 .. S.num(any.bulk.cost) .. " " .. (S.USE_WORD[w.use] or w.use) .. "."
         end
         return
@@ -2669,8 +2947,8 @@ end
 
 function S.ship_tip(s)
     local what = s.convoy and S.basket_text(s.basket) or (S.num(s.n) .. " " .. S.name(s.stem))
-    return what .. " from " .. S.place(s.from) .. " to " .. S.place(s.to)
-        .. ", arriving on turn " .. tostring(S.ask("ship_due", s) or s.due) .. ".\nClick to fly there."
+    return what .. " from " .. S.place(s.from) .. " to " .. S.place(s.to) .. ".\nIt arrives on turn "
+        .. tostring(S.ask("ship_due", s) or s.due) .. ".\nClick to fly there."
 end
 
 -- SHOW: the camera flies to a shipment's cart, CA's way (wh3_dlc29_middenland_narrative), keeping
@@ -2732,6 +3010,67 @@ S.TAB_ART = {
                 "ui/skins/default/button_square_large_text_hover.png" },
 }
 
+-- ---- PANEL SIZE (author, 2026-11-02: "UI size options, same as the derpy great guilds mod") ------
+-- MCT's Small / Medium / Large, the Great Guilds' (GGUI.SIZES). No call changes a font, and
+-- font_scale stretches the glyphs it already drew (soft text, Great Guilds 2026-10-08), so each size
+-- is its own set of .twui.xml with real fonts. DERPY_MR_STORES_SIZES carries each size's layout, and
+-- L is pointed at it before the panel is built, so every MoveTo here draws at that size. The HUD
+-- opener stays CA's HUD size at every size and reads DERPY_MR_STORES_L.
+S.SIZE, S.F, S.SUFFIX = "medium", 1, ""
+
+-- Read on every open and never frozen into the save. MCT keeps it each player's own in multiplayer.
+function S.want_size()
+    local ok, v = pcall(function()
+        local mct = get_mct and get_mct()
+        local mod = mct and mct:get_mod_by_key("derpy_more_resources")
+        local opt = mod and mod:get_option_by_key("ui_size")
+        return opt and opt:get_finalized_setting()
+    end)
+    if ok and DERPY_MR_STORES_SIZES[v] then return v end
+    return "medium"
+end
+
+-- How far the screen is past the 1920x1080 the panel was laid out for. core:get_screen_resolution()
+-- is already the window over the player's UI Scale, so a 4K screen at 200% is 1 here. Never below 1,
+-- led by height and capped by width, in hundredths.
+function S.scale_for(sw, sh)
+    if type(sw) ~= "number" or type(sh) ~= "number" or sw <= 0 or sh <= 0 then return 1 end
+    local s = math.min(sw / 1920, sh / 1080)
+    if s <= 1 then return 1 end
+    return math.floor(s * 100 + 0.5) / 100
+end
+
+-- THE SIZE THAT IS DRAWN: the file set nearest the size asked for times the screen factor, among the
+-- ones that fit the screen. The screen factor is spent here on a real font and never on font_scale, so
+-- 1440p's Medium draws Large's files, and past Large the panel stays Large.
+function S.pick_size(want, sw, sh, sa)
+    local z = DERPY_MR_STORES_SIZES[want] and want or "medium"
+    local target = DERPY_MR_STORES_SIZES[z].f * (sa or 1)
+    local any = type(sw) ~= "number" or type(sh) ~= "number"
+    local best, gap = "medium", 1e30          -- not math.huge: the game's math library has none
+    for _, k in ipairs({ "small", "medium", "large" }) do
+        local s = DERPY_MR_STORES_SIZES[k]
+        local d = math.abs(s.f - target)
+        if (any or (s.layout.W <= sw and s.layout.H <= sh)) and d < gap then best, gap = k, d end
+    end
+    return best
+end
+
+-- A length the layout does not carry, at the size drawn
+function S.px(v) return math.floor(v * S.F + 0.5) end
+
+-- Point L at a size. The panel built at another size goes, and everything kept about its parts: its
+-- rows, list and map parts are that size's files.
+function S.use_size(k)
+    if k == S.SIZE then return end
+    local p = S.panel()
+    if is_uicomponent(p) then pcall(function() p:Destroy() end) end
+    local z = DERPY_MR_STORES_SIZES[k]
+    S.SIZE, S.F, S.SUFFIX, L = k, z.f, z.suffix, z.layout
+    S.list_key, S.list_broken, S.map_drag, S.map_last = nil, nil, nil, nil
+    for kind in pairs(S.map_made) do S.map_made[kind] = 0 end
+end
+
 function S.root() return core:get_ui_root() end
 function S.panel() return find_uicomponent(S.root(), S.PANEL) end
 
@@ -2764,7 +3103,7 @@ end
 
 function S.build()
     local root = S.root()
-    pcall(function() root:CreateComponent(S.PANEL, S.PATH .. "derpy_mr_stores_panel") end)
+    pcall(function() root:CreateComponent(S.PANEL, S.PATH .. "derpy_mr_stores_panel" .. S.SUFFIX) end)
     local p = S.panel()
     if not is_uicomponent(p) then return nil end
     p:SetVisible(false)
@@ -2785,13 +3124,13 @@ function S.build()
     label(find_uicomponent(p, S.BACK), "Back")
     -- the chart's twenty bars, made once and kept; draw_chart sizes, shows and hides them
     for i = 1, L.BARS do
-        pcall(function() p:CreateComponent(S.BAR .. i, S.PATH .. "derpy_mr_stores_bar") end)
+        pcall(function() p:CreateComponent(S.BAR .. i, S.PATH .. "derpy_mr_stores_bar" .. S.SUFFIX) end)
         local b = find_uicomponent(p, S.BAR .. i)
         if is_uicomponent(b) then b:SetVisible(false) end
     end
     -- an escort's cards, made once and kept; draw_cards shows, places and hides them
     for i = 1, L.CARDS do
-        pcall(function() p:CreateComponent(S.CARD .. i, S.PATH .. "derpy_mr_stores_card") end)
+        pcall(function() p:CreateComponent(S.CARD .. i, S.PATH .. "derpy_mr_stores_card" .. S.SUFFIX) end)
         local c = find_uicomponent(p, S.CARD .. i)
         if is_uicomponent(c) then c:SetVisible(false) end
     end
@@ -2867,7 +3206,7 @@ function S.ensure_list(p, n)
     if S.list_broken then return end
     local holder = find_uicomponent(p, "rows_holder")
     if not is_uicomponent(holder) then return end
-    pcall(function() p:CreateComponent(S.LIST, S.PATH .. "derpy_mr_stores_list") end)
+    pcall(function() p:CreateComponent(S.LIST, S.PATH .. "derpy_mr_stores_list" .. S.SUFFIX) end)
     local list = find_uicomponent(p, S.LIST)
     if not is_uicomponent(list) then return end
     local x, y = holder:Position()
@@ -2901,7 +3240,7 @@ function S.ensure_list(p, n)
     end
     for i = 1, n do
         local name = S.SP .. "_" .. i
-        pcall(function() box:CreateComponent(name, S.PATH .. "derpy_mr_stores_sp") end)
+        pcall(function() box:CreateComponent(name, S.PATH .. "derpy_mr_stores_sp" .. S.SUFFIX) end)
         local sp = find_uicomponent(box, name)
         if is_uicomponent(sp) then sized(sp, w, L.PITCH) end
     end
@@ -2983,7 +3322,7 @@ function S.row(holder, i)
     local name = S.ROW .. i
     local r = find_uicomponent(holder, name)
     if is_uicomponent(r) then return r end
-    pcall(function() holder:CreateComponent(name, S.PATH .. "derpy_mr_stores_row") end)
+    pcall(function() holder:CreateComponent(name, S.PATH .. "derpy_mr_stores_row" .. S.SUFFIX) end)
     return find_uicomponent(holder, name)
 end
 
@@ -3010,6 +3349,30 @@ local function draw_switches(r, rc, rx, ry, cols)
 end
 
 -- Rows are made once and kept; the ones past the end go hidden.
+-- THE EDICTS (design 2026-11-01 Part B), above the goods as CA's Commandments list: one option of
+-- three in force and glowing, the others live while the edict is ready and greyed while it waits.
+-- A faction that does not eat has no Rations row (flows.lua F.edict_set refuses it).
+function S.edict_rows(v)
+    local f = S.local_faction()
+    if not (f and S.ask("edicts_on") and S.ask("uses_stores", f)) then return end
+    local fk, chd, eats = f:name(), S.ask("race", f) == "chd", S.ask("eats", f)
+    v.rows[#v.rows + 1] = { S.section("Edicts"), "", "", "", "", section = true }
+    for _, e in ipairs(DERPY_MR_STORES_EDICTS) do
+        if e.key ~= "rations" or eats then
+            local now, wait = S.ask("edict", fk, e.key), S.ask("edict_wait", fk, e.key) or 0
+            local row = { e.name, wait > 0 and ("Wait " .. turns(wait)) or "Ready", "", "", "",
+                          edict = e.key, tip = e.tip, choices = {} }
+            for j, o in ipairs(e.options) do
+                local tip = (chd and o.tip_chd) or o.tip
+                if wait > 0 then tip = tip .. "\nThis edict can change again in " .. turns(wait) .. "." end
+                row.choices[j] = { key = o.key, label = o.label, tip = tip, on = o.key == now, off = o.key ~= now and wait > 0 }
+            end
+            v.rows[#v.rows + 1] = row
+        end
+    end
+    v.rows[#v.rows + 1] = { S.section("Resources"), "", "", "", "", section = true }
+end
+
 function S.draw_rows(p, rows, heads, cols)
     local holder = find_uicomponent(p, "rows_holder")
     if not is_uicomponent(holder) then return end
@@ -3053,8 +3416,8 @@ function S.draw_rows(p, rows, heads, cols)
                 if is_uicomponent(c) then
                     -- a lead icon (the Workshop's price) puts the text after it
                     local dx = j == 1 and shift or (rc.lead and rc.lead[j] and L.ICON_PITCH) or 0
-                    c:MoveTo(rx + col[1] + dx, ry + 4)
-                    sized(c, col[2] - dx, 20)
+                    c:MoveTo(rx + col[1] + dx, ry + S.px(4))
+                    sized(c, col[2] - dx, S.px(20))
                     align(c, col[3])
                     set(c, rc[j])
                 end
@@ -3092,15 +3455,20 @@ function S.draw_rows(p, rows, heads, cols)
                     end
                 end
             end
+            -- the stock rules' -10 / Auto / +10, or an edict's three options
             for j, action in ipairs({ "minus", "auto", "plus" }) do
                 local button = find_uicomponent(r, S.POLICY .. action)
+                local ch = rc.choices and rc.choices[j]
                 if is_uicomponent(button) then
-                    button:SetVisible(rc.policy ~= nil)
-                    if rc.policy then
+                    button:SetVisible(rc.policy ~= nil or ch ~= nil)
+                    if rc.policy or ch then
+                        -- ROWS ARE POOLED: a width an edict row set stays on the row unless set every draw
+                        sized(button, ch and L.EDICT_W or L.POLICY_W[j], L.send[2])
                         button:MoveTo(rx + cols[j + 2][1], ry + math.floor((L.PITCH - L.send[2]) / 2))
-                        label(button, ({ "-10", rc.route and "100" or "Auto", "+10" })[j])
-                        button:SetTooltipText(rc.tip, true)
-                        S.set_off(button, false)
+                        label(button, ch and ch.label or ({ "-10", rc.route and "100" or "Auto", "+10" })[j])
+                        button:SetTooltipText(ch and ch.tip or rc.tip, true)
+                        S.set_off(button, ch ~= nil and ch.off)
+                        if ch and ch.on then S.fx(button, "glow") end
                     end
                 end
             end
@@ -3148,7 +3516,7 @@ function S.draw_rows(p, rows, heads, cols)
                 if is_uicomponent(n) then
                     n:SetVisible(pk ~= nil)
                     if pk then
-                        n:MoveTo(rx + cols[3][1] + (k - 1) * L.PRICE_PITCH + L.ICON_PITCH, ry + 4)
+                        n:MoveTo(rx + cols[3][1] + (k - 1) * L.PRICE_PITCH + L.ICON_PITCH, ry + S.px(4))
                         set(n, pk.text)
                     end
                 end
@@ -3162,7 +3530,7 @@ function S.draw_rows(p, rows, heads, cols)
                 end
             end
             local div = find_uicomponent(r, "divider")
-            if is_uicomponent(div) then div:MoveTo(rx, ry + L.PITCH - 2) end
+            if is_uicomponent(div) then div:MoveTo(rx, ry + L.PITCH - S.px(2)) end
             -- A FOLDABLE SECTION'S ARROW, in the icon slot: drawn pointing down (open), turned
             -- clockwise by three quarters to point right (folded), as CA's lib_text_pointers turns its own
             local ar = find_uicomponent(r, "fold")
@@ -3193,7 +3561,7 @@ S.MAP_CLIP = "derpy_mr_map_clip"
 function S.map_clip(p)
     local c = find_uicomponent(p, S.MAP_CLIP)
     if is_uicomponent(c) then return c end
-    pcall(function() p:CreateComponent(S.MAP_CLIP, S.PATH .. "derpy_mr_stores_mapart") end)
+    pcall(function() p:CreateComponent(S.MAP_CLIP, S.PATH .. "derpy_mr_stores_mapart" .. S.SUFFIX) end)
     c = find_uicomponent(p, S.MAP_CLIP)
     return is_uicomponent(c) and c or nil
 end
@@ -3211,7 +3579,7 @@ function S.map_names(p, m, bx, by, shown)
     local lh, taken = L.map_label[2], {}
     local ruler = S.map_part(p, "label", 1)
     for _, d in ipairs(order) do
-        local gap = math.floor((d.cap and L.MAP_CAP or L.MAP_DOT) / 2) + 4
+        local gap = math.floor((d.cap and L.MAP_CAP or L.MAP_DOT) / 2) + S.px(4)
         local ok, w = false, nil
         if ruler then ok, w = pcall(function() return ruler:WidthOfTextLine(d.name) end) end
         local tw = (ok and type(w) == "number" and w > 0) and math.ceil(w) or S.label_w(d.name)
@@ -3249,7 +3617,7 @@ function S.map_part(p, kind, i)
     local c = find_uicomponent(p, name)
     if is_uicomponent(c) then return c end
     local on = S.map_surface(p) or p
-    pcall(function() on:CreateComponent(name, S.PATH .. S.MAP_FILE[kind]) end)
+    pcall(function() on:CreateComponent(name, S.PATH .. S.MAP_FILE[kind] .. S.SUFFIX) end)
     c = find_uicomponent(p, name)
     if is_uicomponent(c) and i > S.map_made[kind] then S.map_made[kind] = i end
     return is_uicomponent(c) and c or nil
@@ -3327,7 +3695,7 @@ function S.draw_map(p, m)
             if c then
                 c:SetImagePath(d.cap and L.MAP_CAP_ICON or L.MAP_TOWN_ICON, 0)
                 c:SetImagePath(d.cap and L.MAP_CAP_ICON or L.MAP_TOWN_ICON, 1)   -- its hover: brightened
-                c:SetTooltipText(d.name .. (d.cap and ", a province capital" or "") .. "\nClick to fly there.", true)
+                c:SetTooltipText(d.name .. (d.cap and " (province capital)" or "") .. "\nClick to fly there.", true)
                 S.map_hits[c:Id()] = { d.lx, d.ly }
             end
         end
@@ -3403,7 +3771,7 @@ function S.refresh()
     local px, py = p:Position()
     for j, col in ipairs(v.cols) do
         local h = find_uicomponent(p, "hdr_" .. j)
-        put(h, px, py, { L.list[1] + col[1], L.head_y, col[2], 22 })
+        put(h, px, py, { L.list[1] + col[1], L.head_y, col[2], S.px(22) })
         align(h, col[3])
         set(h, v.heads[j])
         local hl = find_uicomponent(p, "hdr_line_" .. j)
@@ -3413,7 +3781,7 @@ function S.refresh()
         end
     end
     -- THE TABLE'S BORDER round the header and the list, and a rule between them; none on the map
-    local F, top, bottom = L.FRAME, L.head_y - L.FRAME - 2, L.list[2] + L.list[4]
+    local F, top, bottom = L.FRAME, L.head_y - L.FRAME - S.px(2), L.list[2] + L.list[4]
     local edges = {
         t = { L.list[1] - F, top, L.list[3] + F * 2, F },
         b = { L.list[1] - F, bottom, L.list[3] + F * 2, F },
@@ -3522,6 +3890,10 @@ end
 -- Reopening keeps the tab and drops the drill-down. Interactive only while visible: a hidden
 -- panel that still takes the mouse is a dead zone in the middle of the map.
 function S.show(on, focus)
+    if on then
+        local sw, sh = core:get_screen_resolution()
+        S.use_size(S.pick_size(S.want_size(), sw, sh, S.scale_for(sw, sh)))
+    end
     local p = S.panel()
     if not is_uicomponent(p) then p = S.build() end
     if not is_uicomponent(p) then return end
@@ -3602,6 +3974,14 @@ function S.click_send(component)
     local rc = i and S.data[i]
     if rc and rc.route_request and rc.send and not rc.send.off then return S.request(unpack(rc.route_request)) end
     if rc and rc.send and rc.send.look then return S.look_at(rc.send.look[1], rc.send.look[2]) end
+    -- the state wanted, never a toggle; and a click within half a second of the last one is the second half of a double
+    -- click on the row redrawn under the cursor (seen 2026-11-03: Hire then Dismiss), so it is dropped
+    if rc and rc.guards then
+        local t = os.clock()
+        if S.guards_at and t - S.guards_at < 0.5 then return end
+        S.guards_at = t
+        return S.request("guards", rc.guards)
+    end
     if rc and rc.provisions and rc.send and not rc.send.off then
         return S.request("provisions", rc.army, rc.provisions)
     end
@@ -3634,10 +4014,17 @@ function S.click_send(component)
 end
 
 function S.click_policy(action, component)
-    if not component or not S.focus then return end
+    if not component then return end
     local row = UIComponent(UIComponent(component):Parent())
     local i = tonumber(string.match(row:Id() or "", "^derpy_mr_row_(%d+)$"))
     local rc = i and S.data[i]
+    -- AN EDICT ROW: the button's place names its option; the one in force and a waiting edict do nothing
+    local ch = rc and rc.choices and rc.choices[({ minus = 1, auto = 2, plus = 3 })[action]]
+    if ch then
+        if not ch.on and not ch.off then return S.request("edict", rc.edict, ch.key) end
+        return
+    end
+    if not S.focus then return end
     if rc and rc.route and rc.policy then
         local f = S.local_faction()
         for _, o in ipairs(f and S.ask("routes", f) or {}) do
@@ -3734,10 +4121,11 @@ function S.anchor()
     if not is_uicomponent(bar) then return nil end
     local bx, by = bar:Position()
     local bw, bh = bar:Dimensions()
-    local x, y = bx + bw + L.GAP, by + math.floor((bh - L.BUTTON) / 2)
+    local H = DERPY_MR_STORES_L          -- not L: the opener is CA's HUD's size whatever the panel's
+    local x, y = bx + bw + H.GAP, by + math.floor((bh - H.BUTTON) / 2)
     local sw, sh = core:get_screen_resolution()
-    if x < -L.BUTTON or y < -L.BUTTON or x > sw or y > sh then return nil end
-    return math.max(0, math.min(x, sw - L.BUTTON)), math.max(0, math.min(y, sh - L.BUTTON))
+    if x < -H.BUTTON or y < -H.BUTTON or x > sw or y > sh then return nil end
+    return math.max(0, math.min(x, sw - H.BUTTON)), math.max(0, math.min(y, sh - H.BUTTON))
 end
 
 -- Created hidden, shown once placed. While the hub manages it, the hub places and shows it.
@@ -3803,10 +4191,9 @@ function S.army_button_poll()
     end
     button:SetVisible(true)
     S.set_off(button,row.off==true)
-    local tip = row.off and "Provisions\nDisabled in this campaign's saved settings. New campaigns default to enabled."
-        or ("Provisions\nNeeded per turn: " .. row.need .. " common provisions\nCarried: " .. row.held .. " / " .. row.cap
-            .. "\nTo five-meal target: " .. math.max(0,row.need * 5-row.held)
-            .. "\nMissed meals: " .. row.short .. "\n" .. row.reason .. "\n" .. S.ARMY_TIP)
+    local tip = row.off and "Provisions\nArmy provisions are switched off in this campaign."
+        or ("Provisions\nThis army eats " .. row.need .. " a turn and carries " .. row.held .. " of " .. row.cap .. ".\n" .. row.reason
+            .. (row.short > 0 and ("\nMissed meals: " .. row.short .. ".") or "") .. "\n" .. S.ARMY_TIP)
     local count = row.off and "-" or S.num(row.need)
     if button:GetStateText() ~= count then
         local state = button:CurrentState()
@@ -3864,7 +4251,7 @@ end
 function S.plate_tip(pv)
     local foot = "Lost: this army has no settlement"
     if pv.to then foot = "Into " .. loc("regions_onscreen_" .. pv.to, pv.to) end
-    return tip_lines("Raiding takes, each turn:", pv.parts, foot)
+    return tip_lines("Raiding takes each turn:", pv.parts, foot)
 end
 
 -- ONE VALUE PER GOOD, each with that good's icon, most first, up to PLATES: copies of the first of
@@ -4034,6 +4421,13 @@ function S.init()
         function(context) return context:faction():name() == cm:get_local_faction_name(true) end,
         function()
             local done, e = pcall(S.refresh)
+            if not done then S.say(e) end
+        end, true)
+    -- ENDING THE TURN CLOSES IT (author, 2026-11-01): a UI change, on the ender's own machine only
+    core:add_listener("derpy_mr_stores_turn_end", "FactionTurnEnd",
+        function(context) return context:faction():name() == cm:get_local_faction_name(true) and S.is_open() end,
+        function()
+            local done, e = pcall(S.show, false)
             if not done then S.say(e) end
         end, true)
 end

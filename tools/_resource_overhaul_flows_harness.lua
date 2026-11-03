@@ -64,6 +64,7 @@ local function region(key, x, y, cap, held)
             return list(t)
         end,
         is_abandoned = function() return r.owner == nil end,
+        public_order = function() return r.po or 0 end,   -- Part D: the wild-land rule
         has_effect_bundle = function(_, b) return BUNDLES[key] ~= nil and BUNDLES[key][b] ~= nil end,
         owning_faction = function() return r.owner and r.owner.iface or NULL end,
         settlement = function() return settlement end,
@@ -117,6 +118,8 @@ local function faction(name, opts)
             end }
         end,
         is_rebel = function() return f.rebel end,
+        -- CA's: an ally, vassal or client state of the other; f.allies names whom (Part C, tolls)
+        is_ally_vassal_or_client_state_of = function(_, o) return (f.allies or {})[o:name()] == true end,
         is_dead = function() return f.dead == true end,
         factions_at_war_with = function()
             local ks, t = {}, {}
@@ -200,6 +203,15 @@ cm = {
     get_local_faction_name = function() return LOCAL_FK or "hum" end,
     get_faction = function(_, k) return FACTIONS[k] and FACTIONS[k].iface or false end,
     get_region = function(_, k) return REGIONS[k] and REGIONS[k].iface or false end,
+    -- a force by its number, from every faction's armies (F.captor looks its force up again)
+    get_military_force_by_cqi = function(_, n)
+        for _, f in pairs(FACTIONS) do
+            for _, mf in ipairs(f.armies) do
+                if type(mf) == "table" and mf.command_queue_index and mf.command_queue_index() == n then return mf end
+            end
+        end
+        return false
+    end,
     get_human_factions = function()
         local t = {}
         for k, f in pairs(FACTIONS) do if f.human then t[#t + 1] = k end end
@@ -208,7 +220,22 @@ cm = {
     end,
     is_multiplayer = function() return MP end,
     model = function() return { turn_number = function() return TURN end,
-        world = function() return { faction_list=function()
+        -- the region nearest a hex, within 5 (Part C, a road's regions); every call counted
+        get_region_at_logical_position = function(_, x, y)
+            GRLP_CALLS = (GRLP_CALLS or 0) + 1
+            local keys, best, bd = {}, nil, 26
+            for k in pairs(REGIONS) do keys[#keys + 1] = k end
+            table.sort(keys)
+            for _, k in ipairs(keys) do
+                local r = REGIONS[k]
+                local d = (r.x - x) * (r.x - x) + (r.y - y) * (r.y - y)
+                if d < bd then best, bd = r, d end
+            end
+            return best and best.iface or NULL
+        end,
+        -- CA's caravan banditry (Part D): BANDITRY(keys) when a test sets it, else 0
+        world = function() return { caravans_system = function() return { total_banditry_for_regions_by_key =
+            function(_, keys) return BANDITRY and BANDITRY(keys) or 0 end } end, faction_list=function()
             local items,keys={},{};for key in pairs(FACTIONS) do keys[#keys+1]=key end;table.sort(keys)
             for _,key in ipairs(keys) do items[#items+1]=FACTIONS[key].iface end
             return list(items)
@@ -266,7 +293,13 @@ cm = {
         if not (cqi and CHARS[cqi]) or type(trait) ~= "string" then error("force_add_trait: bad arguments") end
         CHARS[cqi].traits[trait] = true
     end,
-    random_number = function(_, hi, lo) ROLLS[#ROLLS + 1] = { hi, lo }; return ROLL end,
+    -- ROLLQ: the next answers in order, when a test queues them (Part D's roll, then its pick)
+    random_number = function(_, hi, lo)
+        ROLLS[#ROLLS + 1] = { hi, lo }
+        if ROLLQ and #ROLLQ > 0 then return table.remove(ROLLQ, 1) end
+        return ROLL
+    end,
+    get_total_corruption_value_in_region = function(_, r) return r.__r.corruption or 0 end,
     -- phase 5: CA's spot beside a settlement is one step off it; -1, -1 when it finds none
     find_valid_spawn_location_for_character_from_settlement = function(_, fk, rk, sea, same, dist)
         if type(fk) ~= "string" or sea ~= false or same ~= true or type(dist) ~= "number" then
@@ -331,7 +364,9 @@ common = {
     trigger_soundevent = function(ev) SOUNDS[#SOUNDS + 1] = ev end,
     get_localised_string = function() LOC_CALLS = (LOC_CALLS or 0) + 1; return "" end,
     get_context_value = function() return CCO_MADE end,
+    set_context_value = function(id, v) CONTEXT_VALUES[id] = v end,
 }
+CONTEXT_VALUES = {}
 local function fire(event, context)
     for _, l in ipairs(LISTENERS) do
         if l.event == event and (l.cond == true or (type(l.cond) == "function" and l.cond(context))) then
@@ -356,6 +391,17 @@ cm.saving_game_callbacks[1], cm.loading_game_callbacks[1] = thrower, thrower
 dofile("__STORES__")
 dofile("__FLOWS__")
 local F = DERPY_MR_FLOWS
+-- SPOILAGE (2026-11-01) is off for every block written before it, whose stock figures predate it;
+-- the spoilage block at the end puts the real rule back.
+local SPOILS = F.spoils
+F.spoils = function() return false end
+-- TOLLS (Part C) are off for every block written before them, whose gold and stock figures predate them;
+-- the toll blocks at the end put the real takers back. A global: the main chunk is at its 200 locals.
+TOLL_TAKERS = F.toll_takers
+F.toll_takers = function() return {} end
+-- BANDITS (Part D) likewise: no road encounter in any block written before them.
+ROAD_EVENT = F.road_event
+F.road_event = function() end
 local distance_turns = F.route_turns
 -- Prior lifecycle fixtures test the legacy two-turn schedule; Stage 6 tests the real calculator below.
 F.route_turns = function() return 2 end
@@ -1012,6 +1058,7 @@ local function option()
         if default then self.flagged = key end
     end
     function o:set_locked(v, why) self.locked, self.why = v, why end
+    function o:set_is_global(v) self.global = v end
     function o:get_finalized_setting() return self.value end
     return o
 end
@@ -1048,6 +1095,12 @@ for k, o in pairs(opt) do
         eq(table.concat(o.values, ","), table.concat(LINES[k], ","), k .. "'s choices, in the scenes' order")
         eq(o.value, LINES[k].default, k .. "'s default"); eq(o.flagged, LINES[k].default, "and the list marks it")
         eq(F.mct(k), LINES[k].default, "F.mct reads " .. k)
+    elseif k == "ui_size" then
+        -- THE PANEL SIZE changes this screen alone: open in a campaign, and each player's own
+        eq(o.locked, nil, "a campaign leaves the panel size open")
+        eq(o.global, true, "the panel size is each player's own in multiplayer")
+        eq(table.concat(o.values, ","), "small,medium,large", "the panel size's choices")
+        eq(o.value, "medium", "Medium by default"); eq(o.flagged, "medium", "and the list marks it")
     elseif k:match('^route_') then
         eq(o.locked,nil,'visibility stays editable in a campaign')
         eq(o.value,true,'route visuals default on')
@@ -1056,6 +1109,7 @@ for k, o in pairs(opt) do
     end
 end
 eq(opt.route_size ~= nil and opt.route_colours ~= nil, true, "both line options are on the page")
+eq(opt.ui_size ~= nil, true, "the panel size is on the page")
 opt.route_colours.value = "pale"; eq(F.mct("route_colours"), "pale", "a change reaches the map's next redraw")
 opt.route_colours.value = "default"
 for k, d in pairs(DERPY_MR_FLOWS_DEFAULTS) do
@@ -1181,7 +1235,8 @@ local f1 = region("f1", 5700, 0, 200, { grain = 50 }); f1.level = 1; own(aF, f1,
 F.state.rates.ai = false; turn_start(aF)
 eq(f1.held.grain, 50, "switched off, other factions eat nothing"); eq(has(f1, WF), false, "and gain nothing")
 F.state.rates.ai = true; turn_start(aF)
-eq(f1.held.grain, 48, "switched on, they eat"); eq(has(f1, WF), true, "and are Well fed")
+-- 50 grain is 25 turns of food: the computer's Rations edict (Part B) is Plenty before the meal, so 3
+eq(f1.held.grain, 47, "switched on, they eat, at Plenty"); eq(has(f1, WF), true, "and are Well fed")
 eq(F.state.factions.aF, nil, "with no ledger: only a player's panel reads it")
 local before = u1.held.grain + u1.held.salt
 F.state.rates.upkeep = false; turn_start(uF)
@@ -1739,6 +1794,18 @@ eq(ships_of("gP"), 0, "seized"); eq(g2.held.coal or 0, 0, "it never arrives")
 eq(rr.held.coal, 45, "the captor's nearest settlement gets the cargo")
 eq(MARKERS[gs.id], nil, "the marker goes"); eq(SCENES[gs.id], nil, "and its wagons")
 eq(F.state.factions.rA, nil, "a computer keeps no ledger")
+-- SEEN WHERE IT STANDS NOW (final review, 2026-11-02): the enemy list is keyed by the turn number, which spans a
+-- round. Made earlier in the round (the map's plan refresh, another faction's turn start), it kept the armies where
+-- they stood then, and the owner's own turn start seized by those places.
+g1.held.coal = 50; TURN = 5003; F.request("gP", "send", "coal", "g2")
+local gs2 = last_ship()
+TURN = 5004
+rA.armies = { field(rA, gs2.x + SH.near + 5, gs2.y, 505) }
+F.enemy_armies(gP.iface)   -- asked earlier in the round, with the army out of reach
+rA.armies = { field(rA, gs2.x, gs2.y + SH.near, 505) }   -- it marches up before gP's turn starts
+turn_start(gP)
+eq(ships_of("gP"), 0, "an army that marched up this round seizes it: the turn start reads where it stands now")
+rr.held.coal = 45
 rA.armies = {}
 -- SEIZED BY WALKING IN: AreaEntered, an army only, at war only
 g1.held.coal = 50; TURN = 5100; F.request("gP", "send", "coal", "g2"); gs = last_ship()
@@ -2057,6 +2124,65 @@ eq(#ERRORS, 0, "no script errors in phase 5: " .. table.concat(ERRORS, "; "))
 
     end
     do
+        -- ONTO TODAY'S ROAD (live check 2026-10-24: a convoy that left on a 171-hex road sat 17 hexes off the 142-hex
+        -- one the map drew next turn). A third of the way along the stub road, (27,0), when the pair's road becomes
+        -- `bent`, seven points: the turn start puts it a third of the way along that, (20,10), then steps it to two
+        -- thirds, (60,10). The army check comes between, so an army at (20,10) and out of reach of (27,0) seizes it.
+        local bent = { { 0, 0 }, { 0, 10 }, { 20, 10 }, { 40, 10 }, { 60, 10 }, { 81, 10 }, { 81, 0 } }
+        local function roads(ok, path) DERPY_MR_TERRAIN_ROUTES = { reach = function() return ok, nil, path end } end
+        local function at(c) return c.x .. "," .. c.y end
+        the_road()
+        local e, b, er, br = pair("62", 0, 81, { coal = 100 }, { "coal" })
+        F.trade(e.iface)
+        local c = newest()
+        advance_convoys(e); eq(at(c), "27,0", "a third of the way on the road it left on")
+        roads(true, bent)
+        advance_convoys(e)
+        eq(c.road, F.pack_road(bent), "it takes the pair's road of the day"); eq(at(c), "60,10", "and is two thirds along it")
+        local listed_road
+        for _, x in ipairs(F.convoy_cargo()) do if x.id == c.id then listed_road = x.road end end
+        eq(listed_road, c.road, "the maps are given the road it is on")
+        advance_convoys(e)
+        eq(br.held.coal, 5, "it lands on the day it was given when it left")
+        -- from the other end: today's road is turned to leave the exporter, and F.reach's own copy is not
+        the_road()
+        local e, b = pair("63", 81, 0, { coal = 100 }, { "coal" })
+        F.trade(e.iface)
+        local c = newest()
+        advance_convoys(e); eq(at(c), "54,0", "a third of the way from the exporter at 81")
+        roads(true, bent)
+        advance_convoys(e)
+        eq(at(c), "20,10", "two thirds along today's road, from the exporter's end")
+        eq(F.unpack_road(c.road)[1][1], 81, "the road it keeps leaves the exporter"); eq(bent[1][1], 0, "F.reach's path is not turned round in place")
+        -- the army check reads the spot on today's road
+        the_road()
+        local e, b = pair("64", 0, 81, { coal = 100 }, { "coal" })
+        local cap = faction("cv64C", { human = true }); local capr = region("cv64C1", 500, 500, 600, {}); own(cap, capr, true)
+        F.trade(e.iface)
+        local c = newest()
+        advance_convoys(e); eq(at(c), "27,0", "on the old road")
+        war(e, cap); cap.armies = { field(cap, 20, 10, 6401) }
+        eq(7 * 7 + 10 * 10 > F.SHIP.near * F.SHIP.near, true, "the army is out of reach of where the convoy stood")
+        roads(true, bent)
+        advance_convoys(e)
+        eq(listed(c), false, "seized where it stands on today's road"); eq(capr.held.coal, 5, "by the army there")
+        -- kept on its own road: today's does not leave where it left, or the pair's trade is cut off
+        for _, case in ipairs({ { "65", true, { { 5, 5 }, { 81, 0 } } }, { "66", false, bent } }) do
+            local tag = case[1]
+            the_road()
+            local e, b = pair(tag, 0, 81, { coal = 100 }, { "coal" })
+            F.trade(e.iface)
+            local c = newest()
+            local own_road = c.road
+            advance_convoys(e)
+            roads(case[2], case[3])
+            advance_convoys(e)
+            eq(c.road, own_road, "convoy " .. tag .. " keeps the road it left on"); eq(at(c), "54,0", "and goes on along it")
+        end
+        the_road()   -- the stub road, as the cases below expect it
+
+    end
+    do
         -- WHAT DOES NOT FIT IS LOST: a capital of 200 holding 198 takes 2 of the 5
         local e, b, er, br = pair("21", 0, 81, { coal = 100 }, { "coal" })
         F.trade(e.iface)
@@ -2323,7 +2449,7 @@ eq(#ERRORS, 0, "no script errors in phase 5: " .. table.concat(ERRORS, "; "))
         TURN = TURN + 1; looks = 0
         local armies = F.enemy_armies(e.iface)
         eq(looks, 1, "a new turn looks again")
-        eq(#armies, 1, "a garrison is not an army in the field"); eq(armies[1].f:name(), "cv32X", "the faction at war"); eq(armies[1].mf, live, "its force")
+        eq(#armies, 1, "a garrison is not an army in the field"); eq(armies[1].fkey, "cv32X", "the faction at war"); eq(armies[1].cqi, 1650, "its force")
         eq(armies[1].x, 0, "where it stands"); eq(armies[1].y, 0, "on both axes")
         eq(F.captor(e.iface, { x = 0, y = 0 }) ~= nil, true, "it is near a convoy at the same spot"); eq(looks, 1, "and the same turn asks nobody again")
         live.is_null_interface = function() return true end
@@ -3780,6 +3906,41 @@ end)()
     eq(walks, 100, "adding partner does not rescan source pools per good")
     F.state, TURN = old_state, old_turn
 end)()
+-- ONE READ A TURN START (2026-11-03: 7,500 store reads in one computer round, 2.35 s): inside a turn start a
+-- settlement's stores are read whole once until something is written to them; a write is seen by the next read,
+-- a reader may change what it was given, and the kept copy ends with the turn start
+;(function()
+    local f = faction("once_reader")
+    local a = region("once_a", 83000, 0, 1000, { grain = 400, coal = 300 })
+    own(f, a, true)
+    local trade, guard, got = F.trade, F.guard, nil
+    F.trade = function(fa)
+        local held = F.stock(a.iface)
+        local w = a.pool_walks or 0
+        held.coal = -1
+        local again = F.stock(a.iface)
+        local walked = (a.pool_walks or 0) - w
+        F.move(a.iface, nil, "coal", 50, DERPY_MR_FLOWS_KIND.move, f.name, nil)
+        local fresh = F.stock(a.iface)
+        fresh.coal = -5
+        got = walked .. "," .. again.coal .. "," .. fresh.coal .. "," .. F.stock(a.iface).coal
+        return trade(fa)
+    end
+    local ok, e = pcall(F.on_faction_turn_start, f.iface)
+    F.trade = trade
+    eq(ok and got, "0,300,-5,250", "a second read walks nothing, a reader's change is its own, a write is seen: "
+       .. tostring(e))
+    local w = a.pool_walks
+    F.stock(a.iface)
+    eq(a.pool_walks - w, 1, "the kept copy ends with the turn start")
+    -- a turn start that throws past its guards still ends it
+    local edict_turn = F.edict_turn
+    F.guard = function(fn, ...) if fn == F.edict_turn then error("boom") end; return guard(fn, ...) end
+    local thrown = not pcall(F.on_faction_turn_start, f.iface)
+    F.guard = guard
+    w = a.pool_walks; F.stock(a.iface); F.stock(a.iface)
+    eq(tostring(thrown) .. "," .. (a.pool_walks - w), "true,2", "a turn start that threw left its copy behind")
+end)()
 -- Local paid production and sustained services: no passive output is replaced.
 ;(function()
     local previous, turn = F.state, TURN
@@ -4450,7 +4611,7 @@ end)()
     F.route_return(full); c.held.grain=keep
     c.absent={grain=true}
     local st,why=F.route_status(buyer.iface,contract)
-    eq(st,nil,"a settlement with no pool cannot be bought from"); eq(why,"No price at the source","and the panel is told why")
+    eq(st,nil,"a settlement with no pool cannot be bought from"); eq(why,"The seller cannot store it","and the panel is told why")
     local held=buyer.iface:treasury(); TURN=TURN+1; F.routes_turn(buyer.iface)
     eq(#F.ships(),0,"no cart leaves without a pool"); eq(buyer.iface:treasury(),held,"and the buyer pays nothing")
     c.absent=nil
@@ -4467,7 +4628,7 @@ end)()
     local book=F.state.contracts; local ledger={book.paid,book.refunded,book.lost}
     local s0,b0=seller.iface:treasury(),buyer.iface:treasury()
     TURN=TURN+1; F.routes_turn(buyer.iface)
-    eq(#F.ships(),0,"a cart worth under one gold does not leave"); eq(contract.status,"Waiting for surplus, gold or cart space","and the order says it waits")
+    eq(#F.ships(),0,"a cart worth under one gold does not leave"); eq(contract.status,"Waiting for goods or gold or road space","and the order says it waits")
     eq(buyer.iface:treasury(),b0,"the buyer pays nothing"); eq(c.held.grain,1000,"and no goods move")
     -- a cart saved before that rule, with no escrow, still goes home whole in a war and books nothing
     F.route_edit(buyer.iface,contract.id,"batch","100"); TURN=TURN+1; F.routes_turn(buyer.iface)
@@ -4693,6 +4854,1603 @@ end)()
     eq(cargo_to(later.name,"grain"),1,"actual later partner agrees with preview")
     eq(b.held.grain,0,"and nothing has landed")
     F.state,F.trade_reach,F.ships_to=state,reach,ships_to
+end)()
+
+-- SPOILAGE (design 2026-11-01, Part A): the generated tables the rule reads.
+eq(DERPY_MR_FLOWS_KIND.spoil, "spoiled", "spoilage books on its own factor")
+eq(DERPY_MR_FLOWS_DEFAULTS.spoilage, true, "spoilage is on by default")
+do
+    local sp = DERPY_MR_FLOWS_SPOIL
+    eq(sp.rates.grain .. "," .. sp.rates.beer .. "," .. sp.rates.kvas, "4,2,2", "the three goods that spoil")
+    eq(sp.safe .. "," .. sp.granary .. "," .. sp.granary_good, "25,50,grain", "the safe shares")
+    local lasting = {}
+    for _, w in ipairs(DERPY_MR_FLOWS_WORKS) do
+        if w.kind == "lasting" then lasting[w.key] = true end
+    end
+    eq(#sp.granary_works, 2, "two Great Granaries: the Chaos Dwarfs' and everyone else's")
+    for _, k in ipairs(sp.granary_works) do
+        eq(lasting[k], true, k .. " is a lasting work under the key spoilage reads")
+    end
+end
+
+-- SPOILAGE: the loss, who it applies to, and where it runs in the turn start.
+;(function()
+    local state = F.state
+    F.state = { factions = {}, rates = F.read_rates() }
+    F.spoils = SPOILS
+    eq(F.spoil_loss(400, 1000, 4, 25), 6, "4% of the 150 above a quarter")
+    eq(F.spoil_loss(274, 1000, 4, 25), 0, "24 above loses nothing: it rounds down")
+    eq(F.spoil_loss(275, 1000, 4, 25), 1, "25 above loses one")
+    eq(F.spoil_loss(250, 1000, 4, 25), 0, "exactly at the safe share loses nothing")
+    eq(F.spoil_loss(nil, nil, 4, 25), 0, "no reading loses nothing")
+    local function spoiled(r, stem)
+        local n = 0
+        for _, e in ipairs(LOG) do
+            if e[1] == r.key and e[2] == "derpy_mr_store_" .. stem .. "_spoiled" then n = n + e[3] end
+        end
+        return n
+    end
+    local p = faction("spoil_player", { human = true })
+    local r = region("spoil_a", 0, 0, 1000, { grain = 400, beer = 300, salt = 900 })
+    own(p, r, true)
+    F.spoil(p.iface)
+    eq(r.held.grain .. "," .. r.held.beer .. "," .. r.held.salt, "394,299,900", "grain and beer spoil, salt keeps")
+    eq(spoiled(r, "grain") .. "," .. spoiled(r, "beer"), "-6,-1", "booked on the spoiled factor")
+    eq(F.book(p.name).now.grain.spoiled_out, 6, "and in the ledger")
+    local walks, reads = r.pool_walks or 0, r.pool_reads or 0
+    F.spoil(p.iface)
+    eq((r.pool_walks or 0) - walks, 0, "a computer round's cost: no store is read whole")
+    eq((r.pool_reads or 0) - reads <= 6, true, "at most two reads a good that spoils: its own and the move's")
+    F.works_book(p.name).lasting = { [F.SPOIL.granary_works[1]] = 1 }
+    r.held.grain, r.held.beer = 400, 300
+    F.spoil(p.iface)
+    eq(r.held.grain .. "," .. r.held.beer, "400,299", "the Great Granary keeps grain to half, not beer")
+    F.spoil_safe("nobody", "grain")
+    eq(F.state.factions.nobody, nil, "asking about the Granary writes nothing")
+    F.state.rates.spoilage = false
+    r.held.beer = 300; F.spoil(p.iface)
+    eq(r.held.beer, 300, "the switch off spoils nothing")
+    F.state.rates.spoilage = true
+    local c = faction("spoil_computer")
+    local rc = region("spoil_c", 3, 0, 1000, { grain = 400 })
+    own(c, rc, true)
+    F.state.rates.ai = false; F.spoil(c.iface)
+    eq(rc.held.grain, 400, "a computer's stores keep with other factions' stores off")
+    F.state.rates.ai = true; F.spoil(c.iface)
+    eq(rc.held.grain, 394, "and spoil with them on")
+    local d = faction("spoil_daemons", { sc = "wh3_main_sc_dae_daemons" })
+    local rd = region("spoil_d", 5, 0, 1000, { grain = 400 })
+    own(d, rd, true); F.spoil(d.iface)
+    eq(rd.held.grain, 400, "a race with no stores loses nothing")
+    local v = faction("spoil_vampires", { sc = "wh_main_sc_vmp_vampire_counts" })
+    local rv = region("spoil_v", 7, 0, 1000, { grain = 400 })
+    own(v, rv, true); F.spoil(v.iface)
+    eq(rv.held.grain, 394, "the undead eat nothing, but their grain still rots")
+    rv.absent = { grain = true }; rv.held.grain = 400
+    F.spoil(v.iface)
+    eq(rv.held.grain, 400, "a store with no grain pool loses no grain")
+    rv.absent = nil
+    local old = F.read_rates(); old.spoilage = nil
+    F.state.rates = old
+    eq(F.rates().spoilage, true, "an old save takes spoilage on")
+    F.state.rates = F.read_rates()
+    local order, saved = {}, {}
+    for _, k in ipairs({ "upkeep", "provisions_turn", "spoil", "economy_turn" }) do
+        saved[k] = F[k]
+        F[k] = function() order[#order + 1] = k end
+    end
+    turn_start(c)
+    for k, fn in pairs(saved) do F[k] = fn end
+    eq(table.concat(order, ","), "upkeep,provisions_turn,spoil,economy_turn", "it spoils after eating, before processing")
+    ERRORS = {}
+    F.state = state
+end)()
+
+-- SPOILAGE ON SCREEN: next turn's loss, the forecast and the tooltip's figures.
+;(function()
+    local state = F.state
+    F.state = { factions = {}, rates = F.read_rates() }
+    local p = faction("spoil_viewer", { human = true })
+    local r = region("spoil_view", 0, 0, 1000, { grain = 400, beer = 300, salt = 900 })
+    own(p, r, true)
+    local v = F.stock_view(p.iface, r.iface)
+    eq(F.spoil_due(v, "grain") .. "," .. F.spoil_due(v, "salt"), "6,0", "next turn's loss, and none for salt")
+    local fc = F.stock_forecast(v).provisions
+    eq(fc.spoil, 7, "the forecast counts what will spoil")
+    eq(fc.use_per_turn > 0, true, "the settlement eats")
+    eq(fc.cover, math.floor(fc.held / fc.use_per_turn), "its cover is the use alone: spoiling stops at the safe share")
+    local made = F.stock_forecast(v, { provisions = fc.use_per_turn + 1 }).provisions
+    eq(made.mode .. "," .. made.net, "stable," .. (1 - fc.spoil), "made past its use is stable, and the net counts what spoils")
+    eq(F.stock_forecast(v, { provisions = 0 }).provisions.cover, fc.cover, "a declining store's cover is the use alone too")
+    local info = F.spoil_info(p.iface, r.iface, "grain")
+    eq(info.rate .. "," .. info.keep .. "," .. info.due, "4,250,6", "the tooltip's figures")
+    eq(F.spoil_info(p.iface, r.iface, "salt"), nil, "salt keeps")
+    local tip = DERPY_MR_STORES.forecast_tip(p.iface, r.iface, nil, "provisions", "grain")
+    eq(string.find(tip, "\nIt loses 7 to spoiling each turn.\nThat is enough for ", 1, true) ~= nil, true, "the forecast line says so: " .. tip)
+    eq(string.find(DERPY_MR_STORES.forecast_tip(p.iface, r.iface, nil, "building"), "spoiling", 1, true), nil,
+       "a use with nothing spoiling does not")
+    F.state.rates.spoilage = false
+    eq(F.spoil_due(v, "grain"), 0, "the switch off: nothing due")
+    eq(F.spoil_info(p.iface, r.iface, "grain"), nil, "and nothing to say")
+    eq(F.stock_forecast(v).provisions.spoil, 0, "nor forecast")
+    ERRORS = {}
+    F.state = state
+end)()
+
+-- FACTION-SPECIFIC BUFFS (author 2026-11-01): where a work, a stores bonus or an event would do
+-- nothing for a race, the race gets its own - Chaos Dwarfs have no growth.
+;(function()
+    local state = F.state
+    F.state = { factions = {}, rates = F.read_rates() }
+    local W = {}
+    for _, w in ipairs(DERPY_MR_FLOWS_WORKS) do W[w.key] = w end
+    local chd = faction("race_chd", { human = true, sc = "wh3_dlc23_sc_chd_chaos_dwarfs" })
+    local emp = faction("race_emp", { human = true })
+    eq(F.work_open(emp.iface, W.last_granary), true, "the Great Granary is the Empire's")
+    eq(F.work_open(chd.iface, W.last_granary), false, "but not the Chaos Dwarfs': growth does nothing for them")
+    eq(F.work_open(chd.iface, W.last_granary_chd), true, "theirs feeds the captives")
+    eq(F.work_open(emp.iface, W.last_granary_chd), false, "and is theirs alone")
+    F.works_book(chd.name).lasting = { last_granary_chd = 1 }
+    eq(F.spoil_safe(chd.name, "grain"), F.SPOIL.granary, "and keeps grain to half, like the other")
+    -- Well fed: the race's own bundle, never both
+    local rc = region("race_rc", 0, 0, 1000, { grain = 200 }); rc.level = 1; own(chd, rc, true)
+    local CW = "derpy_mr_well_fed_chd"
+    BUNDLES.race_rc = { [WF] = 2 }
+    F.bundle("race_rc", rc.iface, "provisions", true)
+    eq(BUNDLES.race_rc[CW], F.BUNDLE_TURNS, "Chaos Dwarfs get their own Well fed, for the usual turns")
+    eq(BUNDLES.race_rc[WF], nil, "and a former owner's goes")
+    F.bundle("race_rc", rc.iface, "provisions", false)
+    eq(next(BUNDLES.race_rc), nil, "unfed, neither")
+    local re = region("race_re", 3, 0, 1000, { grain = 200 }); re.level = 1; own(emp, re, true)
+    BUNDLES.race_re = { [CW] = 2 }
+    F.bundle("race_re", re.iface, "provisions", true)
+    eq(BUNDLES.race_re[WF], F.BUNDLE_TURNS, "everyone else keeps the usual Well fed")
+    eq(BUNDLES.race_re[CW], nil, "and a Chaos Dwarf former owner's goes")
+    -- the Feast: the race's own, in its own words
+    eq(F.event_offer(chd.iface, "feast", F.stocks(chd.iface)), nil, "no Feast for Chaos Dwarfs")
+    local o = F.event_offer(chd.iface, "feast_chd", F.stocks(chd.iface))
+    eq(o and o.region, "race_rc", "Full Rations in its place")
+    eq(F.event_pick(chd.iface, F.event_book(chd.name)).key, "feast_chd", "and in the turn's order")
+    eq(F.event_offer(emp.iface, "feast_chd", F.stocks(emp.iface)), nil, "theirs alone")
+    eq(F.event_offer(emp.iface, "feast", F.stocks(emp.iface)) ~= nil, true, "everyone else keeps the Feast")
+    eq(#ERRORS, 0, "no script errors")
+    F.state = state
+end)()
+
+-- TRADE EDICTS (design 2026-11-01, Part B): the generated table the rules read.
+eq(DERPY_MR_FLOWS_DEFAULTS.edicts, true, "edicts are on by default")
+do
+    local E = DERPY_MR_FLOWS_EDICTS
+    eq(table.concat(E.order, ","), "rations,workshops,roads", "three edicts, in order")
+    eq(E.rations.default .. "," .. E.workshops.default .. "," .. E.roads.default, "normal,balanced,tolled", "the defaults")
+    eq(E.cooldown, 10, "ten turns between changes")
+    eq(E.need.plenty .. "," .. E.need.normal .. "," .. E.need.rationing, "3,2,1", "meals a level")
+    eq(E.war_pct .. "," .. E.merchant_trade .. "," .. E.merchant_draw, "150,2,125", "the workshop numbers")
+    eq(E.race_bundles.plenty.chd, "derpy_mr_edict_plenty_chd", "Chaos Dwarfs get their own Plenty")
+    local outs = {}
+    for k in pairs(E.war_outputs) do outs[k] = true end
+    for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do outs[g.stem] = nil end
+    eq(next(outs), nil, "every war output is a good")
+end
+
+-- TRADE EDICTS: the state, the bundles, the cooldown and the change action.
+;(function()
+    local state, turn0 = F.state, TURN
+    F.state = { factions = {}, rates = F.read_rates() }
+    eq(F.edict("e_p", "rations"), "normal", "no entry reads the default")
+    eq(F.state.edicts, nil, "and reading writes nothing")
+    local p = faction("e_p", { human = true })
+    own(p, region("e_pa", 0, 0, 1000, {}), true)
+    eq(F.edict_set(p.iface, "rations", "plenty"), true, "a change")
+    eq(F.edict("e_p", "rations"), "plenty", "reads back")
+    eq(FBUNDLES.e_p.derpy_mr_edict_plenty, 0, "its bundle, for good")
+    eq(F.edict_wait("e_p", "rations"), 10, "and ten turns to wait")
+    eq(F.edict_set(p.iface, "rations", "rationing"), false, "a second change waits")
+    eq(F.edict("e_p", "rations"), "plenty", "and changed nothing")
+    TURN = turn0 + 9
+    eq(F.edict_set(p.iface, "rations", "rationing"), false, "still waiting a turn before")
+    TURN = turn0 + 10
+    eq(F.edict_wait("e_p", "rations"), 0, "ready after ten")
+    eq(F.edict_set(p.iface, "rations", "rationing"), true, "and changes")
+    eq(FBUNDLES.e_p.derpy_mr_edict_plenty, nil, "the old bundle goes")
+    eq(FBUNDLES.e_p.derpy_mr_edict_rationing, 0, "the new one comes")
+    eq(F.edict_set(p.iface, "rations", "rationing"), false, "the option already in force is no change")
+    TURN = turn0 + 11
+    eq(F.edict_set(p.iface, "rations", "normal", true), true, "force skips the wait")
+    eq(next(FBUNDLES.e_p), nil, "the default has no bundle")
+    local c = faction("e_chd", { human = true, sc = "wh3_dlc23_sc_chd_chaos_dwarfs" })
+    own(c, region("e_ca", 3, 0, 1000, {}), true)
+    F.edict_set(c.iface, "rations", "plenty")
+    eq(FBUNDLES.e_chd.derpy_mr_edict_plenty_chd, 0, "Chaos Dwarfs get their own Plenty")
+    eq(FBUNDLES.e_chd.derpy_mr_edict_plenty, nil, "and not the growth one")
+    eq(F.edict_set(p.iface, "rations", "feast"), false, "an unknown option")
+    eq(F.edict_set(p.iface, "feasts", "plenty"), false, "an unknown edict")
+    local d = faction("e_dae", { human = true, sc = "wh3_main_sc_dae_daemons" })
+    eq(F.edict_set(d.iface, "rations", "plenty"), false, "a race with no stores has no edicts")
+    local calls, inv = 0, F.invalidate_reach
+    F.invalidate_reach = function() calls = calls + 1 end
+    F.edict_set(p.iface, "roads", "closed")
+    eq(calls, 1, "closing the roads drops the kept reach answers")
+    F.edict_set(p.iface, "workshops", "war")
+    eq(calls, 1, "another edict does not")
+    F.invalidate_reach = inv
+    F.state.rates.edicts = false
+    eq(F.edict("e_p", "roads"), "tolled", "the switch off reads the default")
+    eq(F.edict_set(p.iface, "workshops", "merchant"), false, "and changes nothing")
+    F.edict_bundles(p.iface)
+    eq(next(FBUNDLES.e_p), nil, "and takes every edict bundle off")
+    F.state.rates.edicts = true
+    -- the action: through the trigger in multiplayer, gated on its own switch
+    TURN = turn0 + 30
+    MP = true
+    ui_trigger(p.cqi, "dmr1|edict|workshops|merchant")
+    eq(F.edict("e_p", "workshops"), "merchant", "the trigger sets it")
+    F.state.rates.actions = false
+    TURN = turn0 + 40
+    ui_trigger(p.cqi, "dmr1|edict|workshops|balanced")
+    eq(F.edict("e_p", "workshops"), "balanced", "Vault actions off still allow an edict")
+    F.state.rates.edicts = false
+    TURN = turn0 + 50
+    ui_trigger(p.cqi, "dmr1|edict|workshops|war")
+    F.state.rates.edicts = true
+    eq(F.edict("e_p", "workshops"), "balanced", "edicts off: the trigger does nothing")
+    MP = false
+    F.state.rates.actions = true
+    -- the load keeps only well-formed entries
+    SAVED.derpy_mr_flows = { factions = {}, edicts = { e_p = { rations = { o = "feast", at = 1 },
+        roads = { o = "open", at = "x" }, nope = { o = "open", at = 1 }, workshops = { o = "war", at = 3 } },
+        e_x = "junk" } }
+    cm.loading_game_callbacks[1]({})
+    local kept = {}
+    for k in pairs(F.state.edicts.e_p) do kept[#kept + 1] = k end
+    eq(table.concat(kept, ","), "workshops", "the load keeps the sound entry alone")
+    eq(F.state.edicts.e_x, nil, "and drops a faction's junk")
+    -- a save from before edicts: the switch fills in on, every edict at its default
+    local old = F.read_rates(); old.edicts = nil
+    F.state = { factions = {}, rates = old }
+    eq(F.rates().edicts, true, "an older save takes edicts on")
+    eq(F.edict("e_p", "rations") .. F.edict("e_p", "workshops") .. F.edict("e_p", "roads"), "normalbalancedtolled",
+       "and every edict at its default")
+    FBUNDLES.e_p, FBUNDLES.e_chd = nil, nil
+    eq(#ERRORS, 0, "no script errors")
+    F.state, TURN = state, turn0
+end)()
+
+-- TRADE EDICTS IN THE RULES: meals, workshop output, trade share and the recruitment draw.
+;(function()
+    local state, turn0 = F.state, TURN
+    F.state = { factions = {}, rates = F.read_rates() }
+    F.spoils = function() return false end
+    local p = faction("er_p", { human = true })
+    local r = region("er_pa", 0, 0, 1000, { grain = 100 }); r.level = 2
+    own(p, r, true)
+    local function set(which, option) TURN = TURN + 20; eq(F.edict_set(p.iface, which, option), true, "set " .. option) end
+    set("rations", "plenty")
+    F.upkeep(p.iface)
+    eq(r.held.grain, 94, "Plenty eats 3 a level")
+    eq(F.recurring_use(p.iface, r.iface).provisions, 6, "and the forecast knows it")
+    set("rations", "rationing")
+    r.held.grain = 100; F.upkeep(p.iface)
+    eq(r.held.grain, 98, "Rationing eats 1 a level")
+    -- WELL FED IS FIVE TURNS OF NORMAL MEALS whatever the edict (final review, 2026-11-02): measured on the edict's
+    -- own meals, Rationing reached it on half the food, and the Chaos Dwarfs' +3 control outweighed Rationing's -2
+    r.held.grain = 17; F.upkeep(p.iface)
+    eq(r.held.grain .. "," .. tostring(has(r, WF)), "15,false", "Rationing: 15 left is under five turns of 4")
+    set("rations", "plenty")
+    r.held.grain = 30; F.upkeep(p.iface)
+    eq(r.held.grain .. "," .. tostring(has(r, WF)), "24,true", "Plenty: 24 left is five turns of 4 and more")
+    set("rations", "rationing")
+    F.state.rates.edicts = false
+    r.held.grain = 100; F.upkeep(p.iface)
+    eq(r.held.grain, 96, "the switch off eats the usual 2")
+    F.state.rates.edicts = true
+    -- War economy: half as much again of a war output, rounded down
+    local tools, cloth
+    for key, d in pairs(DERPY_MR_FLOWS_ECONOMY) do
+        if d.kind == "processing" and d.output and d.output[1] == "tools" then tools = d end
+        if d.kind == "processing" and d.output and d.output[1] == "cloth" then cloth = d end
+    end
+    eq(tools ~= nil and cloth ~= nil, true, "a tools recipe and a cloth recipe")
+    eq(F.output_n(p.iface, tools), tools.output[2], "Balanced makes the usual tools")
+    set("workshops", "war")
+    eq(F.output_n(p.iface, tools), math.floor(tools.output[2] * 3 / 2), "War economy makes half as much again")
+    eq(F.output_n(p.iface, cloth), cloth.output[2], "but not of cloth")
+    eq(F.output_n(p.iface, { cost = {} }), 0, "a service makes nothing")
+    for stem, n in pairs(tools.cost) do r.held[stem] = n * 3 end
+    r.held.tools = 0
+    eq(F.economy_pay(p.iface, r.iface, tools), true, "a batch")
+    eq(r.held.tools, math.floor(tools.output[2] * 3 / 2), "lands the larger amount")
+    for stem in pairs(tools.cost) do r.held[stem] = 500 end
+    r.held.tools = r.cap - tools.output[2]
+    eq(select(2, F.economy_admit(p.iface, r.iface, tools)), "Output store full", "and needs room for it")
+    local cells = DERPY_MR_STORES.economy_cells({ definition = tools, made = F.output_n(p.iface, tools) })
+    eq(string.find(cells.gives, tostring(math.floor(tools.output[2] * 3 / 2)), 1, true) == 1, true,
+       "the Production tab shows what it makes: " .. cells.gives)
+    -- Merchant: twice the trade share
+    local partner = faction("er_b", { human = true })
+    own(partner, region("er_ba", 9, 0, 1000, {}), true)
+    p.partners = { partner }
+    local reach, share, seen = F.trade_reach, F.share, 0
+    F.trade_reach = function() return true end
+    F.share = function(h, pct) seen = math.max(seen, pct); return share(h, pct) end
+    F.trade(p.iface, true)
+    eq(seen, F.rates().trade, "War economy trades the usual share")
+    set("workshops", "merchant")
+    seen = 0; F.trade(p.iface, true)
+    eq(seen, 2 * F.rates().trade, "Merchant sends twice the share")
+    F.trade_reach, F.share = reach, share
+    p.partners = {}
+    -- Merchant: the recruitment draw a quarter more
+    local function total(bill) local n = 0; for _, b in ipairs(bill) do n = n + b.n end return n end
+    local per = F.rates().recruit_per
+    eq(total(F.recruit_bill(p.iface, "melee_infantry", 400)), math.ceil(400 / F.RECRUIT.per * per * 125 / 100),
+       "Merchant recruits draw a quarter more")
+    set("workshops", "balanced")
+    eq(total(F.recruit_bill(p.iface, "melee_infantry", 400)), math.ceil(400 / F.RECRUIT.per * per), "the usual draw")
+    eq(#ERRORS, 0, "no script errors")
+    F.spoils = SPOILS
+    F.state, TURN = state, turn0
+end)()
+
+-- TRADE EDICTS: computer factions choose by their situation (spec 5.4), within the cooldown.
+;(function()
+    local state, turn0, n0 = F.state, TURN, #ERRORS
+    F.state = { factions = {}, rates = F.read_rates() }
+    local a = faction("ea_c")
+    local ra = region("ea_ca", 0, 0, 1000, { grain = 3 }); ra.level = 1
+    own(a, ra, true)
+    F.edict_ai(a.iface)
+    eq(F.edict("ea_c", "rations"), "rationing", "under 2 turns of food: Rationing")
+    TURN = TURN + 5; ra.held.grain = 40; F.edict_ai(a.iface)
+    eq(F.edict("ea_c", "rations"), "rationing", "a rule inside the cooldown changes nothing")
+    TURN = TURN + 5; F.edict_ai(a.iface)
+    eq(F.edict("ea_c", "rations"), "plenty", "over 15 turns of food: Plenty")
+    TURN = TURN + 10; ra.held.grain = 20; F.edict_ai(a.iface)
+    eq(F.edict("ea_c", "rations"), "normal", "in between: Normal")
+    eq(F.edict("ea_c", "workshops") .. "," .. F.edict("ea_c", "roads"), "balanced,tolled", "no partners, no wars")
+    -- a neighbour at war: War economy
+    local n1 = faction("ea_n1")
+    local rn1, rn1b = region("ea_n1a", 3, 0, 1000, {}), region("ea_n1b", 3, 3, 1000, {})
+    own(n1, rn1, true); own(n1, rn1b)
+    ra.adj = { rn1, rn1b }
+    war(a, n1)
+    TURN = TURN + 10; F.edict_ai(a.iface)
+    eq(F.edict("ea_c", "workshops"), "war", "at war with a neighbour: War economy")
+    eq(F.edict("ea_c", "roads"), "tolled", "one neighbour at war, two of its regions next door, keeps the roads Tolled")
+    -- two neighbours at war: Closed
+    local n2 = faction("ea_n2")
+    local rn2 = region("ea_n2a", 0, 3, 1000, {}); own(n2, rn2, true)
+    ra.adj = { rn1, rn2 }
+    war(a, n2)
+    TURN = TURN + 10; F.edict_ai(a.iface)
+    eq(F.edict("ea_c", "roads"), "closed", "two neighbours at war: Closed")
+    -- peace, three partners: Merchant; a rebel neighbour at war is no war
+    a.war, n1.war, n2.war = {}, {}, {}
+    local reb = faction("ea_reb", { rebel = true })
+    local rr = region("ea_rr", 6, 0, 1000, {}); own(reb, rr, true)
+    ra.adj = { rr }
+    war(a, reb)
+    local p1, p2, p3 = faction("ea_p1"), faction("ea_p2"), faction("ea_p3")
+    a.partners = { p1, p2 }
+    TURN = TURN + 10; F.edict_ai(a.iface)
+    eq(F.edict("ea_c", "workshops") .. "," .. F.edict("ea_c", "roads"), "balanced,tolled", "two partners: Balanced, roads open again")
+    a.partners = { p1, p2, p3 }
+    TURN = TURN + 10; F.edict_ai(a.iface)
+    eq(F.edict("ea_c", "workshops"), "merchant", "three partners and only rebels at war: Merchant")
+    -- a faction with no regions keeps the defaults and does not throw
+    local bare = faction("ea_bare")
+    F.edict_ai(bare.iface)
+    eq(F.edict("ea_bare", "rations") .. F.edict("ea_bare", "workshops") .. F.edict("ea_bare", "roads"),
+       "normalbalancedtolled", "no regions: every default")
+    -- THE REBELS (live pass 2026-11-02, 442.5 s into turn 3): CA's factions_trading_with gives false for the rebel
+    -- faction, and edict_ai threw at its turn start. A wars list that comes back false is guarded the same way.
+    local rebels = faction("ea_rebels", { rebel = true })
+    rebels.iface.factions_trading_with = function() return false end
+    local okr, er = pcall(F.edict_ai, rebels.iface)
+    eq(okr, true, "no trade list: the edicts throw nothing (" .. tostring(er) .. ")")
+    eq(F.edict("ea_rebels", "workshops") .. F.edict("ea_rebels", "roads"), "balancedtolled", "no trade list: the defaults")
+    local lone = faction("ea_lone")
+    lone.partners = { p1, p2, p3 }
+    lone.iface.factions_at_war_with = function() return false end
+    local okl, el = pcall(F.edict_ai, lone.iface)
+    eq(okl, true, "no wars list: the edicts throw nothing (" .. tostring(el) .. ")")
+    eq(F.edict("ea_lone", "workshops"), "merchant", "no wars list is no war: three partners make it Merchant")
+    -- the turn start: before the convoys, so this turn's meals eat this turn's rations
+    local order, saved = {}, {}
+    for _, k in ipairs({ "edict_turn", "convoys_turn", "upkeep" }) do
+        saved[k] = F[k]
+        F[k] = function() order[#order + 1] = k end
+    end
+    turn_start(a)
+    for k, fn in pairs(saved) do F[k] = fn end
+    eq(table.concat(order, ","), "edict_turn,convoys_turn,upkeep", "edicts come first in the turn start")
+    -- a human's turn start puts on its bundles (an older save catches up); a computer's runs the rules
+    local h = faction("ea_h", { human = true })
+    own(h, region("ea_ha", 9, 9, 1000, {}), true)
+    F.state.edicts.ea_h = { roads = { o = "open", at = 0 } }
+    F.edict_turn(h.iface)
+    eq(FBUNDLES.ea_h.derpy_mr_edict_open, 0, "a human's edicts get their bundles at the turn start")
+    F.state.rates.ai = false
+    TURN = TURN + 10; ra.held.grain = 3
+    F.edict_turn(a.iface)
+    eq(F.edict("ea_c", "rations"), "normal", "other factions' stores off: no computer rules")
+    -- a faction that does not eat from the stores has no Rations to choose: Plenty would be free growth
+    F.state.rates.ai = true
+    local v = faction("ea_vmp", { sc = "wh_main_sc_vmp_vampire_counts" })
+    own(v, region("ea_va", 12, 12, 1000, {}), true)
+    F.edict_ai(v.iface)
+    eq(F.edict("ea_vmp", "rations"), "normal", "a computer that does not eat keeps Normal")
+    local vh = faction("ea_vmph", { sc = "wh_main_sc_vmp_vampire_counts", human = true })
+    own(vh, region("ea_vha", 15, 15, 1000, {}), true)
+    eq(F.edict_set(vh.iface, "rations", "plenty"), false, "nor can a player who does not eat")
+    eq(F.edict_set(vh.iface, "workshops", "war"), true, "the other edicts still change")
+    eq(#ERRORS, n0, "no script errors")
+    FBUNDLES.ea_c, FBUNDLES.ea_h, FBUNDLES.ea_vmph = nil, nil, nil
+    F.state, TURN = state, turn0
+end)()
+
+F.toll_takers = TOLL_TAKERS   -- the real rule from here on
+-- TOLLS (design 2026-11-01, Part C 6.1): the road's regions, who charges and how much.
+;(function()
+    local state, turn0, n0 = F.state, TURN, #ERRORS
+    F.state = { factions = {}, rates = F.read_rates() }
+    local Y = 9700
+    local A = faction("t_A", { human = true, gold = 59 })   -- the exporter
+    local M1, M2, B = faction("t_M1"), faction("t_M2"), faction("t_B")
+    own(A, region("t_a", 0, Y, 1000, {}), true)
+    own(M1, region("t_m1", 10, Y, 1000, {}), true)
+    own(M2, region("t_m2", 20, Y, 1000, {}), true)
+    own(B, region("t_b", 30, Y, 1000, {}), true)
+    local path = {}
+    for x = 0, 30, 2 do path[#path + 1] = { x, Y } end
+    eq(table.concat(F.road_regions(path), ","), "t_a,t_m1,t_m2,t_b", "the road's regions in road order, each once")
+    local calls = GRLP_CALLS
+    F.road_regions(path)
+    eq(GRLP_CALLS, calls, "the same road again reads no region")
+    eq(#F.road_regions(nil) + #F.road_regions({}), 0, "no road, no regions")
+    F.state.rates.toll, F.state.rates.tolls = 3, true
+    local function takers() return table.concat(F.toll_takers(A.iface, B.iface, path), ",") end
+    eq(takers(), "t_M1,t_M2", "the owners between take tolls, in road order")
+    local due, sum = F.tolls(1000, F.toll_takers(A.iface, B.iface, path))
+    eq(due.t_M1 .. "," .. due.t_M2 .. "," .. sum, "30,30,60", "3% each of 1000")
+    -- six takers: 15% in all, split six ways and rounded down (Review Focus 1)
+    due, sum = F.tolls(1000, { "x1", "x2", "x3", "x4", "x5", "x6" })
+    eq(due.x1 .. "," .. due.x6 .. "," .. sum, "25,25,150", "six takers share 15%")
+    eq(F.toll_pct(6), 15, "never past 15%")
+    due, sum = F.tolls(10, { "x1", "x2" })
+    eq(next(due) == nil and sum == 0, true, "a toll under a gold is not charged")
+    -- no toll from an ally, vassal or master of either side, a rebel, or Open roads (Review Focus 3)
+    M1.allies = { t_A = true }; eq(takers(), "t_M2", "a vassal of the exporter charges nothing")
+    M1.allies, A.allies = nil, { t_M1 = true }; eq(takers(), "t_M2", "nor does its master")
+    A.allies, B.allies = nil, { t_M2 = true }; eq(takers(), "t_M1", "nor the buyer's ally")
+    B.allies, M2.rebel = nil, true; eq(takers(), "t_M1", "nor rebels")
+    M2.rebel = false
+    F.state.edicts = { t_M1 = { roads = { o = "open", at = 0 } } }
+    eq(takers(), "t_M2", "nor a faction whose roads are Open")
+    F.state.edicts = { t_M1 = { roads = { o = "closed", at = 0 } } }
+    eq(takers(), "t_M2", "nor a faction whose roads are Closed: it keeps foreign cargo out, it takes no tolls")
+    F.state.edicts = nil
+    F.state.rates.toll = 0; eq(takers(), "", "a toll of 0: no takers")
+    F.state.rates.toll, F.state.rates.tolls = 3, false; eq(takers(), "", "the switch off: no takers")
+    F.state.rates.tolls = true
+    -- a taker whose land the road crosses twice is charged once (Review Focus 1); a new road table, not the kept one
+    own(M1, region("t_m1b", 25, Y, 1000, {}))
+    local path2 = {}
+    for i, p in ipairs(path) do path2[i] = p end
+    eq(table.concat(F.road_regions(path2), ","), "t_a,t_m1,t_m2,t_m1b,t_b", "the road crosses M1's land twice")
+    eq(table.concat(F.toll_takers(A.iface, B.iface, path2), ","), "t_M1,t_M2", "and M1 is charged once")
+    eq(F.toll_unit(1000, 2), math.floor(F.sell_price(1000) * 6 / 100), "the toll per unit, in hundredths")
+    eq(F.toll_unit(1000, 0), 0, "no takers, no toll per unit")
+    -- paying: refused below the sum with nothing moved; else each taker paid and the player's side booked
+    due = { t_M1 = 30, t_M2 = 30 }
+    eq(F.pay_tolls("t_A", due), false, "59 gold cannot pay 60")
+    eq((TREASURY.t_A or 0) .. "," .. (TREASURY.t_M1 or 0), "0,0", "and nothing moved")
+    TREASURY.t_A = 1
+    eq(F.pay_tolls("t_A", due), true, "60 gold can")
+    eq(TREASURY.t_A .. "," .. TREASURY.t_M1 .. "," .. TREASURY.t_M2, "-59,30,30", "the exporter pays 60 and each taker gets 30")
+    eq(F.tolls_last("t_A"), nil, "this turn's tolls show next turn")
+    TURN = TURN + 1
+    local last = F.tolls_last("t_A")
+    eq(last.paid .. "," .. last.by.t_M1.paid .. "," .. last.by.t_M2.paid, "60,30,30", "the player's book: paid 60, 30 to each")
+    eq(F.tolls_last("t_M1"), nil, "a computer keeps no book")
+    eq(F.pay_tolls("t_A", {}), true, "nothing due is paid at once")
+    eq(#ERRORS, n0, "tolls: no script errors")
+    TREASURY.t_A, TREASURY.t_M1, TREASURY.t_M2 = nil, nil, nil
+    F.state, TURN = state, turn0
+end)()
+
+-- TOLLS IN THE TRADE (Part C 6.1): an agreement convoy and a partner cart pay the land their road crosses.
+;(function()
+    local state, turn0, routes, known, price, n0 = F.state, TURN, DERPY_MR_TERRAIN_ROUTES, F.reach_known, F.local_price, #ERRORS
+    F.state = { factions = {}, rates = F.read_rates() }
+    for _, k in ipairs({ "upkeep", "supply", "events", "army_provisions", "escort", "spoilage" }) do F.state.rates[k] = false end
+    F.state.rates.toll, F.state.rates.tolls = 3, true
+    F.reach_known, TURN, F.state.ship_seq = {}, 320000, 98000   -- cart ids no earlier block used
+    local Y = 9800
+    local E, M = faction("c2E", { gold = 0 }), faction("c2M")      -- a computer exporter, the land between
+    local B, C, D = faction("c2B", { human = true }), faction("c2C", { human = true }), faction("c2D", { human = true })
+    local er = region("c2E1", 0, Y, 2000, { coal = 1000 }); own(E, er, true)
+    own(M, region("c2M1", 10, Y, 1000, {}), true)
+    own(B, region("c2B1", 20, Y, 1000, {}), true)
+    own(C, region("c2C1", 0, Y + 30, 1000, {}), true)
+    own(D, region("c2D1", 10, Y - 20, 1000, {}), true)
+    E.partners, B.partners, C.partners, D.partners = { B, C, D }, { E }, { E }, { E }
+    for _, k in ipairs({ "c2B", "c2C", "c2D" }) do F.set_stock_policy(k, "coal", "target", "1000") end
+    -- B's road crosses M's land, C's crosses nobody's, D's crosses M's too
+    local ROADS = { ["c2B1>c2E1"] = {}, ["c2C1>c2E1"] = {}, ["c2D1>c2E1"] = {} }
+    for x = 0, 20, 2 do table.insert(ROADS["c2B1>c2E1"], { x, Y }) end
+    for y = Y, Y + 30, 6 do table.insert(ROADS["c2C1>c2E1"], { 0, y }) end
+    for x = 0, 10, 2 do table.insert(ROADS["c2D1>c2E1"], { x, Y }) end
+    for y = Y - 4, Y - 20, -4 do table.insert(ROADS["c2D1>c2E1"], { 10, y }) end
+    local function key(a, b) return a:name() < b:name() and a:name() .. ">" .. b:name() or b:name() .. ">" .. a:name() end
+    DERPY_MR_TERRAIN_ROUTES = { reach = function(a, b) return true, nil, ROADS[key(a, b)] end,
+                                journey = function(a, b) return ROADS[key(a, b)] or ROADS["c2B1>c2E1"] end }
+    local P = { c2E1 = 1000, c2B1 = 5000, c2C1 = 5000, c2D1 = 5000 }
+    F.local_price = function(v) return P[v.region:name()] end
+    local pct = F.rates().trade
+    local share = F.share(F.available_stock(F.stock_view(E.iface, er.iface), "coal"), pct)
+    local toll = math.floor(F.gold(share, F.sell_price(1000)) * 3 / 100)
+    eq(toll > 0, true, "the fixture's cargo is worth a toll")
+    local function sent_to(k)
+        for _, c in ipairs(F.convoys()) do if c.buyer == k then return c end end
+    end
+    local function again(gold)
+        F.state.convoys, er.held.coal = {}, 1000
+        TREASURY.c2E, TREASURY.c2M = gold, nil
+    end
+    -- an exporter short of B's toll sends B nothing, and B's plan is put back: C gets its whole share
+    E.partners = { B, C }
+    again(toll - 1)
+    F.trade(E.iface)
+    eq(sent_to("c2B"), nil, "an exporter that cannot pay the toll sends nothing to that partner")
+    eq(sent_to("c2C").basket.coal, share, "a partner over no one's land gets its whole share")
+    eq(sent_to("c2C").tolls, nil, "and pays no toll")
+    eq(TREASURY.c2E, toll - 1, "nothing was paid")
+    -- exactly enough for one toll: B (first by key) pays and sends, C sends free, D sends nothing (Review Focus 2)
+    E.partners = { B, C, D }
+    again(toll)
+    F.trade(E.iface)
+    local cb = sent_to("c2B")
+    eq(cb.basket.coal, share, "B's share leaves"); eq(cb.tolls.c2M, toll, "and its convoy records the toll it paid")
+    -- saved tolls are checked on load: a convoy whose tolls are not whole gold by faction key is dropped
+    eq(F.convoy_sound(cb) ~= nil, true, "a convoy with good tolls loads")
+    local good = cb.tolls
+    cb.tolls = { c2M = -1 }; eq(F.convoy_sound(cb), nil, "a negative toll does not load")
+    cb.tolls = "c2M"; eq(F.convoy_sound(cb), nil, "tolls that are not a table do not load")
+    cb.tolls = good
+    eq(TREASURY.c2E .. "," .. TREASURY.c2M, "0," .. toll, "the exporter pays the toll to the land between")
+    eq(sent_to("c2C") ~= nil, true, "C still trades")
+    eq(sent_to("c2D"), nil, "D's toll finds the treasury empty: nothing sent")
+    eq(E.iface:treasury() >= 0, true, "and the treasury never goes below 0")
+    -- the preview names exactly what the trade sends, on the same fixture (Review Focus 5)
+    again(toll)
+    local plan = F.trade(E.iface, true)
+    eq(#F.convoys(), 0, "a preview sends nothing")
+    eq(TREASURY.c2E, toll, "and charges nothing")
+    eq(table.concat(plan.c2B or {}, ",") .. "|" .. table.concat(plan.c2C or {}, ",") .. "|" .. tostring(plan.c2D),
+       "coal|coal|nil", "the preview: B and C, not D")
+    -- AND EARLIER PARTNERS' GUARDS: B's fee leaves D's toll unpaid in the trade, so the preview must not name D
+    E.partners = { B, D }
+    local bandits0, seen0 = F.state.rates.bandits, F.state.road_seen
+    F.state.rates.bandits, F.state.road_seen = true, nil
+    again(100000)
+    F.trade(E.iface)
+    local feeB = math.floor(F.cargo_value_base(sent_to("c2B")) * F.ROAD.guard_pct / 100)
+    local tD = sent_to("c2D").tolls.c2M
+    eq(feeB > 0 and tD > 0, true, "the fixture's cargo is worth a guards' fee and D's toll")
+    F.state.road_seen = { c2E = TURN }   -- a computer with cargo on dangerous land last turn: guards on
+    again(toll + feeB + tD - 1)
+    F.trade(E.iface)
+    eq(sent_to("c2B") ~= nil and sent_to("c2B").guarded, true, "B sends, guarded")
+    eq(sent_to("c2D"), nil, "B's toll and guards leave D's toll unpaid")
+    again(toll + feeB + tD - 1)
+    plan = F.trade(E.iface, true)
+    eq(table.concat(plan.c2B or {}, ",") .. "|" .. tostring(plan.c2D), "coal|nil", "the preview counts B's guards: not D")
+    F.state.rates.bandits, F.state.road_seen, E.partners = bandits0, seen0, { B, C, D }
+    -- uphill: the buyer's price must clear the seller's buy price plus the toll on a unit
+    again(100000)
+    P.c2B1 = F.buy_price(1000) + F.toll_unit(1000, 1) - 1
+    F.trade(E.iface)
+    eq(sent_to("c2B"), nil, "a price short of the buy price plus the toll sends nothing")
+    again(100000)
+    P.c2B1 = F.buy_price(1000) + F.toll_unit(1000, 1)
+    F.trade(E.iface)
+    eq(sent_to("c2B") ~= nil, true, "a price that clears it does")
+    P.c2B1 = 5000
+    -- the toll is on what left, not on the plan: the engine refuses the iron, the coal leaves and pays alone
+    again(100000)
+    er.held.iron = 1000; F.set_stock_policy("c2B", "iron", "target", "1000")
+    local real = F.route_goods
+    F.route_goods = function(r, stem, n, kind)
+        if r:name() == "c2E1" and stem == "iron" then return false end
+        return real(r, stem, n, kind)
+    end
+    F.trade(E.iface)
+    F.route_goods = real
+    cb = sent_to("c2B")
+    eq(cb.basket.iron, nil, "the iron the engine refused did not leave")
+    eq(cb.tolls.c2M, math.floor(F.cargo_value(cb.basket, { coal = 1000 }) * 3 / 100), "the toll is on the coal that left")
+    er.held.iron = 0
+    -- A PARTNER CONTRACT through M's land: the buyer pays the toll on top of the price, at the seller's price
+    local Y2 = 9900
+    local S, K = faction("c2S"), faction("c2K", { human = true, gold = 0 })
+    own(S, region("c2S1", 0, Y2, 1000, { coal = 900 }), true)
+    own(M, region("c2M2", 10, Y2, 1000, {}))
+    local kr = region("c2K1", 20, Y2, 1000, {}); own(K, kr, true)
+    local k2 = region("c2K2", 0, Y2 + 40, 1000, { coal = 300 }); own(K, k2)
+    S.partners, K.partners = { K }, { S }
+    ROADS["c2K1>c2S1"] = {}
+    for x = 0, 20, 2 do table.insert(ROADS["c2K1>c2S1"], { x, Y2 }) end
+    ROADS["c2K1>c2K2"] = ROADS["c2K1>c2S1"]                 -- an own cart over the same land
+    P.c2S1, P.c2K1, P.c2K2 = 1000, 5000, 1000
+    TREASURY.c2K, TREASURY.c2M = 100000, nil
+    local o = F.route_create(K.iface, "c2S1", "c2K1", "coal", 70, 100)
+    eq(o ~= nil, true, "a contract with the seller")
+    TURN = TURN + 1; F.routes_turn(K.iface)
+    local cart = F.ships()[1]
+    local due = math.floor(F.gold(cart.n, F.sell_price(1000)) * 3 / 100)
+    eq(due > 0, true, "the cart is worth a toll")
+    eq(cart.tolls.c2M, due, "the cart records its toll")
+    -- and a cart's bad tolls are cleared on load, the cart kept
+    local good_tolls = cart.tolls
+    cart.tolls = { [1] = 5 }; F.sanitize_ships()
+    eq(tostring(F.ships()[1] == cart) .. "," .. tostring(cart.tolls), "true,nil", "a cart's bad tolls are cleared on load")
+    cart.tolls = good_tolls
+    eq(TREASURY.c2K, 100000 - cart.escrow - due, "the buyer pays the price and the toll")
+    eq(TREASURY.c2M, due, "the land between is paid")
+    local escrow = cart.escrow
+    F.drop(cart)
+    -- the buyer short of price and toll: no cart
+    TREASURY.c2K = escrow + due - 1; TREASURY.c2M = nil
+    TURN = TURN + 1; F.routes_turn(K.iface)
+    eq(#F.ships(), 0, "a buyer who cannot pay the price and the toll sends for nothing")
+    eq(TREASURY.c2M, nil, "and pays no toll")
+    -- an own cart over the same land pays nothing
+    TREASURY.c2K = 100000
+    local own_cart = F.ship(K.iface, k2.iface, kr.iface, "coal", 50)
+    eq(own_cart ~= nil and own_cart.tolls == nil, true, "a cart between your own settlements pays no toll")
+    eq(TREASURY.c2M, nil, "nobody is paid")
+    F.drop(own_cart)
+    -- and costs nothing, so a faction in debt still moves its own goods
+    TREASURY.c2K = -500
+    own_cart = F.ship(K.iface, k2.iface, kr.iface, "coal", 50)
+    eq(own_cart ~= nil and TREASURY.c2K, -500, "a faction in debt still sends a cart between its own settlements")
+    if own_cart then F.drop(own_cart) end
+    eq(#ERRORS, n0, "tolls in trade: no script errors")
+    F.local_price, DERPY_MR_TERRAIN_ROUTES, F.reach_known = price, routes, known
+    for _, k in ipairs({ "c2E", "c2M", "c2K" }) do TREASURY[k] = nil end
+    F.state, TURN = state, turn0
+end)()
+
+-- BLOCKADES (Part C 6.2): an enemy army on the road stops the pair's trade, duty and contract carts that turn.
+;(function()
+    local state, turn0, routes, known, price, n0 = F.state, TURN, DERPY_MR_TERRAIN_ROUTES, F.reach_known, F.local_price, #ERRORS
+    F.state = { factions = {}, rates = F.read_rates(), ship_seq = 99000 }
+    for _, k in ipairs({ "upkeep", "supply", "events", "army_provisions", "escort", "spoilage" }) do F.state.rates[k] = false end
+    F.reach_known, TURN, F.enemy_cache, F.blockade_known = {}, 330000, {}, {}
+    local Y = 10100
+    local E, B = faction("c3E"), faction("c3B", { human = true })
+    local X, N = faction("c3X"), faction("c3N")   -- at war with the buyer; at war with neither side
+    local er = region("c3E1", 0, Y, 2000, { coal = 1000 }); own(E, er, true)
+    local br = region("c3B1", 20, Y, 1000, {}); own(B, br, true)
+    own(X, region("c3X1", 60, Y + 60, 1000, {}), true)
+    own(N, region("c3N1", 80, Y + 60, 1000, {}), true)
+    E.partners, B.partners = { B }, { E }
+    F.set_stock_policy("c3B", "coal", "target", "1000")
+    war(X, B)
+    local road = {}
+    for x = 0, 20, 2 do road[#road + 1] = { x, Y } end
+    DERPY_MR_TERRAIN_ROUTES = { reach = function() return true, nil, road end, journey = function() return road end }
+    local P = { c3E1 = 1000, c3B1 = 5000 }
+    F.local_price = function(v) return P[v.region:name()] end
+    -- 3 hexes from the road blockades, 4 does not, and an army at war with neither side never does (Review Focus 4)
+    X.armies = { field(X, 10, Y + 3, 33001) }
+    eq(F.blockade(E.iface, B.iface, road), "c3X", "an army at war with the buyer 3 hexes from the road")
+    F.enemy_cache, X.armies = {}, { field(X, 10, Y + 4, 33001) }
+    eq(F.blockade(E.iface, B.iface, road), nil, "4 hexes away it is not")
+    -- past the road's end the distance decides, not the widened box: 2 along and 3 up is 3.6 away
+    F.enemy_cache, X.armies = {}, { field(X, 22, Y + 3, 33001) }
+    eq(F.blockade(E.iface, B.iface, road), nil, "an army off the road's corner, outside the radius")
+    F.enemy_cache, X.armies, N.armies = {}, {}, { field(N, 10, Y + 1, 33002) }
+    eq(F.blockade(E.iface, B.iface, road), nil, "an army at war with neither side never blockades")
+    eq(F.blockade(E.iface, B.iface, nil), nil, "no road, no blockade")
+    -- the real trade: nothing for the pair, the blocker recorded, the preview empty too (Review Focus 5)
+    F.enemy_cache, N.armies, X.armies = {}, {}, { field(X, 10, Y + 3, 33001) }
+    F.trade(E.iface)
+    eq(#F.convoys() .. "," .. er.held.coal, "0,1000", "a blockaded pair sends nothing")
+    eq(F.blockaded("c3E", "c3B") .. "," .. F.blockaded("c3B", "c3E"), "c3X,c3X", "the blocker is recorded, either way round")
+    eq(F.trade(E.iface, true).c3B, nil, "the preview sends nothing to a blockaded pair")
+    -- no duty for a blockaded pair; the same pair clear of it pays
+    F.state.rates.duty, er.made, F.made_cache = 50, { coal = 100 }, nil
+    F.duty(B.iface)
+    eq(TREASURY.c3B, nil, "a blockaded pair pays no duty")
+    local cut = F.cut_off(B.iface)
+    eq(#cut .. "," .. cut[1].key .. "," .. cut[1].by .. "," .. tostring(cut[1].why), "1,c3E,c3X,nil",
+       "the cut-off list names the blockaded partner and its blocker")
+    F.blockade_known, F.made_cache = {}, nil
+    F.duty(B.iface)
+    eq((TREASURY.c3B or 0) < 0, true, "clear of it, the duty is paid")
+    eq(#F.cut_off(B.iface), 0, "and nobody is cut off")
+    TREASURY.c3B, TREASURY.c3E, F.state.rates.duty = nil, nil, 0
+    -- a partner contract on the blockaded road sends no cart and says why
+    local o = F.route_create(B.iface, "c3E1", "c3B1", "coal", 70, 100)
+    eq(o ~= nil, true, "a contract with the exporter")
+    TURN = TURN + 1; F.enemy_cache = {}; F.routes_turn(B.iface)
+    eq(#F.ships() .. "," .. o.status, "0,Blockaded", "no cart leaves a blockaded road, and the contract says so")
+    -- a convoy already on the road is untouched: it arrives
+    local c = F.convoy_new(E.iface, B.iface, { coal = 10 }, road)
+    TURN = c.due; F.enemy_cache = {}; F.convoys_turn(E.iface)
+    eq(br.held.coal, 10, "a convoy already on the road arrives through the blockade")
+    -- with tolls and blockades off the trade goes as before
+    F.state.rates.tolls, F.blockade_known, F.enemy_cache = false, {}, {}
+    F.trade(E.iface)
+    eq(#F.convoys(), 1, "with the switch off the blockaded pair trades")
+    eq(F.blockaded("c3E", "c3B"), nil, "and nothing is recorded")
+    eq(#ERRORS, n0, "blockades: no script errors")
+    F.local_price, DERPY_MR_TERRAIN_ROUTES, F.reach_known, F.blockade_known = price, routes, known, {}
+    F.state, TURN = state, turn0
+end)()
+
+-- BANDITS ON THE ROADS (Part D 7.1): the stretch a cargo covered, its threat, and the roll.
+;(function()
+    local state, turn0, n0 = F.state, TURN, #ERRORS
+    F.state = { factions = {}, rates = F.read_rates() }
+    local Y = 10300
+    local A, M1, M2, B = faction("d1A", { human = true }), faction("d1M1"), faction("d1M2"), faction("d1B")
+    local ra, rm1 = region("d1a", 0, Y, 1000, {}), region("d1m1", 10, Y, 1000, {})
+    own(A, ra, true); own(M1, rm1, true)
+    own(M2, region("d1m2", 20, Y, 1000, {}), true)
+    own(B, region("d1b", 30, Y, 1000, {}), true)
+    local road = {}
+    for x = 0, 30, 2 do road[#road + 1] = { x, Y } end
+    eq(table.concat(F.stretch(road, { 0, Y }, { 12, Y }), ","), "d1a,d1m1", "the stretch from 0 to 12, each region once")
+    eq(table.concat(F.stretch(nil, { 0, Y }, { 12, Y }), ","), "d1m1", "no road: the region it stands in")
+    eq(table.concat(F.stretch(road, { 1, Y + 50 }, { 12, Y }), ","), "d1m1", "a start off the road: the same")
+    -- the wild-land rule
+    local wild = region("d1w", 500, Y, 1000, {})
+    eq(F.wild(wild.iface), 100, "an abandoned region is wild")
+    local R = faction("d1R", { rebel = true }); own(R, wild)
+    eq(F.wild(wild.iface), 100, "so is a rebel one")
+    lose(R, wild); own(M1, wild)
+    wild.corruption, wild.po = 40, -10; eq(F.wild(wild.iface), 40, "corruption 40 and public order -10")
+    wild.corruption, wild.po = 0, -60; eq(F.wild(wild.iface), 60, "unrest 60")
+    wild.corruption, wild.po = 0, 50; eq(F.wild(wild.iface), 0, "a contented region is safe")
+    wild.corruption, wild.po = 150, 0; eq(F.wild(wild.iface), 100, "never past 100")
+    -- CA's banditry first, the wild land's average when it reads 0 or fails
+    ra.po, rm1.po = -30, -50
+    BANDITRY = function(keys) return #keys == 2 and 90 or 0 end
+    eq(F.threat({ "d1a", "d1m1" }), 45, "CA's banditry over two regions")
+    BANDITRY = function() return 0 end
+    eq(F.threat({ "d1a", "d1m1" }), 40, "CA's 0: the wild land's average")
+    BANDITRY = function() error("no caravans here") end
+    eq(F.threat({ "d1a", "d1m1" }), 40, "CA's call failing: the same")
+    eq(F.threat({}), 0, "no regions, no threat")
+    BANDITRY, ra.po, rm1.po = nil, nil, nil
+    -- the roll: threat x danger in 10000, halved by guards
+    F.state.rates.road_danger = 20
+    ROLLQ = { 1000, 1 }; eq(F.road_roll("d1A", 50, false, true), "ambush", "1000 against 50 x 20 is trouble")
+    F.state.road_cool = nil
+    ROLLQ = { 1000 }; eq(F.road_roll("d1A", 50, true, true), nil, "guarded, the same roll is not")
+    ROLLQ = { 1001 }; eq(F.road_roll("d1A", 50, false, true), nil, "1001 is not")
+    local calls = #ROLLS
+    eq(F.road_roll("d1A", 0, false, true), nil, "threat 0 is never trouble")
+    eq(#ROLLS, calls, "and rolls nothing")
+    -- which encounters: the pick's range is how many were eligible
+    local function pick(fkey, threat, land, n)
+        ROLLQ = { 1, n }
+        local got = F.road_roll(fkey, threat, false, land)
+        return tostring(got) .. "/" .. ROLLS[#ROLLS][1]
+    end
+    F.state.road_cool = nil
+    eq(pick("d1x", 20, true, 1), "highwaymen/2", "threat 20 never offers the ambush")
+    eq(pick("d1y", 60, false, 2), "highwaymen/2", "at sea the washout is never offered")
+    -- a cooldown blocks an encounter for 5 turns and frees it on the 6th
+    TURN = 500; eq(pick("d1c", 60, true, 3), "washout/3", "all three on land at 60")
+    TURN = 505; eq(pick("d1c", 60, true, 2), "highwaymen/2", "the washout waits 5 turns")
+    TURN = 506; eq(pick("d1c", 60, true, 2), "washout/2", "and is offered on the 6th")
+    ROLLQ = nil
+    -- a patrol: an army of the owner or the buyer within 3 hexes, never a garrison
+    A.armies = { field(A, 10, Y + 3, 34001) }
+    eq(F.patrol(A.iface, nil, 10, Y), true, "an army of the owner 3 hexes away")
+    A.armies = { field(A, 10, Y + 4, 34001) }
+    eq(F.patrol(A.iface, nil, 10, Y), false, "4 is too far")
+    A.armies, B.armies = {}, { field(B, 10, Y + 1, 34002) }
+    eq(F.patrol(A.iface, B.iface, 10, Y), true, "or the buyer's")
+    B.armies = { field(B, 10, Y, 34002, true) }
+    eq(F.patrol(A.iface, B.iface, 10, Y), false, "a garrison is no patrol")
+    B.armies = {}
+    -- the bandits' faction by the land owner's subculture
+    local n = 0
+    for sc, k in pairs(DERPY_MR_FLOWS_BANDIT_QB) do
+        n = n + 1
+        eq(string.sub(k, -4), "_qb1", "the bandits of " .. sc)
+    end
+    eq(n >= 15, true, "a bandit faction for most races")
+    eq(DERPY_MR_FLOWS_BANDIT_QB.wh_main_sc_emp_empire, "wh_main_emp_empire_qb1", "the Empire's, not its rebels'")
+    eq(#ERRORS, n0, "road threat: no script errors")
+    F.state, TURN = state, turn0
+end)()
+
+-- BANDITS ON CARGO (Part D 7.2-7.4): the other choices, the hooks, Guards, and load.
+F.road_event = ROAD_EVENT   -- the real rule from here on
+;(function()
+    local state, turn0, routes, known, price, n0 = F.state, TURN, DERPY_MR_TERRAIN_ROUTES, F.reach_known, F.local_price, #ERRORS
+    local message = cm.show_message_event
+    local said = {}
+    cm.show_message_event = function(_, fk, title) said[#said + 1] = { fk, title } end
+    F.state = { factions = {}, rates = F.read_rates() }
+    for _, k in ipairs({ "upkeep", "supply", "events", "army_provisions", "escort", "spoilage", "tolls" }) do
+        F.state.rates[k] = false
+    end
+    F.state.rates.road_danger = 20
+    F.reach_known, F.blockade_known, F.enemy_cache, TURN, F.state.ship_seq = {}, {}, {}, 340000, 101000
+    local Y = 10500
+    local E, M, H = faction("d2E", { gold = 1000 }), faction("d2M"), faction("d2H", { human = true })
+    local er = region("d2e", 0, Y, 2000, { coal = 1000 }); own(E, er, true)
+    local rm = region("d2m", 20, Y, 1000, {}); own(M, rm, true); rm.po = -60
+    local rh = region("d2h", 40, Y, 1000, {}); own(H, rh, true)
+    E.partners, H.partners = { H }, { E }
+    local road = {}
+    for x = 0, 40, 2 do road[#road + 1] = { x, Y } end
+    DERPY_MR_TERRAIN_ROUTES = { reach = function() return true, nil, road end, journey = function() return road end }
+    -- a computer's convoy to the player, at 24 having come from 16: the stretch is M's land, threat 60
+    local function convoy(basket)
+        local c = F.convoy_new(E.iface, H.iface, basket, road)
+        c.x = 24
+        return c
+    end
+    local function event(c, ...)   -- the queued answers: the roll, then the pick
+        ROLLQ, F.state.road_cool = { ... }, nil
+        F.road_event(E.iface, "convoy", c, { 16, Y })
+        ROLLQ = nil
+    end
+    -- the ambush, for a computer: no dilemma, half of each good lost, the player told of the import's loss
+    local c, dilemmas = convoy({ coal = 100, iron = 31 }), #DILEMMAS
+    event(c, 1, 1)
+    eq(c.threat, 60, "the stretch's threat is kept on the convoy")
+    eq(c.basket.coal .. "," .. c.basket.iron, "50,16", "the bandits take half of each good, rounded down")
+    eq(#DILEMMAS, dilemmas, "a computer is offered no dilemma")
+    eq(#said .. "," .. said[1][1] .. "," .. said[1][2], "1,d2H,event_feed_strings_text_derpy_mr_road_loss_title",
+       "the player hears that an import was robbed")
+    eq(F.state.road_seen.d2E, TURN, "dangerous land is remembered for the computer's guards")
+    -- highwaymen: a fifth of the value in gold; an empty treasury still lets the cargo pass, whole
+    local value = F.cargo_value_base(c)
+    eq(value >= 50, true, "the cargo is worth something")
+    TREASURY.d2E = nil
+    event(c, 1, 2)
+    eq(TREASURY.d2E, -math.floor(value * 20 / 100), "the highwaymen take a fifth of its value")
+    TREASURY.d2E = -1000
+    event(c, 1, 2)
+    eq(TREASURY.d2E .. "," .. c.basket.coal, "-1000,50", "with no gold the cargo still passes, whole")
+    TREASURY.d2E = nil
+    -- the washed-out road: a turn later, nothing lost, nobody told
+    local due = c.due
+    event(c, 1, 3)
+    eq(c.due .. "," .. #said, due + 1 .. ",1", "the washed-out road costs a turn")
+    -- no roll: a patrol near, the switch off, safe land, the sea
+    local calls = #ROLLS
+    E.armies = { field(E, 24, Y + 3, 35001) }
+    event(c, 1, 1)
+    eq(#ROLLS, calls, "the exporter's army 3 hexes off keeps trouble away")
+    E.armies, H.armies = {}, { field(H, 24, Y - 2, 35002) }
+    event(c, 1, 1)
+    eq(#ROLLS, calls, "and so does the buyer's")
+    H.armies = {}
+    F.state.rates.bandits = false; event(c, 1, 1); F.state.rates.bandits = true
+    eq(#ROLLS, calls, "the switch off: no roll")
+    rm.po = 0; event(c, 1, 1); rm.po = -60
+    eq(#ROLLS .. "," .. c.threat, calls .. ",0", "safe land: no roll")
+    local sea = convoy({ coal = 10 })
+    sea.road, sea.x, sea.y = F.pack_road({ { 0, Y + 400 }, { 2, Y + 400 } }), 2, Y + 400
+    F.road_event(E.iface, "convoy", sea, { 0, Y + 400 })
+    eq(#ROLLS .. "," .. sea.threat, calls .. ",0", "at sea there is no land: no threat and no roll")
+    -- out at sea after a stretch over M's dangerous land: the threat is kept, but all three encounters are land ones
+    local ashore = convoy({ coal = 10 })
+    ashore.road, ashore.x, ashore.y = F.pack_road({ { 16, Y }, { 20, Y }, { 24, Y }, { 26, Y + 400 } }), 26, Y + 400
+    ROLLQ, F.state.road_cool = { 1, 1 }, nil   -- a roll, were there one, would be trouble
+    F.road_event(E.iface, "convoy", ashore, { 16, Y })
+    ROLLQ = nil
+    eq(ashore.threat .. "," .. #ROLLS, "60," .. calls, "cargo now at sea meets nothing, whatever the land behind it")
+    -- losses round down per good; a basket the loss empties leaves the road
+    local ones = convoy({ coal = 1, iron = 1 })
+    eq(F.cargo_lose("convoy", ones, 50) .. "|" .. ones.basket.coal .. "," .. ones.basket.iron, "0|1,1", "a lot of 1 loses nothing to half")
+    local twos = convoy({ coal = 2, iron = 1 })
+    F.cargo_lose("convoy", twos, 50)
+    eq(twos.basket.coal .. "," .. twos.basket.iron, "1,1", "a lot of 2 loses 1")
+    F.cargo_lose("convoy", twos, 100)
+    local left = false
+    for _, x in ipairs(F.convoys()) do if x == twos then left = true end end
+    eq(left, false, "a basket the loss empties leaves the road")
+    local ship = { id = F.SHIP_PREFIX .. "d2", f = "d2E", stem = "coal", n = 7, from = "d2e", to = "d2e", at = TURN,
+                   due = TURN + 3, leg = 1, x = 24, y = Y }
+    F.state.ships = { ship }
+    F.cargo_lose("ship", ship, 50); eq(ship.n, 4, "a shipment loses half, rounded down")
+    F.cargo_wait("ship", ship); eq(ship.due, TURN + 4, "and a washed-out road delays it a turn")
+    F.cargo_lose("ship", ship, 100); eq(#F.ships(), 0, "all of it ends the shipment")
+    -- THE HOOK: a computer convoy still on the road meets trouble after its step; one arriving this turn does not
+    F.state.convoys = {}
+    local on = F.convoy_new(E.iface, H.iface, { coal = 40 }, road)
+    on.due = TURN + 2
+    local arriving = F.convoy_new(E.iface, H.iface, { coal = 40 }, road)
+    arriving.due = TURN + 1
+    TURN = TURN + 1
+    F.state.road_cool, ROLLQ = nil, { 1, 3 }
+    F.convoys_turn(E.iface)
+    ROLLQ = nil
+    eq(on.x .. "," .. on.threat .. "," .. on.due, "20,30," .. TURN + 2, "halfway, threat 30 over two regions: a washed-out road")
+    eq(arriving.threat, nil, "the convoy that arrived met nothing")
+    -- GUARDS: the player's own switch; a computer's while its cargo crossed dangerous land last turn
+    eq(F.guards_on("d2H"), false, "no guards to begin with")
+    F.dispatch("d2H", { "guards", "on" })
+    eq(F.guards_on("d2H"), true, "the player hires guards")
+    -- a set, not a toggle: a double click, or a click on a panel not yet redrawn, asks for the same thing twice
+    F.dispatch("d2H", { "guards", "on" }); eq(F.guards_on("d2H"), true, "Hire twice: still on")
+    F.dispatch("d2H", { "guards", "yes" }); F.dispatch("d2H", { "guards" })
+    eq(F.guards_on("d2H"), true, "any other request changes nothing")
+    F.dispatch("d2H", { "guards", "off" }); F.dispatch("d2H", { "guards", "off" })
+    eq(F.guards_on("d2H"), false, "Dismiss twice: off")
+    F.dispatch("d2H", { "guards", "on" })
+    F.state.road_seen = { d2E = TURN - 1 }; eq(F.guards_on("d2E"), true, "a computer whose cargo met danger last turn")
+    F.state.road_seen = { d2E = TURN - 3 }; eq(F.guards_on("d2E"), false, "not three turns ago")
+    -- the fee at dispatch: 5% of the value; the roll is then halved
+    F.state.road_seen, F.state.convoys = { d2E = TURN - 1 }, {}
+    er.held.coal = 1000; F.set_stock_policy("d2H", "coal", "target", "1000")
+    local P = { d2e = 1000, d2h = 5000 }
+    F.local_price = function(v) return P[v.region:name()] end
+    F.trade(E.iface)
+    local ec = F.convoys()[1]
+    local fee = math.floor(F.cargo_value_base(ec) * 5 / 100)
+    eq(fee > 0, true, "the convoy is worth a fee")
+    eq(TREASURY.d2E .. "," .. tostring(ec.guarded), -fee .. ",true", "a computer with guards pays the fee and is guarded")
+    ROLLQ = { 1000 }
+    eq(F.road_roll("d2E", 50, ec.guarded, true), nil, "and 1000 on threat 50 at 20 is no trouble guarded")
+    ROLLQ = nil
+    TREASURY.d2E = -1000 - F.cargo_value_base(ec)
+    F.state.convoys, F.reach_known = {}, {}
+    F.trade(E.iface)
+    ec = F.convoys()[1]
+    eq(ec ~= nil and ec.guarded, nil, "guards it cannot pay for: the convoy leaves unguarded")
+    TREASURY.d2E = nil
+    -- the player's contract cart: the buyer pays the price and the fee (no convoy on the way to fill the target)
+    TREASURY.d2H, F.state.convoys = 100000, {}
+    local o = F.route_create(H.iface, "d2e", "d2h", "coal", 70, 100)
+    eq(o ~= nil, true, "a contract with the seller")
+    TURN = TURN + 1; F.routes_turn(H.iface)
+    local cart = F.ships()[1]
+    local cart_fee = math.floor(F.cargo_value_base(cart) * 5 / 100)
+    eq(cart_fee > 0 and cart.guarded, true, "the player's cart is guarded")
+    eq(TREASURY.d2H, 100000 - cart.escrow - cart_fee, "the buyer pays the price and the fee")
+    -- THE CART'S HOOK: halfway after its step, over threat 30, the player is asked; waiting delays it a turn
+    cart.at, cart.due = TURN, TURN + 2
+    TURN = TURN + 1
+    F.state.road_cool, ROLLQ = nil, { 1, 3, 1 }   -- the roll, the washout, the region
+    local asked = #DILEMMAS
+    F.ships_turn(H.iface)
+    ROLLQ = nil
+    eq(#DILEMMAS - asked .. "," .. DILEMMAS[#DILEMMAS].key .. "," .. cart.x .. "," .. cart.threat,
+       "1," .. DERPY_MR_FLOWS_EVENTS.road_washout.dilemma .. ",20,30", "a cart on the road meets a washed-out road")
+    answer(H, DERPY_MR_FLOWS_EVENTS.road_washout.dilemma, "FIRST")
+    eq(cart.due, TURN + 2, "and waiting delays it a turn")
+    F.drop(cart)
+    -- LOAD: a malformed cooldown, guards and danger record are cleaned
+    F.state.road_cool = { d2E = { ambush = 5, nope = 3, washout = "x" }, [7] = {}, d2X = "bad" }
+    F.state.guards = { d2H = true, d2E = "yes" }
+    F.state.road_seen = { d2E = 10, d2X = -1 }
+    SAVED = {}; cm.saving_game_callbacks[1]({}); F.state = {}; cm.loading_game_callbacks[1]({})
+    eq(F.state.road_cool.d2E.ambush .. "," .. tostring(F.state.road_cool.d2E.nope) .. "," .. tostring(F.state.road_cool.d2E.washout)
+       .. "," .. tostring(F.state.road_cool.d2X), "5,nil,nil,nil", "the cooldowns cleaned on load")
+    eq(tostring(F.state.guards.d2H) .. "," .. tostring(F.state.guards.d2E), "true,nil", "the guards cleaned")
+    eq(F.state.road_seen.d2E .. "," .. tostring(F.state.road_seen.d2X), "10,nil", "the danger record cleaned")
+    F.state.road_cool, F.state.guards, F.state.road_seen = "junk", 5, {}
+    F.sanitize_road()
+    eq(F.state.road_cool == nil and F.state.guards == nil and F.state.road_seen == nil, true, "junk is dropped whole")
+    eq(#ERRORS, n0, "bandits on cargo: no script errors")
+    cm.show_message_event = message
+    F.local_price, DERPY_MR_TERRAIN_ROUTES, F.reach_known, F.blockade_known = price, routes, known, {}
+    F.state, TURN = state, turn0
+end)()
+
+-- BANDITS: THE PLAYER'S DILEMMA AND THE BATTLE (Part D 7.3), as CA's caravans spawn and fight theirs.
+;(function()
+    local state, turn0, routes, n0 = F.state, TURN, DERPY_MR_TERRAIN_ROUTES, #ERRORS
+    F.state = { factions = {}, rates = F.read_rates() }
+    for _, k in ipairs({ "upkeep", "supply", "events", "army_provisions", "escort", "spoilage", "tolls" }) do
+        F.state.rates[k] = false
+    end
+    F.state.rates.road_danger, TURN, F.state.fight = 20, 360000, nil
+    Forced_Battle_Manager.active_battle = ""
+    local Y = 10700
+    local H = faction("d3H", { human = true, sc = "wh_main_sc_emp_empire" })
+    local M, E = faction("d3M", { sc = "wh_main_sc_dwf_dwarfs" }), faction("d3E")
+    own(H, region("d3h", 0, Y, 2000, {}), true)
+    local rm = region("d3m", 20, Y, 1000, {}); own(M, rm, true); rm.po = -60
+    own(E, region("d3e", 40, Y, 1000, {}), true)
+    H.partners, E.partners = { E }, { H }
+    local road = {}
+    for x = 0, 40, 2 do road[#road + 1] = { x, Y } end
+    DERPY_MR_TERRAIN_ROUTES = { reach = function() return true, nil, road end, journey = function() return road end }
+    -- CA's calls as the caravans make them, recorded; a spawned force lives in FORCES until its general is killed
+    local made, killed, wars, frozen, gone_back, cqi = {}, {}, {}, {}, {}, 61000
+    cm.find_valid_spawn_location_for_character_from_position = function(_, fk, x, y, same)
+        if type(fk) ~= "string" or same ~= false then error("find_valid_spawn_location_for_character_from_position: bad arguments") end
+        if SPAWN_FAIL then return -1, -1 end
+        return x + 1, y
+    end
+    cm.create_force = function(_, fk, units, rk, x, y, no_named, cb)
+        if type(units) ~= "string" or units == "" or type(rk) ~= "string" or no_named ~= true then error("create_force: bad arguments") end
+        cqi = cqi + 1
+        local ch, fc = cqi, cqi + 500
+        made[#made + 1] = { f = fk, units = units, ch = ch, fc = fc, x = x, y = y }
+        FORCES[fc] = { is_null_interface = function() return false end, has_general = function() return true end,
+                       command_queue_index = function() return fc end, has_garrison_residence = function() return false end,
+                       general_character = function() return { cqi = function() return ch end } end,
+                       active_stance = function() return "MILITARY_FORCE_ACTIVE_STANCE_TYPE_DEFAULT" end }
+        cb(ch, fc)
+    end
+    cm.char_lookup_str = function(_, n) return "character_cqi:" .. n end
+    cm.kill_character = function(_, lookup, whole)
+        if whole ~= true then error("kill_character: the bandits' force must go with them") end
+        killed[#killed + 1] = lookup
+        FORCES[tonumber(string.match(lookup, "(%d+)$")) + 500] = nil
+    end
+    cm.force_declare_war = function(_, a, b) wars[#wars + 1] = a .. ">" .. b end
+    cm.disable_movement_for_character = function(_, lookup) frozen[#frozen + 1] = lookup end
+    cm.set_force_has_retreated_this_turn = function(_, mf) gone_back[#gone_back + 1] = mf end
+    local force_lookup = cm.get_military_force_by_cqi
+    cm.get_military_force_by_cqi = function(_, n) return FORCES[n] or false end
+    local EV = DERPY_MR_FLOWS_EVENTS
+    local function offer(c, pick)   -- the roll, the pick, then the region
+        ROLLQ, F.state.road_cool = { 1, pick, 1 }, nil
+        F.road_event(H.iface, "convoy", c, { 16, Y })
+        ROLLQ = nil
+    end
+    local function convoy(basket)
+        local c = F.convoy_new(H.iface, E.iface, basket, road)
+        c.x = 24
+        return c
+    end
+    local function on_road(c)
+        for _, x in ipairs(F.convoys()) do if x == c then return true end end
+        return false
+    end
+    local function battle_done(attacker_won)
+        local last = FBM_LOG[#FBM_LOG]
+        fire("PendingBattle", {})
+        BATTLE = { attacker_won = attacker_won, fought = true, involved = { [last.att] = true, [last.escort] = true } }
+        fire("BattleCompleted", {})
+        if CA_ARMED then ca_handler() end
+    end
+    local dil0, fbm0 = #DILEMMAS, #FBM_LOG
+    -- THE AMBUSH OFFER: the bandits spawn first, for the land owner's race, 8 units at threat 60
+    local c = convoy({ coal = 100, iron = 31 })
+    offer(c, 1)
+    local b = made[1]
+    eq(#made .. "," .. b.f, "1,wh_main_dwf_dwarfs_qb1", "one bandit army, of the land owner's race")
+    eq(select(2, string.gsub(b.units, ",", ",")) + 1, 8, "8 units at threat 60")
+    eq(b.x .. "," .. b.y, 25 .. "," .. Y, "beside the cargo")
+    eq(wars[1] .. "|" .. frozen[1] .. "|" .. #gone_back, "wh_main_dwf_dwarfs_qb1>d3H|character_cqi:" .. b.ch .. "|1",
+       "at war with the owner, unable to move, and counted as retreated")
+    -- THE SPAWN'S CALLBACK keeps the owner's key, not its interface: here the interface is spent once CA has the call
+    local spent, cf = false, cm.create_force
+    local owner = setmetatable({}, { __index = function(_, k)
+        local v = H.iface[k]
+        if type(v) ~= "function" then return v end
+        return function(_, ...)
+            if spent then error("the owner's interface read inside the spawn's callback", 2) end
+            return v(H.iface, ...)
+        end
+    end })
+    cm.create_force = function(self, ...) spent = true; return cf(self, ...) end
+    local ok, fc = pcall(F.bandit_spawn, "d3m", 24, Y, 60, owner)
+    cm.create_force, spent = cf, false
+    eq(ok and wars[#wars], "wh_main_dwf_dwarfs_qb1>d3H", "the war is declared on the owner's key (" .. tostring(fc) .. ")")
+    F.bandit_kill(fc)
+    -- A RACE'S BANDITS THAT NEVER APPEAR (seen 2026-11-03: CA logs the Chaos Dwarf qb1's create_force and makes no army,
+    -- so no fight could start on Chaos Dwarf land): CA's Ogre bandits, the caravans' own, come instead
+    cm.create_force = function(self, fk, ...)
+        if fk == "wh_main_dwf_dwarfs_qb1" then return end
+        return cf(self, fk, ...)
+    end
+    local before = #made
+    local ok2, fc2 = pcall(F.bandit_spawn, "d3m", 24, Y, 60, H.iface)
+    cm.create_force = cf
+    eq(ok2 and (#made - before) .. "," .. made[#made].f .. "," .. tostring(fc2 == made[#made].fc),
+       "1,wh3_main_ogr_ogre_kingdoms_qb1,true", "a race's bandits that never appear: CA's Ogre bandits instead")
+    eq(wars[#wars], "wh3_main_ogr_ogre_kingdoms_qb1>d3H", "the Ogre bandits at war with the owner")
+    F.bandit_kill(fc2)
+    local d = DILEMMAS[#DILEMMAS]
+    eq(#DILEMMAS - dil0 .. "," .. d.key .. "," .. d.force .. "," .. d.region .. "," .. d.fcqi,
+       "1," .. EV.road_ambush.dilemma .. "," .. b.fc .. "," .. rm.iface:cqi() .. "," .. H.cqi, "the ambush asked of the player, naming the bandits and the region")
+    eq(F.pending("d3H", "road_ambush") ~= nil and c.basket.coal == 100, true, "one encounter waits, the cargo untouched")
+    -- FIRST: the bandits attack the player's guard army through CA's manager
+    answer(H, EV.road_ambush.dilemma, "FIRST")
+    local fb = FBM_LOG[#FBM_LOG]
+    eq(#FBM_LOG - fbm0 .. "," .. fb.att .. "," .. fb.force.f, "1," .. b.fc .. ",d3H", "the bandits attack a guard army of the player's")
+    eq(fb.force.units ~= "" and F.state.fight.side .. "," .. tostring(RETREAT_LOCKED), "bandit,true", "a bandit fight, the retreat locked")
+    eq(F.pending("d3H", "road_ambush"), nil, "the encounter no longer waits")
+    -- the bandits win: the whole cargo is lost; the bandits go either way
+    battle_done(true)
+    eq(tostring(on_road(c)) .. "," .. killed[#killed] .. "," .. tostring(F.state.fight) .. "," .. tostring(RETREAT_LOCKED),
+       "false,character_cqi:" .. b.ch .. ",nil,false", "a lost fight loses the cargo, and the bandits are removed")
+    -- the guards win: the cargo goes on whole
+    c = convoy({ coal = 100 }); offer(c, 1); b = made[#made]
+    answer(H, EV.road_ambush.dilemma, "FIRST"); battle_done(false)
+    eq(tostring(on_road(c)) .. "," .. c.basket.coal .. "," .. killed[#killed], "true,100,character_cqi:" .. b.ch, "a won fight: the cargo goes on, the bandits removed")
+    -- SECOND: let it go, half lost, the bandits removed and no battle
+    local fights = #FBM_LOG
+    offer(c, 1); b = made[#made]
+    answer(H, EV.road_ambush.dilemma, "SECOND")
+    eq(c.basket.coal .. "," .. killed[#killed] .. "," .. #FBM_LOG, "50,character_cqi:" .. b.ch .. "," .. fights, "letting it go loses half")
+    -- HIGHWAYMEN: FIRST pays a fifth of the value; SECOND fights
+    local value = F.cargo_value_base(c)
+    TREASURY.d3H = nil
+    offer(c, 2); b = made[#made]
+    eq(DILEMMAS[#DILEMMAS].key, EV.road_highwaymen.dilemma, "the highwaymen asked")
+    answer(H, EV.road_highwaymen.dilemma, "FIRST")
+    eq(TREASURY.d3H .. "," .. killed[#killed] .. "," .. #FBM_LOG, -math.floor(value * 20 / 100) .. ",character_cqi:" .. b.ch .. "," .. fights,
+       "paying the highwaymen: a fifth of the value, no battle")
+    offer(c, 2)
+    answer(H, EV.road_highwaymen.dilemma, "SECOND")
+    eq(#FBM_LOG, fights + 1, "refusing them is a battle")
+    battle_done(false)
+    -- THE WASHOUT: nothing spawns; FIRST waits a turn, SECOND loses a tenth
+    local spawned, due = #made, c.due
+    offer(c, 3)
+    eq(#made .. "," .. DILEMMAS[#DILEMMAS].key .. "," .. DILEMMAS[#DILEMMAS].force, spawned .. "," .. EV.road_washout.dilemma .. ",0", "the washout spawns nobody")
+    answer(H, EV.road_washout.dilemma, "FIRST"); eq(c.due, due + 1, "waiting costs a turn")
+    offer(c, 3); answer(H, EV.road_washout.dilemma, "SECOND"); eq(c.basket.coal, 45, "pushing on loses a tenth")
+    -- ONE ENCOUNTER WAITS AT A TIME (Review Focus 2): a second, while the first waits, is settled at once
+    local c2 = convoy({ coal = 100 })
+    local asked = #DILEMMAS
+    offer(c, 1); b = made[#made]; spawned = #made
+    offer(c2, 1)
+    eq(#DILEMMAS - asked .. "," .. #made - spawned .. "," .. c2.basket.coal, "1,0,50", "the second ambush is settled: half lost, no army, no dilemma")
+    answer(H, EV.road_ambush.dilemma, "SECOND")
+    -- A FIGHT CHOSEN WHILE ANOTHER BATTLE WAITS: settled as the other choice, the bandits removed
+    c2.basket.coal = 100
+    offer(c2, 1); b = made[#made]
+    F.state.fight = { id = "other", side = "raid", key = "derpy_mr_escort_other", turn = TURN }
+    fights = #FBM_LOG
+    answer(H, EV.road_ambush.dilemma, "FIRST")
+    eq(#FBM_LOG - fights .. "," .. c2.basket.coal .. "," .. killed[#killed], "0,50,character_cqi:" .. b.ch, "no second battle: half lost, the bandits removed")
+    F.state.fight = nil
+    -- A SAVE WITH THE DILEMMA OPEN (Review Focus 1): answering after a reload still fights
+    c2.basket.coal = 100
+    offer(c2, 1); b = made[#made]
+    SAVED = {}; cm.saving_game_callbacks[1]({}); F.state = {}; cm.loading_game_callbacks[1]({})
+    answer(H, EV.road_ambush.dilemma, "FIRST")
+    eq(#FBM_LOG, fights + 1, "the reloaded encounter's fight starts")
+    battle_done(false)
+    -- ONE LEFT FROM AN EARLIER TURN is cleared at the next turn start and its bandits removed
+    local c3 = convoy({ coal = 100 })
+    offer(c3, 1); b = made[#made]
+    TURN = TURN + 1; F.fight_stale(TURN)
+    eq(tostring(F.pending("d3H", "road_ambush")) .. "," .. killed[#killed], "nil,character_cqi:" .. b.ch, "a stale encounter is cleared")
+    -- THE CARGO GONE before the answer: the bandits go, nothing else happens
+    offer(c3, 1); b = made[#made]
+    F.convoy_drop(c3); fights = #FBM_LOG
+    answer(H, EV.road_ambush.dilemma, "FIRST")
+    eq(#FBM_LOG - fights .. "," .. killed[#killed], "0,character_cqi:" .. b.ch, "no cargo, no battle, the bandits removed")
+    -- A SPAWN THAT FAILS, MULTIPLAYER, BATTLES OFF: no dilemma for a fight; the other choice
+    local c4 = convoy({ coal = 100 })
+    local due4 = c4.due
+    asked, spawned = #DILEMMAS, #made
+    SPAWN_FAIL = true; offer(c4, 1); SPAWN_FAIL = false
+    eq(#DILEMMAS - asked .. "," .. c4.basket.coal, "0,50", "no spot for the bandits: half lost, nothing asked")
+    MP = true; offer(c4, 1); offer(c4, 3); MP = false
+    eq(#DILEMMAS - asked .. "," .. #made - spawned .. "," .. c4.basket.coal .. "," .. c4.due, "0,0,25," .. due4 + 1,
+       "multiplayer: no dilemma and no army, the other choice")
+    F.ROAD_BATTLES = false
+    offer(c4, 1)
+    eq(#DILEMMAS - asked .. "," .. #made - spawned .. "," .. c4.basket.coal, "0,0,13", "battles off: the ambush is settled")
+    offer(c4, 3)
+    eq(#DILEMMAS - asked .. "," .. DILEMMAS[#DILEMMAS].key, "1," .. EV.road_washout.dilemma, "and the washout still asks")
+    answer(H, EV.road_washout.dilemma, "FIRST")
+    F.ROAD_BATTLES = true
+    eq(#ERRORS, n0, "bandit battles: no script errors")
+    for _, k in ipairs({ "find_valid_spawn_location_for_character_from_position", "create_force", "char_lookup_str", "kill_character",
+                         "force_declare_war", "disable_movement_for_character", "set_force_has_retreated_this_turn",
+                         "get_military_force_by_cqi" }) do cm[k] = nil end
+    cm.get_military_force_by_cqi = force_lookup
+    DERPY_MR_TERRAIN_ROUTES, F.state, TURN = routes, state, turn0
+end)()
+
+-- ====================================================================================================
+-- PART E (design 2026-11-01, section 8): six store events that read the stocks, tolls, blockades and roads
+-- TASK 1: THE ROWS AND THE GATES. Each event names the parts it needs and whether only a player gets it.
+;(function()
+    local state, n0 = F.state, #ERRORS
+    local EV = DERPY_MR_FLOWS_EVENTS
+    local want = { smugglers = ",false", guild = ",false", grain_rot = "spoilage,true", caravan_master = "bandits,true",
+                   toll_dispute = "tolls+edicts,true", blockade_runner = "tolls,true" }
+    for _, k in ipairs({ "smugglers", "guild", "grain_rot", "caravan_master", "toll_dispute", "blockade_runner" }) do
+        local e = EV[k]
+        eq(e and e.needs and table.concat(e.needs, "+") .. "," .. tostring(e.human), want[k], k)
+    end
+    F.state = { factions = {}, rates = F.read_rates() }
+    for _, k in ipairs({ "spoilage", "bandits", "tolls", "edicts", "events", "ai" }) do F.state.rates[k] = true end
+    local H, A = faction("e1H", { human = true }), faction("e1A")
+    eq(F.event_gated(A.iface, EV.grain_rot), false, "Grain rot is never a computer's")
+    eq(F.event_gated(H.iface, EV.grain_rot), true, "a player's Grain rot with spoilage on")
+    eq(F.event_gated(A.iface, EV.smugglers), true, "Smugglers for a computer with every switch on")
+    eq(F.event_gated(H.iface, EV.feast), true, "an older event has no gate")
+    F.state.rates.spoilage = false
+    eq(F.event_gated(H.iface, EV.grain_rot), false, "no Grain rot with spoilage off")
+    F.state.rates.edicts = false
+    eq(F.event_gated(H.iface, EV.toll_dispute), false, "Toll dispute needs the edicts as well as the tolls")
+    -- AN OLD SAVE (Review Focus 5): its book knew only the feast, and its pending offer is one per faction
+    local v = region("e1v", 41000, 0, 400, { grain = 150 }); own(H, v, true)
+    F.state.events = { e1H = { at = -1000000, seen = { feast = 3 } } }
+    local o = F.event_pick(H.iface, F.event_book("e1H"))
+    eq(o and o.key .. "," .. o.region, "feast,e1v", "an old book still picks the feast under the new order")
+    F.state.pending = { e1H = { key = "feast", region = "e1v" } }
+    answer(H, EV.feast.dilemma, "FIRST")
+    eq(v.held.grain, 150 - EV.feast.cost, "and an old save's offer still pays out")
+    eq(#ERRORS, n0, "Part E rows and gates: no script errors")
+    F.state = state
+end)()
+
+-- TASK 2: SMUGGLERS, MERCHANT GUILD AND GRAIN ROT
+;(function()
+    local state, turn0, n0, roll0 = F.state, TURN, #ERRORS, ROLL
+    F.state = { factions = {}, rates = F.read_rates() }
+    for _, k in ipairs({ "supply", "army_provisions", "escort", "tolls", "bandits", "edicts" }) do F.state.rates[k] = false end
+    for _, k in ipairs({ "upkeep", "events", "ai", "spoilage" }) do F.state.rates[k] = true end
+    TURN, DILEMMAS = 380000, {}
+    local EV = DERPY_MR_FLOWS_EVENTS
+    -- a store whose only provisions are grain and salt: every food has one price here, so the tie goes to grain
+    local others = {}
+    for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+        if g.use == "provisions" and g.stem ~= "grain" and g.stem ~= "salt" then others[g.stem] = true end
+    end
+    local function rate(f, r, stem, pct) return math.floor(F.quote(f.iface, r.iface, stem)[pct == 150 and "buy" or "sell"]) end
+    -- SMUGGLERS: a level-2 store eats 4 a turn, so 3 is under 2 turns, and 5 turns less what it holds is 17
+    local H = faction("e2H", { human = true })
+    local s1 = region("e2s", 42000, 0, 400, { grain = 3 }); s1.level, s1.absent = 2, others; own(H, s1, true)
+    local gold = math.ceil(17 * rate(H, s1, "grain", 150) * 150 / 10000)
+    local o = F.smuggle_offer(H.iface, F.stocks(H.iface))
+    eq(o and table.concat({ o.key, o.region, o.use, o.stem, o.n, o.gold }, ","), "smugglers,e2s,provisions,grain,17," .. gold,
+       "a store short of food is offered 5 turns of its cheapest food at half again its buying price")
+    F.events(H.iface)
+    eq(#DILEMMAS .. "," .. (DILEMMAS[1] and DILEMMAS[1].key or ""), "1," .. EV.smugglers.dilemma, "the player is asked")
+    answer(H, EV.smugglers.dilemma, "FIRST")
+    eq(tostring(TREASURY.e2H) .. "," .. s1.held.grain .. "," .. tostring((BUNDLES.e2s or {})[EV.smugglers.bundle]),
+       -gold .. ",20,5", "Buy from them: paid, the grain arrives, and control -3 there for 5 turns")
+    s1.held.grain = 8
+    eq(F.smuggle_offer(H.iface, F.stocks(H.iface)), nil, "2 turns of food is not short")
+    s1.held.grain, s1.level = 0, 15
+    o = F.smuggle_offer(H.iface, F.stocks(H.iface))
+    eq(o and o.n, 100, "30 a turn would want 150: at most 100")
+    local P = faction("e2P", { human = true, gold = gold - 1 })
+    local s2 = region("e2p", 42020, 0, 400, { grain = 3 }); s2.level, s2.absent = 2, others; own(P, s2, true)
+    eq(F.smuggle_offer(P.iface, F.stocks(P.iface)), nil, "no offer the treasury cannot pay")
+    -- MERCHANT GUILD: iron at 80% of the realm's space for it; coal at 70% is not enough
+    local G = faction("e2G", { human = true })
+    local g1 = region("e2g", 42040, 0, 1000, { iron = 800, coal = 700 }); g1.level = 0; own(G, g1, true)
+    o = F.guild_offer(G.iface, F.stocks(G.iface))
+    eq(o and o.key .. "," .. o.stem, "guild,iron", "the good above three quarters of its space is offered")
+    local G2 = faction("e2F", { human = true })
+    own(G2, region("e2f", 42050, 0, 1000, { coal = 700 }), true)
+    eq(F.guild_offer(G2.iface, F.stocks(G2.iface)), nil, "70% of its space is not enough")
+    -- CHEAP TO ASK (the 1.0 live pass, 2026-11-02: these two cost 455 ms of the events' 506 a round): F.stocks has
+    -- read every store, so neither offer reads one again; a store that is not short is never quoted
+    s1.held.grain, s1.level = 8, 2
+    local gst, hst, reads, stock0, view0 = F.stocks(G.iface), F.stocks(H.iface), 0, F.stock, F.stock_view
+    F.stock = function(...) reads = reads + 1; return stock0(...) end
+    F.stock_view = function(...) reads = reads + 1; return view0(...) end
+    local og, os_ = F.guild_offer(G.iface, gst), F.smuggle_offer(H.iface, hst)
+    F.stock, F.stock_view = stock0, view0
+    eq(reads .. "," .. tostring(og and og.stem) .. "," .. tostring(os_), "0,iron,nil",
+       "the guild and the smugglers read no store F.stocks has read, and answer as before")
+    -- THE GOOD IS NAMED: no dilemma target can be a good, so its name is a script value the text reads, keyed by the
+    -- player's faction CQI, and the player rides as the target faction
+    local loc0 = common.get_localised_string
+    common.get_localised_string = function(k) return k == "pooled_resources_display_name_derpy_mr_store_iron" and "Iron" or "" end
+    F.events(G.iface)
+    local dl = DILEMMAS[#DILEMMAS]
+    eq(dl.key .. "," .. dl.faction .. "," .. tostring(CONTEXT_VALUES["derpy_mr_guild_good_" .. G.cqi]),
+       EV.guild.dilemma .. "," .. G.cqi .. ",Iron", "the guild's dilemma names its good")
+    -- script values are not saved: a load's first tick, with the offer still waiting, names it again
+    CONTEXT_VALUES = {}
+    do   -- the first tick's army seeding left out: this block's armies are bare stubs
+        local n, seed = #LISTENERS, F.provision_seed_all
+        F.provision_seed_all = function() end
+        F.started = false; F.init()
+        for i = #LISTENERS, n + 1, -1 do LISTENERS[i] = nil end
+        F.provision_seed_all = seed
+    end
+    eq(CONTEXT_VALUES["derpy_mr_guild_good_" .. G.cqi], "Iron", "after a load the waiting offer names its good again")
+    common.get_localised_string = loc0
+    answer(G, EV.guild.dilemma, "FIRST")
+    local sale = F.state.sales and F.state.sales.e2G
+    eq(sale and sale.stem .. "," .. sale.per .. "," .. sale.left, "iron,20,10", "Sign the contract: 20 a turn for 10 turns")
+    local paid = 0
+    for _ = 1, 3 do
+        paid = paid + math.floor(20 * math.floor(rate(G, g1, "iron") * 120 / 100) / 100)
+        F.sales_turn(G.iface)
+    end
+    eq(g1.held.iron .. "," .. tostring(TREASURY.e2G) .. "," .. sale.left, "740," .. paid .. ",7",
+       "three turns sell 60, paid a fifth above the local selling price")
+    -- Review Focus 1: the good runs out - what there is sells, and the sale ends
+    g1.held.iron = 5
+    paid = paid + math.floor(5 * math.floor(rate(G, g1, "iron") * 120 / 100) / 100)
+    F.sales_turn(G.iface)
+    eq(g1.held.iron .. "," .. tostring(TREASURY.e2G) .. "," .. tostring(F.state.sales.e2G), "0," .. paid .. ",nil",
+       "5 left: 5 sold and paid for, and the sale ends")
+    F.state.sales.e2G = { stem = "iron", per = 20, left = 2 }; g1.held.iron = 500
+    F.sales_turn(G.iface); F.sales_turn(G.iface); F.sales_turn(G.iface)
+    eq(g1.held.iron .. "," .. tostring(F.state.sales.e2G), "460,nil", "a sale ends after its turns")
+    F.state.sales.e2G = { stem = "iron", per = 20, left = 5 }; lose(G, g1); paid = TREASURY.e2G
+    F.sales_turn(G.iface)
+    eq(tostring(F.state.sales.e2G) .. "," .. TREASURY.e2G, "nil," .. paid, "its stores captured: no gold, and the sale ends")
+    F.state.sales = { a = { stem = "nope", per = 20, left = 3 }, b = { stem = "iron", per = 20, left = 3 }, c = "x",
+                      d = { stem = "iron", per = 20, left = 0 } }
+    F.sanitize_sales()
+    eq(tostring(F.state.sales.a) .. tostring(F.state.sales.c) .. tostring(F.state.sales.d) .. "," .. F.state.sales.b.left,
+       "nilnilnil,3", "a saved sale of an unknown good, a broken one and a finished one are dropped on load")
+    -- GRAIN ROT: 250 is the safe share of 1000; 400 is 150 over it and rots, 349 is 99 over and does not
+    local R = faction("e2R", { human = true })
+    local r1 = region("e2r", 42060, 0, 1000, { grain = 400 }); r1.level = 0; own(R, r1, true)
+    local r2 = region("e2q", 42080, 0, 1000, { grain = 349 }); r2.level = 0; own(R, r2)
+    o = F.rot_offer(R.iface, F.stocks(R.iface))
+    eq(o and o.key .. "," .. o.region, "grain_rot,e2r", "the first store 100 over its safe share is offered")
+    local function rot(choice, grain)
+        r1.held.grain = grain
+        F.set_pending("e2R", { key = "grain_rot", region = "e2r" })
+        answer(R, EV.grain_rot.dilemma, choice)
+        return r1.held.grain
+    end
+    eq(rot("FIRST", 400) .. "," .. tostring(TREASURY.e2R), "380,-50", "Clean the granary: 50 gold, a twentieth lost")
+    eq(rot("SECOND", 400) .. "," .. TREASURY.e2R, "280,-50", "Let it rot: 30% lost, no gold")
+    eq(rot("FIRST", 100), 95, "emptied before the answer: a twentieth of what is there now")
+    local R2 = faction("e2Q", { human = true, gold = 49 }); own(R2, region("e2o", 42090, 0, 1000, { grain = 400 }), true)
+    F.set_pending("e2Q", { key = "grain_rot", region = "e2o" }); answer(R2, EV.grain_rot.dilemma, "FIRST")
+    eq(REGIONS.e2o.held.grain .. "," .. tostring(TREASURY.e2Q), "380,nil", "50 gold paid only when the treasury holds it")
+    F.state.rates.spoilage = false
+    eq(F.rot_offer(R.iface, F.stocks(R.iface)), nil, "no rot while nothing spoils")
+    F.state.rates.spoilage = true
+    -- A COMPUTER buys from the smugglers and signs with the guild on a winning roll, and never meets Grain rot
+    ROLL, DILEMMAS = 1, {}
+    local A = faction("e2A")
+    local a1 = region("e2a", 42100, 0, 400, { grain = 3 }); a1.level, a1.absent = 2, others; own(A, a1, true)
+    F.events(A.iface)
+    eq(#DILEMMAS .. "," .. a1.held.grain, "0,20", "a computer buys from the smugglers, unasked")
+    local B = faction("e2B")
+    local b1 = region("e2b", 42120, 0, 1000, { iron = 800 }); b1.level = 0; own(B, b1, true)
+    F.events(B.iface)
+    eq(F.state.sales and F.state.sales.e2B and F.state.sales.e2B.stem, "iron", "and signs with the guild")
+    b1.held.grain = 400
+    eq(F.event_offer(B.iface, "grain_rot", F.stocks(B.iface)), nil, "Grain rot is never a computer's")
+    eq(#ERRORS, n0, "Part E stock events: no script errors")
+    F.state, TURN, ROLL = state, turn0, roll0
+end)()
+
+-- TASK 3: CARAVAN MASTER, TOLL DISPUTE AND BLOCKADE RUNNER
+;(function()
+    local state, turn0, routes, known, price, n0 = F.state, TURN, DERPY_MR_TERRAIN_ROUTES, F.reach_known, F.local_price, #ERRORS
+    F.state = { factions = {}, rates = F.read_rates(), ship_seq = 103000 }
+    for _, k in ipairs({ "upkeep", "supply", "army_provisions", "escort", "spoilage", "tolls", "edicts" }) do
+        F.state.rates[k] = false
+    end
+    F.state.rates.bandits, F.state.rates.road_danger, F.state.rates.events = true, 20, true
+    F.reach_known, F.enemy_cache, F.blockade_known, TURN, DILEMMAS = {}, {}, {}, 400000, {}
+    local EV = DERPY_MR_FLOWS_EVENTS
+    local Y = 10900
+    local H = faction("e3H", { human = true })
+    local M, B = faction("e3M"), faction("e3B", { human = true })   -- a player: only a player sets a stock target
+    local hr = region("e3h", 0, Y, 2000, { coal = 1000 }); own(H, hr, true)
+    local mr = region("e3m", 20, Y, 1000, {}); own(M, mr, true); mr.po = -60
+    local br = region("e3b", 40, Y, 1000, {}); own(B, br, true)
+    H.partners, B.partners = { B }, { H }
+    local road = {}
+    for x = 0, 40, 2 do road[#road + 1] = { x, Y } end
+    DERPY_MR_TERRAIN_ROUTES = { reach = function() return true, nil, road end, journey = function() return road end }
+    -- CARAVAN MASTER: cargo on a road of threat 30 or more; hired, the player's cargo meets nothing for 10 turns
+    local c = F.convoy_new(H.iface, B.iface, { coal = 100 }, road)
+    c.x, c.threat = 24, 29
+    eq(F.caravan_offer(H.iface), nil, "cargo on a road of threat 29: no caravan master")
+    c.threat = 40
+    local o = F.caravan_offer(H.iface)
+    eq(o and o.key, "caravan_master", "cargo on a road of threat 40 brings him")
+    local fee = math.floor(F.cargo_value_base(c) * 5 / 100)
+    F.set_pending("e3H", o); answer(H, EV.caravan_master.dilemma, "FIRST")
+    eq(tostring(TREASURY.e3H) .. "," .. tostring((F.state.road_safe or {}).e3H), -fee .. "," .. TURN + 10,
+       "Hire him: a twentieth of the cargo's value, and safe roads until 10 turns on")
+    local function road_trouble()   -- the roll, the washout, the region: asked unless the road is safe
+        local asked = #DILEMMAS
+        ROLLQ, F.state.road_cool = { 1, 3, 1 }, nil
+        F.road_event(H.iface, "convoy", c, { 16, Y })
+        ROLLQ = nil
+        if #DILEMMAS > asked then answer(H, EV.road_washout.dilemma, "SECOND") end
+        return #DILEMMAS - asked
+    end
+    local t0 = TURN
+    TURN = t0 + 10
+    eq(road_trouble(), 0, "the 10th turn after: nothing on the road")
+    TURN = t0 + 11
+    eq(road_trouble(), 1, "the 11th: the road is as before")
+    local P = faction("e3P", { human = true, gold = fee - 1 })
+    own(P, region("e3p", 0, Y + 200, 1000, {}), true)
+    local pc = F.convoy_new(P.iface, B.iface, { coal = 100 }, road)
+    pc.threat = 40
+    F.set_pending("e3P", { key = "caravan_master" }); answer(P, EV.caravan_master.dilemma, "FIRST")
+    eq(tostring(TREASURY.e3P) .. "," .. tostring((F.state.road_safe or {}).e3P), "nil,nil", "no gold, no caravan master")
+    F.convoy_drop(c); F.convoy_drop(pc)
+    F.state.road_safe = { e3H = 5, x = "bad", [7] = 3 }; F.sanitize_road()
+    eq(F.state.road_safe.e3H .. "," .. tostring(F.state.road_safe.x), "5,nil", "a saved safe turn keeps only a number")
+    -- TOLL DISPUTE: a neighbour that paid 50 in tolls last turn; 49 is not enough
+    F.state.rates.tolls, F.state.rates.edicts = true, true
+    local N1, N2 = faction("e3N"), faction("e3O")
+    TURN = TURN - 1
+    F.book_gold("tolls", "e3H", "e3N", "got", 49)
+    TURN = TURN + 1
+    eq(F.toll_offer(H.iface), nil, "a neighbour that paid 49: no dispute")
+    TURN = TURN - 1
+    F.book_gold("tolls", "e3H", "e3N", "got", 1); F.book_gold("tolls", "e3H", "e3O", "got", 80)
+    TURN = TURN + 1
+    o = F.toll_offer(H.iface)
+    eq(o and o.key .. "," .. o.target, "toll_dispute,e3N", "the first by key that paid 50 or more")
+    -- roads set Open since, or Closed: the realm takes no tolls now, so there is nothing to dispute
+    F.state.edicts = { e3H = { roads = { o = "open", at = TURN - 1 } } }
+    eq(F.toll_offer(H.iface), nil, "roads already Open: no dispute")
+    F.state.edicts = { e3H = { roads = { o = "closed", at = TURN - 1 } } }
+    eq(F.toll_offer(H.iface), nil, "nor Closed")
+    F.state.edicts = nil
+    -- Review Focus 2: the Roads edict changed 4 turns ago and waits 6 more; accepting opens the roads anyway
+    F.state.edicts = { e3H = { roads = { o = "closed", at = TURN - 4 } } }
+    eq(F.edict_set(H.iface, "roads", "open"), false, "the edict waits")
+    F.set_pending("e3H", o); answer(H, EV.toll_dispute.dilemma, "FIRST")
+    local d = DIPLO[#DIPLO]
+    eq(F.edict("e3H", "roads") .. "," .. F.edict_wait("e3H", "roads") .. "," .. d[1] .. "," .. d[2] .. "," .. d[3],
+       "open,10,e3H,e3N," .. F.DIPLO_BONUS, "Open the roads: the edict is Open, waits 10 turns, and they think better of you")
+    F.set_pending("e3H", o); answer(H, EV.toll_dispute.dilemma, "SECOND")
+    d = DIPLO[#DIPLO]
+    eq(d[1] .. "," .. d[2] .. "," .. d[3], "e3H,e3N," .. -F.DIPLO_BONUS, "Keep the tolls: they think worse of you")
+    -- BLOCKADE RUNNER: an enemy army on the road to a partner
+    F.state.rates.tolls, F.state.edicts = true, nil
+    M.allies = { e3H = true }   -- no toll on the runner's road: the treasury shows the runner's tenth alone
+    local X = faction("e3X"); own(X, region("e3x", 60, Y + 60, 1000, {}), true)
+    war(X, B)
+    X.armies = { field(X, 30, Y + 3, 39001) }
+    F.set_stock_policy("e3B", "coal", "target", "1000")
+    local PR = { e3h = 1000, e3b = 5000 }
+    F.local_price = function(v) return PR[v.region:name()] end
+    local cut = TREASURY.e3H or 0
+    -- a blockaded pair that would send nothing anyway brings no runner
+    PR.e3b = 1000
+    F.trade(H.iface)
+    eq(tostring(F.blockaded("e3H", "e3B")) .. "," .. tostring(F.runner_offer(H.iface)), "e3X,nil",
+       "no price gain, nothing to run: no runner")
+    PR.e3b = 5000
+    F.trade(H.iface)
+    eq(#F.convoys() .. "," .. tostring(F.blockaded("e3H", "e3B")), "0,e3X", "the pair is blockaded: nothing leaves")
+    o = F.runner_offer(H.iface)
+    eq(o and o.key .. "," .. o.target, "blockade_runner,e3B", "the blockaded partner brings the runner")
+    -- the trade agreement ended before the answer: nothing leaves, nothing is paid
+    H.partners = {}
+    F.set_pending("e3H", o); answer(H, EV.blockade_runner.dilemma, "FIRST")
+    eq(#F.convoys() .. "," .. tostring(TREASURY.e3H or 0), "0," .. cut, "a partner that no longer trades with you: no runner")
+    H.partners = { B }
+    F.set_pending("e3H", o); answer(H, EV.blockade_runner.dilemma, "FIRST")
+    local sent = F.convoys()[1]
+    local due = sent and math.floor(F.cargo_value_base(sent) * 10 / 100)
+    eq(#F.convoys() .. "," .. tostring(sent and sent.buyer) .. "," .. tostring(TREASURY.e3H), "1,e3B," .. cut - (due or 0),
+       "Pay the runner: this turn's goods leave, for a tenth of their value")
+    eq(tostring(F.blockaded("e3H", "e3B")), "nil", "the goods got through: the panel and the map show no blockade")
+    -- Review Focus 3: a second answer the same turn sends nothing and pays nothing
+    F.set_pending("e3H", o); answer(H, EV.blockade_runner.dilemma, "FIRST")
+    eq(#F.convoys() .. "," .. TREASURY.e3H, "1," .. cut - due, "a second runner the same turn: nothing more")
+    -- goods already sent to that partner this turn: a blockade seen after them brings no runner (seen 2026-11-03,
+    -- offered and paid for, and its answer sent nothing)
+    F.record_blockade("e3H", "e3B", "e3X")
+    eq(F.runner_offer(H.iface), nil, "goods already sent this turn: no runner")
+    F.record_blockade("e3H", "e3B", nil)
+    -- the army gone before the answer: the convoy still leaves, and the tenth is still paid
+    TURN = TURN + 1; F.enemy_cache = {}
+    F.trade(H.iface)
+    eq(#F.convoys(), 1, "blockaded again the next turn")
+    -- the turn's blockade is saved: after a reload the panel, the map and the duty still see it
+    SAVED = {}; cm.saving_game_callbacks[1]({})
+    F.blockade_known = {}; cm.loading_game_callbacks[1]({})
+    eq(tostring(F.blockaded("e3H", "e3B")), "e3X", "a reload keeps the turn's blockade")
+    local good = SAVED.derpy_mr_flows.blockades
+    SAVED.derpy_mr_flows.blockades = { ["e3H>e3B"] = { by = 3, turn = "x" }, [4] = {}, junk = "y" }
+    cm.loading_game_callbacks[1]({})
+    eq(next(F.blockade_known), nil, "a damaged saved blockade list loads as none")
+    SAVED.derpy_mr_flows.blockades = good; cm.loading_game_callbacks[1]({})
+    X.armies, F.enemy_cache = {}, {}
+    o = F.runner_offer(H.iface)
+    F.set_pending("e3H", o); answer(H, EV.blockade_runner.dilemma, "FIRST")
+    local sent2 = F.convoys()[2]
+    eq(#F.convoys() .. "," .. TREASURY.e3H, "2," .. cut - due - math.floor(F.cargo_value_base(sent2 or {}) * 10 / 100),
+       "the army left before the answer: the goods leave and the tenth is paid")
+    TURN = TURN + 1
+    eq(F.runner_offer(H.iface), nil, "a blockade from last turn brings no runner")
+    eq(#ERRORS, n0, "Part E road events: no script errors")
+    F.local_price, DERPY_MR_TERRAIN_ROUTES, F.reach_known, F.blockade_known = price, routes, known, {}
+    F.state, TURN = state, turn0
+end)()
+
+-- NOTHING FROM THE ENGINE IS KEPT (the 1.0 live pass, 2026-11-02): a script interface is good for the script entry
+-- that asked for it and freed memory after ("Character interfaces are volatile and may not be stored over time", CA's
+-- scripting docs). F.enemy_cache kept the turn's enemy factions and forces, and the map's next plan refresh
+-- (R.renew_plan > F.trade > F.trade_pair > F.blockade) called e.f:is_null_interface() on one: a native crash at
+-- Warhammer3.exe+0x118D937. Here an interface remembers the entry that made it and refuses a call from a later one.
+;(function()
+    local state, turn0, routes, known, n0 = F.state, TURN, DERPY_MR_TERRAIN_ROUTES, F.reach_known, #ERRORS
+    F.state = { factions = {}, rates = F.read_rates(), ship_seq = 99500 }
+    F.reach_known, TURN, F.enemy_cache, F.blockade_known = {}, 340000, {}, {}
+    local ENTRY = 1
+    local function volatile(t, stamp)
+        if type(t) ~= "table" then return t end
+        return setmetatable({}, { __index = function(_, k)
+            local v = t[k]
+            if type(v) ~= "function" then return v end
+            return function(_, ...)
+                if stamp ~= ENTRY then error("an interface from script entry " .. stamp .. " used in entry " .. ENTRY, 2) end
+                return volatile(v(t, ...), stamp)
+            end
+        end })
+    end
+    local Y = 10300
+    local A, B, X = faction("sk1A"), faction("sk1B", { human = true }), faction("sk1X")
+    own(A, region("sk1A1", 0, Y, 1000, {}), true)
+    own(B, region("sk1B1", 20, Y, 1000, {}), true)
+    own(X, region("sk1X1", 60, Y + 60, 1000, {}), true)
+    war(X, A)
+    X.armies = { field(X, 10, Y + 1, 34001) }
+    local road = {}
+    for x = 0, 20, 2 do road[#road + 1] = { x, Y } end
+    local wars = A.iface.factions_at_war_with
+    A.iface.factions_at_war_with = function(self) return volatile(wars(self), ENTRY) end
+    eq(F.blockade(A.iface, B.iface, road), "sk1X", "entry 1: the army on the road blockades")
+    ENTRY = 2   -- the map's next plan refresh, the same turn
+    local ok, by = pcall(F.blockade, A.iface, B.iface, road)
+    eq(ok, true, "entry 2 reads no interface entry 1 kept (" .. tostring(by) .. ")")
+    eq(by, "sk1X", "entry 2 still sees the army")
+    ENTRY = 3   -- a convoy beside the army, at a later turn start
+    local ok2, captor, force = pcall(F.captor, A.iface, { x = 10, y = Y + 1 })
+    eq(ok2, true, "F.captor reads no kept interface (" .. tostring(captor) .. ")")
+    eq(captor and captor:name(), "sk1X", "the captor is the army's faction")
+    eq(force and force:command_queue_index(), 35001, "and the force is its army")
+    -- a force gone since the list was made is passed over: it is looked up again by its number
+    X.armies = {}
+    eq(F.captor(A.iface, { x = 10, y = Y + 1 }), nil, "a force destroyed this turn captures nothing")
+    A.iface.factions_at_war_with = wars
+    eq(#ERRORS, n0, "nothing kept: no script errors")
+    F.state, TURN, DERPY_MR_TERRAIN_ROUTES, F.reach_known, F.enemy_cache, F.blockade_known = state, turn0, routes, known, {}, {}
+end)()
+
+-- NOTHING KEPT, the whole module: once every test above has run, no engine interface is reachable from F through its
+-- tables or its functions' upvalues. A stub interface stands in for the engine's userdata: a table with its own
+-- is_null_interface.
+;(function()
+    local found, seen = {}, {}
+    local function walk(v, path)
+        if seen[v] then return end
+        if type(v) == "table" then
+            seen[v] = true
+            if type(rawget(v, "is_null_interface")) == "function" then found[#found + 1] = path; return end
+            for k, x in pairs(v) do walk(x, path .. "." .. tostring(k)) end
+        elseif type(v) == "function" then
+            seen[v] = true
+            local i = 1
+            while true do
+                local name, x = debug.getupvalue(v, i)
+                if not name then break end
+                walk(x, path .. "<" .. name .. ">")
+                i = i + 1
+            end
+        end
+    end
+    -- the turn's caches filled first: an enemy army in the field
+    local A, X = faction("sk2A"), faction("sk2X")
+    own(A, region("sk2A1", 0, 10400, 1000, {}), true); own(X, region("sk2X1", 40, 10400, 1000, {}), true)
+    war(A, X); X.armies = { field(X, 20, 10400, 34101) }
+    eq(#F.enemy_armies(A.iface), 1, "the walk sees a filled enemy list")
+    walk(F, "F")
+    table.sort(found)
+    eq(table.concat(found, " "), "", "engine interfaces kept in the flows module")
 end)()
 
 print("harness ok")

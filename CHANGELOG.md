@@ -1,5 +1,48 @@
 # Changelog
 
+## 2026-11-03
+
+- Trade route lines: Small dashes half as thick.
+- Carts move smoothly from hex to hex.
+- Cargo icons hand over to the next hex without a ghost.
+- Carts, lines and convoy markers drawn only where the camera looks.
+- The map stops redrawing during the other factions' turns.
+- Faster turn starts: each store read once a turn.
+- Bandits now come on Chaos Dwarf land. Ogre bandits stand in.
+- Blockade Runner: no offer for a partner whose goods already left.
+- Road guards: a double click no longer hires and then dismisses them.
+- Closed roads take no tolls.
+- No road trouble at sea.
+- Blockades kept after a reload.
+- Blockade Runner and Toll Dispute checked again when you answer.
+- The Merchant Guild names its good.
+
+## 2026-11-02 (version 1.0)
+
+- Trade edicts: Rations, Workshops and Roads, three options each, 10 turns between changes.
+- Tolls: 3% to each faction whose land a trade road crosses, 15% at most. Allies and Open roads go free.
+- Blockades: an enemy army within 3 hexes of the road stops that partner's trade for the turn.
+- Bandits, highwaymen and washed-out roads on the trade roads. MCT switch, on by default.
+- Road guards on the Trade tab: 5% of the cargo, half the trouble.
+- Six new store events: Smugglers, Merchant Guild, Grain Rot, Caravan Master, Toll Dispute, Blockade Runner.
+- MCT Panel size: Small, Medium, Large.
+- The Vault closes when you end the turn.
+- Shorter tooltips, one plain sentence a line.
+
+## 2026-11-01
+
+- Spoilage: grain rots, beer and kvas sour above a quarter of a store's space. MCT switch, on by default.
+- Great Granary keeps grain to half a store.
+- Spoiled shows in Last turn, the forecasts and the settlement tooltips.
+- Workshop: permanent works say Permanent. Section renamed Permanent works.
+- A convoy follows its trade road when the road changes.
+- Chaos Dwarf Great Granary: Labour from battles +15% in place of growth.
+- Greenskins: Loot Hoard in place of the Grand Bazaar.
+- Dwarfs: Engineers' Yard in place of the Royal Stables. Skaven: Beast Pens. Vampire Coast: Bone Yard.
+- Chaos Dwarfs: Well fed cuts Labour loss in place of growth.
+- Chaos Dwarfs: Full Rations event in place of the Feast.
+- Stable stocked: cheaper monsters for every race, gyrocopters for Dwarfs.
+
 ## 2026-10-31
 
 - Vault: Production tab. Every processing recipe and service your race has, and the settlements that run each.

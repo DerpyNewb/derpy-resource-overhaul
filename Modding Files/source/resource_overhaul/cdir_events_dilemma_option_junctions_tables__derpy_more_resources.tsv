@@ -12,3 +12,23 @@ derpy_mr_dil_restore	1203110172	GEN_TARGET_MODEL		default
 derpy_mr_dil_restore	967512209	VAR_CHANCE	100	default
 derpy_mr_dil_raid	1151612175	GEN_TARGET_MODEL		default
 derpy_mr_dil_raid	467529310	VAR_CHANCE	100	default
+derpy_mr_dil_feast_chd	227518320	GEN_TARGET_MODEL		default
+derpy_mr_dil_feast_chd	2080579416	VAR_CHANCE	100	default
+derpy_mr_dil_road_ambush	1556898160	GEN_TARGET_MODEL		default
+derpy_mr_dil_road_ambush	1487147415	VAR_CHANCE	100	default
+derpy_mr_dil_road_highwaymen	1773546031	GEN_TARGET_MODEL		default
+derpy_mr_dil_road_highwaymen	366008051	VAR_CHANCE	100	default
+derpy_mr_dil_road_washout	975049426	GEN_TARGET_MODEL		default
+derpy_mr_dil_road_washout	1763277075	VAR_CHANCE	100	default
+derpy_mr_dil_smugglers	1586219410	GEN_TARGET_MODEL		default
+derpy_mr_dil_smugglers	1400525854	VAR_CHANCE	100	default
+derpy_mr_dil_guild	933245373	GEN_TARGET_MODEL		default
+derpy_mr_dil_guild	746544224	VAR_CHANCE	100	default
+derpy_mr_dil_grain_rot	1621026905	GEN_TARGET_MODEL		default
+derpy_mr_dil_grain_rot	1718287756	VAR_CHANCE	100	default
+derpy_mr_dil_caravan_master	122182965	GEN_TARGET_MODEL		default
+derpy_mr_dil_caravan_master	1560575203	VAR_CHANCE	100	default
+derpy_mr_dil_toll_dispute	691188377	GEN_TARGET_MODEL		default
+derpy_mr_dil_toll_dispute	1018089679	VAR_CHANCE	100	default
+derpy_mr_dil_blockade_runner	622097741	GEN_TARGET_MODEL		default
+derpy_mr_dil_blockade_runner	781922038	VAR_CHANCE	100	default

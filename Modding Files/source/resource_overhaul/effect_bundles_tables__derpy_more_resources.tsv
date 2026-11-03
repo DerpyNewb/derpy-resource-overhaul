@@ -61,6 +61,7 @@ derpy_mr_hold_trinkets	[hidden]	[hidden]	faction	1		true	false	true
 derpy_mr_well_fed	After eating, this settlement's stores still hold five turns of provisions.	Well fed	region	1	growth.png	true	false	true
 derpy_mr_garrison_stocked	War materials fill at least a quarter of one store's space in this settlement.	Garrison stocked	region	1	siege_defence.png	true	false	true
 derpy_mr_comforts	Luxuries fill at least a quarter of one store's space in this settlement.	Comforts	region	1	public_order_happy.png	true	false	true
+derpy_mr_well_fed_chd	After eating, this settlement's stores still hold five turns of provisions, and its fed slaves are quieter.	Well fed	region	1	public_order_happy.png	true	false	true
 derpy_mr_service_archives	Paid each turn from this province capital's stores. Province growth +5.	Scholars' halls	region	1	growth.png	true	false	true
 derpy_mr_service_builders	Paid each turn from this province capital's stores. Province construction cost -5%.	Builders' yards	region	1	construction.png	true	false	true
 derpy_mr_service_feasts	Paid each turn from this province capital's stores. Province control +2.	Village feasts	region	1	public_order_happy.png	true	false	true
@@ -72,11 +73,13 @@ derpy_mr_service_tea	Paid each turn from this province capital's stores. Provinc
 derpy_mr_event_feast	A feast paid for from this settlement's stores: public order and growth are up.	Feast	region	1	public_order_jubilant.png	true	false	true
 derpy_mr_event_siege	This settlement's stores feed its besieged garrison.	Siege Stores	region	1	siege_defence.png	true	false	true
 derpy_mr_event_restore	Repaired from this settlement's own stores: public order is up.	Restored	region	1	public_order_happy.png	true	false	true
+derpy_mr_event_feast_chd	Provisions from this settlement's stores feed its slaves: public order is up.	Full Rations	region	1	public_order_jubilant.png	true	false	true
+derpy_mr_event_smugglers	Goods bought from smugglers fill this settlement's stores: control is down.	Smuggled Goods	region	1	public_order_unhappy.png	true	false	true
 derpy_mr_supply_materials	Supplied from the province capital's stores each turn: construction cost -25%.	Materials on hand	region	1	construction.png	true	false	true
-derpy_mr_supply_stable	Supplied from the province capital's stores each turn: recruit cost -15% for cavalry and monsters.	Stable stocked	region	1	mount.png	true	false	true
+derpy_mr_supply_stable	Supplied from the province capital's stores each turn: recruit cost -15% for cavalry, monsters and gyrocopters.	Stable stocked	region	1	mount.png	true	false	true
 derpy_mr_supply_arms	Supplied from the province capital's stores each turn: recruit cost -15% for infantry and artillery.	Arms stocked	region	1	weapon_damage.png	true	false	true
-derpy_mr_up_gromril	Built from your stores: melee defence +10 for your armies here, armour +10 in the province.	Gromril Gate	region	1	siege_defence.png	true	false	true
-derpy_mr_up_ithilmar	Built from your stores: public order +3 in the province, income +10% here.	Ithilmar Spire	region	1	public_order_happy.png	true	false	true
+derpy_mr_up_gromril	Built from your stores: melee defence +10 for your armies here and armour +10 in the province.	Gromril Gate	region	1	siege_defence.png	true	false	true
+derpy_mr_up_ithilmar	Built from your stores: public order +3 in the province and income +10% here.	Ithilmar Spire	region	1	public_order_happy.png	true	false	true
 derpy_mr_up_dragon_bone	Built from your stores: units recruited in the province gain a rank.	Dragon Bone Shrine	region	1	experience.png	true	false	true
 derpy_mr_up_sea_dragon_hide	Built from your stores: income +15% here.	Sea Dragon Moorings	region	1	income.png	true	false	true
 derpy_mr_up_black_lotus	Built from your stores: hero actions from here succeed more often (+10).	Black Lotus Gardens	region	1	agent.png	true	false	true
@@ -86,15 +89,27 @@ derpy_mr_up_wyvern_scales	Built from your stores: upkeep -5% for your armies her
 derpy_mr_order_festival	Paid for from your stores: public order +4 in every province.	Festival	faction	1	public_order_jubilant.png	true	false	true
 derpy_mr_order_muster	Paid for from your stores: recruit rank +1 for every unit.	Muster	faction	1	experience.png	true	false	true
 derpy_mr_order_great_works	Paid for from your stores: construction cost -20% for every building.	Great Works	faction	1	construction.png	true	false	true
+derpy_mr_edict_plenty	Settlements eat 3 provisions a turn for each level. Growth +10 in every province.	Plenty	faction	1	growth.png	true	false	true
+derpy_mr_edict_plenty_chd	Settlements eat 3 provisions a turn for each level. Control +2 in every province.	Plenty	faction	1	public_order_happy.png	true	false	true
+derpy_mr_edict_rationing	Settlements eat 1 provision a turn for each level. Control -2 in every province.	Rationing	faction	1	public_order_unhappy.png	true	false	true
+derpy_mr_edict_war	Workshops that make blackpowder, tools or leather make half as much again. Trade income -10%.	War economy	faction	1	weapon_damage.png	true	false	true
+derpy_mr_edict_merchant	Trade agreements send twice their usual share. Recruits take a quarter more from your stores.	Merchant	faction	1	trade_agreement.png	true	false	true
+derpy_mr_edict_open	Trade crossing your lands pays no tolls. Trade income +5%.	Open roads	faction	1	convoy_icon.png	true	false	true
+derpy_mr_edict_closed	Other factions' trade cannot cross your lands. Control +1 in every province.	Closed roads	faction	1	barrier.png	true	false	true
 derpy_mr_army_hungry	Two missed meals. Refill locally or buy field rations where available.	Short rations	force	1	growth.png	false	false	true
 derpy_mr_army_starved	Three or more missed meals. A full meal clears these penalties.	Empty provision wagons	force	1	growth.png	false	false	true
-derpy_mr_rc_army_ammo	Paid for from your stores: ammunition +20%, 5 turns.	Ammunition Train	force	1	ammo.png	false	false	true
-derpy_mr_rc_army_forge	Paid for from your stores: armour +15, 5 turns.	Field Forge	force	1	armour.png	false	false	true
-derpy_mr_rc_army_remounts	Paid for from your stores: replenishment +10%, 5 turns.	Remounts	force	1	replenishment.png	false	false	true
-derpy_mr_rc_army_medicine	Paid for from your stores: attrition -25%, 5 turns.	Medicine Chests	force	1	attrition.png	false	false	true
-derpy_mr_rc_last_granary	Paid for from your stores: growth +15, for good.	Great Granary	faction	1	growth.png	true	false	true
-derpy_mr_rc_last_records	Paid for from your stores: research +15%, for good.	Hall of Records	faction	1	technology.png	true	false	true
-derpy_mr_rc_last_bazaar	Paid for from your stores: trade income +15%, for good.	Grand Bazaar	faction	1	trade_agreement.png	true	false	true
-derpy_mr_rc_last_arsenal	Paid for from your stores: upkeep -10%, for good.	Arsenal	faction	1	variable_upkeep.png	true	false	true
-derpy_mr_rc_last_stables	Paid for from your stores: cavalry cost -20%, for good.	Royal Stables	faction	1	mount.png	true	false	true
+derpy_mr_rc_army_ammo	Paid for from your stores: ammunition +20% (5 turns).	Ammunition Train	force	1	ammo.png	false	false	true
+derpy_mr_rc_army_forge	Paid for from your stores: armour +15 (5 turns).	Field Forge	force	1	armour.png	false	false	true
+derpy_mr_rc_army_remounts	Paid for from your stores: replenishment +10% (5 turns).	Remounts	force	1	replenishment.png	false	false	true
+derpy_mr_rc_army_medicine	Paid for from your stores: attrition -25% (5 turns).	Medicine Chests	force	1	attrition.png	false	false	true
+derpy_mr_rc_last_granary	Paid for from your stores: growth +15 in every province. Grain is safe from spoiling up to half of each store. Permanent.	Great Granary	faction	1	growth.png	true	false	true
+derpy_mr_rc_last_granary_chd	Paid for from your stores: Labour taken after battles +15%. Grain is safe from spoiling up to half of each store. Permanent.	Great Granary	faction	1	chd_labour.png	true	false	true
+derpy_mr_rc_last_records	Paid for from your stores: research rate +15%. Permanent.	Hall of Records	faction	1	technology.png	true	false	true
+derpy_mr_rc_last_bazaar	Paid for from your stores: trade income +15%. Permanent.	Grand Bazaar	faction	1	trade_agreement.png	true	false	true
+derpy_mr_rc_last_loot	Paid for from your stores: income from sacking and looting settlements +15%. Permanent.	Loot Hoard	faction	1	income.png	true	false	true
+derpy_mr_rc_last_arsenal	Paid for from your stores: army upkeep -10%. Permanent.	Arsenal	faction	1	variable_upkeep.png	true	false	true
+derpy_mr_rc_last_stables	Paid for from your stores: cavalry recruitment cost -20%. Permanent.	Royal Stables	faction	1	mount.png	true	false	true
+derpy_mr_rc_last_engineers	Paid for from your stores: artillery recruitment cost -20%. Permanent.	Engineers' Yard	faction	1	artillery.png	true	false	true
+derpy_mr_rc_last_pens	Paid for from your stores: monster recruitment cost -20%. Permanent.	Beast Pens	faction	1	moulder_reputation.png	true	false	true
+derpy_mr_rc_last_boneyard	Paid for from your stores: monster recruitment cost -20%. Permanent.	Bone Yard	faction	1	cst_sea_monster.png	true	false	true
 derpy_mr_exports_held	You are holding some resources back from your trade agreements (the Resource Vault's Trade tab). Your regions make none of them for trade, so they earn you no trade income. Your stores still fill.	Exports held	faction	1	trade_agreement.png	true	false	true

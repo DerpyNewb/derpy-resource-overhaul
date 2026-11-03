@@ -21,7 +21,7 @@ unchanged, and so are the DB table file names inside the packs.
 
 **Status:** not on the Steam Workshop yet. Tested in Immortal Empires and Immortal Empires
 Expanded campaigns through a live connection to the running game, most recently on
-2026-10-23 with twenty trade partners. Not yet tested: the Old World and Realm of Chaos
+2026-11-03 (version 1.0, see CHANGELOG.md). Not yet tested: the Old World and Realm of Chaos
 campaigns with the trade roads, and multiplayer on two machines.
 
 ## The goods

@@ -96,6 +96,26 @@ o_recruit_per:set_default_value(1)
 o_recruit_per:set_assigned_section("stores")
 if IN_CAMPAIGN then o_recruit_per:set_locked(true, LOCK_REASON) end
 
+local o_toll = m:add_new_option("toll", "slider")
+o_toll:set_text("Tolls")
+o_toll:set_tooltip_text("Each turn, trade that crosses another faction's lands pays that faction this share of the value of the goods it carries. All the tolls on one cargo together are at most 15%. A faction whose Roads edict is Open charges nothing. Neither do your allies and vassals. 0 turns tolls off.")
+o_toll:slider_set_precision(0)
+o_toll:slider_set_min_max(0, 10)
+o_toll:slider_set_step_size(1, 0)
+o_toll:set_default_value(3)
+o_toll:set_assigned_section("stores")
+if IN_CAMPAIGN then o_toll:set_locked(true, LOCK_REASON) end
+
+local o_road_danger = m:add_new_option("road_danger", "slider")
+o_road_danger:set_text("Road danger")
+o_road_danger:set_tooltip_text("How likely trouble on the road is on the most dangerous land, each turn. Half as dangerous land is half as likely. 0 turns road encounters off.")
+o_road_danger:slider_set_precision(0)
+o_road_danger:slider_set_min_max(0, 50)
+o_road_danger:slider_set_step_size(1, 0)
+o_road_danger:set_default_value(20)
+o_road_danger:set_assigned_section("stores")
+if IN_CAMPAIGN then o_road_danger:set_locked(true, LOCK_REASON) end
+
 local o_army_provisions = m:add_new_option("army_provisions", "checkbox")
 o_army_provisions:set_text("Carried army provisions")
 o_army_provisions:set_tooltip_text("Armies eat carried provisions once each turn and refill locally above settlement Keep. Five turns target, ten turns capacity. At sea or without settlements, Load can buy two meals at 10 gold per ration once per turn; human Auto never buys. Foreign land still prevents local refill. Consecutive shortages reduce movement and replenishment. On by default for new campaigns; existing campaign switches stay saved.")
@@ -119,16 +139,23 @@ if IN_CAMPAIGN then o_services:set_locked(true, LOCK_REASON) end
 
 local o_ai = m:add_new_option("ai", "checkbox")
 o_ai:set_text("Other factions use their stores")
-o_ai:set_tooltip_text("Factions no player controls raid, sack, trade, eat, recruit and gain bonuses from their stores as a player does. Off: resources move only when a player's faction is one of the two. Other factions' settlements do not eat or gain bonuses, and their recruits take nothing. Turns run faster on a slow machine.")
+o_ai:set_tooltip_text("Factions no player controls raid, sack, trade, eat, recruit and gain bonuses from their stores as a player does. Off: resources move only when a player's faction is one of the two. Other factions' settlements do not eat or gain bonuses, their grain, beer and kvas do not spoil, and their recruits take nothing. Turns run faster on a slow machine.")
 o_ai:set_default_value(true)
 o_ai:set_assigned_section("stores")
 if IN_CAMPAIGN then o_ai:set_locked(true, LOCK_REASON) end
+
+local o_spoilage = m:add_new_option("spoilage", "checkbox")
+o_spoilage:set_text("Spoilage")
+o_spoilage:set_tooltip_text("Each turn, grain loses 4% and beer and kvas 2% of what a store holds above a quarter of its space. With the Great Granary, grain is safe up to half. Hardtack, salted meat, salted fish, wine and every other good never spoil. Off: nothing spoils.")
+o_spoilage:set_default_value(true)
+o_spoilage:set_assigned_section("stores")
+if IN_CAMPAIGN then o_spoilage:set_locked(true, LOCK_REASON) end
 
 m:add_new_section("using", "Using stores")
 
 local o_upkeep = m:add_new_option("upkeep", "checkbox")
 o_upkeep:set_text("Settlements use their stores")
-o_upkeep:set_tooltip_text("Each turn every settlement eats provisions from its stores. Five turns of provisions left make it Well fed; war materials and luxuries filling a quarter of one store's space give Garrison stocked and Comforts. Off: stores are only kept, raided and traded.")
+o_upkeep:set_tooltip_text("Each turn every settlement eats provisions from its stores. Five turns of provisions left make it Well fed; war materials and luxuries filling a quarter of one store's space give Garrison stocked and Comforts. Off: settlements eat nothing and give no bonuses. Spoilage has its own switch.")
 o_upkeep:set_default_value(true)
 o_upkeep:set_assigned_section("using")
 if IN_CAMPAIGN then o_upkeep:set_locked(true, LOCK_REASON) end
@@ -174,6 +201,27 @@ o_escort:set_tooltip_text("Every shipment travels with an escort of its owner's 
 o_escort:set_default_value(true)
 o_escort:set_assigned_section("using")
 if IN_CAMPAIGN then o_escort:set_locked(true, LOCK_REASON) end
+
+local o_edicts = m:add_new_option("edicts", "checkbox")
+o_edicts:set_text("Trade edicts")
+o_edicts:set_tooltip_text("Each faction sets three edicts in the Resource Vault: Rations, Workshops and Roads. Each has three choices. A change waits 10 turns before the next. Other factions choose theirs by their situation. Off: there are no edicts.")
+o_edicts:set_default_value(true)
+o_edicts:set_assigned_section("using")
+if IN_CAMPAIGN then o_edicts:set_locked(true, LOCK_REASON) end
+
+local o_tolls = m:add_new_option("tolls", "checkbox")
+o_tolls:set_text("Tolls and blockades")
+o_tolls:set_tooltip_text("Trade agreements and partner contracts pay tolls to the factions whose lands their roads cross. An army at war with either side standing within 3 hexes of the road stops that agreement's trade for the turn. Off: no tolls and no blockades.")
+o_tolls:set_default_value(true)
+o_tolls:set_assigned_section("stores")
+if IN_CAMPAIGN then o_tolls:set_locked(true, LOCK_REASON) end
+
+local o_bandits = m:add_new_option("bandits", "checkbox")
+o_bandits:set_text("Bandits on the roads")
+o_bandits:set_tooltip_text("Bandits, highwaymen and washed-out roads can meet your cargo on the road. Dangerous lands meet them more often. You choose what to do, and some choices lead to a battle. Guards on the Trade tab make it less likely. Off: the roads are safe.")
+o_bandits:set_default_value(true)
+o_bandits:set_assigned_section("using")
+if IN_CAMPAIGN then o_bandits:set_locked(true, LOCK_REASON) end
 
 m:add_new_section("routes", "Trade route lines")
 
@@ -225,3 +273,16 @@ o_route_colours:add_dropdown_value("bright", "Bright", "Aqua, violet, yellow and
 o_route_colours:add_dropdown_value("pale", "Pale", "Pale blue, pink, cream and sage.", false)
 o_route_colours:add_dropdown_value("colourblind", "Colour-blind friendly", "Magenta, teal, red-orange and light yellow: they stay apart for every common kind of colour blindness.", false)
 o_route_colours:set_default_value("default")
+
+-- DISPLAY ONLY: never locked and never frozen into the save. The panel reads it on every open,
+-- and set_is_global keeps it each player's own in multiplayer: it changes this screen alone.
+m:add_new_section("display", "Display")
+local o_size = m:add_new_option("ui_size", "dropdown")
+o_size:set_text("Panel size")
+o_size:set_tooltip_text("Sets the size of the Resource Vault and its text. The new size shows the next time you open the Vault. On a screen larger than 1080p the Vault grows to fit and some sizes look the same.")
+o_size:add_dropdown_value("small", "Small", "A seventh smaller than Medium.", false)
+o_size:add_dropdown_value("medium", "Medium", "The standard size.", true)
+o_size:add_dropdown_value("large", "Large", "A third larger than Medium.", false)
+o_size:set_default_value("medium")
+o_size:set_assigned_section("display")
+o_size:set_is_global(true)

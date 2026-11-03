@@ -73,6 +73,9 @@ function R.hostile(owner, parties)
     for _, p in ipairs(parties) do
         if owner:name() == p:name() then return false end
     end
+    -- CLOSED ROADS (the Roads edict, design 2026-11-01 Part B): the owner's land is hostile to every road but its own
+    local F = DERPY_MR_FLOWS
+    if F and F.edict and F.edict(owner:name(), 'roads') == 'closed' then return true end
     if owner:is_rebel() then return true end
     for _, p in ipairs(parties) do
         if owner:at_war_with(p) or owner:diplomatic_attitude_towards(p:name()) <= R.AGGRESSIVE then return true end
@@ -93,6 +96,7 @@ function R.advance(j, budget)
     local w, edges, all_bridges = g.w, g.edges, g.bridges
     local floor, abs, max = math.floor, math.abs, math.max
     local avoid, wall, corridor, shared, limit, target = j.avoid, j.wall, j.corridor, j.shared, j.max, j.target
+    local model = avoid and cm:model()   -- this entry's: a queued job may be many ticks old
     local tx, ty = j.dest[1], j.dest[2]
     for _ = 1, budget do
         if open.n == 0 or j.count >= R.SEARCH_CAP then return true end
@@ -128,7 +132,7 @@ function R.advance(j, budget)
                 local step, walled = max(1, abs(qx - x), abs(qy - y)), false
                 if corridor and not corridor[other] then walled = true end
                 if avoid then
-                    if seen[other] == nil then seen[other] = avoid(qx, qy) end
+                    if seen[other] == nil then seen[other] = avoid(qx, qy, model) end
                     if seen[other] then
                         if wall then walled = true else step = step * R.AVOID end
                     end
@@ -180,23 +184,33 @@ end
 -- (x, y) -> is that hex enemy or aggressive land to the owners of regions a and b; one verdict per owner.
 -- A hex's verdict is its region's, worked out once per region and filed in `regions` (key -> verdict).
 -- The second result judges a region the same way, for R.unchanged.
+-- KEYS, NOT INTERFACES (the 1.0 live pass, 2026-11-02): a queued search runs over many ticks, and an interface kept
+-- from an earlier tick is freed memory. The parties are kept by key and looked up again for each new owner, and the
+-- model comes from R.advance, once a call.
 function R.avoider(a, b, regions)
     local parties = {}
     for _, region in ipairs({a, b}) do
         local owner = region:owning_faction()
-        if not owner:is_null_interface() then parties[#parties + 1] = owner end
+        if not owner:is_null_interface() then parties[#parties + 1] = owner:name() end
     end
-    local model, verdicts = cm:model(), {}
+    local verdicts = {}
     regions = regions or {}
     local function judge(region)
         local owner = region:owning_faction()
         if owner:is_null_interface() then return false end
         local name = owner:name()
-        if verdicts[name] == nil then verdicts[name] = R.hostile(owner, parties) end
+        if verdicts[name] == nil then
+            local now = {}
+            for _, key in ipairs(parties) do
+                local p = cm:get_faction(key)
+                if p and not p:is_null_interface() then now[#now + 1] = p end
+            end
+            verdicts[name] = R.hostile(owner, now)
+        end
         return verdicts[name]
     end
-    return function(x, y)
-        local region = model:get_region_at_logical_position(x, y)
+    return function(x, y, model)
+        local region = (model or cm:model()):get_region_at_logical_position(x, y)
         if region:is_null_interface() then return false end
         local key = region:name()
         if regions[key] == nil then regions[key] = judge(region) end
@@ -342,7 +356,7 @@ end
 -- THE CART GOODS' PREVIEWS ARE KEPT (2026-10-29): one allocator preview is ~3 ms and a refresh asked for ten, so a
 -- still camera's timed refresh stalled a frame. The map keeps them in R.plans and works out one seller again every
 -- R.PLAN_EVERY ticks (R.renew_plan), so a sale or a switch shows within seconds and no frame pays for them all.
-R.plans, R.PLAN_EVERY, R.reach_shown = {}, 5, {}
+R.plans, R.reach_shown, R.spots = {}, {}, {}
 function R.renew_plan()
     local F, sellers = DERPY_MR_FLOWS, {}
     if not F then return end
@@ -419,7 +433,7 @@ function R.clear()
     for id in pairs(R.icon_scenes) do R.hide_icon(id) end
     R.scenes = {}
     R.traffic, R.cart_scenes, R.icon_scenes = {}, {}, {}
-    R.traffic_clock = 0
+    R.depart_at = nil
 end
 
 -- Every cart moves one hex a second, so a waiting cart leaves only if it would pass each hex it shares with a
@@ -457,102 +471,119 @@ function R.can_depart(trip,traffic)
     return true
 end
 
+-- THE CARTS' CLOCK (author, 2026-11-03: the carts stuttered every other second). A cart's scene rounds its hex in
+-- exactly a second, and a step every tenth 100 ms tick came ~9% late, so every cart sat still at every hex end.
+-- Steps follow the real clock (R.now, ms) on a timer of their own that comes round every frame, and keep their beat
+-- unless the game stalled past R.STEP_LATE. Departures are looked at every R.DEPART_EVERY.
+R.STEP, R.STEP_LATE, R.DEPART_GAP, R.DEPART_EVERY, R.CART_MS = 1000, 250, 6000, 500, 15
+-- THE ICON'S HANDOFF: the old icon is held at the join while the new one's emitter makes its first frames, so the
+-- icon never blinks out (2026-10-23). R.ICON_HOLD ms is two frames at 60 fps: the 100 ms it was showed the old icon
+-- left behind once the carts stopped waiting at the join (author, 2026-11-03: the carried icons twitched).
+R.ICON_HOLD = 40
+function R.now() return os.clock() * 1000 end
+R.CART_IDS = {}
+for slot = 1, R.CART_LIMIT do R.CART_IDS[slot] = { 'derpy_mr_traffic_' .. slot, 'derpy_mr_traffic_' .. slot .. '_icon' } end
+
+-- A cart's scene for the hex it is on, worked out once a step: the region read and the strings are what the
+-- per-frame timer cannot pay for every frame.
+function R.place(trip)
+    local pl, i = {}, trip.distance + 1
+    trip.place = pl
+    local p, b, angle = R.corner(trip.path, i, trip.reverse)
+    if not p then return pl end
+    local curve = R.turn(angle) % 6
+    if trip.steps == 0 then curve = 7 elseif i == 1 or i == #trip.path then curve = 6 end
+    local sea = cm:model():get_region_at_logical_position(p[1], p[2]):is_null_interface()
+    local scene = (sea and 'derpy_mr_route_boat_curve_' or 'derpy_mr_route_cart_curve_') .. curve
+    local vehicle = R.vehicle(trip.vehicle_faction, sea)
+    if vehicle then scene = 'derpy_mr_route_vehicle_' .. vehicle .. '_' .. curve end
+    pl.x, pl.y, pl.fx, pl.fy, pl.scene, pl.curve, pl.sea = p[1], p[2], b[1], b[2], scene, curve, sea
+    pl.dx, pl.dy = cm:log_to_dis(p[1], p[2])
+    pl.key = trip.key .. ':' .. tostring(trip.path) .. ':' .. i .. ':' .. tostring(trip.reverse == true) .. ':'
+        .. tostring(sea) .. ':' .. scene
+    return pl
+end
+
 function R.animate()
-    local camera = R.camera
-    if not camera then return end
-    R.traffic_clock=(R.traffic_clock or 0)+1
-    while true do
-        local next_trip
-        for _,trip in ipairs(R.traffic) do
-            local g=trip.goods
-            -- A one-way route starts its next load from the source instead of driving home empty.
-            if not trip.active and g and #g[trip.reverse and 2 or 1]==0 and #g[trip.reverse and 1 or 2]>0 then
-                trip.reverse=not trip.reverse
-                trip.distance=trip.reverse and #trip.path-1 or 0
-            end
-            if not trip.active and R.traffic_clock-(trip.last_departure or -60)>=60 and R.can_depart(trip,R.traffic)
-                and (not next_trip or (trip.last_departure or 0)<(next_trip.last_departure or 0)) then next_trip=trip end
-        end
-        if next_trip then
-            next_trip.active,next_trip.age,next_trip.steps=true,0,0
-            next_trip.last_departure=R.traffic_clock
-            local goods=next_trip.goods and next_trip.goods[next_trip.reverse and 2 or 1]
-            next_trip.departures=(next_trip.departures or 0)+1
-            next_trip.stem=goods and goods[(next_trip.departures-1)%math.max(1,#goods)+1]
-            if next_trip.factions and (next_trip.stem or not next_trip.vehicle_faction) then
-                next_trip.vehicle_faction=next_trip.factions[next_trip.reverse and 2 or 1]
-            end
-        else break end
-    end
-    local faction = cm:get_faction(cm:get_local_faction_name(true))
-    local radius = math.max(35, camera[3]*4)
-    local model = cm:model()
-    for slot = 1, R.CART_LIMIT do
-        local id, trip = 'derpy_mr_traffic_'..slot, R.traffic[slot]
-        local wanted, x,y,fx,fy,scene,curve,sea
-        if trip and trip.active then
-            local i
-            i=trip.distance+1
-            local p,b,angle=R.corner(trip.path,i,trip.reverse)
-            if p then
-                x,y,fx,fy=p[1],p[2],b[1],b[2]
-                curve=R.turn(angle)%6
-                if trip.steps==0 then curve=7
-                elseif i==1 or i==#trip.path then curve=6 end
-                scene='derpy_mr_route_cart_curve_'..curve
-            end
-            if x then
-                local p = trip.path[i]
-                local region = model:get_region_at_logical_position(p[1],p[2])
-                sea=region:is_null_interface()
-                if sea then scene='derpy_mr_route_boat_curve_'..curve end
-                local vehicle=R.vehicle(trip.vehicle_faction,sea)
-                if vehicle then scene='derpy_mr_route_vehicle_'..vehicle..'_'..curve end
-                local dx,dy = cm:log_to_dis(x,y)
-                if (dx-camera[1])*(dx-camera[1])+(dy-camera[2])*(dy-camera[2]) <= radius*radius then
-                    wanted = trip.key .. ':' .. tostring(trip.path) .. ':' .. i .. ':' .. tostring(trip.reverse == true)..':'..tostring(sea)..':'..scene
+    if not R.camera then return end
+    local now = R.now()
+    if now >= (R.depart_at or 0) then
+        R.depart_at = now + R.DEPART_EVERY
+        while true do
+            local next_trip
+            for _,trip in ipairs(R.traffic) do
+                local g=trip.goods
+                -- A one-way route starts its next load from the source instead of driving home empty.
+                if not trip.active and g and #g[trip.reverse and 2 or 1]==0 and #g[trip.reverse and 1 or 2]>0 then
+                    trip.reverse=not trip.reverse
+                    trip.distance=trip.reverse and #trip.path-1 or 0
                 end
+                if not trip.active and (not trip.last_departure or now-trip.last_departure>=R.DEPART_GAP)
+                    and R.can_depart(trip,R.traffic)
+                    and (not next_trip or (trip.last_departure or 0)<(next_trip.last_departure or 0)) then next_trip=trip end
+            end
+            if next_trip then
+                next_trip.active,next_trip.steps,next_trip.due,next_trip.fresh,next_trip.place=true,0,now+R.STEP,true,nil
+                next_trip.last_departure=now
+                local goods=next_trip.goods and next_trip.goods[next_trip.reverse and 2 or 1]
+                next_trip.departures=(next_trip.departures or 0)+1
+                next_trip.stem=goods and goods[(next_trip.departures-1)%math.max(1,#goods)+1]
+                if next_trip.factions and (next_trip.stem or not next_trip.vehicle_faction) then
+                    next_trip.vehicle_faction=next_trip.factions[next_trip.reverse and 2 or 1]
+                end
+            else break end
+        end
+    end
+    local faction
+    local icons = R.shown('icons')
+    for slot = 1, R.CART_LIMIT do
+        local id, icon_id, trip = R.CART_IDS[slot][1], R.CART_IDS[slot][2], R.traffic[slot]
+        if trip and trip.active and now >= trip.due then
+            -- the scene has rounded its hex: the next one, on the same beat unless the game stalled
+            trip.due = now - trip.due > R.STEP_LATE and now + R.STEP or trip.due + R.STEP
+            trip.fresh, trip.place = true, nil
+            if trip.steps>0 and (trip.distance==0 or trip.distance==#trip.path-1) then
+                trip.active,trip.reverse=false,not trip.reverse
+            else
+                trip.distance=trip.distance+(trip.reverse and -1 or 1)
+                trip.steps=trip.steps+1
+            end
+        end
+        local wanted, icon, pl
+        if trip and trip.active then
+            pl = trip.place or R.place(trip)
+            if pl.x and R.in_view(pl.dx, pl.dy) then wanted = pl.key end
+            if wanted and icons and trip.stem then
+                if pl.stem ~= trip.stem then pl.stem, pl.icon = trip.stem, wanted .. ':' .. trip.stem end
+                icon = pl.icon
             end
         end
         if R.cart_scenes[id] ~= wanted then
             if R.cart_scenes[id] then cm:remove_scripted_composite_scene(id); R.cart_scenes[id] = nil end
-            if wanted and cm:add_scripted_composite_scene_to_logical_position(id,scene,
-                x,y,fx,fy,false,false,false,faction) then R.cart_scenes[id] = wanted end
+            faction = faction or cm:get_faction(cm:get_local_faction_name(true))
+            if wanted and cm:add_scripted_composite_scene_to_logical_position(id,pl.scene,
+                pl.x,pl.y,pl.fx,pl.fy,false,false,false,faction) then R.cart_scenes[id] = wanted end
         end
-        local icon_id=id..'_icon'
-        local icon=wanted and trip.stem and R.shown('icons') and wanted..':'..trip.stem or nil
         local current=R.icon_scenes[icon_id]
-        if current and current.old and R.traffic_clock>=current.retire then
+        if current and current.old and now>=current.retire then
             cm:remove_scripted_composite_scene(icon_id..'_'..current.old)
             current.old=nil
         end
-        if not icon or (current and current.key~=icon and trip.age~=0) then
+        if not icon or (current and current.key~=icon and not trip.fresh) then
             if current then R.hide_icon(icon_id);R.icon_scenes[icon_id]=nil end
-        elseif not current or current.key~=icon then
-            if trip.age==0 then
-                local bank=current and current.bank=='a' and 'b' or 'a'
-                -- Keep the previous sprite at the join for 100 ms while the new emitter acquires its first frame.
-                if cm:add_scripted_composite_scene_to_logical_position(icon_id..'_'..bank,
-                    (sea and 'derpy_mr_sea_icon_' or 'derpy_mr_icon_')..trip.stem..'_'..curve,x,y,fx,fy,false,false,false,faction) then
-                    R.icon_scenes[icon_id]={key=icon,bank=bank,old=current and current.bank,retire=R.traffic_clock+1}
-                else
-                    R.hide_icon(icon_id);R.icon_scenes[icon_id]=nil
-                end
+        elseif (not current or current.key~=icon) and trip.fresh then
+            local bank=current and current.bank=='a' and 'b' or 'a'
+            faction = faction or cm:get_faction(cm:get_local_faction_name(true))
+            -- Keep the previous sprite at the join for R.ICON_HOLD while the new emitter acquires its first frame.
+            if cm:add_scripted_composite_scene_to_logical_position(icon_id..'_'..bank,
+                (pl.sea and 'derpy_mr_sea_icon_' or 'derpy_mr_icon_')..trip.stem..'_'..pl.curve,pl.x,pl.y,pl.fx,pl.fy,
+                false,false,false,faction) then
+                R.icon_scenes[icon_id]={key=icon,bank=bank,old=current and current.bank,retire=now+R.ICON_HOLD}
+            else
+                R.hide_icon(icon_id);R.icon_scenes[icon_id]=nil
             end
         end
-        if trip and trip.active then
-            -- The scene rounds this corner for one second; keep it alive for the whole curve.
-            trip.age = (trip.age or 0) + 1
-            if trip.age == 10 then
-                trip.age = 0
-                if trip.steps>0 and (trip.distance==0 or trip.distance==#trip.path-1) then
-                    trip.active,trip.reverse=false,not trip.reverse
-                else
-                    trip.distance=trip.distance+(trip.reverse and -1 or 1)
-                    trip.steps=trip.steps+1
-                end
-            end
-        end
+        if trip then trip.fresh = nil end
     end
 end
 
@@ -581,7 +612,7 @@ function R.links(faction)
     end
     local F = DERPY_MR_FLOWS
     if not F then return links, cargo end
-    local known, visible = { [faction:name()] = faction }, {}
+    local known, visible, agreed = { [faction:name()] = faction }, {}, {}
     local met = faction:factions_met()
     for i = 0, met:num_items() - 1 do
         local f = met:item_at(i)
@@ -641,6 +672,9 @@ function R.links(faction)
                             end
                             if open ~= nil then R.reach_shown[pair] = { open, road } end
                         end
+                        -- A BLOCKADED agreement (Part C) draws no line either, until its trade runs again
+                        if open and F.blockaded and F.blockaded(key, partner:name()) then open = false end
+                        if open and road then agreed[key .. '>' .. partner:name()] = road end
                         if open then
                             local goods={R.goods(key,partner:name()),R.goods(partner:name(),key)}
                             if #goods[1]>0 or #goods[2]>0 then
@@ -654,6 +688,22 @@ function R.links(faction)
             end
         end
     end
+    -- A convoy keeps the road it left on until its exporter's turn start moves it onto today's (F.convoys_turn), so
+    -- its marker goes there now: on its pair's agreement road, at the share of the way it has come. Kept per convoy
+    -- while its road and spot hold: working every one out again was 21 ms a refresh at 100 convoys.
+    local spots = {}
+    for _, c in ipairs(cargo) do
+        local road = c.convoy and F.convoy_on and agreed[c.f .. '>' .. c.buyer]
+        if road then
+            local s = R.spots[c.id]
+            if not (s and s[1] == road and s[2] == c.road and s[3] == c.x and s[4] == c.y) then
+                s = { road, c.road, c.x, c.y, F.convoy_on(c, road) }
+            end
+            spots[c.id] = s
+            if s[5] then c.x, c.y = s[5], s[6] end
+        end
+    end
+    R.spots = spots
     for seller in pairs(plans) do if not used[seller] then plans[seller] = nil end end   -- renew only what is drawn
     table.sort(links, function(a,b)
         if a.own ~= b.own then return a.own end
@@ -743,6 +793,36 @@ function R.display(path)
     return d
 end
 
+-- THE CAMERA'S VIEW (author, 2026-11-03: carts out of the camera should not be there). R.in_view is true for a
+-- display point inside the old circle around the camera's target and inside what the camera sees, widened by
+-- R.VIEW_MARGIN display units on every side so a pan between ticks shows nothing missing. R.VIEW_TAN is the tangent
+-- of half the camera's vertical view angle, and the bearing is a compass bearing (0 looks up the map). Both were
+-- measured against CA's own projection (the CCO's WorldSpaceToScreenSpace) on a grid of 625 points at three zooms
+-- and a turned camera (2026-11-03): 0.66 dropped points on screen at the far zoom, 0.76 dropped none, so 0.8 for
+-- slack. It keeps about a tenth of the off-screen points the circle kept. A camera with no bearing or height is the
+-- circle alone.
+R.VIEW_TAN, R.VIEW_MARGIN = 0.8, 6
+function R.view(cx, cy, d, b, h)
+    local v = { cx, cy, d, b = b, r2 = math.max(35, d * 4) ^ 2 }
+    if b and h and h > 0 then
+        local sw, sh = core:get_screen_resolution()
+        local slant = math.sqrt(d * d + h * h)
+        v.ux, v.uy = math.sin(b), math.cos(b)
+        v.px, v.py, v.cos, v.sin, v.h = cx - d * v.ux, cy - d * v.uy, d / slant, h / slant, h
+        v.tv, v.th = R.VIEW_TAN, R.VIEW_TAN * sw / sh
+    end
+    return v
+end
+function R.in_view(x, y)
+    local v = R.camera
+    if (x - v[1]) * (x - v[1]) + (y - v[2]) * (y - v[2]) > v.r2 then return false end
+    if not v.ux then return true end
+    local rx, ry = x - v.px, y - v.py
+    local f, s = rx * v.ux + ry * v.uy, rx * v.uy - ry * v.ux
+    local z, up = f * v.cos + v.h * v.sin, f * v.sin - v.h * v.cos
+    return z > 0 and math.abs(up) <= z * v.tv + R.VIEW_MARGIN and math.abs(s) <= z * v.th + R.VIEW_MARGIN
+end
+
 -- moved: the camera alone moved, so the links and goods of the last refresh still hold and only what is
 -- near the camera is placed again (author, 2026-10-29: a full refresh per tick skipped frames while dragging)
 function R.refresh(moved)
@@ -750,9 +830,8 @@ function R.refresh(moved)
     local faction = cm:get_faction(cm:get_local_faction_name(true))
     if not faction or faction:is_null_interface() then return end
     local wanted, count = {}, 0
-    local cx, cy, zoom = cm:get_camera_position()
-    R.camera = {cx, cy, zoom}
-    local radius = math.max(35, zoom * 4)
+    R.camera = R.view(cm:get_camera_position())
+    local cx, cy = R.camera[1], R.camera[2]
     R.shows, R.show_until = 0, os.clock() + R.SHOW_BUDGET
     local size, set = R.style()
     local links, cargo, unshared
@@ -770,8 +849,7 @@ function R.refresh(moved)
         -- a convoy's marker takes a decal only near the camera, as the road dashes do: there can be hundreds
         local near = true
         if s.convoy then
-            local dx, dy = cm:log_to_dis(s.x, s.y)
-            near = (dx-cx)*(dx-cx) + (dy-cy)*(dy-cy) <= radius * radius
+            near = R.in_view(cm:log_to_dis(s.x, s.y))
         end
         if near and count < 512 then
             count = count + 1
@@ -789,7 +867,7 @@ function R.refresh(moved)
                 and (not link.goods or #link.goods[1]>0 or #link.goods[2]>0) then
                 for i,q in ipairs(shown) do
                     local d = (q[1]-cx)*(q[1]-cx)+(q[2]-cy)*(q[2]-cy)
-                    if d <= radius*radius and (not best or d < best) then closest,best = i,d end
+                    if (not best or d < best) and R.in_view(q[1], q[2]) then closest,best = i,d end
                 end
                 if closest then
                     local goods=link.goods
@@ -815,7 +893,7 @@ function R.refresh(moved)
                 if count >= 512 then break end
                 local p = path[i]
                 local dx, dy = shown[i][1], shown[i][2]
-                if visible[i] and (dx-cx)*(dx-cx) + (dy-cy)*(dy-cy) <= radius * radius then
+                if visible[i] and R.in_view(dx, dy) then
                     local id = 'derpy_mr_road_' .. (count + 1)
                     wanted[id] = { x = p[1], y = p[2], scene = R.dash(path, i, R.ink(link.owner, set), size) }
                     count = count + 1
@@ -878,16 +956,22 @@ function R.refresh(moved)
     end
 end
 
+-- The timed refresh every R.STALE_EVERY ticks (10 s) and one seller's cart goods every R.PLAN_EVERY (2 s): at 2.5 s
+-- and 0.5 s the map's own redraws were a frame hitch every few seconds (2026-11-03, 22 ms and 8 ms each).
+R.STALE_EVERY, R.PLAN_EVERY = 100, 20
 function R.tick()
     local ok, err = pcall(function()
         R.pump()
+        -- THE COMPUTERS' TURNS (2026-11-03: 277 redraws, 3.5 s, in one round of them): the map is worked out and
+        -- drawn again only in the player's turn; the carts go on moving
+        if not cm:is_local_players_turn() then return end
         R.ticks = (R.ticks or 0) + 1
-        local x, y, zoom = cm:get_camera_position()
+        local x, y, zoom, b = cm:get_camera_position()
         local camera = R.camera
         local moved = camera and ((x-camera[1])*(x-camera[1]) + (y-camera[2])*(y-camera[2]) > 16
-                                or math.abs(zoom-camera[3]) > 2)
+                                or math.abs(zoom-camera[3]) > 2 or math.abs((b or 0)-(camera.b or 0)) > 0.05)
         -- the timed refresh catches what nothing reports (a sale, a recruit); it waits for the camera to stop
-        R.stale = R.stale or R.ticks % 25 == 1
+        R.stale = R.stale or R.ticks % R.STALE_EVERY == 1
         if R.dirty or (R.stale and not moved) or not R.drawn then
             R.dirty, R.stale = false, false
             R.refresh()
@@ -896,8 +980,12 @@ function R.tick()
         elseif R.ticks % R.PLAN_EVERY == 0 then
             R.renew_plan()   -- never on a tick that already refreshed
         end
-        R.animate()
     end)
+    if not ok and not R.failed then R.failed = true; pcall(out, '[derpy_mr_routes] ' .. tostring(err)) end
+end
+
+function R.cart_tick()
+    local ok, err = pcall(R.animate)
     if not ok and not R.failed then R.failed = true; pcall(out, '[derpy_mr_routes] ' .. tostring(err)) end
 end
 
@@ -921,6 +1009,7 @@ function R.init()
     if not R.grid then return end
     R.refresh()
     cm:repeat_real_callback(R.tick, 100, 'derpy_mr_terrain_routes')
+    cm:repeat_real_callback(R.cart_tick, R.CART_MS, 'derpy_mr_terrain_carts')
     core:add_listener('derpy_mr_terrain_routes_turn', 'FactionTurnStart',
         function(context) return context:faction():name() == cm:get_local_faction_name(true) end,
         function() R.new_turn() end, true)

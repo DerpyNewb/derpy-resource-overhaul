@@ -14,3 +14,30 @@ derpy_mr_dil_restore_reward	ui/campaign ui/effect_bundles/public_order_happy.png
 derpy_mr_dil_raid_cost	ui/campaign ui/effect_bundles/weapon_damage.png	negative	0
 derpy_mr_dil_raid_reward	ui/campaign ui/effect_bundles/convoy_icon.png	positive	0
 derpy_mr_dil_raid_pass		default	0
+derpy_mr_dil_feast_chd_cost	ui/campaign ui/effect_bundles/growth.png	negative	0
+derpy_mr_dil_feast_chd_reward	ui/campaign ui/effect_bundles/public_order_jubilant.png	positive	0
+derpy_mr_dil_road_ambush_cost	ui/campaign ui/effect_bundles/icon_effects_ambush.png	negative	0
+derpy_mr_dil_road_ambush_reward	ui/campaign ui/effect_bundles/convoy_icon.png	positive	0
+derpy_mr_dil_road_ambush_pass		default	0
+derpy_mr_dil_road_highwaymen_cost	ui/campaign ui/effect_bundles/treasury.png	negative	0
+derpy_mr_dil_road_highwaymen_reward	ui/campaign ui/effect_bundles/convoy_icon.png	positive	0
+derpy_mr_dil_road_highwaymen_pass		default	0
+derpy_mr_dil_road_washout_cost	ui/campaign ui/effect_bundles/campaign_movement.png	negative	0
+derpy_mr_dil_road_washout_reward	ui/campaign ui/effect_bundles/convoy_icon.png	positive	0
+derpy_mr_dil_road_washout_pass		default	0
+derpy_mr_dil_smugglers_cost	ui/campaign ui/effect_bundles/treasury.png	negative	0
+derpy_mr_dil_smugglers_reward	ui/campaign ui/effect_bundles/public_order_unhappy.png	positive	0
+derpy_mr_dil_smugglers_pass		default	0
+derpy_mr_dil_guild_cost	ui/campaign ui/effect_bundles/trade_agreement.png	negative	0
+derpy_mr_dil_guild_reward	ui/campaign ui/effect_bundles/treasury.png	positive	0
+derpy_mr_dil_grain_rot_cost	ui/campaign ui/effect_bundles/treasury.png	negative	0
+derpy_mr_dil_grain_rot_reward	ui/campaign ui/effect_bundles/resource_grain.png	positive	0
+derpy_mr_dil_grain_rot_pass		default	0
+derpy_mr_dil_caravan_master_cost	ui/campaign ui/effect_bundles/treasury.png	negative	0
+derpy_mr_dil_caravan_master_reward	ui/campaign ui/effect_bundles/convoy_icon.png	positive	0
+derpy_mr_dil_caravan_master_pass		default	0
+derpy_mr_dil_toll_dispute_cost	ui/campaign ui/effect_bundles/convoy_icon.png	negative	0
+derpy_mr_dil_toll_dispute_reward	ui/campaign ui/effect_bundles/diplomacy.png	positive	0
+derpy_mr_dil_toll_dispute_pass		default	0
+derpy_mr_dil_blockade_runner_cost	ui/campaign ui/effect_bundles/treasury.png	negative	0
+derpy_mr_dil_blockade_runner_reward	ui/campaign ui/effect_bundles/convoy_icon.png	positive	0

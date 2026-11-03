@@ -2,7 +2,7 @@
 
 Source-checked **21 October 2026**. The essential-goods and half-full starting-cargo revision is locally deployed and MCP-verified through three owner-turn cycles and exact cold reload. The processed-only Hardtack Exchange supply gap was fixed during that test. See the [native evidence and limits](sessions/LIVE_TEST_20261021_ESSENTIAL_GOODS.md). Game closed and original settings restored; no Workshop publication. The later [service-label fix](sessions/HANDOFF_20261021_SERVICE_BENEFIT_LABELS.md) (main `e75ce0c9`, deployed and native-checked) makes the Settlements view show each service's real benefit (`-5% cost`, `+3% replen.`, `+5 growth`) instead of labelling every service except Civic Records as control.
 
-The later [terrain-route addition](sessions/HANDOFF_20261021_TERRAIN_TRADE_ROUTES.md) draws faction-coloured dashed paths on the 3D campaign map, around impassable terrain and across water, and since 2026-10-22 round land hostile to either party wherever a detour exists; the line size and colours are MCT choices (Campaign settings, below). Cargo indicators track existing saved shipment positions; the Vault Map draws the same roads. Since 2026-10-22 an agreement's road also decides whether it trades ([Trade reach](#trade-reach-2026-10-22)). Main `3AE6E88B`, deployed to `data/` 2026-10-23 ([route logic](sessions/HANDOFF_20261023_ROUTE_LOGIC.md)); nearby routes merge into shared corridors on both maps, carts and dashes round corners, and Small is the default line size ([current handoff](sessions/HANDOFF_20261022_TRADE_ROUTES_CURRENT.md)). Rendering is single-player only; the routes do not model army zones of control or live blockades.
+The later [terrain-route addition](sessions/HANDOFF_20261021_TERRAIN_TRADE_ROUTES.md) draws faction-coloured dashed paths on the 3D campaign map, around impassable terrain and across water, and since 2026-10-22 round land hostile to either party wherever a detour exists; the line size and colours are MCT choices (Campaign settings, below). Cargo indicators track existing saved shipment positions; the Vault Map draws the same roads. Since 2026-10-22 an agreement's road also decides whether it trades ([Trade reach](#trade-reach-2026-10-22)). Main `3AE6E88B`, deployed to `data/` 2026-10-23 ([route logic](sessions/HANDOFF_20261023_ROUTE_LOGIC.md)); nearby routes merge into shared corridors on both maps, carts and dashes round corners, and Small is the default line size ([current handoff](sessions/HANDOFF_20261022_TRADE_ROUTES_CURRENT.md)). Rendering is single-player only; the routes do not model army zones of control. Since 2026-11-02 an enemy army near a road stops that pair's trade for the turn without rerouting it ([Tolls and blockades](#tolls-and-blockades-2026-11-02)).
 
 Since 2026-10-24 every store has its own price, set by how short or full it is ([Local prices](#local-prices-2026-10-24)). Selling, partner contracts and agreement trade all read it. Since the same day an agreement's goods travel the road between the two capitals as a convoy that can be seized on the way, and shipments take their road's length ([Cargo on the road](#cargo-on-the-road-2026-10-24)). Main `74088FE5`, deployed to `data/` 2026-10-24 and checked in game the same day ([live check](sessions/LIVE_TEST_20261024_LOCAL_PRICES_AND_CARGO.md)).
 
@@ -92,6 +92,10 @@ Occupation retains the settlement's remaining stocks for its new owner. Razing o
 
 Stores gameplay excludes Daemons of Chaos, the four monogod daemon cultures, Tomb Kings, Nagash and Beastmen. **Vampire Counts and Vampire Coast retain stores and trade but do not consume settlement or army meals.** Their old army shortage records and penalties retire through the normal owner-turn cleanup. Production is a separate layer: an excluded owner can still possess a captured building with native production effects; that does not make all stores actions available to it.
 
+### Spoilage (2026-11-01)
+
+Grain rots (4% a turn) and Beer and Kvas sour (2%), on what a store holds above a **safe share** of that good's space: 25%, or 50% for Grain once the faction has built the Great Granary. The loss is `floor(exposed x rate / 100)`, so a small excess loses nothing, and every other good keeps - the preserved forms (Hardtack, salted meat and fish, Wine) are the answer. It runs at the owner's turn start, after the meals and before processing and trade, books on its own factor (Spoiled), and applies to computer factions under the same switch as their other stores actions. Vampire Counts and Vampire Coast eat nothing, but their grain still rots. The settlement view's row tooltip gives the safe amount and next turn's expected loss, forecasts take it off the net but not the cover, since it stops at the safe share and cannot empty a store, and each good's Last turn line shows what spoiled. The ledger is kept per faction and good, so there is no per-store record of last turn's loss.
+
 ## Reserves, targets and forecasts
 
 ### Automatic defaults and per-resource overrides (#1)
@@ -173,7 +177,7 @@ The five pinned points on the cover rule:
 
 Prices are whole **hundredths of a gold** in the model and the save (`F.PCT = 100`): `price = floor(floor(base * 100) * mult / 100)`. A buyer pays `floor(price * 110 / 100)` and a seller gets `floor(price * 100 / 110)` (`F.SPREAD = 10`), so a round trip loses about 17%. Gold for `n` units is `floor(n * price / 100)`. A full war-materials store prices at 0.75, buyers pay 0.82, sellers get 0.68, and ten units at 0.75 are 7 gold. Nothing is stored: the price is worked out from the stock view each time it is read, so a reload cannot disagree with a live game. Every constant sits right of its operator, because the game's compiler miscompiles a literal on the left.
 
-`F.quote(faction, region, stem)` returns `price, buy, sell, mult, base` and `cover` or `fullness`. The Resource Vault reads it and never repeats the formula: the settlement view and the good drill-down have a **Price** column, the full mark sits in the Held / Space cell, and the price tooltip reads, for example, "Price 1.37 (137% of 1.00). 5 turns of provisions in store, dear here. Buyers pay 1.50, sellers get 1.24." A good's Trade rules show "Price at capital", the figure partners' stores are compared with.
+`F.quote(faction, region, stem)` returns `price, buy, sell, mult, base` and `cover` or `fullness`. The Resource Vault reads it and never repeats the formula: the settlement view and the good drill-down have a **Price** column, the full mark sits in the Held / Space cell, and the price tooltip reads, for example, "The price is 0.75 instead of 3.00." then "It is cheap because the stores hold 20 turns of war materials." then "You buy for 0.82 and sell for 0.68." A good's Trade rules show "Price at capital", the figure partners' stores are compared with.
 
 Each store is priced at its own faction's base. Without the Exchange every faction's base is the same category price; with it, the houses' opinion of each faction moves its base, so an agreement's goods also lean toward the faction that values them more. The partner capitals' own prices are not shown yet (deferred to the tolls design).
 
@@ -186,19 +190,32 @@ At the exporter's turn start, everything it sends one partner that turn leaves t
 At each of the exporter's turn starts, in the order they left, each convoy:
 
 1. **Returns** if the agreement has ended (war included) or the buyer is dead or has no settlement. The goods go back to the exporter's settlement nearest the convoy; an exporter with no settlement loses them.
-2. **Is seized** if an army at war with the exporter stands within **3 hexes** (`F.SHIP.near`) of it. The goods go to the captor's nearest settlement, with the ledger lines a seized shipment gets. A convoy is checked only where it stands at the exporter's turn start, so a one-turn convoy is exposed only at the exporter's capital. There is no escort and no battle.
-3. **Arrives** on its due turn, into the buyer's current capital up to its free space; the rest is lost.
-4. Otherwise **moves on** to the point that share of the way along the road.
+2. **Takes the pair's road of the day** (since 2026-11-01, `F.convoy_on`), when the reach check has an open road for the two capitals that still leaves the exporter's end. It goes the same share of the way along that road, and its due turn stays as it was. A cut-off pair, or a road from a capital that has moved, leaves it on its own road.
+3. **Is seized** if an army at war with the exporter stands within **3 hexes** (`F.SHIP.near`) of it. The goods go to the captor's nearest settlement, with the ledger lines a seized shipment gets. A convoy is checked only where it stands at the exporter's turn start, so a one-turn convoy is exposed only at the exporter's capital. There is no escort and no battle.
+4. **Arrives** on its due turn, into the buyer's current capital up to its free space; the rest is lost.
+5. Otherwise **moves on** to the point that share of the way along the road.
 
 A dead exporter's convoys are removed, goods and all, at the next player's turn start. Cargo on the road counts as incoming at the buyer's capital (`F.ships_to`), so its import need, the forecasts and the next turn's trade see it, and a partner is not sent the same shortfall every turn while the first load travels. Duty is unchanged: paid on what the partner made this turn, arrived or not. Convoys are saved in `F.state.convoys`, each road packed into one string (`"x:y;x:y"`); a save from before this change loads with none, and a malformed record is dropped at load.
 
-**Seeing it.** The Trade tab has a **Cargo on the road** row ("2 out, 1 in") whose tooltip lists the eight that land soonest, with their goods and turn, then "and N more convoys". A good's drill-down lists convoy cargo with what is coming in. The Vault Map and the 3D campaign map draw a convoy marker on the road. The 3D map draws the viewer's own convoys, those bound for the viewer, and a met faction's between two capitals the viewer can see; only near the camera, and only while shipments are shown. Several convoys at one spot on the Vault Map share one marker whose tooltip lists them, and the Vault Map stays framed on the realm. **The turn shown is when the buyer first has the goods**: a computer partner's convoy lands during that partner's turn, after the player's, so a player buying from a computer sees it a turn after the convoy's due turn (`F.convoy_due`).
+**Seeing it.** The Trade tab has a **Cargo on the road** row ("2 out, 1 in") whose tooltip lists the eight that land soonest, with their goods and turn, then "and N more convoys". A good's drill-down lists convoy cargo with what is coming in. The Vault Map and the 3D campaign map draw a convoy marker on the road. The 3D map draws the viewer's own convoys, those bound for the viewer, and a met faction's between two capitals the viewer can see; only near the camera, and only while shipments are shown. A road can change in the middle of a round. The 3D map then draws the marker where step 2 will move the convoy, on the pair's road as drawn that moment, so the marker never sits on yesterday's road. Corridor merging can still draw the dashes up to six tiles off that road (`R.bundle`). Several convoys at one spot on the Vault Map share one marker whose tooltip lists them, and the Vault Map stays framed on the realm. **The turn shown is when the buyer first has the goods**: a computer partner's convoy lands during that partner's turn, after the player's, so a player buying from a computer sees it a turn after the convoy's due turn (`F.convoy_due`).
 
 ### Import duty
 
 At the payer's turn, trade partners can receive a duty based on their current production value: **10% by default**, rounded down and capped by the payer's remaining treasury. The value uses native resource trade values, not the Exchange's market quote.
 
 Duty is a gold transfer between factions. It is based on production rather than the exact quantity of stock delivered that turn, and can apply even when a particular import target is already full. It is additional to native treaty income. A partner out of trade reach pays and receives no duty.
+
+### Tolls and blockades (2026-11-02)
+
+**Tolls.** Agreement trade and partner contract carts pay a toll to each faction whose lands their road crosses: the **Tolls** setting's share of the cargo's value per faction (**3% by default**), rounded down, and **at most 15%** for all of them together. The exporter pays for agreement trade; the buyer pays for a contract cart. Internal shipments pay none. These never charge: the two trading factions, rebels, a faction whose Roads edict is Open or Closed, and an ally, vassal or client state of either side. A faction whose lands the road crosses twice is paid once.
+
+Tolls are paid in full or not at all. Agreement trade only sends a good whose price at the partner covers the buying price plus the toll, and a partner whose tolls the exporter cannot pay this turn gets nothing. Guards hired for an earlier partner's cargo count against the same treasury. A contract cart whose tolls the buyer cannot pay does not leave. The tolls are paid when the cargo leaves and are recorded on it.
+
+**Blockades.** An army at war with either side, standing within **3 hexes** of any point of the road, stops that pair's agreement trade, its import duty and its contract carts for the turn. Cargo already on the road goes on. A blockade never reroutes a road. The Trade tab's Trade cut off row names the blocker ("Blockaded by Name"), a contract's status reads "Blockaded", and both maps stop drawing the pair's line until its trade runs again. A blockade is kept in the save for the turn it was seen and the next, so a reload shows and charges the same.
+
+**On screen.** The Trade tab shows last turn's Tolls paid and Tolls received under Import duty, each with a line per faction in its tooltip. A cargo's tooltip lists the tolls it paid. MCT switch **Tolls and blockades** (on); off, nothing pays a toll and nothing is blockaded.
+
+Not seen in game. Design and checks: [TRADE_RESOURCES.md §64](TRADE_RESOURCES.md#64-tolls-and-blockades-2026-11-02).
 
 ### Selling excess
 
@@ -224,7 +241,7 @@ Click a settlement resource, or open a resource's Trade rules, to choose an owne
 
 Each owner turn, an enabled order requests only `target - local stock - committed net cargo`, limited by free capacity, source Keep, holds and cart space. At most one dispatch per order per turn. A named order replaces standing category dispatch to that destination, including while paused until cancelled. Multiple sources share incoming reservations. There are no independently enabled AI purchase contracts; existing AI standing supply and army relief use the new cart bounds.
 
-An internal order costs no gold. A **partner contract** requires a current trade agreement, a buyer-owned destination and trade reach between its own source and destination settlements (status "Too far for trade" or "Cut off by enemy lands"; cargo already on the road still arrives). Since 2026-10-24 nothing is priced at creation: **each cart is charged, at dispatch, the source store's buy price or what the goods would sell for at the buyer's destination store, whichever is more** (`F.cart_price`, [Local prices](#local-prices-2026-10-24)), saved on the cart in hundredths. A contract drawing on a store that is running low pays more for each batch. The second figure stops a loop: without it, buying a full partner store's goods at 1.37 and selling them from your own store at 4.18 made about 2.80 gold a unit every turn. The cost of that rule: a contract filling an empty store pays what the goods sell for there, up to 1.59 times the base, however full the seller is. A source with no pool for the good refuses with "No price at the source". The order's detail shows "Price per delivered unit", the last cart's price, or "Set per cart" before the first; its tooltip gives the next cart's price. Carts saved before this change keep their old whole-gold rate, converted to hundredths on load. The buyer owns the cart and escort. Its seller and recipient are saved separately.
+An internal order costs no gold, so a faction in debt still sends one. A **partner contract** requires a current trade agreement, a buyer-owned destination and trade reach between its own source and destination settlements (status "Too far for trade" or "Cut off by enemy lands"; cargo already on the road still arrives). Since 2026-10-24 nothing is priced at creation: **each cart is charged, at dispatch, the source store's buy price or what the goods would sell for at the buyer's destination store, whichever is more** (`F.cart_price`, [Local prices](#local-prices-2026-10-24)), saved on the cart in hundredths. A contract drawing on a store that is running low pays more for each batch. The second figure stops a loop: without it, buying a full partner store's goods at 1.37 and selling them from your own store at 4.18 made about 2.80 gold a unit every turn. The cost of that rule: a contract filling an empty store pays what the goods sell for there, up to 1.59 times the base, however full the seller is. A source with no pool for the good refuses with "No price at the source". The order's detail shows "Price per delivered unit", the last cart's price, or "Set per cart" before the first; its tooltip gives the next cart's price. Carts saved before this change keep their old whole-gold rate, converted to hundredths on load. The buyer owns the cart and escort. Its seller and recipient are saved separately.
 
 Only a dispatched batch reserves gold: native treasury is debited once for its maximum net delivery, `floor(net * price / 100)` whole gold, with a saved escrow balance. Arrival pays the seller `min(escrow, floor(delivered * price / 100))`. Dispatch verifies both native gold and source-goods debits. The seller receives payment only for cargo actually credited at arrival. Cargo above arrival capacity is lost and its gold refunds the buyer; free general trade counts committed cargo rather than filling that same deficit twice. Existing import duty remains separate and unchanged.
 
@@ -238,6 +255,30 @@ Only **one escort battle can start in an owner's turn-start sequence**. Other th
 
 Seized cargo goes to the captor's nearest settlement, subject to capacity. A captor without a settlement cannot retain it.
 
+### Bandits on the roads (2026-11-02)
+
+**When.** Each turn a cargo moves, it can meet trouble on the stretch of road it covered that turn. This holds for agreement trade, contract carts and internal shipments alike. The chance is the stretch's threat times the **Road danger** setting, out of 10,000. At the default 20, a cargo on the most dangerous land meets trouble one turn in five, and on land half as dangerous one turn in ten. Guards halve it. Nothing happens while an army of the cargo's owner or of its buyer stands within **3 hexes** of the cargo. A garrison does not count. Cargo that ends the turn at sea meets nothing.
+
+**Threat** runs from 0 to 100. It is CA's own banditry figure for the regions the stretch crosses, averaged. Where CA gives 0 or nothing, the land's own figure is used instead: 100 for abandoned or rebel-held land, else the region's corruption or its unrest (minus public order), whichever is higher.
+
+**What.** Three encounters. Each comes at most once in **5 turns** to one faction.
+
+| Encounter | When | First choice | Second choice |
+|---|---|---|---|
+| Bandit Ambush | Threat 30 or more | Fight them: a battle. Win and the cargo goes on; lose and all of it is lost | Let it go: half the cargo is lost, rounded down for each good |
+| Highwaymen | Any threat | Pay them: a fifth of the cargo's value, never more than the treasury holds | Refuse: a battle. Lose and all of the cargo is lost |
+| A Washed-out Road | Any threat | Wait: the cargo arrives a turn later | Push on: a tenth of the cargo is lost |
+
+**Who is asked.** A player in single player is asked with a dilemma at their turn start, one encounter at a time. A second encounter while one waits for an answer is settled without asking. Computer factions and multiplayer games are never asked: an ambush takes half the cargo, highwaymen are paid and a washout waits. A player whose import from a computer faction is robbed gets the message "Cargo robbed on the road".
+
+**The battle.** The bandits are the bandit faction of the race that owns the region, or CA's Ogre bandits (its caravans' own) where that race has none or its own never come (the Chaos Dwarfs', 2026-11-03). They bring 5 units below threat 50, 8 below 70 and 10 above. The player's guards are a new army rolled from their escort units, as strong as an escort battle's in the same turn and as large as the cargo. After the battle both armies are removed. Only one battle can start in a turn start, and escort battles share that one. When a battle cannot start, the cargo is settled as if the other choice had been taken.
+
+**Guards.** The Trade tab's **Road guards** row hires or dismisses them. While they are hired, every cart and convoy the player sends pays **5%** of its cargo's value as it leaves, and its trouble on the road is half as likely. A cargo whose fee the treasury cannot cover leaves without guards. Computer factions hire guards for the turn after any of their cargo crosses land of threat 30 or more, and for that turn too.
+
+MCT switch **Bandits on the roads** (on); off, the roads are safe and the Road guards row is hidden.
+
+Seen in game 2026-11-03 (the Ogre bandits on Chaos Dwarf land, [§69](TRADE_RESOURCES.md#69-thinner-lines-smooth-carts-and-a-lighter-map-2026-11-03)). Design and checks: [TRADE_RESOURCES.md §65](TRADE_RESOURCES.md#65-bandits-on-the-roads-2026-11-02).
+
 ### Raiding, sacking and razing
 
 Default plunder rates are **10% for a raid turn**, **50% for a sack** and **50% for a raze**. These take individual goods, including rare goods. A positive rate can take at least one unit from a nonempty holding.
@@ -248,13 +289,13 @@ Loot is delivered to the attacker's nearest owned settlement. Excess that cannot
 
 ### Recurring consumption and holding bonuses
 
-An eligible living settlement consumes **two common provisions per settlement level per owner turn**. Available food can be partially consumed when insufficient; the system does not create food debt or directly damage the settlement.
+An eligible living settlement consumes **two common provisions per settlement level per owner turn** at Normal rations (three at Plenty, one at Rationing: see Trade edicts). Available food can be partially consumed when insufficient; the system does not create food debt or directly damage the settlement.
 
 After consumption, holdings determine these bonuses:
 
 | Condition | Benefit |
 |---|---|
-| At least five more settlement meals in common provisions | +10 province growth |
+| At least five more settlement meals in common provisions | +10 province growth; Chaos Dwarfs, who have no growth, get +3 control in the province instead |
 | Common war materials total at least 25% of one good's local capacity | +4 melee attack and +4 melee defence for the garrison |
 | Common luxuries total at least 25% of one good's local capacity | +3 province control |
 
@@ -267,7 +308,7 @@ Each enabled supply costs **two goods per owned settlement in the province, ever
 | Supply | Goods category | Benefit |
 |---|---|---|
 | Materials on Hand | Building materials | -25% construction cost |
-| Stable Stocked | Mount supplies | -15% cavalry/monster recruitment cost |
+| Stable Stocked | Mount supplies | -15% cavalry, monster and gyrocopter recruitment cost (CA's caste-wide monster set since 2026-11-01, so Vampire Coast is covered; gyrocopters for the Dwarfs) |
 | Arms Stocked | War materials | -15% infantry/artillery recruitment cost |
 
 The benefit is applied to owned settlements in the province. Insufficient stock removes the benefit and **switches the supply off**. Standing supply is the optional shipment order that tries to keep the capital stocked; it is not an instant transfer or a guaranteed payment.
@@ -282,18 +323,47 @@ Each order consumes **200 common goods across the realm**, lasts **five turns**,
 | Muster | War materials | +1 recruitment rank |
 | Great Works | Building materials | -20% construction cost |
 
+### Trade edicts (2026-11-02)
+
+Three realm policies sit at the top of the Resources tab. Each has three options, exactly one in force, and the middle one changes nothing. After a change that edict waits 10 turns before it can change again. Nothing else is paid.
+
+| Edict | Option | Effect |
+|---|---|---|
+| Rations | Plenty | Settlements eat 3 provisions per level. +10 growth in every province; Chaos Dwarfs get +2 control instead |
+| | Normal | 2 per level, as before |
+| | Rationing | 1 per level. -2 control in every province |
+| Workshops | War economy | Processing whose output is Blackpowder, Tools or Leather makes half as much again, rounded down. -10% trade income |
+| | Balanced | As before |
+| | Merchant | Agreement trade sends twice the MCT share. The recruitment draw takes a quarter more |
+| Roads | Open | No tolls on your land. +5% trade income |
+| | Tolled | The default: your land charges tolls |
+| | Closed | Other factions' roads treat your land as hostile. No tolls. +1 control in every province |
+
+Growth, control and trade income come from one faction effect bundle per non-default option; the meal size, the batch output, the trade share, the recruitment draw and the road verdict are read by the scripts. A Roads change clears the kept reach answers, since it changes the verdict on every region the faction owns. Vampire Counts and Vampire Coast do not eat from the stores, so they have no Rations row and their Rations cannot change.
+
+Computer factions choose at their turn start, before their meals, under the same cooldown: Rationing below 2 turns of realm food at Normal and Plenty above 15; War economy while at war with the owner of a region next to theirs, Merchant with three or more trade partners and no war, otherwise Balanced; Closed while at war with two or more neighbours, otherwise Tolled. Rebels never count as a war or a neighbour. This follows the "other factions use their stores" switch.
+
 ### Scripted opportunities
 
 | Opportunity | Payment and result |
 |---|---|
-| Feast | 100 local provisions; +5 control and +20 growth for five turns |
+| Feast | 100 local provisions; +5 control and +20 growth for five turns. Not offered to Chaos Dwarfs |
+| Full Rations | Chaos Dwarfs' Feast: 100 local provisions; +10 control for five turns |
 | Siege Stores | 60 local provisions; siege-attrition protection for two turns |
 | Tribute | 50 realm luxuries; improves relations with an eligible peaceful neighbour |
 | Arsenal | 50 realm war materials; +1 rank to units in the largest army |
 | Restore | 100 local building materials after an eligible capture; repairs buildings and grants +5 control for five turns |
 | Enemy Shipment | Attack the shipment's escort or let it pass |
+| Smugglers | A store with under 2 turns of food, or else of war materials, when the treasury can pay: 5 turns' worth (at most 100) of its cheapest good of that kind arrives at once, at half again the local buying price, with -3 control in that province for five turns. Computer factions take it too |
+| Merchant Guild | A common good above three quarters of the realm's space for it: 20 a turn are sold for 10 turns at a fifth above the local selling price. The offer names the good. The sale ends early on the first turn the realm cannot fill its 20. Computer factions take it too |
+| Grain Rot | A store holding 100 grain or more above its safe share, while grain spoils: pay 50 gold and lose a twentieth of that grain, or lose 30% of it. Players only |
+| Caravan Master | Some of the player's cargo on a road of threat 30 or more: a twentieth of the value of all their cargo on the road buys 10 turns with no road encounters. Players only |
+| Toll Dispute | The player's Roads edict is Tolled and a faction paid them 50 or more in tolls last turn: open the roads (the Roads edict becomes Open at once and then waits 10 turns) and relations with it improve, or keep the tolls and relations get worse. Players only |
+| Blockade Runner | A trade partner's road is blockaded this turn and goods would go to it: a tenth of the cargo's value sends this turn's goods anyway, once a turn. Never offered for a partner this turn's goods already reached. Refused if the trade has lapsed by the answer. The partner's Blockaded line clears. Players only |
 
 Offers have their own eligibility and timing checks. Costs are rechecked when accepted. These scripted opportunities are distinct from CA's natural random dilemmas.
+
+The last six (2026-11-02) share the one-event-in-10-turns rule with the rest. Each needs the Store events switch and the switch of what it reads: Grain Rot needs Spoilage, Caravan Master needs Bandits on the roads, Toll Dispute needs Tolls and blockades and Trade edicts, and Blockade Runner needs Tolls and blockades. Smugglers is paid at the price when it is answered, for what fits in the store. Not seen in game. Design and checks: [TRADE_RESOURCES.md §66](TRADE_RESOURCES.md#66-store-events-2026-11-02).
 
 ## Workshop and recruitment
 
@@ -314,7 +384,7 @@ Paid pool recruits receive one resource-charge exemption when recruited later, a
 
 ### Named recipes
 
-There are **19 named recipes**, in addition to the rare purchases above. Exact ingredients matter; unrelated goods in the same category cannot substitute.
+There are **24 named recipes**, in addition to the rare purchases above. Exact ingredients matter; unrelated goods in the same category cannot substitute.
 
 | Recipe | Inputs | Result |
 |---|---|---|
@@ -332,11 +402,18 @@ There are **19 named recipes**, in addition to the rare purchases above. Exact i
 | Well-read | 80 Books +80 Glassware | Character trait: +20% experience |
 | Spice-hardened | 60 Spices +60 Incense | Lord trait: +4 leadership, -5% movement |
 | Furred and Booted | 60 Furs +60 Wool | Lord trait: 25% attrition resistance |
-| Great Granary | 120 each Grain, Salt, Salted Meat, Pottery | Permanent faction +15 growth |
+| Great Granary | 120 each Grain, Salt, Salted Meat, Pottery | Permanent faction +15 growth; grain is safe from spoiling up to half of each store. Not Chaos Dwarfs |
+| Great Granary (Chaos Dwarfs) | the same | Permanent +15% Labour gained after battles; grain is safe from spoiling up to half of each store |
 | Hall of Records | 150 each Books, Glassware, Silver | Permanent faction +15% research |
-| Grand Bazaar | 120 each Silk, Arabyan Carpets, Dyes, Spices | Permanent faction +15% trade income |
+| Grand Bazaar | 120 each Silk, Arabyan Carpets, Dyes, Spices | Permanent faction +15% trade income. Not Greenskins |
+| Loot Hoard (Greenskins) | 120 each Trinkets, Silver, Gems, Gold Idols | Permanent +15% income from sacking and looting |
 | Arsenal | 150 each Iron, Coal, Brass, Blackpowder | Permanent faction -10% army upkeep |
-| Royal Stables | 150 each Warhorses, Furs, Tusks, Timber | Permanent faction -20% cavalry recruitment cost |
+| Royal Stables | 150 each Warhorses, Furs, Tusks, Timber | Permanent faction -20% cavalry recruitment cost. Not Dwarfs, Skaven or Vampire Coast |
+| Engineers' Yard (Dwarfs) | 150 each Timber, Iron, Tools, Brass | Permanent -20% artillery recruitment cost |
+| Beast Pens (Skaven) | 150 each Animals, Salted Meat, Leather, Timber | Permanent -20% monster recruitment cost |
+| Bone Yard (Vampire Coast) | 150 each Tusks, Timber, Salt, Whale Oil | Permanent -20% monster recruitment cost |
+
+**Faction-specific works (2026-11-01).** A race is never offered a work, stores bonus, event or supply that does nothing for it; where the general one would, it gets its own. Growth does nothing for Chaos Dwarfs (author's rule; not one of their vanilla buildings grants growth), Greenskins cannot trade (CA's `factions_without_trade` set), and Dwarfs, Skaven and Vampire Coast have no cavalry. `gen_resource_overhaul.check_reach()` checks every row against CA's tables on each build: each race reached must get at least one working effect, and no Chaos Dwarf row may carry growth. The Chaos Dwarfs' Well fed and Full Rations give control (+3, and +10 for five turns) and not CA's Labour-loss effect. That effect is a display dummy: CA's `wh3_dlc23_labour_loss.lua` takes 3% of a province's Labour a turn at control 50 and up and 5 to 20% below it. Both were seen in game on 2026-11-01.
 
 Conversions have a one-turn wait and require the destination pooled resource to exist and have room for the full output. Army works have a five-turn cooldown per army and recipe; traits are once per character; permanent faction works are once per campaign. There is no Ogre Meat conversion.
 
@@ -427,7 +504,7 @@ Selecting an owned army lord adds a Provisions food-icon button to the native ar
 
 ### Limited field purchases
 
-An eligible army **at sea**, or belonging to a faction with **no settlements**, can buy field rations through its existing Load row (shown as **Buy field rations**). The quote shows quantity and total gold. Each ration costs **10 gold**, and purchases can top up to **two meals carried**, at most once per army per turn. Actual gold payment is confirmed before cargo is credited; the purchase-turn stamp survives save/reload. At sea these goods are Salted Fish; on land they are Salted Meat.
+An eligible army **at sea**, or belonging to a faction with **no settlements**, can buy field rations through its existing Load row (shown as **Buy rations**). The quote shows quantity and total gold. Each ration costs **10 gold**, and purchases can top up to **two meals carried**, at most once per army per turn. Actual gold payment is confirmed before cargo is credited; the purchase-turn stamp survives save/reload. At sea these goods are Salted Fish; on land they are Salted Meat.
 
 Human purchases are manual: Auto-refill never spends gold on field rations. Eligible AI armies with Auto enabled use the same price, stock target and turn limit before eating. A settled faction's army in foreign/vassal land cannot use this fallback on land. Field purchases do not access settlement stock or permit remote unloading. Native Skaven Food and Ogre Meat remain separate currencies.
 
@@ -459,7 +536,7 @@ In an existing save, armies that already have a cargo ledger keep it unchanged; 
 | Workshop | Rare purchases, upgrades, research and named recipes |
 | Production | Every processing recipe and service the race has, realm-wide: where each runs, what it gives, which inputs each settlement is short of, and Enable/Pause (2026-10-31, [TRADE_RESOURCES.md §57](TRADE_RESOURCES.md#57-the-vaults-production-tab-2026-10-31)) |
 
-The Vault is reached through the mod's HUD opener/hub. Detail views and tooltips explain eligibility and blocked actions. The maintained layouts include a 720p testing format; validation evidence distinguishes offline previews from actual in-game checks.
+The Vault is reached through the mod's HUD opener/hub and closes when the player ends the turn. Detail views and tooltips explain eligibility and blocked actions, one short sentence a line with no comma joining two clauses ([TRADE_RESOURCES.md §61](TRADE_RESOURCES.md#61-the-vaults-wording-and-the-turn-end-close-2026-11-01)). Its size is the MCT's Panel size, Small, Medium or Large, and on a screen past 1080p it grows to fit ([TRADE_RESOURCES.md §62](TRADE_RESOURCES.md#62-the-vaults-panel-size-2026-11-02)). The maintained layouts include a 720p testing format; validation evidence distinguishes offline previews from actual in-game checks.
 
 ### Campaign settings
 
@@ -470,6 +547,7 @@ The Vault is reached through the mod's HUD opener/hub. Detail views and tooltips
 | Raze share | 50% | 0–100% |
 | Scripted trade share | 5% | 0–25% |
 | Import duty | 10% | 0–50% |
+| Tolls | 3% | 0–10% for each faction whose lands the road crosses; all the tolls on one cargo together at most 15%; 0 turns tolls off |
 | Trade reach | 6 turns | 1–10; no "any distance" setting, since a cut-off pair's search covers everything within reach |
 | Human shipment cap | 3 | 1–10 |
 | Recruitment rate | 1 | 0–5 per 100 reference gold |
@@ -477,8 +555,13 @@ The Vault is reached through the mod's HUD opener/hub. Detail views and tooltips
 | Settlement upkeep, orders, scripted opportunities, supplies, recruitment and escorts | On | Separate mechanic switches |
 | Processing and sustained services | On | Global permission; individual player orders still need enabling |
 | Army provisions | **On** | New campaigns; existing saved switches stay unchanged |
+| Spoilage | On | Grain, Beer and Kvas spoil above a quarter of a store's space; off, nothing spoils. Filled as on into an older save |
+| Trade edicts | On | The Rations, Workshops and Roads edicts on the Resources tab; off, every edict reads its default and the section is not shown. Filled as on into an older save |
+| Tolls and blockades | On | Tolls on agreement trade and contract carts, and blockades by enemy armies near a road; off, neither. Filled as on into an older save |
+| Road danger | 20 | 0–50: the chance in a hundred that a cargo meets trouble in a turn on the most dangerous land; half as dangerous land, half as likely; 0 turns road encounters off |
+| Bandits on the roads | On | Bandits, highwaymen and washed-out roads, and the Road guards row on the Trade tab; off, the roads are safe. Filled as on into an older save |
 | Disable natural random dilemmas | Off | Suppresses CA's natural random dilemmas, not all scripted/story dilemmas |
-| Line size (trade route lines) | Small | Small (0.7x), Normal, Large (1.5x): the dashes and the cargo marker on the campaign map |
+| Line size (trade route lines) | Small | Small (dashes 0.35x, cargo marker 0.7x), Normal, Large (1.5x): the dashes and the cargo marker on the campaign map |
 | Line colours (trade route lines) | Default | Default (gold, blue, green, red), Bright, Pale, Colour-blind friendly: the four owner colours on the campaign map and the Vault Map |
 
 Settings are frozen into saved campaign state when first initialized, except the two trade route line settings: they move no goods, stay open in a campaign and show at the next redraw. Added keys are filled once for an older save without replacing its existing settings; pre-provisions saved settings retain the former off default for that one key. Frontend changes are not a reliable way to reconfigure a campaign whose settings are already saved. Multiplayer uses defaults to avoid disagreement between client MCT values; new campaigns now include army provisions.
@@ -495,7 +578,7 @@ Relief cannot feed armies at sea or in foreign territory, and does not command t
 
 ### Turn sequencing
 
-The scripted owner-turn economy broadly processes arriving shipments, settlement consumption, army meals/refill, province supplies, processing/services, partner stock trade, duty and later opportunities/AI purchases. Consequently, an import arriving later in that sequence may only fund next turn's earlier payment. UI history and forecasts should be read with that ordering in mind.
+The scripted owner-turn economy broadly processes a computer's edict choices, arriving shipments (each cargo that moves can meet bandits on its way), settlement consumption, army meals/refill, spoilage, province supplies, processing/services, partner stock trade (which pays its tolls and finds its blockades), duty and later opportunities/AI purchases. Consequently, an import arriving later in that sequence may only fund next turn's earlier payment. UI history and forecasts should be read with that ordering in mind.
 
 ## Implementation status and limits
 
@@ -516,7 +599,7 @@ The Exchange recalculates quotes during its existing load routine. After normal 
 
 Army-provisions verification includes six real campaign cycles, all shortage stages and recovery, exact save/reload comparison, sea consumption/refill refusal, native ownership changes and force-identity cases. Offline coverage includes both runtime harnesses, economy/provisions mutation checks and UI previews. These are dated results, not an automatic guarantee for future edits.
 
-Still open: actual player-driven army merge/manual replacement UI cases, sustained AI provisioning balance, and two-machine multiplayer validation. For the map routes, the companion campaigns, FPS with sixteen vehicles and two-machine multiplayer are untested; the wool import switch that cleared once on 2026-10-23 held over four turns on 2026-10-24 with no caller. A convoy keeps the road it left on while the 3D map draws the current one, so after a road change its marker can sit off the road (17 hexes once, [live check](sessions/LIVE_TEST_20261024_LOCAL_PRICES_AND_CARGO.md)). Agreement trade takes 8.4 to 10.6 s a round at 18 partners against 7.6 s on 2026-10-23, nearly all of it the unchanged reach search. There is no implemented seasonal economy, population demand model or spoilage simulation. Adding more processing/service ingredients is separate future content work.
+Still open: actual player-driven army merge/manual replacement UI cases, sustained AI provisioning balance, and two-machine multiplayer validation. For the map routes, the companion campaigns, FPS with sixteen vehicles and two-machine multiplayer are untested; the wool import switch that cleared once on 2026-10-23 held over four turns on 2026-10-24 with no caller. A convoy that kept the road it left on sat 17 hexes off the drawn road once ([live check](sessions/LIVE_TEST_20261024_LOCAL_PRICES_AND_CARGO.md)). Since 2026-11-01 it takes the pair's road of the day ([Cargo on the road](#cargo-on-the-road-2026-10-24), step 2). That fix has not been seen in game. Agreement trade takes 8.4 to 10.6 s a round at 18 partners against 7.6 s on 2026-10-23, nearly all of it the unchanged reach search. There is no implemented seasonal economy or population demand model. Adding more processing/service ingredients is separate future content work.
 
 ## Source ownership and evidence
 

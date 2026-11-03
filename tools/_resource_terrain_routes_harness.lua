@@ -1,7 +1,9 @@
 -- Run from the workspace root with Lua 5.1.
 math.huge = nil   -- not safe to assume in the game's Lua (2026-10-21 handoff): the runtime must not need it
 core = { add_listener = function() end }
-cm = { add_first_tick_callback = function() end }
+-- a map with no regions until a test gives it some: R.advance asks for the model whenever a search has an avoid
+local NO_MAP = function() return {} end
+cm = { add_first_tick_callback = function() end, model = NO_MAP }
 cm.log_to_dis=function(_,x,y) return x,y end
 out = function() end
 dofile('Modding Files/source/resource_overhaul/terrain_routes.lua')
@@ -148,10 +150,24 @@ local function fac(name, war, attitude, rebel)
              at_war_with = function() return war == true end, diplomatic_attitude_towards = function() return attitude or 0 end }
 end
 local trader = fac('trader')
+-- a search looks its parties up again by key (R.avoider keeps no interface); as CA's, a faction comes back as it is
+cm.get_faction = function(_, key)
+    if type(key) ~= 'string' then return key end
+    return key == 'trader' and trader or fac(key)
+end
 assert(R.hostile(fac('trader', true, -500, true), {trader}) == false, 'a party is never hostile to its own route')
 assert(R.hostile(fac('x', true), {trader}) and R.hostile(fac('x', false, 0, true), {trader}), 'war and rebels')
 assert(R.hostile(fac('x', false, R.AGGRESSIVE), {trader}) and not R.hostile(fac('x', false, R.AGGRESSIVE + 1), {trader}),
        'aggressive starts at very unfriendly')
+-- TRADE EDICTS (Part B): a faction whose Roads edict is Closed is hostile land to every road but its own.
+assert(not R.hostile(fac('closer'), {trader}), 'no flows script: the edict is not read')
+DERPY_MR_FLOWS = { edict = function(f, w) return w == 'roads' and (f == 'closer' and 'closed' or 'tolled') or nil end }
+assert(R.hostile(fac('closer'), {trader}), 'Closed roads are hostile to foreign trade')
+assert(not R.hostile(fac('closer'), {trader, fac('closer')}), 'but not to its own')
+assert(not R.hostile(fac('opener'), {trader}), 'Tolled roads are not')
+DERPY_MR_FLOWS = { mct = function() return nil end }
+assert(not R.hostile(fac('closer'), {trader}), 'a flows script without edicts reads none')
+DERPY_MR_FLOWS = nil
 
 -- TRADE REACH: enemy land is a wall and the road has a length limit. The detour from (1,4) to (3,4) round
 -- the enemy column is 10 steps; straight through it is 2.
@@ -251,7 +267,7 @@ R.SEARCH_CAP = 200000
 R.grids = {}
 assert(R.reach(settled(1, 4), settled(3, 4), 1) == true, 'a map with no grid never stops trade')
 assert(R.journey(settled(1, 4), settled(3, 4)) == nil, 'unknown maps retain legacy shipment positions')
-R.grids, cm.model = saved_grids, nil
+R.grids, cm.model = saved_grids, NO_MAP
 
 local empty = { num_items = function() return 0 end }
 local faction = { culture=function() return 'human' end, name = function() return 'viewer' end, is_null_interface = function() return false end,
@@ -267,6 +283,8 @@ local adds, removes, live_scenes = {}, {}, {}
 cm.get_local_faction_name = function() return 'viewer' end
 cm.get_faction = function() return faction end
 cm.get_camera_position = function() return 0, 0, 20 end
+cm.is_local_players_turn = function() return true end
+core.get_screen_resolution = function() return 1600, 900 end
 cm.log_to_dis = function(_, x, y) return x, y end
 cm.get_region=function() return settled(1,2) end
 cm.add_scripted_composite_scene_to_logical_position = function(_, id, kind, x,y,fx,fy,once,seen,unseen,viewer)
@@ -338,7 +356,7 @@ do
     R.tick()
     assert(built == 1 and next(R.scenes) ~= nil, 'moving back did not place the dashes again')
     -- the timed refresh falls due while the camera moves: it waits, and runs on the first still tick
-    R.ticks = 25
+    R.ticks = R.STALE_EVERY
     cx = 40
     R.tick()
     assert(built == 1 and R.stale, 'the timed refresh ran mid-drag')
@@ -407,6 +425,39 @@ do
     assert(R.path('a', 'b') == road_now and #R.queue == 1, 'a kept road outlived its map')
     R.pump()
     assert(R.kept['a>b'].data == R.grid.data and R.kept['a>b'].regions['0,0'] == false, 'a finished search kept no verdicts')
+end
+-- NOTHING FROM THE ENGINE IS KEPT ACROSS TICKS (the 1.0 live pass, 2026-11-02): a queued search runs over many ticks,
+-- each its own script entry, and an interface from an earlier entry is freed memory. Here an interface remembers the
+-- entry that made it and refuses a call from a later one: R.path queues on one tick and R.pump works on the next.
+do
+    local ENTRY = 1
+    local function volatile(t, stamp)
+        if type(t) ~= 'table' then return t end
+        return setmetatable({}, { __index = function(_, k)
+            local v = t[k]
+            if type(v) ~= 'function' then return v end
+            return function(_, ...)
+                if stamp ~= ENTRY then error('an interface from script entry ' .. stamp .. ' used in entry ' .. ENTRY, 2) end
+                return volatile(v(t, ...), stamp)
+            end
+        end })
+    end
+    local get_region, model, get_faction, kept, road = cm.get_region, cm.model, cm.get_faction, R.kept, R.cache['a>b']
+    cm.get_region = function(_, key) return volatile(key == 'a' and region(1, 2) or region(3, 2), ENTRY) end
+    cm.model = function() return volatile({ get_region_at_logical_position = function() return region(0, 0) end }, ENTRY) end
+    cm.get_faction = function(_, key)   -- as CA's: a faction comes back as it is
+        if type(key) ~= 'string' then return key end
+        return volatile(fac(key), ENTRY)
+    end
+    R.kept, R.queue = {}, {}
+    R.epoch = R.epoch + 1
+    R.path('a', 'b')
+    assert(#R.queue == 1, 'the search was not queued')
+    ENTRY = 2   -- the next tick
+    local ok, err = pcall(R.pump)
+    assert(ok, 'a queued search used an interface from an earlier tick: ' .. tostring(err))
+    assert(#R.queue == 0 and R.cache['a>b'] and R.cache['a>b'][1][1] == 1, 'the search did not finish on the next tick')
+    cm.get_region, cm.model, cm.get_faction, R.kept, R.cache['a>b'] = get_region, model, get_faction, kept, road
 end
 -- THE NETWORK IS BUNDLED AGAIN when a road changes and at the player's turn, not at every war or diplomatic event
 do
@@ -510,6 +561,12 @@ DERPY_MR_FLOWS.trade = function(...) previews = previews + 1; return preview_tra
 R.links(faction); R.links(faction)
 assert(previews == 0 and R.plans.viewer and R.plans.ally, 'a refresh worked the cart goods out again')
 DERPY_MR_FLOWS.trade = preview_trade
+-- A BLOCKADED agreement (Part C 6.2) draws no line, as a cut-off one does
+DERPY_MR_FLOWS.blockaded = function(a, b) return 'raider' end
+assert(#R.links(faction) == 0, 'a blockaded agreement drew a line')
+DERPY_MR_FLOWS.blockaded = function() return nil end
+assert(#R.links(faction) == 1, 'an agreement nobody blockades drew no line')
+DERPY_MR_FLOWS.blockaded = nil
 DERPY_MR_FLOWS.stopped=function() return true end
 assert(#R.links(faction)==0, 'all resources stopped must remove empty agreement roads')
 ships={{f='viewer',from='a',to='b',stem='grain',x=1,y=2,road=road}}
@@ -566,6 +623,10 @@ assert(#R.traffic==2 and not R.traffic[1].reverse and R.traffic[2].reverse,
        'two-way trade must queue carts at both endpoints')
 table.remove(R.traffic,2) -- Inspect one cart's icon handoff below; both lanes are checked separately.
 adds = {}
+-- THE CARTS' CLOCK: each call here is one 100 ms beat of a fake clock
+local animate, NOW = R.animate, 0
+R.now = function() return NOW end
+R.animate = function() NOW = NOW + 100; return animate() end
 R.animate()
 assert(#adds==2 and adds[1].kind:match('^derpy_mr_route_cart_curve_') and adds[2].kind:match('^derpy_mr_icon_grain_'), 'cart and its resource icon must start together')
 local first = adds[1]
@@ -597,7 +658,7 @@ local first_boat=adds[1].id
 R.animate()
 assert(#adds==2,'a boat or icon restarted during its curve')
 cm.model = function() return {get_region_at_logical_position=function() return {is_null_interface=function() return false end} end} end
-R.traffic[1].age=0;R.traffic[1].distance=1;R.traffic[1].steps=1
+R.traffic[1].fresh,R.traffic[1].place=true,nil;R.traffic[1].distance=1;R.traffic[1].steps=1
 R.animate()
 assert(adds[3].kind:match('^derpy_mr_route_cart_curve_') and adds[4].kind:match('^derpy_mr_icon_grain_'),
        'traffic must switch back to land models and terrain-anchored icons at the coast')
@@ -625,10 +686,10 @@ for tick=1,250 do
     for _,trip in ipairs(R.traffic) do
         if trip.active then
             active=active+1
-            if trip.last_departure==R.traffic_clock then
-                assert(R.traffic_clock-(last_departure[trip.key] or -60)>=60,'a short route departed again too soon')
+            if trip.last_departure==NOW then
+                assert(NOW-(last_departure[trip.key] or -6000)>=6000,'a short route departed again too soon')
                 if not last_departure[trip.key] then departures[#departures+1]=trip.key end
-                last_departure[trip.key]=R.traffic_clock
+                last_departure[trip.key]=NOW
             end
         end
     end
@@ -681,7 +742,7 @@ for _,sea in ipairs({false,true}) do
         if tick%25==0 then R.refresh() end
         R.animate()
         local trip=R.traffic[1]
-        if trip.last_departure==R.traffic_clock then
+        if trip.last_departure==NOW then
             departures=departures+1
             assert(not trip.reverse and trip.stem=='grain','a one-way route drove an empty leg')
             assert(trip.vehicle_faction=='supplier','a loop must keep its supplier vehicle')
@@ -703,6 +764,83 @@ R.links = saved_links
 R.clear()
 assert(next(R.cart_scenes)==nil and #R.traffic==0, 'cleanup left animated traffic behind')
 assert(next(R.icon_scenes)==nil,'cleanup left resource icons behind')
+-- THE CARTS' CLOCK (author, 2026-11-03: the carts stuttered every other second): a step a second of real time
+-- whatever the timer's beat, the beat kept through a late frame and started again after a stall, and a frame
+-- between steps reads no region
+do
+    local saved_links, saved_model, saved_camera = R.links, cm.model, cm.get_camera_position
+    local reads = 0
+    cm.model = function() return { get_region_at_logical_position = function()
+        reads = reads + 1; return { is_null_interface = function() return false end } end } end
+    local long = {}
+    for y = 0, 99 do long[#long + 1] = { 0, y } end
+    R.links = function() return { { key = 'clock', from = 'a', owner = 'viewer', path = long, goods = { { 'grain' }, {} } } }, {} end
+    for _, beat in ipairs({ 110, 90, 30 }) do
+        R.clear(); R.refresh()
+        NOW = NOW + beat; animate()
+        local trip, t0 = R.traffic[1], NOW
+        assert(trip and trip.active, 'the cart did not leave')
+        while NOW < t0 + 10000 do NOW = NOW + beat; animate() end
+        assert(trip.steps == 10, 'a ' .. beat .. ' ms timer moved the cart ' .. trip.steps .. ' hexes in 10 s')
+    end
+    -- a stall (a slow redraw, a menu): one step when it ends, and the next a full second later, not a burst
+    R.clear(); R.refresh()
+    NOW = NOW + 100; animate()
+    local trip = R.traffic[1]
+    NOW = NOW + 3000; animate()
+    assert(trip.steps == 1, 'a stall made the cart catch up in a burst: ' .. trip.steps)
+    reads = 0
+    NOW = NOW + 900; animate()
+    assert(trip.steps == 1, 'the beat after a stall did not start again from it')
+    assert(reads == 0, 'a frame with no step read the map ' .. reads .. ' times')
+    NOW = NOW + 100; animate()
+    assert(trip.steps == 2, 'the step after a stall did not come a second later')
+    -- THE ICON'S HANDOFF (author, 2026-11-03: the carried icons twitched once the carts ran smoothly). The old icon
+    -- is held at the join only for the new one's first frames: the cart no longer waits there, so a longer hold showed
+    -- the old icon left behind while the new one moved on.
+    R.clear(); R.refresh()
+    NOW = NOW + 16; animate()
+    trip = R.traffic[1]
+    NOW = trip.due; animate()
+    local icon = R.icon_scenes['derpy_mr_traffic_1_icon']
+    assert(icon and icon.old, 'the old icon was not held while the new one starts')
+    NOW = NOW + 50; animate()
+    assert(icon.old == nil, 'the old icon was held past the new one\'s first frames')
+    -- THE CAMERA'S VIEW (author, 2026-11-03: carts out of the camera should not be there). Looking north (bearing 0)
+    -- at (0, 50) from 20 back and 20 up, the cart leaving (0, 0) is behind the camera, though inside the old circle
+    -- around its target; looking south at (0, 40) it is in front, where a camera looking north at (0, 40) would
+    -- have it behind.
+    cm.get_camera_position = function() return 0, 50, 20, 0, 20 end
+    R.clear(); R.refresh(); NOW = NOW + 100; animate()
+    assert(R.traffic[1] and R.traffic[1].active and next(R.cart_scenes) == nil, 'a cart behind the camera was drawn')
+    assert(R.in_view(0, 50) and not R.in_view(60, 50), 'a point beside the view was drawn')
+    cm.get_camera_position = function() return 0, 40, 20, math.pi, 20 end
+    R.clear(); R.refresh(); NOW = NOW + 100; animate()
+    assert(next(R.cart_scenes) ~= nil, 'a cart in front of a turned camera was not drawn')
+    -- turning the camera on the spot is a move: what is in view changed
+    local refresh, full, moved, renewals, renew = R.refresh, 0, 0, 0, R.renew_plan
+    R.refresh = function(m) if m then moved = moved + 1 else full = full + 1 end; return refresh(m) end
+    R.renew_plan = function() renewals = renewals + 1 end
+    R.dirty, R.stale, R.ticks = false, false, 2
+    cm.get_camera_position = function() return 0, 40, 20, math.pi / 2, 20 end
+    R.tick()
+    assert(moved == 1, 'turning the camera did not place what came into view')
+    -- THE COMPUTERS' TURNS (2026-11-03: 277 redraws, 3.5 s, in one round of them): nothing is worked out or drawn
+    -- again until the player's turn, which draws the change that waited
+    local mine = false
+    cm.is_local_players_turn = function() return mine end
+    full, moved, R.dirty, R.ticks = 0, 0, true, 2
+    cm.get_camera_position = function() return 0, 60, 20, 0, 20 end
+    for _ = 1, R.STALE_EVERY + R.PLAN_EVERY do R.tick() end
+    assert(full + moved + renewals == 0, 'the map was worked out in the computers\' turn')
+    mine = true; R.tick()
+    assert(full == 1 and not R.dirty, 'the change that waited was not drawn in the player\'s turn')
+    assert(not R.failed, 'the tick threw')
+    cm.is_local_players_turn = function() return true end
+    R.refresh, R.renew_plan = refresh, renew
+    R.links, cm.model, cm.get_camera_position = saved_links, saved_model, saved_camera
+    R.clear()
+end
 assert(next(live_scenes)==nil,'cleanup left an old icon buffer or scene in the engine')
 
 -- AGREEMENT CARGO (Task 6): a convoy on the road is a cargo marker and nothing else. Its pair's line is the agreement's
@@ -734,6 +872,34 @@ do
            'a convoy adds no line and changes none: the pair keeps the road and the colour the agreement gave it')
     assert(table.concat(links[1].goods[1],',')==table.concat(base_links[1].goods[1],',')
         and table.concat(links[1].goods[2],',')==table.concat(base_links[1].goods[2],','),'a convoy adds no goods to its pair\'s line')
+    -- ON THE ROAD THE MAP DRAWS (live check 2026-10-24, 17 hexes off): a convoy keeps the road it left on until its
+    -- exporter's turn start moves it, so the marker goes where F.convoy_on puts it on the pair's agreement road, and
+    -- is worked out again only when that road, the convoy's own road or its spot changes
+    local asked={}
+    local function placing(x,y) DERPY_MR_FLOWS.convoy_on=function(c,path) asked[#asked+1]={c.id,path}; return x,y end end
+    placing(7,9); R.spots={}
+    convoys={convoy({road='2:2;9:9'})}
+    links,cargo=R.links(faction)
+    assert(#asked==1 and asked[1][1]=='derpy_mr_cv_1' and asked[1][2]==road,'the marker is placed on its pair\'s agreement road')
+    assert(cargo[1].x==7 and cargo[1].y==9,'at the spot F.convoy_on gives')
+    convoys={convoy({road='2:2;9:9'})}   -- a new list, as F.convoy_cargo gives each time
+    cargo=select(2,R.links(faction))
+    assert(#asked==1 and cargo[1].x==7 and cargo[1].y==9,'the same road and spot are not worked out again')
+    convoys={convoy({road='2:2;9:9',x=3})}
+    assert(select(2,R.links(faction))[1].x==7 and #asked==2,'a step is')
+    convoys={convoy({road='2:2;8:8',x=3})}
+    assert(select(2,R.links(faction))[1].x==7 and #asked==3,'and a road of its own changed at a turn start')
+    placing(nil,nil)
+    convoys={convoy({road='2:2;9:9'})}
+    cargo=select(2,R.links(faction))
+    assert(cargo[1].x==2 and cargo[1].y==2,'a road that does not leave where the convoy left keeps its own spot')
+    placing(7,9)
+    local today=road; road={{1,2},{2,2},{3,2}}   -- the pair's road worked out again: the reach stub gives a new table
+    assert(select(2,R.links(faction))[1].x==7 and asked[#asked][2]==road,'a new road for the pair is worked out again')
+    road=today
+    convoys={convoy({id='derpy_mr_cv_2',f='ally',buyer='viewer',road='2:2;9:9'})}
+    assert(select(2,R.links(faction))[1].x==7 and asked[#asked][2]==road,'and so does a convoy coming to the viewer')
+    DERPY_MR_FLOWS.convoy_on=nil; R.spots={}
     -- the buyer sees what is coming to it; a stranger sees only what both ends of lets it see
     convoys={convoy({f='ally',buyer='viewer'})}
     assert(#select(2,R.links(faction))==1,'a convoy bound for the viewer is drawn')
@@ -804,4 +970,31 @@ do
     R.clear()
     assert(next(live_scenes)==nil,'cleanup left a convoy marker in the engine')
 end
+-- NOTHING KEPT, the whole module (the 1.0 live pass, 2026-11-02): once every test above has run, no engine interface
+-- is reachable from R through its tables or its functions' upvalues. A stub interface stands in for the engine's
+-- userdata: a table with its own is_null_interface.
+do
+    local found, seen = {}, {}
+    local function walk(v, path)
+        if seen[v] then return end
+        if type(v) == "table" then
+            seen[v] = true
+            if type(rawget(v, "is_null_interface")) == "function" then found[#found + 1] = path; return end
+            for k, x in pairs(v) do walk(x, path .. "." .. tostring(k)) end
+        elseif type(v) == "function" then
+            seen[v] = true
+            local i = 1
+            while true do
+                local name, x = debug.getupvalue(v, i)
+                if not name then break end
+                walk(x, path .. "<" .. name .. ">")
+                i = i + 1
+            end
+        end
+    end
+    walk(R, "R")
+    table.sort(found)
+    assert(#found == 0, "engine interfaces kept in the terrain routes module: " .. table.concat(found, " "))
+end
+
 print('terrain routes harness ok: routing, corridor merging, rounded geometry, ordered traffic, fog and cleanup')

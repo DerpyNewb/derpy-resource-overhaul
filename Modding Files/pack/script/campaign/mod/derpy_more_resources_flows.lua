@@ -9,6 +9,8 @@ DERPY_MR_FLOWS_DEFAULTS = {
     reach = 6,
     ships = 3,
     recruit_per = 1,
+    toll = 3,
+    road_danger = 20,
     army_provisions = true,
     processing = true,
     services = true,
@@ -20,6 +22,10 @@ DERPY_MR_FLOWS_DEFAULTS = {
     recruit = true,
     escort = true,
     random_off = false,
+    spoilage = true,
+    edicts = true,
+    tolls = true,
+    bandits = true,
 }
 DERPY_MR_FLOWS_KIND = {
     eat = "eaten",
@@ -30,7 +36,31 @@ DERPY_MR_FLOWS_KIND = {
     sack = "plundered",
     sell = "sold",
     spend = "spent",
+    spoil = "spoiled",
     trade = "traded",
+}
+DERPY_MR_FLOWS_SPOIL = {rates = {beer = 2, grain = 4, kvas = 2}, safe = 25, granary = 50, granary_good = "grain", granary_works = {"last_granary", "last_granary_chd"}}
+DERPY_MR_FLOWS_EDICTS = {order = {"rations", "workshops", "roads"}, rations = {default = "normal", options = {"plenty", "normal", "rationing"}}, workshops = {default = "balanced", options = {"war", "balanced", "merchant"}}, roads = {default = "tolled", options = {"open", "tolled", "closed"}}, cooldown = 10, need = {normal = 2, plenty = 3, rationing = 1}, war_outputs = {blackpowder = true, leather = true, tools = true}, war_pct = 150, merchant_trade = 2, merchant_draw = 125, bundles = {plenty = "derpy_mr_edict_plenty", rationing = "derpy_mr_edict_rationing", war = "derpy_mr_edict_war", merchant = "derpy_mr_edict_merchant", open = "derpy_mr_edict_open", closed = "derpy_mr_edict_closed"}, race_bundles = {plenty = {chd = "derpy_mr_edict_plenty_chd"}}, ai = {ration_low = 2, ration_high = 15, merchant_partners = 3, closed_wars = 2}}
+DERPY_MR_FLOWS_TOLL = {max = 15}
+DERPY_MR_FLOWS_ROAD = {cooldown = 5, ambush_min = 30, ai_guard = 30, guard_pct = 5, toll_pct = 20, wash_pct = 10, half_pct = 50, sizes = {{50, 5}, {70, 8}, {nil, 10}}, encounters = {"ambush", "highwaymen", "washout"}, qb = "wh3_main_ogr_ogre_kingdoms_qb1", qb_sc = "wh3_main_sc_ogr_ogre_kingdoms"}
+DERPY_MR_FLOWS_BANDIT_QB = {
+    wh2_dlc11_sc_cst_vampire_coast = "wh2_dlc11_cst_vampire_coast_qb1",
+    wh2_main_sc_def_dark_elves = "wh2_main_def_dark_elves_qb1",
+    wh2_main_sc_hef_high_elves = "wh2_main_hef_high_elves_qb1",
+    wh2_main_sc_lzd_lizardmen = "wh2_main_lzd_lizardmen_qb1",
+    wh2_main_sc_skv_skaven = "wh2_main_skv_skaven_qb1",
+    wh3_dlc23_sc_chd_chaos_dwarfs = "wh3_dlc23_chd_chaos_dwarfs_qb1",
+    wh3_main_sc_cth_cathay = "wh3_main_cth_cathay_qb1",
+    wh3_main_sc_ksl_kislev = "wh3_main_ksl_kislev_qb1",
+    wh3_main_sc_ogr_ogre_kingdoms = "wh3_main_ogr_ogre_kingdoms_qb1",
+    wh_dlc05_sc_wef_wood_elves = "wh_dlc05_wef_wood_elves_qb1",
+    wh_dlc08_sc_nor_norsca = "wh_main_nor_norsca_qb1",
+    wh_main_sc_brt_bretonnia = "wh_main_brt_bretonnia_qb1",
+    wh_main_sc_chs_chaos = "wh_main_chs_chaos_qb1",
+    wh_main_sc_dwf_dwarfs = "wh_main_dwf_dwarfs_qb1",
+    wh_main_sc_emp_empire = "wh_main_emp_empire_qb1",
+    wh_main_sc_grn_greenskins = "wh_main_grn_greenskins_qb1",
+    wh_main_sc_vmp_vampire_counts = "wh_main_vmp_vampire_counts_qb1",
 }
 DERPY_MR_FLOWS_GOODS = {
     {stem = "salted_fish", res = "res_derpy_salted_fish", use = "provisions", rare = false, value = 9},
@@ -102,12 +132,22 @@ DERPY_MR_FLOWS_ORDER = {200, 5, 10}   -- cost, turns, cooldown
 DERPY_MR_FLOWS_SELL_RATE = {building = 2, luxuries = 5, mounts = 4, provisions = 1, war = 3}
 DERPY_MR_FLOWS_EVENT = {10, 20}   -- gap in turns, a computer's chance in 100
 DERPY_MR_FLOWS_EVENTS = {
-    feast = {use = "provisions", cost = 100, where = "region", dilemma = "derpy_mr_dil_feast", bundle = "derpy_mr_event_feast", turns = 5},
-    siege = {use = "provisions", cost = 60, where = "region", dilemma = "derpy_mr_dil_siege", bundle = "derpy_mr_event_siege", turns = 2},
-    tribute = {use = "luxuries", cost = 50, where = "realm", dilemma = "derpy_mr_dil_tribute", bundle = nil, turns = 0},
-    arsenal = {use = "war", cost = 50, where = "realm", dilemma = "derpy_mr_dil_arsenal", bundle = nil, turns = 0},
-    restore = {use = "building", cost = 100, where = "region", dilemma = "derpy_mr_dil_restore", bundle = "derpy_mr_event_restore", turns = 5},
-    raid = {use = "war", cost = 0, where = "ship", dilemma = "derpy_mr_dil_raid", bundle = nil, turns = 0},
+    feast = {use = "provisions", cost = 100, where = "region", dilemma = "derpy_mr_dil_feast", bundle = "derpy_mr_event_feast", turns = 5, races = {"all"}, not_races = {"chd"}, needs = {}, human = false},
+    siege = {use = "provisions", cost = 60, where = "region", dilemma = "derpy_mr_dil_siege", bundle = "derpy_mr_event_siege", turns = 2, races = {"all"}, not_races = {}, needs = {}, human = false},
+    tribute = {use = "luxuries", cost = 50, where = "realm", dilemma = "derpy_mr_dil_tribute", bundle = nil, turns = 0, races = {"all"}, not_races = {}, needs = {}, human = false},
+    arsenal = {use = "war", cost = 50, where = "realm", dilemma = "derpy_mr_dil_arsenal", bundle = nil, turns = 0, races = {"all"}, not_races = {}, needs = {}, human = false},
+    restore = {use = "building", cost = 100, where = "region", dilemma = "derpy_mr_dil_restore", bundle = "derpy_mr_event_restore", turns = 5, races = {"all"}, not_races = {}, needs = {}, human = false},
+    raid = {use = "war", cost = 0, where = "ship", dilemma = "derpy_mr_dil_raid", bundle = nil, turns = 0, races = {"all"}, not_races = {}, needs = {}, human = false},
+    feast_chd = {use = "provisions", cost = 100, where = "region", dilemma = "derpy_mr_dil_feast_chd", bundle = "derpy_mr_event_feast_chd", turns = 5, races = {"chd"}, not_races = {}, needs = {}, human = false},
+    road_ambush = {use = "war", cost = 0, where = "road", dilemma = "derpy_mr_dil_road_ambush", bundle = nil, turns = 0, races = {"all"}, not_races = {}, needs = {}, human = false},
+    road_highwaymen = {use = "war", cost = 0, where = "road", dilemma = "derpy_mr_dil_road_highwaymen", bundle = nil, turns = 0, races = {"all"}, not_races = {}, needs = {}, human = false},
+    road_washout = {use = "war", cost = 0, where = "road", dilemma = "derpy_mr_dil_road_washout", bundle = nil, turns = 0, races = {"all"}, not_races = {}, needs = {}, human = false},
+    smugglers = {use = "provisions", cost = 0, where = "region", dilemma = "derpy_mr_dil_smugglers", bundle = "derpy_mr_event_smugglers", turns = 5, races = {"all"}, not_races = {}, needs = {}, human = false},
+    guild = {use = "war", cost = 0, where = "realm", dilemma = "derpy_mr_dil_guild", bundle = nil, turns = 0, races = {"all"}, not_races = {}, needs = {}, human = false},
+    grain_rot = {use = "provisions", cost = 0, where = "region", dilemma = "derpy_mr_dil_grain_rot", bundle = nil, turns = 0, races = {"all"}, not_races = {}, needs = {"spoilage"}, human = true},
+    caravan_master = {use = "war", cost = 0, where = "realm", dilemma = "derpy_mr_dil_caravan_master", bundle = nil, turns = 0, races = {"all"}, not_races = {}, needs = {"bandits"}, human = true},
+    toll_dispute = {use = "war", cost = 0, where = "realm", dilemma = "derpy_mr_dil_toll_dispute", bundle = nil, turns = 0, races = {"all"}, not_races = {}, needs = {"tolls", "edicts"}, human = true},
+    blockade_runner = {use = "war", cost = 0, where = "realm", dilemma = "derpy_mr_dil_blockade_runner", bundle = nil, turns = 0, races = {"all"}, not_races = {}, needs = {"tolls"}, human = true},
 }
 DERPY_MR_FLOWS_SUPPLY = {
     materials = {use = "building", bundle = "derpy_mr_supply_materials"},
@@ -237,6 +277,9 @@ DERPY_MR_FLOWS_BUNDLES = {
     war = "derpy_mr_garrison_stocked",
     luxuries = "derpy_mr_comforts",
 }
+DERPY_MR_FLOWS_RACE_BUNDLES = {
+    derpy_mr_well_fed = {{race = "chd", key = "derpy_mr_well_fed_chd"}},
+}
 DERPY_MR_FLOWS_WORKS = {
     {key = "item_gromril_armour", kind = "item", rare = "gromril", rare_n = 40, use = "war", use_n = 150, races = {"dwf"}, grant = "derpy_mr_anc_gromril_armour", group = "", pool = ""},
     {key = "item_gromril_greataxe", kind = "item", rare = "gromril", rare_n = 40, use = "war", use_n = 150, races = {"dwf"}, grant = "derpy_mr_anc_gromril_greataxe", group = "", pool = ""},
@@ -313,11 +356,16 @@ DERPY_MR_FLOWS_WORKS = {
     {key = "trait_read", kind = "trait", rare = "", rare_n = 0, use = "", use_n = 0, races = {"all"}, grant = "", group = "", pool = "", goods = {{"books", 80}, {"glassware", 80}}, trait = "derpy_mr_trait_read", wait = 0},
     {key = "trait_spice", kind = "trait", rare = "", rare_n = 0, use = "", use_n = 0, races = {"all"}, grant = "", group = "", pool = "", goods = {{"spices", 60}, {"incense", 60}}, trait = "derpy_mr_trait_spice", wait = 0, lord = true},
     {key = "trait_fur", kind = "trait", rare = "", rare_n = 0, use = "", use_n = 0, races = {"all"}, grant = "", group = "", pool = "", goods = {{"furs", 60}, {"wool", 60}}, trait = "derpy_mr_trait_fur", wait = 0, lord = true},
-    {key = "last_granary", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"all"}, grant = "", group = "", pool = "", goods = {{"grain", 120}, {"salt", 120}, {"salted_meat", 120}, {"pottery", 120}}, bundle = "derpy_mr_rc_last_granary", turns = 0, wait = 0},
+    {key = "last_granary", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"all"}, grant = "", group = "", pool = "", goods = {{"grain", 120}, {"salt", 120}, {"salted_meat", 120}, {"pottery", 120}}, bundle = "derpy_mr_rc_last_granary", turns = 0, wait = 0, not_races = {"chd"}},
+    {key = "last_granary_chd", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"chd"}, grant = "", group = "", pool = "", goods = {{"grain", 120}, {"salt", 120}, {"salted_meat", 120}, {"pottery", 120}}, bundle = "derpy_mr_rc_last_granary_chd", turns = 0, wait = 0},
     {key = "last_records", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"all"}, grant = "", group = "", pool = "", goods = {{"books", 150}, {"glassware", 150}, {"silver", 150}}, bundle = "derpy_mr_rc_last_records", turns = 0, wait = 0},
-    {key = "last_bazaar", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"all"}, grant = "", group = "", pool = "", goods = {{"silk", 120}, {"carpets", 120}, {"dyes", 120}, {"spices", 120}}, bundle = "derpy_mr_rc_last_bazaar", turns = 0, wait = 0},
+    {key = "last_bazaar", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"all"}, grant = "", group = "", pool = "", goods = {{"silk", 120}, {"carpets", 120}, {"dyes", 120}, {"spices", 120}}, bundle = "derpy_mr_rc_last_bazaar", turns = 0, wait = 0, not_races = {"grn"}},
+    {key = "last_loot", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"grn"}, grant = "", group = "", pool = "", goods = {{"trinkets", 120}, {"silver", 120}, {"gems", 120}, {"gold_idols", 120}}, bundle = "derpy_mr_rc_last_loot", turns = 0, wait = 0},
     {key = "last_arsenal", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"all"}, grant = "", group = "", pool = "", goods = {{"iron", 150}, {"coal", 150}, {"brass", 150}, {"blackpowder", 150}}, bundle = "derpy_mr_rc_last_arsenal", turns = 0, wait = 0},
-    {key = "last_stables", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"all"}, grant = "", group = "", pool = "", goods = {{"warhorses", 150}, {"furs", 150}, {"tusks", 150}, {"timber", 150}}, bundle = "derpy_mr_rc_last_stables", turns = 0, wait = 0},
+    {key = "last_stables", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"all"}, grant = "", group = "", pool = "", goods = {{"warhorses", 150}, {"furs", 150}, {"tusks", 150}, {"timber", 150}}, bundle = "derpy_mr_rc_last_stables", turns = 0, wait = 0, not_races = {"dwf", "skv", "cst"}},
+    {key = "last_engineers", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"dwf"}, grant = "", group = "", pool = "", goods = {{"timber", 150}, {"iron", 150}, {"tools", 150}, {"brass", 150}}, bundle = "derpy_mr_rc_last_engineers", turns = 0, wait = 0},
+    {key = "last_pens", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"skv"}, grant = "", group = "", pool = "", goods = {{"animals", 150}, {"salted_meat", 150}, {"leather", 150}, {"timber", 150}}, bundle = "derpy_mr_rc_last_pens", turns = 0, wait = 0},
+    {key = "last_boneyard", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"cst"}, grant = "", group = "", pool = "", goods = {{"tusks", 150}, {"timber", 150}, {"salt", 150}, {"whale_oil", 150}}, bundle = "derpy_mr_rc_last_boneyard", turns = 0, wait = 0},
     {key = "research", kind = "research", rare = "", rare_n = 0, use = "luxuries", use_n = 300, races = {"all"}, grant = "", group = "", pool = ""},
 }
 DERPY_MR_FLOWS_WORK = {ai_pct = 20, research_points = 400, research_wait = 10, unit_max = 2}
@@ -499,11 +547,11 @@ function F.move(from, to, stem, n, kind, from_key, to_key)
     if from then n = math.min(n, F.held(from, stem)) end
     if n <= 0 then return 0 end
     local j = F.PREFIX .. stem .. "_" .. kind
-    if from then cm:entity_add_pooled_resource_transaction(from, j, -n) end
+    if from then F.pool_add(from, j, -n) end
     local got = 0
     if to then
         got = math.min(n, F.free(to, stem))
-        if got > 0 then cm:entity_add_pooled_resource_transaction(to, j, got) end
+        if got > 0 then F.pool_add(to, j, got) end
     end
     F.log(from_key, stem, kind .. "_out", n)
     F.log(to_key, stem, kind .. "_in", got)
@@ -713,14 +761,17 @@ function F.trade_reach(a, b, mode)
     return F.reach(F.capital(a), F.capital(b), mode)
 end
 
--- The panel's list: this faction's agreement partners whose trade is cut off, with why. Known answers only.
+-- The panel's list: this faction's agreement partners whose trade is cut off, with why, or blockaded, by whom
+-- (Part C). Known answers only. A pair both cut off and blockaded is listed once, with the reach reason.
 function F.cut_off(faction)
     local out, partners = {}, faction:factions_trading_with()
     if type(partners) == "boolean" then return out end
     for i = 0, partners:num_items() - 1 do
         local p = partners:item_at(i)
         local ok, why = F.trade_reach(faction, p, "peek")
-        if ok == false then out[#out + 1] = { key = p:name(), why = F.REACH_WHY[why] } end
+        local by = ok ~= false and F.blockaded(faction:name(), p:name())
+        if ok == false then out[#out + 1] = { key = p:name(), why = F.REACH_WHY[why] }
+        elseif by then out[#out + 1] = { key = p:name(), by = by } end
     end
     table.sort(out, function(x, y) return x.key < y.key end)
     return out
@@ -770,59 +821,112 @@ end
 
 -- Preview only adjusts disposable stock views, in the same partner/good order as a real turn.
 function F.trade(exporter, preview)
-    local pct, goods = F.rates().trade, {}
-    if pct <= 0 then return goods end
+    local goods = {}
+    if F.rates().trade <= 0 then return goods end
     local partners = exporter:factions_trading_with()
     if type(partners) == "boolean" then return goods end
     local ordered, sources = {}, nil
     for i = 0, partners:num_items() - 1 do ordered[#ordered + 1] = partners:item_at(i) end
     table.sort(ordered, function(a, b) return a:name() < b:name() end)
     for _, partner in ipairs(ordered) do
-        local to = F.capital(partner)
-        local open, _, path
-        if to and F.allowed(exporter:name(), partner:name()) then
-            -- the road F.reach just worked out for this pair, kept for the convoy
-            open, _, path = F.trade_reach(exporter, partner, preview and "peek" or nil)
-        end
-        if open then
-            sources = sources or F.stock_views(exporter)
-            local dest, convoy = F.stock_view(partner, to), nil
-            for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
-                if not F.stopped(exporter:name(), "export", g.stem)
-                    and not F.stopped(partner:name(), "import", g.stem) then
-                    local source, removable = F.cheapest_store(sources, g.stem)
-                    -- at least 1 (author, 2026-10-30): floored, 226 of 441 computer goods on open roads moved nothing
-                    local n = math.min(F.share(removable, pct), F.import_need(dest, g.stem))
-                    if source and n > 0 then
-                        -- uphill only: the destination's price must clear the source's price plus the spread
-                        local ps, pd = F.local_price(source, g.stem, exporter:name()), F.local_price(dest, g.stem, partner:name())
-                        if pd ~= nil and ps ~= nil and pd >= F.buy_price(ps) then
-                            local sent = true
-                            if preview then
-                                goods[partner:name()] = goods[partner:name()] or {}
-                                goods[partner:name()][#goods[partner:name()]+1] = g.stem
-                            elseif F.route_goods(source.region, g.stem, -n, KIND.trade) then
-                                -- AGREEMENT CARGO (spec 2026-10-23, 5.1): debited here, landed when the convoy arrives.
-                                -- The convoy is made at the FIRST good taken and each later good joins it at once, so a
-                                -- throw at a later good leaves what was already taken on the road, not lost.
-                                convoy = convoy or F.convoy_new(exporter, partner, {}, path)
-                                convoy.basket[g.stem] = (convoy.basket[g.stem] or 0) + n
-                                F.log(exporter:name(), g.stem, KIND.trade .. "_out", n)
-                            else
-                                sent = false   -- the engine refused the debit: nothing left, nothing to count
-                            end
-                            -- the views keep a good sent this round from being sent again to the next partner
-                            if sent then
-                                F.stock_adjust(source, g.stem, -n)
-                                F.stock_adjust(dest, g.stem, n)
-                            end
-                        end
-                    end
+        local stems
+        stems, sources = F.trade_pair(exporter, partner, sources, preview)
+        if preview and stems then goods[partner:name()] = stems end
+    end
+    return goods
+end
+
+-- What a basket is worth in whole gold at each good's local sell price (hundredths in `prices`).
+function F.cargo_value(basket, prices)
+    local v = 0
+    for stem, n in pairs(basket) do v = v + F.gold(n, F.sell_price(prices[stem])) end
+    return v
+end
+
+-- ONE PARTNER'S TURN OF TRADE: the road, the plan, the toll, then the goods. `sources` are the exporter's
+-- stock views, shared by every partner of the round (made here when nil) and handed back. In preview the
+-- planned stems come back and only the views change; nil when nothing is planned. opts.blockade_ok skips
+-- the blockade test (Part E's Blockade runner).
+function F.trade_pair(exporter, partner, sources, preview, opts)
+    local pct = F.rates().trade
+    if pct <= 0 then return nil, sources end
+    if F.edict(exporter:name(), "workshops") == "merchant" then pct = pct * F.EDICT.merchant_trade end
+    local to = F.capital(partner)
+    if not (to and F.allowed(exporter:name(), partner:name())) then return nil, sources end
+    -- the road F.reach just worked out for this pair, kept for the convoy
+    local open, _, path = F.trade_reach(exporter, partner, preview and "peek" or nil)
+    if not open then return nil, sources end
+    -- A BLOCKADE stops this pair's trade for the turn; the real trade records it for the panel, the map and the duty
+    if not (opts and opts.blockade_ok) then
+        local by = F.blockade(exporter, partner, path)
+        if not preview then F.record_blockade(exporter:name(), partner:name(), by) end
+        if by then return nil, sources end
+    end
+    sources = sources or F.stock_views(exporter)
+    local dest, takers, plan = F.stock_view(partner, to), F.toll_takers(exporter, partner, path), {}
+    for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+        if not F.stopped(exporter:name(), "export", g.stem)
+            and not F.stopped(partner:name(), "import", g.stem) then
+            local source, removable = F.cheapest_store(sources, g.stem)
+            -- at least 1 (author, 2026-10-30): floored, 226 of 441 computer goods on open roads moved nothing
+            local n = math.min(F.share(removable, pct), F.import_need(dest, g.stem))
+            if source and n > 0 then
+                -- uphill only: the destination's price must clear the source's price plus the spread and the toll
+                local ps, pd = F.local_price(source, g.stem, exporter:name()), F.local_price(dest, g.stem, partner:name())
+                if pd ~= nil and ps ~= nil and pd >= F.buy_price(ps) + F.toll_unit(ps, #takers) then
+                    plan[#plan + 1] = { stem = g.stem, source = source, n = n, ps = ps }
+                    -- the views keep a good planned this round from being sent again to the next partner
+                    F.stock_adjust(source, g.stem, -n)
+                    F.stock_adjust(dest, g.stem, n)
                 end
             end
         end
     end
-    return goods
+    if #plan == 0 then return nil, sources end
+    local function unplan(p)
+        F.stock_adjust(p.source, p.stem, p.n)
+        F.stock_adjust(dest, p.stem, -p.n)
+    end
+    local basket, prices = {}, {}
+    for _, p in ipairs(plan) do basket[p.stem], prices[p.stem] = p.n, p.ps end
+    -- AN EXPORTER THAT CANNOT PAY THE TOLLS sends this partner nothing, and its plan goes back into the views
+    local _, sum = F.tolls(F.cargo_value(basket, prices), takers)
+    -- a preview pays nothing, so it counts what this round's earlier partners would have paid: tolls and guards
+    local spent = preview and sources.toll_spent or 0
+    -- nothing due is never refused: a faction in debt still trades where no toll is taken
+    if sum > 0 and sum > exporter:treasury() - spent then
+        for _, p in ipairs(plan) do unplan(p) end
+        return nil, sources
+    end
+    if preview then
+        -- the guards' fee comes after the toll, from the same treasury, and only when it is there (F.guard_fee)
+        local fee = F.guards_on(exporter:name())
+            and math.floor(F.cargo_value_base({ f = exporter:name(), basket = basket }) * F.ROAD.guard_pct / 100) or 0
+        sources.toll_spent = spent + sum + (fee <= exporter:treasury() - spent - sum and fee or 0)
+        local stems = {}
+        for _, p in ipairs(plan) do stems[#stems + 1] = p.stem end
+        return stems, sources
+    end
+    local convoy = nil
+    for _, p in ipairs(plan) do
+        if F.route_goods(p.source.region, p.stem, -p.n, KIND.trade) then
+            -- AGREEMENT CARGO (spec 2026-10-23, 5.1): debited here, landed when the convoy arrives.
+            -- The convoy is made at the FIRST good taken and each later good joins it at once, so a
+            -- throw at a later good leaves what was already taken on the road, not lost.
+            convoy = convoy or F.convoy_new(exporter, partner, {}, path)
+            convoy.basket[p.stem] = (convoy.basket[p.stem] or 0) + p.n
+            F.log(exporter:name(), p.stem, KIND.trade .. "_out", p.n)
+        else
+            unplan(p)   -- the engine refused the debit: nothing left, nothing to count
+        end
+    end
+    -- THE TOLL ON WHAT LEFT, not on the plan: less can leave than was planned, never more
+    if convoy then
+        local due = F.tolls(F.cargo_value(convoy.basket, prices), takers)
+        if next(due) and F.pay_tolls(exporter:name(), due) then convoy.tolls = due end
+        F.guard_fee(exporter, convoy)
+    end
+    return nil, sources
 end
 
 -- ---- import duty (docs/superpowers/specs/2026-10-08-resource-overhaul-import-duty-design.md) --
@@ -873,7 +977,8 @@ function F.duty(faction)
         -- (F.allowed): with other factions' stores off a computer partner paid the player nothing
         -- while the player paid it, against the row's own "each partner pays you the same"
         -- no trade, no duty: a partner out of reach (F.reach) pays and is paid nothing
-        local due = (not F.allowed(fkey, partner:name()) or not F.trade_reach(faction, partner)) and 0 or math.min(math.floor(F.made_value(partner) * pct / 100), math.max(0, faction:treasury()))
+        -- nor a blockaded one (Part C)
+        local due = (not F.allowed(fkey, partner:name()) or not F.trade_reach(faction, partner) or F.blockaded(fkey, partner:name())) and 0 or math.min(math.floor(F.made_value(partner) * pct / 100), math.max(0, faction:treasury()))
         if due > 0 then
             cm:treasury_mod(fkey, -due)   -- negative: CA's own scripts do (spec section 2)
             cm:treasury_mod(partner:name(), due)
@@ -884,25 +989,29 @@ function F.duty(faction)
 end
 
 -- Booked for humans only, by game turn; the panel shows the turn before, which every faction in
--- the round has finished paying into.
-function F.book_duty(fkey, other, way, n)
+-- the round has finished paying into. `field` is the book's "duty" or "tolls" (Part C): one shape.
+function F.book_gold(field, fkey, other, way, n)
     if not F.is_human(fkey) then return end
     local b, turn = F.book(fkey), cm:model():turn_number()
-    b.duty = b.duty or {}
-    for t in pairs(b.duty) do
-        if t < turn - 1 then b.duty[t] = nil end
+    b[field] = b[field] or {}
+    local book = b[field]
+    for t in pairs(book) do
+        if t < turn - 1 then book[t] = nil end
     end
-    local d = b.duty[turn] or { paid = 0, got = 0, by = {} }
-    b.duty[turn] = d
+    local d = book[turn] or { paid = 0, got = 0, by = {} }
+    book[turn] = d
     d[way] = d[way] + n
     d.by[other] = d.by[other] or { paid = 0, got = 0 }
     d.by[other][way] = d.by[other][way] + n
 end
 
-function F.duty_last(fkey)
+function F.gold_last(field, fkey)
     local b = F.state.factions[fkey]
-    return b and b.duty and b.duty[cm:model():turn_number() - 1] or nil
+    return b and b[field] and b[field][cm:model():turn_number() - 1] or nil
 end
+
+function F.book_duty(fkey, other, way, n) return F.book_gold("duty", fkey, other, way, n) end
+function F.duty_last(fkey) return F.gold_last("duty", fkey) end
 
 -- ---- the player's trade switches (the Stores panel's Trade tab) ---------------------------
 -- Saved in the faction's book as stop[dir][stem] = true; everything allowed by default.
@@ -1013,21 +1122,40 @@ function F.eats(faction)
 end
 
 -- One read of a settlement's stores: {stem = held}, and one store's space.
+-- ONE READ A TURN START (2026-11-03: 7,500 whole reads in one computer round, 2.35 s): inside F.on_faction_turn_start
+-- each settlement is read whole once and kept in F.stock_cache until F.pool_add writes to it. A reader gets copies,
+-- as a stock view is changed in place.
+local function copy(t)
+    local c = {}
+    for k, v in pairs(t) do c[k] = v end
+    return c
+end
 function F.stock(region)
-    local held, cap, capacity = {}, 0, {}
+    local kept = F.stock_cache
+    local rk = kept and region:name()
+    local hit = kept and kept[rk]
+    if hit then return copy(hit[1]), hit[2], copy(hit[3]) end
+    local held, cap, capacity, n = {}, 0, {}, #F.PREFIX
     local list = region:pooled_resource_manager():resources()
     for i = 0, list:num_items() - 1 do
         local p = list:item_at(i)
         if not p:is_null_interface() then
             local k = p:key()
-            if string.sub(k, 1, #F.PREFIX) == F.PREFIX then
-                held[string.sub(k, #F.PREFIX + 1)] = p:value()
-                capacity[string.sub(k, #F.PREFIX + 1)] = p:maximum_value()
-                if p:maximum_value() > cap then cap = p:maximum_value() end
+            if string.sub(k, 1, n) == F.PREFIX then
+                local stem, max = string.sub(k, n + 1), p:maximum_value()
+                held[stem], capacity[stem] = p:value(), max
+                if max > cap then cap = max end
             end
         end
     end
+    if kept then kept[rk] = { copy(held), cap, copy(capacity) } end
     return held, cap, capacity
+end
+
+-- Every write to a settlement's stores goes through here, which drops the turn start's kept copy first.
+function F.pool_add(region, key, n)
+    if F.stock_cache then F.stock_cache[region:name()] = nil end
+    cm:entity_add_pooled_resource_transaction(region, key, n)
 end
 
 -- A RARE GOOD IS NEVER BULK (author, 2026-10-08): gromril is a war material but pays only for the
@@ -1077,12 +1205,21 @@ function F.draw(region, held, use, n, kind, fkey)
     return F.draw_realm({ { region = region, held = held } }, F.bulk(use), n, kind, fkey)
 end
 
+-- A RACE'S OWN BUNDLE for a use (2026-11-01: growth does nothing for Chaos Dwarfs), and never two:
+-- a captured settlement's former owner's goes
 function F.bundle(rkey, region, use, on)
-    local b = DERPY_MR_FLOWS_BUNDLES[use]
-    if on then
-        cm:apply_effect_bundle_to_region(b, rkey, F.BUNDLE_TURNS)
-    elseif region:has_effect_bundle(b) then
-        cm:remove_effect_bundle_from_region(b, rkey)
+    local base = DERPY_MR_FLOWS_BUNDLES[use]
+    local race, want, family = F.race(region:owning_faction()), base, { base }
+    for _, v in ipairs(DERPY_MR_FLOWS_RACE_BUNDLES[base] or {}) do
+        family[#family + 1] = v.key
+        if v.race == race then want = v.key end
+    end
+    for _, b in ipairs(family) do
+        if on and b == want then
+            cm:apply_effect_bundle_to_region(b, rkey, F.BUNDLE_TURNS)
+        elseif region:has_effect_bundle(b) then
+            cm:remove_effect_bundle_from_region(b, rkey)
+        end
     end
 end
 
@@ -1092,10 +1229,11 @@ function F.upkeep_region(region, fkey, uses)
         local held, cap = F.stock(region)
         local level = 0
         pcall(function() level = region:settlement():primary_slot():building():building_level() end)
-        local need = F.NEED * level
+        local need = F.need(fkey) * level
         if need > 0 and F.eats(region:owning_faction()) then
             F.draw(region, held, "provisions", need, KIND.eat, fkey)
-            fed = F.use_total(held, "provisions") >= F.FED_TURNS * need
+            -- five turns of NORMAL meals, whatever the Rations edict: on Rationing's own meals it took half the food
+            fed = F.use_total(held, "provisions") >= F.FED_TURNS * F.NEED * level
         end
         local quarter = cap * F.STOCKED_PCT / 100
         war = cap > 0 and F.use_total(held, "war") >= quarter
@@ -1116,6 +1254,636 @@ function F.upkeep(faction)
         local region = rl:item_at(i)
         if not region:is_null_interface() then F.upkeep_region(region, fkey, uses) end
     end
+end
+
+-- ---- spoilage (design 2026-11-01, Part A) ----------------------------------------------------
+-- Grain rots and Beer and Kvas sour, at the owner's turn start, on what a store holds above a safe
+-- share of that good's space; the Great Granary raises Grain's. After the meals, before processing.
+F.SPOIL = DERPY_MR_FLOWS_SPOIL
+
+-- The safe share, in 100 of a store's space. A READ, never F.works_book: the panel asks it, and a
+-- book made here would be a save entry for every faction a tooltip looked at.
+function F.spoil_safe(fkey, stem)
+    local b = F.state.factions[fkey]
+    local lasting = b and b.works and b.works.lasting
+    if stem == F.SPOIL.granary_good and lasting then
+        for _, k in ipairs(F.SPOIL.granary_works) do
+            if lasting[k] then return F.SPOIL.granary end
+        end
+    end
+    return F.SPOIL.safe
+end
+
+function F.spoil_loss(held, capacity, rate, safe)
+    local exposed = (held or 0) - math.floor((capacity or 0) * safe / 100)
+    if exposed <= 0 then return 0 end
+    return math.floor(exposed * rate / 100)
+end
+
+-- Whose stock spoils: the turn start and the forecast ask the same question.
+function F.spoils(faction)
+    local r = F.rates()
+    return r.spoilage and (r.ai or faction:is_human()) and F.uses_stores(faction)
+end
+
+-- The loss rule without the gates: F.spoil asks them once a faction, F.spoil_due once a good.
+local function spoil_due(v, stem)
+    local rate = F.SPOIL.rates[stem]
+    if not (rate and v.held[stem]) then return 0 end
+    return F.spoil_loss(v.held[stem], v.capacity[stem], rate, F.spoil_safe(v.faction:name(), stem))
+end
+
+-- What `stem` will lose at the next turn start, in a stock view (or any {faction, held, capacity}).
+function F.spoil_due(v, stem)
+    if not (F.SPOIL.rates[stem] and F.spoils(v.faction)) then return 0 end
+    return spoil_due(v, stem)
+end
+
+-- The tooltip's figures for one store: {rate, keep, due}; nil for a good that keeps here.
+function F.spoil_info(faction, region, stem)
+    local rate = F.SPOIL.rates[stem]
+    if not (rate and F.spoils(faction)) then return nil end
+    local held, _, capacity = F.stock(region)
+    if not capacity[stem] then return nil end
+    return { rate = rate, keep = math.floor(capacity[stem] * F.spoil_safe(faction:name(), stem) / 100),
+             due = F.spoil_due({ faction = faction, held = held, capacity = capacity }, stem) }
+end
+
+function F.spoil(faction)
+    if not F.spoils(faction) then return end
+    local fkey = faction:name()
+    local rl = faction:region_list()
+    for i = 0, rl:num_items() - 1 do
+        local region = rl:item_at(i)
+        if not region:is_null_interface() then
+            -- the spoiling pools alone: F.stock reads all ~60, in every settlement of every faction
+            local v = { faction = faction, held = {}, capacity = {} }
+            for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+                local p = F.SPOIL.rates[g.stem] and F.pool(region, g.stem)
+                if p then
+                    v.held[g.stem], v.capacity[g.stem] = p:value(), p:maximum_value()
+                    local n = spoil_due(v, g.stem)
+                    if n > 0 then F.move(region, nil, g.stem, n, KIND.spoil, fkey) end
+                end
+            end
+        end
+    end
+end
+
+-- ---- trade edicts (design 2026-11-01, Part B) ------------------------------------------------
+-- Three realm policies, one option each in force: Rations, Workshops, Roads. Saved as
+-- F.state.edicts[fkey][edict] = {o = option, at = turn of the change}; no entry is the default. A change
+-- waits F.EDICT.cooldown turns. Growth, control and trade income are a faction bundle per option that is
+-- not the default (F.edict_bundles); the rest is read by the rules themselves through F.edict.
+F.EDICT = DERPY_MR_FLOWS_EDICTS
+
+function F.edicts_on() return F.rates().edicts == true end
+
+local function edict_known(which, option)
+    local e = F.EDICT[which]
+    if type(e) ~= "table" or type(e.options) ~= "table" then return false end
+    for _, o in ipairs(e.options) do
+        if o == option then return true end
+    end
+    return false
+end
+
+-- A READ, never a write: the panel and every rule ask it, for factions that never chose anything.
+function F.edict(fkey, which)
+    local e = F.EDICT[which]
+    if not e then return nil end
+    local b = F.edicts_on() and F.state.edicts and F.state.edicts[fkey]
+    local x = b and b[which]
+    if x and edict_known(which, x.o) then return x.o end
+    return e.default
+end
+
+function F.edict_wait(fkey, which)
+    local b = F.state.edicts and F.state.edicts[fkey]
+    local x = b and b[which]
+    if not (x and type(x.at) == "number") then return 0 end
+    return math.max(0, x.at + F.EDICT.cooldown - cm:model():turn_number())
+end
+
+-- The race's own bundle for an option, or the base one; nil for an option with none (the defaults).
+function F.edict_bundle(faction, option)
+    local own = F.EDICT.race_bundles[option]
+    return (own and own[F.race(faction)]) or F.EDICT.bundles[option]
+end
+
+-- RATIONS: provisions a turn per settlement level (F.NEED, 2, while the edict reads Normal).
+function F.need(fkey) return F.EDICT.need[F.edict(fkey, "rations")] or F.NEED end
+
+-- WAR ECONOMY: a processing batch whose output is a war material makes half as much again, rounded down.
+function F.output_n(faction, d)
+    if not d.output then return 0 end
+    local n = d.output[2]
+    if F.EDICT.war_outputs[d.output[1]] and F.edict(faction:name(), "workshops") == "war" then
+        n = math.floor(n * F.EDICT.war_pct / 100)
+    end
+    return n
+end
+
+-- Every edict bundle there is, in a fixed order.
+local function edict_family()
+    local out = {}
+    for _, which in ipairs(F.EDICT.order) do
+        for _, o in ipairs(F.EDICT[which].options) do
+            if F.EDICT.bundles[o] then out[#out + 1] = F.EDICT.bundles[o] end
+            local races, keys = F.EDICT.race_bundles[o] or {}, {}
+            for race in pairs(races) do keys[#keys + 1] = race end
+            table.sort(keys)
+            for _, race in ipairs(keys) do out[#out + 1] = races[race] end
+        end
+    end
+    return out
+end
+
+-- The bundles of the options in force on, every other edict bundle off; all off with the switch off.
+function F.edict_bundles(faction)
+    local fkey, want = faction:name(), {}
+    if F.edicts_on() and F.uses_stores(faction) then
+        for _, which in ipairs(F.EDICT.order) do
+            local b = F.edict_bundle(faction, F.edict(fkey, which))
+            if b then want[b] = true end
+        end
+    end
+    for _, b in ipairs(edict_family()) do
+        if want[b] and not faction:has_effect_bundle(b) then cm:apply_effect_bundle(b, fkey, 0)
+        elseif not want[b] and faction:has_effect_bundle(b) then cm:remove_effect_bundle(b, fkey) end
+    end
+end
+
+-- `force` skips the wait (a store event's choice); nothing else does.
+function F.edict_set(faction, which, option, force)
+    if not edict_known(which, option) or not F.edicts_on() or not F.uses_stores(faction) then return false end
+    -- NO MEALS, NO RATIONS: a faction that does not eat from the stores would get Plenty's growth for nothing
+    if which == "rations" and not F.eats(faction) then return false end
+    local fkey = faction:name()
+    if F.edict(fkey, which) == option then return false end
+    if not force and F.edict_wait(fkey, which) > 0 then return false end
+    F.state.edicts = F.state.edicts or {}
+    F.state.edicts[fkey] = F.state.edicts[fkey] or {}
+    F.state.edicts[fkey][which] = { o = option, at = cm:model():turn_number() }
+    F.edict_bundles(faction)
+    -- CLOSED ROADS CHANGE EVERY VERDICT ON THIS FACTION'S LAND (terrain_routes.lua R.hostile): kept answers go
+    if which == "roads" then F.invalidate_reach() end
+    return true
+end
+
+-- Run from the load callback: a known edict, a known option and a turn number, or nothing.
+function F.sanitize_edicts()
+    local all = F.state.edicts
+    if type(all) ~= "table" then F.state.edicts = nil return end
+    local clean = {}
+    for fkey, b in pairs(all) do
+        if type(fkey) == "string" and type(b) == "table" then
+            local keep = {}
+            for which, x in pairs(b) do
+                if type(x) == "table" and edict_known(which, x.o) and F.stock_number(x.at) then keep[which] = x end
+            end
+            if next(keep) then clean[fkey] = keep end
+        end
+    end
+    F.state.edicts = next(clean) and clean or nil
+end
+
+-- COMPUTER EDICTS (spec 5.4): checked at their turn start, each change through F.edict_set, so the
+-- cooldown binds them too. Rebels never count as a war or a neighbour.
+
+-- Realm provisions held over the realm's meals at Normal: how many turns the food lasts. nil with no meals.
+function F.food_cover(faction)
+    local held, meals = 0, 0
+    for _, s in ipairs(F.stocks(faction)) do
+        local level = 0
+        pcall(function() level = s.region:settlement():primary_slot():building():building_level() end)
+        meals = meals + F.EDICT.need.normal * level
+        held = held + F.use_total(s.held, "provisions")
+    end
+    if meals <= 0 then return nil end
+    return held / meals
+end
+
+-- How many owners of a region next to ours are at war with us. A count, so the walk order cannot matter.
+local function wars_next_door(faction)
+    local fkey, seen, n = faction:name(), {}, 0
+    local rl = faction:region_list()
+    for i = 0, rl:num_items() - 1 do
+        local adj = rl:item_at(i):adjacent_region_list()
+        for j = 0, adj:num_items() - 1 do
+            local o = adj:item_at(j):owning_faction()
+            if not o:is_null_interface() and not o:is_rebel() and o:name() ~= fkey and not seen[o:name()] then
+                seen[o:name()] = true
+                if faction:at_war_with(o) then n = n + 1 end
+            end
+        end
+    end
+    return n
+end
+
+local function at_war(faction)
+    local wars = faction:factions_at_war_with()
+    if type(wars) == "boolean" then return false end
+    for i = 0, wars:num_items() - 1 do
+        if not wars:item_at(i):is_rebel() then return true end
+    end
+    return false
+end
+
+function F.edict_ai(faction)
+    local a = F.EDICT.ai
+    local cover = F.food_cover(faction)
+    if cover then
+        F.edict_set(faction, "rations", (cover < a.ration_low and "rationing") or (cover > a.ration_high and "plenty") or "normal")
+    end
+    local near = wars_next_door(faction)
+    -- false, not a list, for the rebel faction (seen in game 2026-11-02)
+    local partners = faction:factions_trading_with()
+    local merchant = type(partners) ~= "boolean" and partners:num_items() >= a.merchant_partners and not at_war(faction)
+    F.edict_set(faction, "workshops", (near > 0 and "war") or (merchant and "merchant") or "balanced")
+    F.edict_set(faction, "roads", near >= a.closed_wars and "closed" or "tolled")
+end
+
+-- A player's edicts get their bundles (an older save catches up); a computer's run the rules.
+function F.edict_turn(faction)
+    if faction:is_human() then return F.edict_bundles(faction) end
+    local r = F.rates()
+    if r.edicts and r.ai and F.uses_stores(faction) then F.edict_ai(faction) end
+end
+
+-- ---- tolls and blockades (design 2026-11-01, Part C) ------------------------------------------
+-- An agreement convoy or a partner cart pays each faction whose land its road crosses F.rates().toll% of
+-- the cargo's value, at dispatch: all of them together at most F.TOLL.max%, each rounded down. Never the
+-- two sides, their allies, vassals and masters, or rebels. Only a Tolled realm charges: Open charges nothing, and
+-- Closed keeps foreign cargo out rather than charging it (spec 5.1), though a contract cart's road can still cross.
+F.TOLL = DERPY_MR_FLOWS_TOLL
+
+-- The land regions under a road's points, in road order, each once. Kept by the road's own table: a
+-- road is a new table whenever it is worked out again.
+F.road_known = setmetatable({}, { __mode = "k" })
+function F.road_regions(path)
+    if type(path) ~= "table" then return {} end
+    local hit = F.road_known[path]
+    if hit then return hit end
+    local out, seen, model = {}, {}, cm:model()
+    for _, p in ipairs(path) do
+        local r = model:get_region_at_logical_position(p[1], p[2])
+        if r and not r:is_null_interface() and not seen[r:name()] then
+            seen[r:name()] = true
+            out[#out + 1] = r:name()
+        end
+    end
+    F.road_known[path] = out
+    return out
+end
+
+local function friends(x, y) return x:is_ally_vassal_or_client_state_of(y) or y:is_ally_vassal_or_client_state_of(x) end
+
+-- Who charges a and b's cargo on this road, in the order the road first reaches their land.
+function F.toll_takers(a, b, path)
+    local r = F.rates()
+    if not r.tolls or (r.toll or 0) <= 0 then return {} end
+    local out, seen = {}, { [a:name()] = true, [b:name()] = true }
+    for _, rk in ipairs(F.road_regions(path)) do
+        local region = cm:get_region(rk)
+        local o = region and not region:is_null_interface() and region:owning_faction()
+        if o and not o:is_null_interface() and not seen[o:name()] then
+            seen[o:name()] = true
+            if not o:is_rebel() and F.edict(o:name(), "roads") == "tolled" and not friends(o, a) and not friends(o, b) then
+                out[#out + 1] = o:name()
+            end
+        end
+    end
+    return out
+end
+
+function F.toll_pct(n) return math.min(F.rates().toll * n, F.TOLL.max) end
+
+-- Each taker's toll on a cargo worth `value` gold, and their sum. A taker due nothing is left out.
+function F.tolls(value, takers)
+    local due, n = {}, #takers
+    if n == 0 then return due, 0 end
+    local each = math.floor(value * F.toll_pct(n) / (n * 100))
+    if each <= 0 then return due, 0 end
+    for _, k in ipairs(takers) do due[k] = each end
+    return due, each * n
+end
+
+-- The toll on one unit sold at price_c (hundredths of gold), in hundredths: the uphill rule adds it.
+function F.toll_unit(price_c, n)
+    if n <= 0 then return 0 end
+    return math.floor(F.sell_price(price_c) * F.toll_pct(n) / 100)
+end
+
+-- All of it or none of it: a payer short of the sum pays nothing. In taker order, so every machine alike.
+function F.pay_tolls(payer, due)
+    local keys, sum = {}, 0
+    for k, n in pairs(due) do keys[#keys + 1] = k; sum = sum + n end
+    if sum <= 0 then return true end
+    local f = cm:get_faction(payer)
+    if not f or f:treasury() < sum then return false end
+    table.sort(keys)
+    for _, k in ipairs(keys) do
+        cm:treasury_mod(payer, -due[k])
+        cm:treasury_mod(k, due[k])
+        F.book_toll(payer, k, "paid", due[k])
+        F.book_toll(k, payer, "got", due[k])
+    end
+    return true
+end
+
+function F.book_toll(fkey, other, way, n) return F.book_gold("tolls", fkey, other, way, n) end
+function F.tolls_last(fkey) return F.gold_last("tolls", fkey) end
+
+-- A saved record's tolls: absent, or whole gold above 0 by faction key.
+function F.tolls_sound(t)
+    if t == nil then return true end
+    if type(t) ~= "table" then return false end
+    for k, n in pairs(t) do
+        if type(k) ~= "string" or not (F.stock_number(n) and n > 0) then return false end
+    end
+    return true
+end
+
+-- A BLOCKADE (spec 6.2): an army at war with either side standing within F.SHIP.near hexes of any point of
+-- their road stops that pair's trade, duty and contract carts for the turn; cargo already on the road goes on.
+-- Never a reroute, and the reach answers never see armies. The blocker's faction key, or nil.
+function F.blockade(a, b, path)
+    if not F.rates().tolls or type(path) ~= "table" or #path == 0 then return nil end
+    local near = F.SHIP.near
+    local x0, y0, x1, y1 = path[1][1], path[1][2], path[1][1], path[1][2]
+    for _, p in ipairs(path) do
+        x0, y0, x1, y1 = math.min(x0, p[1]), math.min(y0, p[2]), math.max(x1, p[1]), math.max(y1, p[2])
+    end
+    for _, side in ipairs({ a, b }) do
+        for _, e in ipairs(F.enemy_armies(side)) do
+            -- the box widened by `near` first: most armies are nowhere near the road
+            if e.x >= x0 - near and e.x <= x1 + near and e.y >= y0 - near and e.y <= y1 + near then
+                for _, p in ipairs(path) do
+                    local dx, dy = e.x - p[1], e.y - p[2]
+                    if dx * dx + dy * dy <= near * near then return e.fkey end
+                end
+            end
+        end
+    end
+    return nil
+end
+
+-- This turn's or last turn's blocker of a pair, as F.trade_pair recorded it at a real trade: what the panel, the
+-- map and the duty read. Saved with those two turns (F.blockades_kept), so a reload shows and charges the same.
+F.blockade_known = {}
+local function pair_key(a_key, b_key)
+    if b_key < a_key then a_key, b_key = b_key, a_key end
+    return a_key .. ">" .. b_key
+end
+function F.blockaded(a_key, b_key)
+    local hit = F.blockade_known[pair_key(a_key, b_key)]
+    if hit and hit.turn >= cm:model():turn_number() - 1 then return hit.by end
+    return nil
+end
+function F.record_blockade(a_key, b_key, by)
+    F.blockade_known[pair_key(a_key, b_key)] = by and { by = by, turn = cm:model():turn_number() } or nil
+end
+
+function F.blockades_kept()
+    local keep, turn = {}, cm:model():turn_number()
+    for k, v in pairs(F.blockade_known) do
+        if v.turn >= turn - 1 then keep[k] = { by = v.by, turn = v.turn } end
+    end
+    return next(keep) and keep or nil
+end
+
+-- On load: pair key -> { by = faction key, turn = number }, anything else dropped.
+function F.sanitize_blockades()
+    local clean = {}
+    for k, v in pairs(type(F.state.blockades) == "table" and F.state.blockades or {}) do
+        if type(k) == "string" and type(v) == "table" and type(v.by) == "string" and type(v.turn) == "number" then
+            clean[k] = { by = v.by, turn = v.turn }
+        end
+    end
+    F.blockade_known, F.state.blockades = clean, nil
+end
+
+-- ---- bandits on the roads (design 2026-11-01, Part D) ---------------------------------------
+-- Cargo still on the road can meet trouble on the stretch it covered this turn, more often on dangerous land:
+-- CA's caravan banditry where it reads above 0, else the wild-land rule. Three encounters, each a choice.
+F.ROAD = DERPY_MR_FLOWS_ROAD
+F.ROAD_BATTLES = true   -- false: every battle encounter is settled as its other choice (the live probe's fallback)
+
+-- The region keys under the road's points from `from_xy` to `to_xy`, inclusive, each once; with no road, or a start
+-- that is not on it, the region at `to_xy` alone.
+-- ponytail: every point of the stretch is read each turn; cache by road if the 50 ms round budget is missed
+function F.stretch(road, from_xy, to_xy)
+    local model, out, seen = cm:model(), {}, {}
+    local function add(x, y)
+        local r = model:get_region_at_logical_position(x, y)
+        if r and not r:is_null_interface() and not seen[r:name()] then
+            seen[r:name()] = true
+            out[#out + 1] = r:name()
+        end
+    end
+    local i, j
+    for k, p in ipairs(road or {}) do
+        if not i and p[1] == from_xy[1] and p[2] == from_xy[2] then i = k end
+        if not j and p[1] == to_xy[1] and p[2] == to_xy[2] then j = k end
+    end
+    if not (i and j) then
+        add(to_xy[1], to_xy[2])
+        return out
+    end
+    for k = i, j, (i <= j and 1 or -1) do add(road[k][1], road[k][2]) end
+    return out
+end
+
+-- THE WILD-LAND RULE for one region: 100 for abandoned or rebel land, else its corruption or its unrest, whichever
+-- is larger, 0 to 100.
+function F.wild(region)
+    local o = region:owning_faction()
+    if region:is_abandoned() or o:is_null_interface() or o:is_rebel() then return 100 end
+    local c = math.floor(cm:get_total_corruption_value_in_region(region) or 0)
+    return math.max(0, math.min(100, math.max(c, -region:public_order())))
+end
+
+-- A stretch's threat: CA's caravan banditry over its regions, averaged and rounded down, as CA's caravans read it,
+-- when that is above 0; else the wild land's average. 0 for no regions.
+function F.threat(keys)
+    if #keys == 0 then return 0 end
+    local ok, v = pcall(function()
+        return cm:model():world():caravans_system():total_banditry_for_regions_by_key(keys)
+    end)
+    if ok and type(v) == "number" and v > 0 then return math.min(100, math.floor(v / #keys)) end
+    local sum = 0
+    for _, k in ipairs(keys) do
+        local r = cm:get_region(k)
+        if r and not r:is_null_interface() then sum = sum + F.wild(r) end
+    end
+    return math.floor(sum / #keys)
+end
+
+-- AN ARMY ON PATROL (not a garrison) of the owner or the buyer within F.SHIP.near of the cargo keeps trouble away.
+function F.patrol(owner, buyer, x, y)
+    local r2 = F.SHIP.near * F.SHIP.near
+    for _, f in ipairs({ owner, buyer }) do
+        local mfl = f:military_force_list()
+        for i = 0, mfl:num_items() - 1 do
+            local mf = mfl:item_at(i)
+            if not mf:is_armed_citizenry() and mf:has_general() then
+                local ch = mf:general_character()
+                local dx, dy = ch:logical_position_x() - x, ch:logical_position_y() - y
+                if dx * dx + dy * dy <= r2 then return true end
+            end
+        end
+    end
+    return false
+end
+
+-- THE ROLL: trouble when cm:random_number(10000, 1) is at most threat x danger, half that with guards. Then one of
+-- the encounters this cargo can meet, each as likely, that its faction has not met in F.ROAD.cooldown turns; that
+-- turn is kept. The encounter's key, or nil.
+function F.road_roll(fkey, threat, guarded, land)
+    local danger = F.rates().road_danger or 0
+    if threat <= 0 or danger <= 0 then return nil end
+    if cm:random_number(10000, 1) > threat * danger * (guarded and 50 or 100) / 100 then return nil end
+    local turn = cm:model():turn_number()
+    F.state.road_cool = F.state.road_cool or {}
+    local cool, open = F.state.road_cool[fkey] or {}, {}
+    for _, e in ipairs(F.ROAD.encounters) do
+        local fits = (e ~= "ambush" or threat >= F.ROAD.ambush_min) and (e ~= "washout" or land)
+        if fits and turn - (cool[e] or -1000000) > F.ROAD.cooldown then open[#open + 1] = e end
+    end
+    if #open == 0 then return nil end
+    local e = open[cm:random_number(#open, 1)]
+    cool[e] = turn
+    F.state.road_cool[fkey] = cool
+    return e
+end
+
+-- A cargo's value at its owner's base prices: a convoy's whole basket, a shipment's units.
+function F.cargo_value_base(rec)
+    local v = 0
+    for stem, n in pairs(rec.basket or { [rec.stem] = rec.n }) do
+        v = v + F.gold(n, math.floor(F.price(F.GOOD[stem], rec.f) * F.PCT))
+    end
+    return v
+end
+
+-- Each good loses pct of its count, rounded down, so the smallest lots lose nothing to a half; a record left
+-- empty leaves the road (F.drop refunds a contract's escrow). The units lost.
+function F.cargo_lose(kind, rec, pct)
+    local lost = 0
+    if kind == "convoy" then
+        for stem, n in pairs(rec.basket) do
+            local cut = math.floor(n * pct / 100)
+            lost = lost + cut
+            -- a 0 never stays in a basket: a saved one fails F.convoy_sound
+            rec.basket[stem] = n - cut > 0 and n - cut or nil
+        end
+        if next(rec.basket) == nil then F.convoy_drop(rec) end
+    else
+        local cut = math.floor(rec.n * pct / 100)
+        lost, rec.n = cut, rec.n - cut
+        if rec.n <= 0 then F.drop(rec) end
+    end
+    return lost
+end
+
+function F.cargo_wait(kind, rec)
+    if kind == "convoy" then rec.due = rec.due + 1 else rec.due = F.ship_due(rec) + 1 end
+end
+
+-- THE OTHER CHOICE, which every encounter takes that no dilemma or battle settles: bandits take half, highwaymen
+-- a fifth of the value in gold (never more than the treasury), a washed-out road a turn. A computer's convoy
+-- bound for a player that loses goods tells that player.
+function F.road_settle(faction, kind, rec, key)
+    if key == "washout" then return F.cargo_wait(kind, rec) end
+    if key == "highwaymen" then
+        local pay = math.min(math.floor(F.cargo_value_base(rec) * F.ROAD.toll_pct / 100), math.max(0, faction:treasury()))
+        if pay > 0 then cm:treasury_mod(faction:name(), -pay) end
+        return
+    end
+    local lost = F.cargo_lose(kind, rec, F.ROAD.half_pct)
+    local buyer = kind == "convoy" and F.live(rec.buyer)
+    if lost > 0 and buyer and buyer:is_human() and not faction:is_human() then
+        cm:show_message_event(buyer:name(), "event_feed_strings_text_derpy_mr_road_loss_title",
+            "event_feed_strings_text_derpy_mr_road_loss_primary", "event_feed_strings_text_derpy_mr_road_loss_secondary",
+            false, 1014)
+    end
+end
+
+-- AT ITS OWNER'S TURN START, for cargo still on the road after its step: the stretch it covered, its threat
+-- (kept on it, and a turn of danger for the owner's guards), then the roll. Nothing with the switch off, a
+-- patrol near, or a safe road bought for the turn (Part E's caravan master).
+function F.road_event(faction, kind, rec, from_xy)
+    local r = F.rates()
+    if not r.bandits or (r.road_danger or 0) <= 0 or not (rec.x and rec.y) then return end
+    local fkey, turn, to_xy = faction:name(), cm:model():turn_number(), { rec.x, rec.y }
+    local road = kind == "convoy" and F.unpack_road(rec.road) or rec.road
+    local keys = F.stretch(road, from_xy or to_xy, to_xy)
+    rec.threat = F.threat(keys)
+    if rec.threat >= F.ROAD.ai_guard then
+        F.state.road_seen = F.state.road_seen or {}
+        F.state.road_seen[fkey] = turn
+    end
+    if F.patrol(faction, kind == "convoy" and F.live(rec.buyer) or nil, rec.x, rec.y) then return end
+    if ((F.state.road_safe or {})[fkey] or -1) >= turn then return end
+    -- all three encounters are land ones: cargo standing at sea meets none, whatever land its stretch crossed
+    local here = cm:model():get_region_at_logical_position(rec.x, rec.y)
+    if not here or here:is_null_interface() then return end
+    local key = F.road_roll(fkey, rec.threat, rec.guarded == true, true)
+    if not key then return end
+    -- a player in single player is asked, as CA's caravans ask; everyone else takes the other choice
+    if faction:is_human() and not cm:is_multiplayer() and (F.ROAD_BATTLES or not F.ROAD_FIGHT[key])
+        and F.road_offer(faction, kind, rec, key, F.road_region(faction, keys)) then return end
+    F.road_settle(faction, kind, rec, key)
+end
+
+-- GUARDS (spec 7.4): a player's switch; a computer's while any of its cargo crossed land of threat 30 or more
+-- last turn. Off with the bandits.
+function F.guards_on(fkey)
+    if not F.rates().bandits then return false end
+    if F.is_human(fkey) then return (F.state.guards or {})[fkey] == true end
+    return ((F.state.road_seen or {})[fkey] or -1000000) >= cm:model():turn_number() - 1
+end
+
+-- "on" or "off", the state the panel wants: asking twice gives the same answer, as a toggle would not
+function F.set_guards(faction, want)
+    if want ~= "on" and want ~= "off" then return end
+    F.state.guards = F.state.guards or {}
+    F.state.guards[faction:name()] = want == "on" or nil
+end
+
+-- 5% of the cargo's value when it leaves, paid only when the payer can; then the cargo is guarded.
+function F.guard_fee(payer, rec)
+    if not F.guards_on(payer:name()) then return end
+    local fee = math.floor(F.cargo_value_base(rec) * F.ROAD.guard_pct / 100)
+    if fee > payer:treasury() then return end
+    if fee > 0 then cm:treasury_mod(payer:name(), -fee) end
+    rec.guarded = true
+end
+
+-- On load: the cooldowns, the guards and the turns of danger, each by faction in the shapes above, or nothing.
+function F.sanitize_road()
+    local known = {}
+    for _, e in ipairs(F.ROAD.encounters) do known[e] = true end
+    local function by_faction(t, keep)
+        if type(t) ~= "table" then return nil end
+        local clean = {}
+        for k, v in pairs(t) do
+            if type(k) == "string" then clean[k] = keep(v) end
+        end
+        return next(clean) and clean or nil
+    end
+    F.state.road_cool = by_faction(F.state.road_cool, function(b)
+        if type(b) ~= "table" then return nil end
+        local out = {}
+        for e, t in pairs(b) do
+            if known[e] and F.stock_number(t) then out[e] = t end
+        end
+        return next(out) and out or nil
+    end)
+    F.state.guards = by_faction(F.state.guards, function(v) return v == true or nil end)
+    F.state.road_seen = by_faction(F.state.road_seen, function(v) return F.stock_number(v) and v or nil end)
+    F.state.road_safe = by_faction(F.state.road_safe, function(v) return F.stock_number(v) and v or nil end)
 end
 
 -- ---- the Stores panel's actions (spending spec section 5, phase 7) -------------------------
@@ -1172,7 +1940,7 @@ function F.economy_state(faction, region, key)
     local ready, short = false, nil
     if open then ready, short = F.economy_admit(faction, region, d) end
     return { key = key, definition = d, on = on, open = open, reason = reason,
-        ready = ready, short = short,
+        ready = ready, short = short, made = d.output and F.output_n(faction, d) or nil,
         paid = b and b.paid[key] == cm:model():turn_number() or false }
 end
 
@@ -1246,7 +2014,7 @@ function F.economy_admit(faction, region, d, batches)
         if F.available_stock(v, stem) < n then return false, "Short of " .. stem end
         F.stock_adjust(v, stem, -n)
     end
-    if d.output and F.free(region, d.output[1]) < d.output[2] then return false, "Output store full" end
+    if d.output and F.free(region, d.output[1]) < F.output_n(faction, d) then return false, "Output store full" end
     return true
 end
 
@@ -1255,11 +2023,11 @@ function F.economy_pay(faction, region, d)
     local changes, before = {}, {}
     for stem, n in pairs(d.cost) do changes[#changes + 1] = { stem, -n, KIND.spend } end
     table.sort(changes, function(a, b) return a[1] < b[1] end)
-    if d.output then changes[#changes + 1] = { d.output[1], d.output[2], KIND.process } end
+    if d.output then changes[#changes + 1] = { d.output[1], F.output_n(faction, d), KIND.process } end
     for _, c in ipairs(changes) do before[c[1]] = F.held(region, c[1]) end
     local ok, err = pcall(function()
         for _, c in ipairs(changes) do
-            cm:entity_add_pooled_resource_transaction(region, F.PREFIX .. c[1] .. "_" .. c[3], c[2])
+            F.pool_add(region, F.PREFIX .. c[1] .. "_" .. c[3], c[2])
             assert(F.held(region, c[1]) == before[c[1]] + c[2], "processing transaction did not match")
         end
         if d.bundle then
@@ -1272,7 +2040,7 @@ function F.economy_pay(faction, region, d)
             local restored, why = pcall(function()
                 local delta = before[c[1]] - F.held(region, c[1])
                 if delta ~= 0 then
-                    cm:entity_add_pooled_resource_transaction(region, F.PREFIX .. c[1] .. "_" .. c[3], delta)
+                    F.pool_add(region, F.PREFIX .. c[1] .. "_" .. c[3], delta)
                 end
                 assert(F.held(region, c[1]) == before[c[1]], "rollback did not match")
             end)
@@ -1453,7 +2221,7 @@ function F.recurring_use(faction, region, provinces)
     if rates.upkeep and F.eats(faction) then
         local level = 0
         pcall(function() level = region:settlement():primary_slot():building():building_level() end)
-        out.provisions = F.NEED * level
+        out.provisions = F.need(faction:name()) * level
     end
     local army_need, army_short = F.provision_need(faction, region)
     if army_need > 0 then
@@ -1554,11 +2322,17 @@ end
 function F.stock_forecast(v, made)
     local out = {}
     for _, use in ipairs({ "provisions", "building", "war", "mounts", "luxuries" }) do
-        local h, d = v.totals[use] or 0, v.recurring[use] or 0
+        local h, s = v.totals[use] or 0, 0
+        for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+            if g.use == use then s = s + F.spoil_due(v, g.stem) end
+        end
         local p = made and (made[use] or 0)
-        local fc = { held = h, use_per_turn = d, production = p, incoming = v.incoming_use[use] or 0,
-            due = v.due, mode = "none" }
-        if p ~= nil then fc.net = p - d end
+        local fc = { held = h, use_per_turn = v.recurring[use] or 0, spoil = s, production = p,
+            incoming = v.incoming_use[use] or 0, due = v.due, mode = "none" }
+        local d = fc.use_per_turn
+        if p ~= nil then fc.net = p - d - s end
+        -- spoiling counts against the net, never the cover: it stops at the safe share, so it
+        -- cannot empty a store, and counted as a use it showed a countdown on every full granary
         if d > 0 then
             if p == nil then fc.mode, fc.cover = "stored", math.floor(h / d)
             elseif p >= d then fc.mode = "stable"
@@ -1583,7 +2357,10 @@ function F.stocks(faction)
     local rl = faction:region_list()
     for i = 0, rl:num_items() - 1 do
         local r = rl:item_at(i)
-        if not r:is_null_interface() then out[#out + 1] = { region = r, held = (F.stock(r)) } end
+        if not r:is_null_interface() then
+            local held, _cap, capacity = F.stock(r)
+            out[#out + 1] = { region = r, held = held, capacity = capacity }
+        end
     end
     return out
 end
@@ -1667,8 +2444,13 @@ function F.race(faction)
     return string.match(faction:subculture(), "_sc_(%a+)_") or ""
 end
 
+-- A work or an event is open to its races ("all" for every one), less its not_races: a race gets its
+-- own where the general one would do nothing for it (2026-11-01)
 function F.work_open(faction, w)
     local race = F.race(faction)
+    for _, r in ipairs(w.not_races or {}) do
+        if r == race then return false end
+    end
     for _, r in ipairs(w.races) do
         if r == "all" or r == race then return true end
     end
@@ -1946,7 +2728,8 @@ function F.recruit_bill(faction, caste, value)
     local out, per = {}, F.rates().recruit_per or 0
     local parts = caste and DERPY_MR_FLOWS_CASTE[caste]
     if not parts or type(value) ~= "number" or value <= 0 or per <= 0 then return out end
-    local base = math.ceil(value / F.RECRUIT.per * per)
+    local draw = F.edict(faction:name(), "workshops") == "merchant" and F.EDICT.merchant_draw or 100
+    local base = math.ceil(value / F.RECRUIT.per * per * draw / 100)
     -- the RUNNING total is rounded, not each part: a 7 split in halves is 4 and 3, never 4 and 4
     local share, done = 0, 0
     for _, p in ipairs(parts) do
@@ -2257,14 +3040,14 @@ end
 
 function F.provision_source(faction, force)
     local ch = force:general_character()
-    if ch:is_at_sea() then return nil, "At sea: no refill" end
-    if not ch:has_region() then return nil, "No local settlement" end
+    if ch:is_at_sea() then return nil, "It cannot refill at sea." end
+    if not ch:has_region() then return nil, "There is no settlement here to refill from." end
     local r = ch:region()
     if r:is_null_interface() or r:is_abandoned() or r:owning_faction():name() ~= faction:name() then
-        return nil, "Local settlement is not yours"
+        return nil, "This settlement is not yours."
     end
-    if r:garrison_residence():is_under_siege() then return nil, "Local settlement is besieged" end
-    return r, "Local stores above Keep"
+    if r:garrison_residence():is_under_siege() then return nil, "This settlement is under siege." end
+    return r, "It refills from this settlement."
 end
 
 function F.provision_need(faction, region)
@@ -2325,7 +3108,8 @@ function F.provision_rows(faction)
                         F.stock_adjust(view, g.stem, -n)
                     end
                 end
-                reason = available > 0 and (tostring(available) .. " provisions above Keep") or "No provisions above Keep"
+                reason = available > 0 and ("This settlement has " .. tostring(available) .. " provisions to spare.")
+                    or "This settlement has no provisions to spare."
             end
             local row = { id = id, force = force, need = need, cap = 10 * need,
                 held = F.provision_total(b), short = b and b.short or 0, auto = not b or b.auto ~= false,
@@ -2334,8 +3118,8 @@ function F.provision_rows(faction)
             row.buy = F.provision_quote(faction, row, b)
             row.price = row.buy * F.FIELD_RATION_PRICE
             if row.mobile then
-                row.reason = row.buy > 0 and ("Field rations: " .. row.buy .. " for " .. row.price .. " gold. Load to buy.")
-                    or "Field rations unavailable: two meals held, already bought this turn, or insufficient gold."
+                row.reason = row.buy > 0 and ("You can buy " .. row.buy .. " rations for " .. row.price .. " gold.")
+                    or "The army cannot buy more rations this turn."
             end
             rows[#rows + 1] = row
         end
@@ -2384,7 +3168,7 @@ function F.provision_refill(faction, row, b, unload)
                 or math.min(left, F.available_stock(view, g.stem))
             if n > 0 then
                 local before = F.held(region, g.stem)
-                cm:entity_add_pooled_resource_transaction(region, F.PREFIX .. g.stem .. "_" .. KIND.move, unload and n or -n)
+                F.pool_add(region, F.PREFIX .. g.stem .. "_" .. KIND.move, unload and n or -n)
                 local actual = F.held(region, g.stem) - before
                 -- Cargo changes only by the native pool's confirmed debit/credit.
                 if unload then actual = math.max(0, math.min(n, actual))
@@ -2572,19 +3356,19 @@ end
 -- mode: as F.reach; the panel passes 'show', the model's own callers nothing.
 function F.route_status(faction, o, mode)
     local seller = F.live(o.seller)
-    if not seller or not F.live(faction:name()) then return nil, "Party no longer exists" end
+    if not seller or not F.live(faction:name()) then return nil, "The seller or buyer is gone" end
     local from, to = F.owned(seller, o.from), F.owned(faction, o.to)
-    if not from or not to then return nil, "Endpoint no longer owned" end
-    if o.seller ~= faction:name() and not F.partners(faction, seller) then return nil, "Trade agreement required" end
+    if not from or not to then return nil, "One of the two settlements has changed hands" end
+    if o.seller ~= faction:name() and not F.partners(faction, seller) then return nil, "Needs a trade agreement" end
     if o.seller ~= faction:name() then
         local open, why = F.reach(from, to, mode)
         if open == false then return nil, F.REACH_WHY[why] end
     end
-    if not F.uses_stores(faction) or not F.uses_stores(seller) then return nil, "Faction keeps no stores" end
+    if not F.uses_stores(faction) or not F.uses_stores(seller) then return nil, "One side keeps no stores" end
     if F.stopped(o.seller, "export", o.stem) or F.stopped(faction:name(), "import", o.stem) then
-        return nil, "Imports or exports stopped"
+        return nil, "Trade in this resource is stopped"
     end
-    if o.seller ~= faction:name() and not F.pool(from, o.stem) then return nil, "No price at the source" end
+    if o.seller ~= faction:name() and not F.pool(from, o.stem) then return nil, "The seller cannot store it" end
     return { from = from, to = to, seller = seller }, "Ready"
 end
 
@@ -2646,10 +3430,10 @@ end
 function F.route_goods(region, stem, delta, kind)
     local before = F.held(region, stem)
     local key = F.PREFIX .. stem .. "_" .. (kind or KIND.move)
-    local ok = pcall(function() cm:entity_add_pooled_resource_transaction(region, key, delta) end)
+    local ok = pcall(function() F.pool_add(region, key, delta) end)
     if ok and F.held(region, stem) == before + delta then return true end
     local restore = before - F.held(region, stem)
-    if restore ~= 0 then pcall(function() cm:entity_add_pooled_resource_transaction(region, key, restore) end) end
+    if restore ~= 0 then pcall(function() F.pool_add(region, key, restore) end) end
     if F.held(region, stem) ~= before then error("route stock rollback failed") end
     return false
 end
@@ -2704,9 +3488,10 @@ function F.routes_turn(faction)
                 local need = math.max(0, math.min(o.target - F.held(st.to, o.stem) - incoming, F.free(st.to, o.stem) - incoming))
                 local fit = F.fit_delivery(o.batch, need)
                 if fit then
-                    local ship = F.ship(faction, st.from, st.to, o.stem, fit.n, o)
-                    o.status = ship and "Dispatched" or "Waiting for surplus, gold or cart space"
-                else o.status = "Target covered by stock and incoming cargo" end
+                    local ship, why = F.ship(faction, st.from, st.to, o.stem, fit.n, o)
+                    o.status = (ship and "Cart sent") or (why == "blockaded" and "Blockaded")
+                        or "Waiting for goods or gold or road space"
+                else o.status = "You have enough including what is on the way" end
             end
         end
     end
@@ -2742,13 +3527,16 @@ function F.sanitize_ships()
                 s.price_c = F.stock_number(s.price) and s.price * F.PCT or 0
             end
             s.price = nil
+            if not F.tolls_sound(s.tolls) then s.tolls = nil end
         end
     end
 end
 
 -- THE ONE DOOR. parts = {action, args...}: a trade switch (export|import, stem), or an action
 -- with exactly its own count of parts. Humans only; the actions only with the MCT switch on.
-F.ACTIONS = { send = 3, order = 2, sell = 2, supply = 3, work = 2, upgrade = 3, aim = 3, found = 2, economy = 3, provisions = 3, route_new = 6, route_ctl = 3, route_edit = 4 }
+F.ACTIONS = { send = 3, order = 2, sell = 2, supply = 3, work = 2, upgrade = 3, aim = 3, found = 2, economy = 3, provisions = 3, route_new = 6, route_ctl = 3, route_edit = 4, edict = 3, guards = 2 }
+-- the switch an action needs: an edict is not a Vault action, and has its own; so have the guards
+F.ACTION_SWITCH = { supply = "supply", edict = "edicts", guards = "bandits" }
 function F.dispatch(fkey, parts)
     if not F.is_human(fkey) then return end
     -- the map's cart goods come from kept trade previews (terrain_routes.lua R.plans): an action shows on its
@@ -2765,9 +3553,11 @@ function F.dispatch(fkey, parts)
         return
     end
     if F.ACTIONS[a] ~= #parts then return end
-    if not F.rates()[a == "supply" and "supply" or "actions"] then return end
+    if not F.rates()[F.ACTION_SWITCH[a] or "actions"] then return end
     local f = cm:get_faction(fkey)
-    if a == "route_new" then F.route_create(f, parts[2], parts[3], parts[4], parts[5], parts[6])
+    if a == "edict" then F.edict_set(f, parts[2], parts[3])
+    elseif a == "guards" then F.set_guards(f, parts[2])
+    elseif a == "route_new" then F.route_create(f, parts[2], parts[3], parts[4], parts[5], parts[6])
     elseif a == "route_ctl" then F.route_control(f, parts[2], parts[3])
     elseif a == "route_edit" then F.route_edit(f, parts[2], parts[3], parts[4])
     elseif a == "send" then F.send_here(f, parts[2], parts[3])
@@ -2814,7 +3604,11 @@ end
 -- dilemma payload cannot charge a REGION pool. A computer-run faction takes the same deal on a
 -- roll. At most one event per faction every EVENT_GAP turns, counted from the offer.
 F.EVENT_GAP, F.EVENT_AI_PCT = DERPY_MR_FLOWS_EVENT[1], DERPY_MR_FLOWS_EVENT[2]
-F.EVENT_ORDER = { "siege", "feast", "arsenal", "tribute" }   -- a siege cannot wait; the rest take turns
+-- a siege cannot wait; the rest take turns. Part E's six follow the tribute.
+F.EVENT_ORDER = { "siege", "feast", "feast_chd", "arsenal", "tribute", "smugglers", "guild", "grain_rot", "caravan_master",
+                  "toll_dispute", "blockade_runner" }
+-- PART E's offers, one rule each, by key: function(faction, stocks) -> the offer or nil (filled below them)
+F.EVENT_OFFERS = {}
 F.DIPLO_BONUS = 3                                            -- CA's change type, -6..+6
 F.EVENT_BY_DILEMMA = {}
 for k, e in pairs(DERPY_MR_FLOWS_EVENTS) do F.EVENT_BY_DILEMMA[e.dilemma] = k end
@@ -2865,9 +3659,23 @@ function F.event_army(faction)
     return best
 end
 
+-- An event's gates (Part E): every switch it needs is on, and a players-only event goes to a player.
+function F.event_gated(faction, e)
+    local r = F.rates()
+    for _, s in ipairs(e.needs or {}) do
+        if not r[s] then return false end
+    end
+    return not e.human or faction:is_human()
+end
+
 -- What `key` would be offered now: {key, region, target, char, force}, or nil.
 function F.event_offer(faction, key, stocks)
     local e = DERPY_MR_FLOWS_EVENTS[key]
+    if not (F.work_open(faction, e) and F.event_gated(faction, e)) then return nil end
+    local own = F.EVENT_OFFERS[key]
+    if own then return own(faction, stocks) end
+    -- the store rule below offers wherever `cost` is held: at 0 that is every store, so an event of 0 has its own
+    if e.cost <= 0 then return nil end
     if e.where == "region" then
         local r = F.event_region(stocks, e.use, e.cost, key == "siege")
         return r and { key = key, region = r:name() } or nil
@@ -2905,8 +3713,12 @@ function F.event_pick(faction, b)
     return best
 end
 
--- The spend and the reward. A store short of the cost when this runs pays nothing and gets nothing.
-function F.event_apply(faction, p)
+-- The spend and the reward for `choice`. Part E's events have their own (F.EVENT_APPLY); the rest act on FIRST
+-- only. A store short of the cost when this runs pays nothing and gets nothing.
+function F.event_apply(faction, p, choice)
+    local own = F.EVENT_APPLY[p.key]
+    if own then return own(faction, p, choice) end
+    if choice ~= "FIRST" then return end
     local e, fkey = DERPY_MR_FLOWS_EVENTS[p.key], faction:name()
     local pick = F.bulk(e.use)
     if e.where == "region" then
@@ -2943,6 +3755,7 @@ function F.events(faction)
     if human then
         local e = DERPY_MR_FLOWS_EVENTS[o.key]
         local tf = o.target and cm:get_faction(o.target):command_queue_index() or 0
+        if o.key == "guild" then tf = F.name_good(faction, o.stem) end
         local rg = o.region and cm:get_region(o.region):cqi() or 0
         F.set_pending(fkey, o)
         -- false: never issued (multiplayer, a target gone); no offer waits and no gap starts.
@@ -2954,9 +3767,29 @@ function F.events(faction)
         end
     else
         if cm:random_number(100, 1) > F.EVENT_AI_PCT then return end   -- a failed roll starts no gap
-        F.event_apply(faction, o)
+        F.event_apply(faction, o, "FIRST")
     end
     b.at, b.seen[o.key] = turn, turn
+end
+
+-- THE GUILD'S GOOD: no dilemma target can be a good, so its name goes in a script value the dilemma's text reads,
+-- keyed by the player's faction CQI, and the player rides as the target faction (as CA's sea encounters pass it).
+-- The faction's CQI, for that target.
+F.GUILD_GOOD = "derpy_mr_guild_good_"
+function F.name_good(faction, stem)
+    local cqi = faction:command_queue_index()
+    local s = common.get_localised_string("pooled_resources_display_name_" .. F.PREFIX .. stem)
+    common.set_context_value(F.GUILD_GOOD .. cqi, (s ~= nil and s ~= "") and s or stem)
+    return cqi
+end
+
+-- Script values are not saved: a guild offer still waiting after a load names its good again.
+function F.name_pending_goods()
+    for fkey, p in pairs(F.state.pending or {}) do
+        local o = type(p) == "table" and (p.guild or (p.key == "guild" and p))
+        local f = o and F.GOOD[o.stem] and F.live(fkey)
+        if f then F.name_good(f, o.stem) end
+    end
 end
 
 function F.on_dilemma(context)
@@ -2966,7 +3799,8 @@ function F.on_dilemma(context)
     if not p then return end
     F.clear_pending(fkey, key)
     if key == "raid" then return F.raid_answer(faction, p, context:choice_key()) end
-    if context:choice_key() == "FIRST" then F.event_apply(faction, p) end
+    if string.sub(key, 1, 5) == "road_" then return F.road_answer(faction, p, context:choice_key()) end
+    F.event_apply(faction, p, context:choice_key())
 end
 
 -- AN UNANSWERED OFFER, one per faction and event: a Restore offered on capture must not wipe a
@@ -3030,9 +3864,265 @@ function F.on_restore(context)
             F.clear_pending(faction:name(), "restore")   -- never issued (multiplayer returns false)
         end
     elseif cm:random_number(100, 1) <= F.EVENT_AI_PCT then
-        F.event_apply(faction, o)
+        F.event_apply(faction, o, "FIRST")
     end
 end
+
+-- ---- Part E: store events that read the stores (design 2026-11-01, section 8) ----------------
+-- Each is offered by its own rule (F.EVENT_OFFERS) and settled by its own apply (F.EVENT_APPLY), which is
+-- handed the answered choice. Literals stay right of their operators (the game's compiler).
+F.EVENT_APPLY = {}
+
+-- The cheapest good of `use` a store can hold, ties by stem.
+local function cheapest(fkey, v, use)
+    local best, bp = nil, nil
+    for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+        if F.bulk(use)(g) and (v.capacity[g.stem] or 0) > 0 then
+            local p = F.price(g, fkey)
+            if bp == nil or p < bp or (p == bp and g.stem < best) then best, bp = g.stem, p end
+        end
+    end
+    return best
+end
+
+local function smuggle_gold(n, buy) return math.ceil(n * buy * 150 / (F.PCT * F.PCT)) end
+
+-- SMUGGLERS: the first store by key under 2 turns of provisions, then the first under 2 turns of war
+-- materials, is offered 5 turns of its use (at most 100) in its cheapest good, at half again the local
+-- buying price, when the treasury holds that. It works out each store's turns of use and nothing else of
+-- its view (a whole view per store was 190 ms a round), and quotes only a store that is short.
+function F.smuggle_offer(faction, stocks)
+    local sorted, provinces, uses = {}, F.provinces(faction), {}
+    for _, s in ipairs(stocks) do sorted[#sorted + 1] = s end
+    table.sort(sorted, function(a, b) return a.region:name() < b.region:name() end)
+    for _, use in ipairs({ "provisions", "war" }) do
+        for _, s in ipairs(sorted) do
+            local r = s.region
+            uses[r:name()] = uses[r:name()] or F.recurring_use(faction, r, provinces)
+            local per, held = uses[r:name()][use] or 0, F.use_total(s.held, use)
+            if per > 0 and held < per * 2 then
+                local stem = cheapest(faction:name(), s, use)
+                local q = stem and F.quote(faction, r, stem)
+                local n = math.min(100, per * 5 - held)
+                if q and smuggle_gold(n, q.buy) <= faction:treasury() then
+                    return { key = "smugglers", region = r:name(), use = use, stem = stem, n = n, gold = smuggle_gold(n, q.buy) }
+                end
+            end
+        end
+    end
+    return nil
+end
+
+-- The price is the local one at the answer, for what fits; nothing happens when the treasury cannot pay it.
+F.EVENT_APPLY.smugglers = function(faction, p, choice)
+    if choice ~= "FIRST" or not F.GOOD[p.stem] then return end
+    local r = F.owned(faction, p.region)
+    local q = r and F.quote(faction, r, p.stem)
+    if not q then return end
+    local n = math.min(p.n, F.free(r, p.stem))
+    local gold = smuggle_gold(n, q.buy)
+    if n <= 0 or gold > faction:treasury() then return end
+    cm:treasury_mod(faction:name(), -gold)
+    F.move(nil, r, p.stem, n, KIND.trade, nil, faction:name())
+    local e = DERPY_MR_FLOWS_EVENTS.smugglers
+    cm:apply_effect_bundle_to_region(e.bundle, p.region, e.turns)
+end
+
+-- MERCHANT GUILD: the common good the realm holds the most of for its space, when that is above three
+-- quarters of it; ties by stem.
+function F.guild_offer(faction, stocks)
+    local held, space = {}, {}
+    for _, s in ipairs(stocks) do
+        for stem, c in pairs(s.capacity) do
+            held[stem], space[stem] = (held[stem] or 0) + (s.held[stem] or 0), (space[stem] or 0) + c
+        end
+    end
+    local best, bh, bc = nil, nil, nil
+    for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+        local h, c = held[g.stem] or 0, space[g.stem] or 0
+        if not g.rare and c > 0 and h * 100 > c * 75
+                and (best == nil or h * bc > bh * c or (h * bc == bh * c and g.stem < best)) then
+            best, bh, bc = g.stem, h, c
+        end
+    end
+    return best and { key = "guild", stem = best } or nil
+end
+
+F.EVENT_APPLY.guild = function(faction, p, choice)
+    if choice ~= "FIRST" or not F.GOOD[p.stem] then return end
+    F.state.sales = F.state.sales or {}
+    F.state.sales[faction:name()] = { stem = p.stem, per = 20, left = 10 }
+end
+
+-- A STANDING SALE: up to `per` from the fullest stores each turn start, paid a fifth above the fullest
+-- store's local selling price. It ends after its turns, or the first turn the realm cannot fill it.
+function F.sales_turn(faction)
+    local fkey = faction:name()
+    local s = F.state.sales and F.state.sales[fkey]
+    if not s then return end
+    local stocks, top = F.stocks(faction), nil
+    for _, x in ipairs(stocks) do
+        local h, th = x.held[s.stem] or 0, top and (top.held[s.stem] or 0)
+        if h > 0 and (top == nil or h > th or (h == th and x.region:name() < top.region:name())) then top = x end
+    end
+    local q = top and F.quote(faction, top.region, s.stem)
+    local sold = q and F.draw_realm(stocks, function(g) return g.stem == s.stem end, s.per, KIND.sell, fkey) or 0
+    if sold > 0 then cm:treasury_mod(fkey, F.gold(sold, math.floor(q.sell * 120 / 100))) end
+    s.left = s.left - 1
+    if s.left <= 0 or sold < s.per then F.state.sales[fkey] = nil end
+end
+
+-- On load: a sale of a good this build lacks, a rare one, or with no turns left is dropped.
+function F.sanitize_sales()
+    if type(F.state.sales) ~= "table" then
+        F.state.sales = nil
+        return
+    end
+    for fkey, s in pairs(F.state.sales) do
+        local g = type(s) == "table" and F.GOOD[s.stem]
+        if not (g and not g.rare and type(s.per) == "number" and s.per > 0 and type(s.left) == "number" and s.left > 0) then
+            F.state.sales[fkey] = nil
+        end
+    end
+end
+
+-- GRAIN ROT: the first store by key holding 100 grain or more above its safe share, while grain spoils.
+function F.rot_offer(faction, stocks)
+    if not F.spoils(faction) then return nil end
+    local safe, best = F.spoil_safe(faction:name(), "grain"), nil
+    for _, s in ipairs(stocks) do
+        local _h, _c, capacity = F.stock(s.region)
+        local over = (s.held.grain or 0) - math.floor((capacity.grain or 0) * safe / 100)
+        if over >= 100 and (best == nil or s.region:name() < best) then best = s.region:name() end
+    end
+    return best and { key = "grain_rot", region = best } or nil
+end
+
+-- Either choice loses its share of what the store holds now; the 50 gold is paid only when it is there.
+F.EVENT_APPLY.grain_rot = function(faction, p, choice)
+    local r = F.owned(faction, p.region)
+    if not r then return end
+    local fkey, pct = faction:name(), 30
+    if choice == "FIRST" then
+        pct = 5
+        if faction:treasury() >= 50 then cm:treasury_mod(fkey, -50) end
+    end
+    F.move(r, nil, "grain", math.floor(F.held(r, "grain") * pct / 100), KIND.spoil, fkey, nil)
+end
+
+-- The faction's convoys and shipments on the road.
+local function own_cargo(fkey)
+    local out = {}
+    for _, c in ipairs(F.convoys()) do
+        if c.f == fkey then out[#out + 1] = c end
+    end
+    for _, s in ipairs(F.ships()) do
+        if s.f == fkey then out[#out + 1] = s end
+    end
+    return out
+end
+
+-- CARAVAN MASTER: some of the faction's cargo is on a road where an ambush can come (its threat as Part D
+-- last read it).
+function F.caravan_offer(faction)
+    for _, rec in ipairs(own_cargo(faction:name())) do
+        if (tonumber(rec.threat) or 0) >= F.ROAD.ambush_min then return { key = "caravan_master" } end
+    end
+    return nil
+end
+
+-- A twentieth of the value of all its cargo on the road, then 10 turns of safe roads (F.road_event); nothing
+-- happens when the treasury cannot pay it.
+F.EVENT_APPLY.caravan_master = function(faction, p, choice)
+    if choice ~= "FIRST" then return end
+    local fkey, value = faction:name(), 0
+    for _, rec in ipairs(own_cargo(fkey)) do value = value + F.cargo_value_base(rec) end
+    local fee = math.floor(value * 5 / 100)
+    if fee > faction:treasury() then return end
+    if fee > 0 then cm:treasury_mod(fkey, -fee) end
+    F.state.road_safe = F.state.road_safe or {}
+    F.state.road_safe[fkey] = cm:model():turn_number() + 10
+end
+
+-- TOLL DISPUTE: the first faction by key that paid this one 50 or more in tolls last turn.
+function F.toll_offer(faction)
+    -- only a realm that still charges: roads set Open (or Closed) since last turn's tolls leave nothing to dispute
+    if F.edict(faction:name(), "roads") ~= "tolled" then return nil end
+    local d = F.tolls_last(faction:name())
+    if not d then return nil end
+    local keys = {}
+    for k in pairs(d.by) do keys[#keys + 1] = k end
+    table.sort(keys)
+    for _, k in ipairs(keys) do
+        if d.by[k].got >= 50 and F.live(k) then return { key = "toll_dispute", target = k } end
+    end
+    return nil
+end
+
+-- FIRST opens the roads past any wait, which starts a new one; either choice moves that faction's regard.
+F.EVENT_APPLY.toll_dispute = function(faction, p, choice)
+    if not F.live(p.target) then return end
+    local bonus = F.DIPLO_BONUS
+    if choice == "FIRST" then F.edict_set(faction, "roads", "open", true) else bonus = -F.DIPLO_BONUS end
+    cm:apply_dilemma_diplomatic_bonus(faction:name(), p.target, bonus)
+end
+
+local function trades_with(faction, key)
+    local partners = faction:factions_trading_with()
+    if type(partners) == "boolean" then return false end   -- the rebels' answer
+    for i = 0, partners:num_items() - 1 do
+        if partners:item_at(i):name() == key then return true end
+    end
+    return false
+end
+
+-- A convoy this faction sent that partner this turn: the saved record, so a reload still knows.
+local function sent_this_turn(fkey, partner, turn)
+    for _, c in ipairs(F.convoys()) do
+        if c.f == fkey and c.buyer == partner and c.at == turn then return c end
+    end
+    return nil
+end
+
+-- BLOCKADE RUNNER: the first partner by key whose road a blockade stopped this turn, and whose goods have not gone
+-- yet (seen 2026-11-03: a blockade seen after the turn's convoy brought a runner whose answer sent nothing).
+function F.runner_offer(faction)
+    local fkey, turn, keys = faction:name(), cm:model():turn_number(), {}
+    local partners = faction:factions_trading_with()
+    if type(partners) == "boolean" then return nil end
+    for i = 0, partners:num_items() - 1 do keys[#keys + 1] = partners:item_at(i):name() end
+    table.sort(keys)
+    for _, k in ipairs(keys) do
+        local hit = F.blockade_known[pair_key(fkey, k)]
+        local partner = hit and hit.turn == turn and not sent_this_turn(fkey, k, turn) and F.live(k)
+        -- only where this turn's trade would send something past the army: a runner with nothing to run is no offer
+        if partner and F.trade_pair(faction, partner, nil, true, { blockade_ok = true }) then
+            return { key = "blockade_runner", target = k }
+        end
+    end
+    return nil
+end
+
+
+-- This turn's trade with that partner goes past the blockade, once a turn, whether or not the army is still
+-- there, while the two still trade; a tenth of what leaves is paid when the treasury holds it. Goods that got
+-- through clear the pair's blockade for the turn, and the next turn's trade looks again.
+F.EVENT_APPLY.blockade_runner = function(faction, p, choice)
+    local partner, fkey, turn = F.live(p.target), faction:name(), cm:model():turn_number()
+    if choice ~= "FIRST" or not partner or not trades_with(faction, p.target) or sent_this_turn(fkey, p.target, turn) then
+        return
+    end
+    F.trade_pair(faction, partner, nil, false, { blockade_ok = true })
+    local c = sent_this_turn(fkey, p.target, turn)
+    if not c then return end
+    F.record_blockade(fkey, p.target, nil)
+    local fee = math.floor(F.cargo_value_base(c) * 10 / 100)
+    if fee > 0 and fee <= faction:treasury() then cm:treasury_mod(fkey, -fee) end
+end
+
+F.EVENT_OFFERS.smugglers, F.EVENT_OFFERS.guild, F.EVENT_OFFERS.grain_rot = F.smuggle_offer, F.guild_offer, F.rot_offer
+F.EVENT_OFFERS.caravan_master, F.EVENT_OFFERS.toll_dispute, F.EVENT_OFFERS.blockade_runner =
+    F.caravan_offer, F.toll_offer, F.runner_offer
 
 -- ---- province supplies and shipments (spending spec section 3, phase 5) -------------------
 -- Three switches per province, paid each turn from the province capital's store, each put a
@@ -3227,11 +4317,15 @@ F.ESCORT = DERPY_MR_FLOWS_ESCORT
 
 function F.escort_template(faction) return DERPY_MR_FLOWS_ESCORT_SC[faction:subculture()] end
 
--- units by the cargo's value at the fixed Sell rates, never the Exchange's market
+-- units by the cargo's value at the fixed Sell rates, never the Exchange's market: a shipment's units, or a
+-- convoy's whole basket (a bandit fight's guard army)
 function F.escort_size(s)
-    local g = F.GOOD[s.stem]
-    local per = (g and DERPY_MR_FLOWS_SELL_RATE[g.use]) or 1
-    local n = F.ESCORT.min + math.floor(s.n * per / F.ESCORT.per)
+    local worth = 0
+    for stem, n in pairs(s.basket or { [s.stem] = s.n }) do
+        local g = F.GOOD[stem]
+        worth = worth + n * ((g and DERPY_MR_FLOWS_SELL_RATE[g.use]) or 1)
+    end
+    local n = F.ESCORT.min + math.floor(worth / F.ESCORT.per)
     return math.max(F.ESCORT.min, math.min(F.ESCORT.max, n))
 end
 
@@ -3267,11 +4361,9 @@ end
 -- CA's generate_random_army ADDS to a force it already holds on every call, so it runs once per key
 -- per session and later rolls draw from the force it made (its own opt_use_pre_generated_template).
 -- The key carries the power: one key for every power would roll every escort at the first one's.
-function F.escort_roll(faction, s)
-    s.escort = ""
-    local tpl = F.escort_template(faction)
-    if not tpl or type(random_army_manager) ~= "table" then return end
-    local power = F.escort_power(cm:model():turn_number())
+-- `n` units off template `tpl` at `power`, as CA's unit list, or nil. The bandits and the guard army roll here too.
+function F.roll_units(tpl, power, n)
+    if not tpl or type(random_army_manager) ~= "table" then return nil end
     local key = "derpy_mr_esc_" .. tpl .. "_" .. power
     if tpl == F.ESCORT.own then key = tpl .. "_" .. power end
     if not random_army_manager:get_force_by_key(key) then
@@ -3281,11 +4373,15 @@ function F.escort_roll(faction, s)
             WH_Random_Army_Generator:generate_random_army(key, tpl, 1, power, true, false)
             F.escort_prune(key)
         else
-            return
+            return nil
         end
     end
-    local units = random_army_manager:generate_force(key, F.escort_size(s), false)
-    if type(units) == "string" then s.escort = units end
+    local units = random_army_manager:generate_force(key, n, false)
+    return type(units) == "string" and units or nil
+end
+
+function F.escort_roll(faction, s)
+    s.escort = F.roll_units(F.escort_template(faction), F.escort_power(cm:model():turn_number()), F.escort_size(s)) or ""
 end
 
 function F.ship_by_id(id)
@@ -3300,11 +4396,12 @@ F.FIGHT_PREFIX = "derpy_mr_escort_"
 function F.escorts_on() return F.rates().escort == true end
 
 -- CA's manager (wh2_campaign_forced_battle_manager.lua) holds one battle at a time, shared with
--- its own episodes; a campaign root that does not load it has no escort battles at all.
-function F.fight_ready()
-    return F.escorts_on() and F.state.fight == nil and type(Forced_Battle_Manager) == "table"
-        and (Forced_Battle_Manager.active_battle or "") == ""
+-- its own episodes; a campaign root that does not load it has no escort or bandit battles at all.
+function F.fight_free()
+    return F.state.fight == nil and type(Forced_Battle_Manager) == "table" and (Forced_Battle_Manager.active_battle or "") == ""
 end
+
+function F.fight_ready() return F.escorts_on() and F.fight_free() end
 
 -- CA's manager: "attacking forces must be able to attack (not garrisoned or in a stance)". It locks
 -- the retreat itself for march and double time, so those are allowed; raiding, ambush, encamped and
@@ -3359,9 +4456,10 @@ function F.on_battle_done()
         return
     end
     F.state.fight = nil
-    if f.side == "defend" then
+    if f.side == "defend" or f.side == "bandit" then
         cm:callback(function() cm:disable_event_feed_events(false, "wh_event_category_character", "", "") end, 0.2)
     end
+    if f.side == "bandit" then return F.bandit_done(f) end
     local s = F.ship_by_id(f.id)
     if not s then return end
     local won = cm:model():pending_battle():has_been_fought() and cm:pending_battle_cache_attacker_victory()
@@ -3384,7 +4482,8 @@ function F.fight_clear()
         pcall(function() invasion_manager:kill_invasion_by_key(f.key); invasion_manager:remove_invasion(f.key) end)
     end
     pcall(function() cm:get_campaign_ui_manager():override("retreat"):unlock() end)
-    if f.side == "defend" then cm:disable_event_feed_events(false, "wh_event_category_character", "", "") end
+    if f.side == "defend" or f.side == "bandit" then cm:disable_event_feed_events(false, "wh_event_category_character", "", "") end
+    if f.side == "bandit" then F.bandit_kill(f.force) end
     if type(Forced_Battle_Manager) == "table" and Forced_Battle_Manager.active_battle == f.key then
         Forced_Battle_Manager.active_battle = ""
     end
@@ -3395,6 +4494,19 @@ end
 function F.fight_stale(turn)
     local f = F.state.fight
     if f and f.turn < turn then F.fight_clear() end
+    -- A ROAD ENCOUNTER LEFT FROM AN EARLIER TURN (a lost dilemma): cleared, and its bandits removed
+    local fkeys = {}
+    for fkey in pairs(F.state.pending or {}) do fkeys[#fkeys + 1] = fkey end
+    table.sort(fkeys)
+    for _, fkey in ipairs(fkeys) do
+        for _, e in ipairs(F.ROAD.encounters) do
+            local p = F.pending(fkey, "road_" .. e)
+            if p and (tonumber(p.turn) or 0) < turn then
+                F.clear_pending(fkey, "road_" .. e)
+                F.bandit_kill(p.bandit)
+            end
+        end
+    end
     if type(Forced_Battle_Manager) ~= "table" then return end
     local list, active = Forced_Battle_Manager.forced_battles_list, Forced_Battle_Manager.active_battle
     for k in pairs(list) do
@@ -3427,6 +4539,157 @@ function F.raid_answer(faction, p, choice)
     F.fight(s, "raid", mf, faction:name())
 end
 
+-- ---- bandit battles (design 2026-11-01, Part D 7.3) -------------------------------------------
+-- A player's road encounter as CA's caravans run theirs (caravans:attach_battle_to_dilemma): the bandits spawn before
+-- the dilemma, the dilemma names them and the region, and the answer either fights through CA's manager, as the escort
+-- battles do, or takes the other choice and removes them.
+F.ROAD_FIGHT = { ambush = "FIRST", highwaymen = "SECOND" }   -- the choice that fights; the washout never does
+
+-- CA's rule (caravans:event_handler): one of the stretch's regions at random, or the last one owned by a faction at war
+-- with the cargo's owner.
+function F.road_region(faction, keys)
+    local pick = keys[cm:random_number(#keys, 1)]
+    for _, k in ipairs(keys) do
+        local o = cm:get_region(k):owning_faction()
+        if not o:is_null_interface() and o:at_war_with(faction) then pick = k end
+    end
+    return pick
+end
+
+-- The bandits' units: the subculture's escort template at CA's sizes by threat (caravans:generate_attackers).
+function F.bandit_units(sc, threat)
+    local n
+    for _, s in ipairs(F.ROAD.sizes) do
+        if s[1] == nil or threat < s[1] then
+            n = s[2]
+            break
+        end
+    end
+    return F.roll_units(DERPY_MR_FLOWS_ESCORT_SC[sc], F.escort_power(cm:model():turn_number()), n)
+end
+
+-- THE BANDITS (caravans:spawn_caravan_battle_force): a quest-battle faction of the land owner's subculture, CA's ogres
+-- where there is none, at a valid spot by the cargo; at war with the owner, unable to move and counted as having
+-- retreated this turn, with the messages of their war and death muted. The force's cqi, or nil.
+function F.bandit_spawn(region_key, x, y, threat, owner)
+    local o = cm:get_region(region_key):owning_faction()
+    local sc = not o:is_null_interface() and o:subculture() or nil
+    if not DERPY_MR_FLOWS_BANDIT_QB[sc] then sc = F.ROAD.qb_sc end
+    -- the owner's key, read now: the callback runs when CA has made the force, and keeps no interface
+    local owner_key = owner:name()
+    -- A RACE'S BANDITS THAT NEVER APPEAR: CA logs the Chaos Dwarf qb1's create_force and makes no army (seen 2026-11-03,
+    -- no fight could start on Chaos Dwarf land), so CA's Ogre bandits, the caravans' own, are asked next. A force that
+    -- is made calls back at once (measured), so no force by the return is none at all.
+    for _, s in ipairs(sc == F.ROAD.qb_sc and { sc } or { sc, F.ROAD.qb_sc }) do
+        local qb, units = DERPY_MR_FLOWS_BANDIT_QB[s], F.bandit_units(s, threat)
+        local sx, sy
+        if units then sx, sy = cm:find_valid_spawn_location_for_character_from_position(qb, x, y, false) end
+        if sx and sx >= 0 then
+            local force = nil
+            cm:create_force(qb, units, region_key, sx, sy, true, function(char_cqi, force_cqi)
+                force = force_cqi
+                cm:disable_event_feed_events(true, "", "", "diplomacy_faction_destroyed")
+                cm:disable_event_feed_events(true, "", "", "character_dies_battle")
+                cm:disable_event_feed_events(true, "", "", "diplomacy_war_declared")
+                cm:force_declare_war(qb, owner_key, false, false)
+                cm:callback(function() cm:disable_event_feed_events(false, "", "", "diplomacy_war_declared") end, 0.2)
+                cm:disable_movement_for_character(cm:char_lookup_str(char_cqi))
+                cm:set_force_has_retreated_this_turn(cm:get_military_force_by_cqi(force_cqi))
+            end)
+            if force then return force end
+        end
+    end
+    return nil
+end
+
+-- Removed with their force and their messages back on, as caravans:cleanup_post_battle does. The messages come back
+-- even when the battle already destroyed them.
+function F.bandit_kill(force_cqi)
+    if not force_cqi then return end
+    local mf = cm:get_military_force_by_cqi(force_cqi)
+    if mf and not mf:is_null_interface() and mf:has_general() then
+        cm:kill_character(cm:char_lookup_str(mf:general_character():cqi()), true)
+    end
+    cm:callback(function()
+        cm:disable_event_feed_events(false, "", "", "diplomacy_faction_destroyed")
+        cm:disable_event_feed_events(false, "", "", "character_dies_battle")
+    end, 0.2)
+end
+
+function F.convoy_by_id(id)
+    for _, c in ipairs(F.convoys()) do
+        if c.id == id then return c end
+    end
+    return nil
+end
+
+-- A PLAYER'S ENCOUNTER: the bandits first for one that can come to a fight, then the dilemma naming them and the
+-- region. One road encounter waits per faction; while it does, the next is settled at once. False when nothing was
+-- offered, and the caller settles it.
+function F.road_offer(faction, kind, rec, key, region_key)
+    local fkey, pkey = faction:name(), "road_" .. key
+    for _, e in ipairs(F.ROAD.encounters) do
+        if F.pending(fkey, "road_" .. e) then return false end
+    end
+    local bandit = nil
+    if F.ROAD_FIGHT[key] then
+        bandit = F.bandit_spawn(region_key, rec.x, rec.y, rec.threat, faction)
+        if not bandit then return false end
+    end
+    F.set_pending(fkey, { key = pkey, kind = kind, id = rec.id, enc = key, bandit = bandit, region = region_key,
+                          turn = cm:model():turn_number() })
+    if not cm:trigger_dilemma_with_targets(faction:command_queue_index(), DERPY_MR_FLOWS_EVENTS[pkey].dilemma, 0, 0, 0,
+                                           bandit or 0, cm:get_region(region_key):cqi(), 0, function() end) then
+        F.clear_pending(fkey, pkey)
+        F.bandit_kill(bandit)
+        return false
+    end
+    return true
+end
+
+-- THE ANSWER: the fighting choice fights; anything else, or a fight that cannot start, is settled and the bandits
+-- go. Push on is the one choice no computer takes: it loses a tenth. The cargo gone, only the bandits go.
+function F.road_answer(faction, p, choice)
+    local rec = p.kind == "convoy" and F.convoy_by_id(p.id) or F.ship_by_id(p.id)
+    if rec and F.ROAD_FIGHT[p.enc] == choice and F.road_fight(faction, p, rec) then return end
+    F.bandit_kill(p.bandit)
+    if not rec then return end
+    if p.enc == "washout" and choice == "SECOND" then return F.cargo_lose(p.kind, rec, F.ROAD.wash_pct) end
+    F.road_settle(faction, p.kind, rec, p.enc)
+end
+
+-- THE FIGHT, through CA's manager as the escort battles: the cargo's guard army, sized as an escort, spawns for its
+-- owner at the cargo and the bandits attack it. False when the manager is busy, the bandits are gone or the owner has
+-- no escort template.
+function F.road_fight(faction, p, rec)
+    local mf = p.bandit and cm:get_military_force_by_cqi(p.bandit)
+    if not (F.fight_free() and mf and not mf:is_null_interface()) then return false end
+    local units = F.roll_units(F.escort_template(faction), F.escort_power(cm:model():turn_number()), F.escort_size(rec))
+    if not units then return false end
+    local key, fbm = F.FIGHT_PREFIX .. "road_" .. rec.id, Forced_Battle_Manager
+    fbm.forced_battles_list[key] = nil
+    local fb = fbm:setup_new_battle(key)
+    if not fb then return false end
+    fb:add_new_force(key, units, faction:name(), true)
+    F.state.fight = { id = rec.id, cargo = p.kind, side = "bandit", key = key, force = p.bandit, owner = faction:name(),
+                      turn = cm:model():turn_number() }
+    -- the guard army is the player's own new army: no messages for its general; a retreat is never fought
+    cm:disable_event_feed_events(true, "wh_event_category_character", "", "")
+    pcall(function() cm:get_campaign_ui_manager():override("retreat"):lock() end)
+    fb:trigger_battle(p.bandit, key, rec.x, rec.y, false)
+    return true
+end
+
+-- A BANDIT FIGHT FOUGHT: the bandits won, the whole cargo is lost; either way they are removed and the retreat unlocked.
+function F.bandit_done(f)
+    local rec = f.cargo == "convoy" and F.convoy_by_id(f.id) or F.ship_by_id(f.id)
+    if rec and cm:model():pending_battle():has_been_fought() and cm:pending_battle_cache_attacker_victory() then
+        F.cargo_lose(f.cargo, rec, 100)
+    end
+    F.bandit_kill(f.force)
+    pcall(function() cm:get_campaign_ui_manager():override("retreat"):unlock() end)
+end
+
 -- The buyer owns the cart and its escort; a contract records the separate exporting faction.
 function F.ship(faction, from, to, stem, n, order)
     local fkey = faction:name()
@@ -3455,13 +4718,23 @@ function F.ship(faction, from, to, stem, n, order)
     local got = fit.got
     local R = DERPY_MR_TERRAIN_ROUTES
     local road = R and R.journey and R.journey(from, to) or nil
+    -- A BLOCKADE (Part C 6.2): a partner cart does not leave while an enemy army stands on its road
+    if partner and F.blockade(seller, faction, road) then return nil, "blockaded" end
     local escrow, price_c = 0, nil
     if partner then
         local c = F.cart_price(seller, from, faction, to, stem)
         escrow, price_c = F.gold(got, c), c
     end
     if partner and escrow <= 0 then return nil end   -- a cart worth under one gold would deliver for nothing
-    if escrow > faction:treasury() then return nil end
+    -- TOLLS (Part C): a partner cart pays the land its road crosses, the buyer on top of the price, on the
+    -- delivered units at the seller's local price; a cart between your own settlements pays none
+    local due, toll = {}, 0
+    if partner then
+        local ps = F.local_price(source, stem, seller:name())
+        due, toll = F.tolls(F.gold(got, F.sell_price(ps or 0)), F.toll_takers(seller, faction, road))
+    end
+    -- nothing to pay is never refused: a faction in debt still moves its own goods
+    if escrow + toll > 0 and escrow + toll > faction:treasury() then return nil end
     if escrow > 0 and not F.route_gold(faction, -escrow) then return nil end
     if not F.route_goods(from, stem, -n) then
         if escrow > 0 and not F.route_gold(faction, escrow) then error("route escrow rollback failed") end
@@ -3478,6 +4751,8 @@ function F.ship(faction, from, to, stem, n, order)
         s.sender, s.recipient, s.price_c, s.escrow = seller:name(), fkey, price_c, escrow
         order.last_price_c = price_c
     end
+    if toll > 0 and F.pay_tolls(fkey, due) then s.tolls = due end
+    F.guard_fee(faction, s)
     if road and #road > 0 then s.x, s.y = road[1][1], road[1][2]
     else s.x, s.y = F.spot(fkey, from) end
     F.escort_roll(faction, s)
@@ -3506,9 +4781,11 @@ function F.seize(s, captor)
     F.move(nil, F.nearest(captor, s.x, s.y), s.stem, s.n, KIND.raid, nil, captor:name())
 end
 
--- Every army in the field (no garrison) of a faction at war with `owner`: { f = faction, mf = force, x, y },
--- worked out ONCE PER OWNER PER TURN. F.captor reads it for shipments and convoys alike, so a few hundred
--- convoys do not each rescan every enemy army. Not saved: it is rebuilt by the first question of a turn.
+-- Every army in the field (no garrison) of a faction at war with `owner`: { fkey, cqi = force, x, y },
+-- worked out ONCE PER OWNER PER TURN START (each faction's turn start empties it). F.captor reads it for shipments
+-- and convoys alike, so a few hundred convoys do not each rescan every enemy army. Not saved.
+-- KEYS AND NUMBERS ONLY (the 1.0 live pass, 2026-11-02): the list outlives the script entry that made it, and an
+-- interface kept past its entry is freed memory. Calling is_null_interface() on one crashed the game.
 F.enemy_cache = F.enemy_cache or {}
 function F.enemy_armies(owner)
     local key, turn = owner:name(), cm:model():turn_number()
@@ -3523,7 +4800,8 @@ function F.enemy_armies(owner)
                 local mf = mfl:item_at(j)
                 if not mf:is_armed_citizenry() and mf:has_general() then
                     local ch = mf:general_character()
-                    list[#list + 1] = { f = o, mf = mf, x = ch:logical_position_x(), y = ch:logical_position_y() }
+                    list[#list + 1] = { fkey = o:name(), cqi = mf:command_queue_index(),
+                                        x = ch:logical_position_x(), y = ch:logical_position_y() }
                 end
             end
         end
@@ -3539,10 +4817,11 @@ function F.captor(owner, s)
     local skip_human = F.escorts_on() and not owner:is_human() and (s.escort or "") ~= ""
     local r2 = F.SHIP.near * F.SHIP.near
     for _, e in ipairs(F.enemy_armies(owner)) do
-        -- a force an escort battle earlier in this turn start destroyed is a null interface by now
-        if not (skip_human and e.f:is_human()) and not e.mf:is_null_interface() then
-            local dx, dy = e.x - s.x, e.y - s.y
-            if dx * dx + dy * dy <= r2 then return e.f, e.mf end
+        local dx, dy = e.x - s.x, e.y - s.y
+        if dx * dx + dy * dy <= r2 and not (skip_human and F.is_human(e.fkey)) then
+            -- looked up now: a force an escort battle earlier in this turn destroyed is gone
+            local mf, f = cm:get_military_force_by_cqi(e.cqi), cm:get_faction(e.fkey)
+            if mf and not mf:is_null_interface() and f and not f:is_null_interface() then return f, mf end
         end
     end
     return nil
@@ -3621,7 +4900,10 @@ function F.ships_turn(faction)
         elseif captor then
             F.seize(s, captor)
         else
+            local from = s.x and { s.x, s.y }
             F.ship_step(faction, s, turn)
+            -- still on the road: one that arrived this turn is off the list
+            if F.ship_by_id(s.id) == s then F.road_event(faction, "ship", s, from) end
         end
         end
     end
@@ -3682,7 +4964,7 @@ function F.convoy_cargo()
                 if not n or v > n or (v == n and k < stem) then stem, n = k, v end
             end
             out[#out + 1] = { id = c.id, f = c.f, buyer = c.buyer, from = c.from, to = c.to, at = c.at, due = F.convoy_due(c),
-                              x = c.x, y = c.y, stem = stem, n = n, basket = c.basket, convoy = true }
+                              x = c.x, y = c.y, road = c.road, stem = stem, n = n, basket = c.basket, convoy = true }
         end
     end
     return out
@@ -3745,6 +5027,7 @@ function F.convoy_sound(c)
     -- a position is the pair or nothing: no settlement on the capital and no road writes neither
     if (c.x ~= nil or c.y ~= nil) and not (F.stock_number(c.x) and F.stock_number(c.y)) then return nil end
     if c.road ~= nil and not F.unpack_road(c.road) then return nil end
+    if not F.tolls_sound(c.tolls) then return nil end
     return n
 end
 
@@ -3807,6 +5090,25 @@ function F.convoy_step(c, turn)
     c.x, c.y = road[i][1], road[i][2]
 end
 
+-- ONTO TODAY'S ROAD: where convoy c stands on `path`, its pair's road as F.reach gives it now, at the same share of
+-- the way it had come on its own road, and the path, turned to leave the exporter (a new table then). Nil with no
+-- path, no saved road or place, or a path that does not leave where the convoy left. Live check 2026-10-24: a convoy
+-- that left on a 171-hex road sat 17 hexes off the 142-hex one the map drew next turn.
+function F.convoy_on(c, path)
+    local road = path and F.unpack_road(c.road)
+    if not (road and #path > 0) then return nil end
+    local s = road[1]
+    if path[1][1] ~= s[1] or path[1][2] ~= s[2] then path = F.reverse(path) end
+    if path[1][1] ~= s[1] or path[1][2] ~= s[2] then return nil end
+    for i, p in ipairs(road) do
+        if p[1] == c.x and p[2] == c.y then
+            local j = math.floor((#path - 1) * (i - 1) / math.max(1, #road - 1)) + 1
+            return path[j][1], path[j][2], path
+        end
+    end
+    return nil
+end
+
 -- At its exporter's turn start, before its shipments: each convoy is returned, seized, arrives or moves on. A COPY of
 -- the list is walked, since every one of them takes the convoy off it; the list is in id order.
 function F.convoys_turn(faction)
@@ -3819,12 +5121,22 @@ function F.convoys_turn(faction)
         -- the treaty gone (war included), the buyer dead, or the buyer with no settlement left to receive it
         if not buyer or not F.capital(buyer) or not F.partners(faction, buyer) then F.convoy_return(c)
         else
+            -- onto the pair's road of the day first, where the map has drawn it since (R.links), so the army check
+            -- and the step read the road the player sees; this turn's answer, which the trade below reads too
+            local open, _, path = F.trade_reach(faction, buyer)
+            local x, y, road = F.convoy_on(c, open and path)
+            if x then c.road, c.x, c.y = F.pack_road(road), x, y end
             -- a convoy with no position has no army near it
             local captor = c.x and c.y and F.captor(faction, c)
             if captor then F.convoy_seize(c, captor)
             elseif turn >= c.due then F.convoy_arrive(c)
             -- still on the road: it follows the buyer's capital, which F.ships_to counts the cargo at
-            else c.to = F.capital(buyer):name(); F.convoy_step(c, turn) end
+            else
+                c.to = F.capital(buyer):name()
+                local from = c.x and { c.x, c.y }
+                F.convoy_step(c, turn)
+                F.road_event(faction, "convoy", c, from)
+            end
         end
     end
 end
@@ -4089,8 +5401,18 @@ function F.last(fkey, stem)
     return (b and b.last[stem]) or {}
 end
 
+-- the turn start keeps what it reads of the stores (F.stock), and drops it when it ends, thrown or not
 function F.on_faction_turn_start(faction)
+    F.stock_cache = {}
+    local ok, e = pcall(F.turn_start, faction)
+    F.stock_cache = nil
+    if not ok then error(e, 0) end
+end
+
+function F.turn_start(faction)
     F.freeze_rates()                              -- frozen at the first turn start
+    -- the armies where they stand now: a list made earlier in the round has them where they stood then
+    F.enemy_cache = {}
     if faction:is_human() then
         -- ITS OWN GUARD: the snapshot reads through the UI-side CCO and loc, and a throw there must
         -- not skip the trade below, which is model state every machine has to run alike
@@ -4100,11 +5422,14 @@ function F.on_faction_turn_start(faction)
         F.guard(F.hold_exports, faction:name())   -- a save from before the bundle existed catches up
         F.guard(F.fight_stale, cm:model():turn_number())
     end
+    -- This turn's meals eat this turn's rations, so the edicts come first.
+    F.guard(F.edict_turn, faction)
     -- Arrivals fund this turn; essentials and elective local orders precede exports.
     F.guard(F.convoys_turn, faction)
     F.guard(F.ships_turn, faction)
     F.guard(F.upkeep, faction)
     F.guard(F.provisions_turn, faction)
+    F.guard(F.spoil, faction)                     -- after the meals, before processing and trade
     F.guard(F.provision_supply, faction)
     F.guard(F.supply, faction)
     F.guard(F.economy_turn, faction)
@@ -4113,6 +5438,7 @@ function F.on_faction_turn_start(faction)
     -- guarded: the trade debits through F.route_goods, which can throw, and the duty after it must still run
     F.guard(F.trade, faction)
     F.guard(F.duty, faction)
+    F.guard(F.sales_turn, faction)                -- Part E: the Merchant guild's sale, after the trade
     -- last, on what eating and trading left; its own guard, as an offer is model state too
     F.guard(F.events, faction)
     -- the Workshop's computer purchases, after everything else has used the stores
@@ -4133,6 +5459,7 @@ function F.init()
     -- has read the player's settings by now (its LoadingGame callback). A loaded save is frozen.
     F.guard(F.freeze_rates)
     F.guard(F.quiet_dilemmas)
+    F.guard(F.name_pending_goods)
     for _,event in ipairs({'FactionLeaderDeclaresWar','PositiveDiplomaticEvent','NegativeDiplomaticEvent','RegionFactionChangeEvent'}) do
         core:add_listener('derpy_mr_reach_'..event,event,true,function() F.invalidate_reach() end,true)
     end
@@ -4202,9 +5529,16 @@ first("loading", function(context)
     F.sanitize_routes()
     F.sanitize_ships()
     F.sanitize_convoys()
+    F.sanitize_edicts()
+    F.sanitize_road()
+    F.sanitize_sales()
+    F.sanitize_blockades()
 end)
 
 first("saving", function(context)
-    local ok, e = pcall(function() cm:save_named_value(F.SAVE, F.state, context) end)
+    local ok, e = pcall(function()
+        F.state.blockades = F.blockades_kept()
+        cm:save_named_value(F.SAVE, F.state, context)
+    end)
     if not ok then F.say("could not save the stores history: " .. tostring(e)) end
 end)

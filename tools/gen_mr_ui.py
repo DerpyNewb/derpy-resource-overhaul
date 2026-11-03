@@ -75,17 +75,36 @@ RATES = (
     ("recruit_per", "Resources per 100 gold of a recruit",
      "How many resources a recruit takes from your stores for each 100 gold it is worth. 0 turns this off.",
      0, 5, 1),
+    # TOLLS (design 2026-11-01, Part C 6.1): each toll-taker's share of a cargo's value, TOLL_MAX_PCT in all
+    ("toll", "Tolls",
+     "Each turn, trade that crosses another faction's lands pays that faction this share of the value of the "
+     "goods it carries. All the tolls on one cargo together are at most 15%. A faction whose Roads edict is "
+     "Open charges nothing. Neither do your allies and vassals. 0 turns tolls off.", 0, 10, 3),
+    # BANDITS ON THE ROADS (design 2026-11-01, Part D 7.1): the chance on the most dangerous land, in 100
+    ("road_danger", "Road danger",
+     "How likely trouble on the road is on the most dangerous land, each turn. Half as dangerous land is half as "
+     "likely. 0 turns road encounters off.", 0, 50, 20),
 )
+TOLL_MAX_PCT = 15   # all the tolls on one cargo together (spec 6.1)
+# BANDITS ON THE ROADS (Part D 7.1-7.2). The chance of trouble in a turn is threat x road_danger in 10000;
+# guards halve it. A battle's bandit army has ROAD_SIZES units: under 50 threat 5, under 70 8, else 10.
+ROAD_ENCOUNTERS = ("ambush", "highwaymen", "washout")
+ROAD_COOLDOWN, ROAD_AMBUSH_MIN, ROAD_AI_GUARD = 5, 30, 30
+ROAD_SIZES = ((50, 5), (70, 8), (None, 10))
+ROAD_GUARD_PCT, ROAD_TOLL_PCT, ROAD_WASH_PCT, ROAD_HALF_PCT = 5, 20, 10, 50
+ROAD_QB_DEFAULT = "wh3_main_ogr_ogre_kingdoms_qb1"   # CA's caravans' own bandits
+ROAD_QB_SC = "wh3_main_sc_ogr_ogre_kingdoms"        # theirs, and the units they are rolled from
 AI_SWITCH = ("ai", "Other factions use their stores",
              "Factions no player controls raid, sack, trade, eat, recruit and gain bonuses from their "
              "stores as a player does. Off: resources move only when a player's faction is one of the "
-             "two. Other factions' settlements do not eat or gain bonuses, and their recruits take "
-             "nothing. Turns run faster on a slow machine.", True)
+             "two. Other factions' settlements do not eat or gain bonuses, their grain, beer and kvas do "
+             "not spoil, and their recruits take nothing. Turns run faster on a slow machine.", True)
 # PHASE 4 (spending spec section 2): settlements eat provisions and well-stocked stores give bonuses
 UPKEEP_SWITCH = ("upkeep", "Settlements use their stores",
                  "Each turn every settlement eats provisions from its stores. Five turns of provisions left "
                  "make it Well fed; war materials and luxuries filling a quarter of one store's space give "
-                 "Garrison stocked and Comforts. Off: stores are only kept, raided and traded.", True)
+                 "Garrison stocked and Comforts. Off: settlements eat nothing and give no bonuses. Spoilage has "
+                 "its own switch.", True)
 ACTIONS_SWITCH = ("actions", "Resource Vault actions",
                   "The Resource Vault can send a resource between your settlements, buy a Festival, Muster or "
                   "Great Works with your stores, and sell what your stores hold above half their space. "
@@ -121,8 +140,99 @@ SERVICES_SWITCH = ("services", "Sustained services",
     "Allow optional province services paid each turn with named goods. Enable them in the province capital's Stores view.", True)
 PROVISIONS_SWITCH = ("army_provisions", "Carried army provisions",
     "Armies eat carried provisions once each turn and refill locally above settlement Keep. Five turns target, ten turns capacity. At sea or without settlements, Load can buy two meals at 10 gold per ration once per turn; human Auto never buys. Foreign land still prevents local refill. Consecutive shortages reduce movement and replenishment. On by default for new campaigns; existing campaign switches stay saved.", True)
+SPOIL_SWITCH = ("spoilage", "Spoilage",
+                "Each turn, grain loses 4% and beer and kvas 2% of what a store holds above a quarter of its "
+                "space. With the Great Granary, grain is safe up to half. Hardtack, salted meat, salted fish, "
+                "wine and every other good never spoil. Off: nothing spoils.", True)
+# TRADE EDICTS (design 2026-11-01, Part B, section 5)
+EDICT_SWITCH = ("edicts", "Trade edicts",
+                "Each faction sets three edicts in the Resource Vault: Rations, Workshops and Roads. Each has three "
+                "choices. A change waits 10 turns before the next. Other factions choose theirs by their situation. "
+                "Off: there are no edicts.", True)
+# TOLLS AND BLOCKADES (design 2026-11-01, Part C, section 6)
+TOLL_SWITCH = ("tolls", "Tolls and blockades",
+               "Trade agreements and partner contracts pay tolls to the factions whose lands their roads cross. "
+               "An army at war with either side standing within 3 hexes of the road stops that agreement's trade "
+               "for the turn. Off: no tolls and no blockades.", True)
+BANDIT_SWITCH = ("bandits", "Bandits on the roads",
+                 "Bandits, highwaymen and washed-out roads can meet your cargo on the road. Dangerous lands meet "
+                 "them more often. You choose what to do, and some choices lead to a battle. Guards on the Trade "
+                 "tab make it less likely. Off: the roads are safe.", True)
 SWITCHES = (PROVISIONS_SWITCH, PROCESSING_SWITCH, SERVICES_SWITCH, AI_SWITCH, UPKEEP_SWITCH, ACTIONS_SWITCH, EVENTS_SWITCH, SUPPLY_SWITCH, RECRUIT_SWITCH, ESCORT_SWITCH,
-            RANDOM_SWITCH)
+            RANDOM_SWITCH, SPOIL_SWITCH, EDICT_SWITCH, TOLL_SWITCH, BANDIT_SWITCH)
+# THE THREE EDICTS: (key, name, tip, default, options); an option is (key, label, tip, bundle or None,
+# the Chaos Dwarfs' tip or None). The tips are the player text that lists each option's exact effects,
+# one sentence a line. The middle option is the default and changes nothing.
+EDICTS = (
+    ("rations", "Rations", "How much your settlements eat each turn.", "normal", (
+        ("plenty", "Plenty", "Settlements eat 3 provisions a turn for each level.\nGrowth +10 in every province.",
+         "derpy_mr_edict_plenty",
+         "Settlements eat 3 provisions a turn for each level.\nControl +2 in every province."),
+        ("normal", "Normal", "Settlements eat 2 provisions a turn for each level.", None, None),
+        ("rationing", "Rationing", "Settlements eat 1 provision a turn for each level.\nControl -2 in every province.",
+         "derpy_mr_edict_rationing", None))),
+    ("workshops", "Workshops", "What your workshops and trade favour.", "balanced", (
+        ("war", "War economy", "Workshops that make blackpowder, tools or leather make half as much again.\n"
+         "Trade income -10%.", "derpy_mr_edict_war", None),
+        ("balanced", "Balanced", "Workshops make their usual amounts.", None, None),
+        ("merchant", "Merchant", "Trade agreements send twice their usual share.\n"
+         "Recruits take a quarter more from your stores.", "derpy_mr_edict_merchant", None))),
+    ("roads", "Roads", "Who may cross your lands with trade.", "tolled", (
+        ("open", "Open", "Trade crossing your lands pays no tolls.\nTrade income +5%.", "derpy_mr_edict_open", None),
+        ("tolled", "Tolled", "Trade crossing your lands pays you tolls.", None, None),
+        ("closed", "Closed", "Other factions' trade cannot cross your lands.\nControl +1 in every province.",
+         "derpy_mr_edict_closed", None))),
+)
+EDICT_RACE_BUNDLES = {"plenty": {"chd": "derpy_mr_edict_plenty_chd"}}   # growth does nothing for them (NO_GROWTH)
+EDICT_COOLDOWN = 10                       # turns between changes of one edict; the cooldown is the price
+EDICT_NEED = {"plenty": 3, "normal": 2, "rationing": 1}   # provisions a turn per settlement level
+EDICT_WAR_OUTPUTS = ("blackpowder", "leather", "tools")   # War economy: processing with these outputs
+EDICT_WAR_PCT = 150                       # makes half as much again, rounded down
+EDICT_MERCHANT_TRADE = 2                  # Merchant: twice the MCT trade share
+EDICT_MERCHANT_DRAW = 125                 # and the recruitment draw a quarter more
+# a computer's rules (spec 5.4): Rationing under ration_low turns of realm food, Plenty over ration_high;
+# Merchant with merchant_partners partners and no war; Closed at war with closed_wars neighbours
+EDICT_AI = (("ration_low", 2), ("ration_high", 15), ("merchant_partners", 3), ("closed_wars", 2))
+
+
+def _lstr(s):
+    """A Lua string literal of `s`, its line breaks escaped (_lua writes them raw)."""
+    return '"%s"' % s.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
+
+
+def edicts_lua():
+    """DERPY_MR_FLOWS_EDICTS: what the flows script's edict rules read."""
+    import gen_resource_overhaul as G
+    stems = {s for s, _r, _i in goods()}
+    outs = {d["output"][0] for d in G.economy_definitions().values() if d.get("output") and d["kind"] == "processing"}
+    for s in EDICT_WAR_OUTPUTS:
+        assert s in stems and s in outs, "War economy names %s, which no processing recipe makes" % s
+    keys = [o[0] for e in EDICTS for o in e[4]]
+    assert len(keys) == len(set(keys)), "two edict options share a key"
+    assert set(EDICT_NEED) == {o[0] for o in EDICTS[0][4]}, "a ration with no meal size"
+    parts = ['order = {%s}' % ", ".join('"%s"' % e[0] for e in EDICTS)]
+    for k, _n, _t, d, opts in EDICTS:
+        assert d in [o[0] for o in opts] and [o for o in opts if o[0] == d][0][3] is None, "default %s has a bundle" % d
+        parts.append('%s = {default = "%s", options = {%s}}' % (k, d, ", ".join('"%s"' % o[0] for o in opts)))
+    parts += ["cooldown = %d" % EDICT_COOLDOWN,
+              "need = {%s}" % ", ".join("%s = %d" % kv for kv in sorted(EDICT_NEED.items())),
+              "war_outputs = {%s}" % ", ".join("%s = true" % s for s in EDICT_WAR_OUTPUTS),
+              "war_pct = %d" % EDICT_WAR_PCT, "merchant_trade = %d" % EDICT_MERCHANT_TRADE,
+              "merchant_draw = %d" % EDICT_MERCHANT_DRAW,
+              "bundles = {%s}" % ", ".join('%s = "%s"' % (o[0], o[3]) for e in EDICTS for o in e[4] if o[3]),
+              "race_bundles = {%s}" % ", ".join("%s = {%s}" % (o, ", ".join('%s = "%s"' % kv for kv in sorted(r.items())))
+                                                for o, r in sorted(EDICT_RACE_BUNDLES.items())),
+              "ai = {%s}" % ", ".join("%s = %d" % kv for kv in EDICT_AI)]
+    return "DERPY_MR_FLOWS_EDICTS = {%s}" % ", ".join(parts)
+# SPOILAGE (design 2026-11-01, Part A, section 4): the rate in 100 lost each turn on what a store
+# holds above SPOIL_SAFE_PCT of its space; the Great Granary (a lasting work) raises Grain's to
+# SPOIL_GRANARY_PCT. Every other good keeps.
+SPOIL_RATES = {"grain": 4, "beer": 2, "kvas": 2}
+SPOIL_SAFE_PCT = 25
+SPOIL_GRANARY_PCT = 50
+SPOIL_GRANARY_GOOD = "grain"
+# the Great Granary, and the Chaos Dwarfs' own (which feeds captives instead of growth): both keep grain
+SPOIL_GRANARY_WORKS = ("last_granary", "last_granary_chd")
 # THE RECRUITMENT DRAW (workshop expansion spec 2026-10-08, section 3): what a recruited unit draws
 # from the stores, by CA's caste (main_units.caste), per RECRUIT_PER gold of its value. Lords,
 # heroes and `generic` draw nothing. check_recruit() holds every key to CA's DB.
@@ -178,7 +288,7 @@ WORK_SOUND = {"item": "UI_CLICK_Craft_Item", "unit": "UI_CAM_DWF_BookOfGrudges_P
 NO_STORES = ("dae", "kho", "nur", "sla", "tze", "tmb", "nag", "bst")
 # Which factor each kind of move books to: the junction is derpy_mr_store_<stem>_<kind>.
 FLOW_KIND = {"process": "processed", "raid": "raided", "sack": "plundered", "raze": "plundered", "trade": "traded", "eat": "eaten",
-             "move": "moved", "spend": "spent", "sell": "sold"}
+             "move": "moved", "spend": "spent", "sell": "sold", "spoil": "spoiled"}
 # PHASE 7: gold a unit when the Zharr Exchange is not there to price it (spending spec section 5)
 SELL_RATE = {"provisions": 1, "building": 2, "war": 3, "mounts": 4, "luxuries": 5}
 # ESCORT BATTLES (spec 2026-10-09): a cart's escort, rolled when it leaves. Units by the cargo's
@@ -237,6 +347,11 @@ L = {
     # ON CA'S MINIMAP (one pixel to one logical unit): never closer than MAP_ART_ZOOM, past which
     # the picture is a blur. MAP_CHAR_W is a name's width per letter at 11px, for spacing names.
     "MAP_ART_ZOOM": 2, "MAP_CHAR_W": 6.5,
+    # CHAR_W: body_12's flat glyph width, for the line-fit rules here and in the panel (S.last_line)
+    "CHAR_W": 7,
+    # A ROW'S THREE POLICY BUTTONS: the stock rules' widths (the trade_focus columns), and an edict
+    # choice's on the Resources tab, where columns 3-5 are 100, 110 and 240 wide (Part B)
+    "POLICY_W": (90, 130, 114), "EDICT_W": 100,
     # ZOOM (asked 2026-10-04): round + and - buttons on the map's bottom-right corner (CA's small
     # round button, the Close button's art; CA ships no minus icon, so both are text), a step of
     # MAP_ZOOM_STEP around the spot in the middle of the box. Closest: MAP_ZOOM_MAX pixels per picture pixel (the
@@ -301,8 +416,9 @@ L = {
     # Trade tab's ticks under right-aligned headers and "Space per good" squeezed into 100px.
     # "focus" is both drill-downs, a good's and a settlement's: the same five columns.
     "VIEWS": {
-        "goods": ((36, 204, "left"), (244, 90, "right"), (338, 100, "right"), (442, 110, "right"),
-                  (556, 240, "right")),
+        # column 2 is 96 wide for an edict's "Wait 10 turns" (Part B); 3-5 hold its three buttons
+        "goods": ((36, 204, "left"), (244, 96, "right"), (344, 100, "right"), (448, 110, "right"),
+                  (562, 234, "right")),
         "focus": ((36, 230, "left"), (276, 120, "right"), (406, 90, "right"), (506, 80, "right"),
                   (596, 204, "left")),
         "settlements": ((36, 230, "left"), (276, 46, "right"), (330, 90, "left"), (430, 80, "right"),
@@ -394,6 +510,117 @@ SECTION_COLOUR = "#3A2C1ECC"     # the band under "Goods you do not have"
 TIP_OPEN = "Resource Vault||What each of your settlements keeps of every resource, and how fast it fills."
 
 
+# MCT "Panel size" (author, 2026-11-02: "UI size options, same as the derpy great guilds mod"): Small /
+# Medium / Large, as gen_guilds_ui.SIZES. No call changes a font, and font_scale stretches the glyphs
+# it already drew (soft text in game, Great Guilds 2026-10-08), so each size is a whole second set of
+# .twui.xml: every length scaled and every font one real step along CA's body list. Medium is the
+# original files, no suffix. The stores script gets each size's factor, suffix and layout from
+# DERPY_MR_STORES_SIZES (header()), so nothing here is typed twice.
+# suffix -> (num, den, GUID letter in place of MR's R, font map)
+SIZES = {
+    "_sm": (6, 7, "S", {"body_10": "body_10", "body_12": "body_10", "body_16": "body_12"}),
+    "_lg": (4, 3, "L", {"body_10": "body_12", "body_12": "body_16", "body_16": "body_16"}),
+}
+SIZE_NAME = {"_sm": "small", "": "medium", "_lg": "large"}
+# THE OPENER IS ON CA'S HUD, beside the resource strip, so it keeps CA's size at every panel size
+UNSIZED_FILES = ("derpy_mr_stores_button",)
+# Layout entries that are not lengths on screen: counts, ratios, map units, and MAP_FRAME_OUT, which is
+# pixels of CA's border art: a 9-slice draws its edges at the art's own size at every box size, so its
+# copper line starts 4px in at Small and Large too (check_map_frame), and 3 left the map showing past it
+UNSCALED = ("ROWS", "CHART_ROWS", "ICONS", "USING", "BARS", "CARDS", "MAP_PATH_MAX", "MAP_PATH_COLOURS",
+            "MAP_MIN_SPAN", "MAP_ART_ZOOM", "MAP_ZOOM_STEP", "MAP_ZOOM_MAX", "MAP_FRAME_OUT")
+# A LETTER'S WIDTH follows its font, not its box: the map's names stay body_10 at Small
+GLYPH_FONT = {"CHAR_W": "body_12", "HEAD_CHAR_W": "body_12", "MAP_CHAR_W": "body_10"}
+SIZE_OPTION = ("ui_size", "Panel size",
+               "Sets the size of the Resource Vault and its text. The new size shows the next time you open "
+               "the Vault. On a screen larger than 1080p the Vault grows to fit and some sizes look the same.")
+SIZE_VALUES = (("small", "Small", "A seventh smaller than Medium."), ("medium", "Medium", "The standard size."),
+               ("large", "Large", "A third larger than Medium."))
+
+
+def _pt(font):
+    return int(re.search(r"\d+", font).group())
+
+
+def _z(v, n, d):
+    """A length at n/d, rounded as the stores script's S.px: half away from zero."""
+    return int(v * n / float(d) + 0.5) if v >= 0 else -int(-v * n / float(d) + 0.5)
+
+
+def scaled_layout(sfx):
+    """L at a size: every length scaled, counts and ratios kept, a letter's width by its font."""
+    n, d, _g, fonts = SIZES[sfx]
+
+    def walk(v):
+        if isinstance(v, (bool, str)):
+            return v
+        if isinstance(v, (int, float)):
+            return _z(v, n, d)
+        if isinstance(v, dict):
+            return {k: walk(x) for k, x in v.items()}
+        return type(v)(walk(x) for x in v)
+    out = {}
+    for k, v in L.items():
+        if k in UNSCALED:
+            out[k] = v
+        elif k in GLYPH_FONT:
+            f = GLYPH_FONT[k]
+            out[k] = round(v * _pt(fonts[f]) / float(_pt(f)), 3)
+        else:
+            out[k] = walk(v)
+    return out
+
+
+def sized(root, sfx):
+    """A builder's tree at another size: boxes, layer offsets, text insets, list columns, fonts.
+    9-slice margins are texture pixels and stay as they are."""
+    import gen_mr_emitter as E
+    n, d, _g, fonts = SIZES[sfx]
+
+    def z(v):
+        return _z(v, n, d)
+    for c in root.walk():
+        c.w, c.h = z(c.w), z(c.h)
+        kw = c.kw
+        for key in ("layers", "hover"):
+            if kw.get(key):
+                kw[key] = [dict(lay, offset=tuple(float(v) * n / d for v in lay.get("offset", (0, 0))),
+                                dw=z(lay.get("dw", 0)), dh=z(lay.get("dh", 0))) for lay in kw[key]]
+        if kw.get("text"):
+            for k in ("tx", "ty"):
+                if k in kw:
+                    kw[k] = ",".join("%.2f" % (float(v) * n / d) for v in kw[k].split(","))
+            kw["fontcat"] = fonts[E.fontcat(kw)]
+            kw["size"] = z(kw.get("size", 12))
+        le = kw.get("layoutengine")
+        if le and le.get("columns"):
+            kw["layoutengine"] = dict(le, columns=[z(v) for v in le["columns"]])
+    return root
+
+
+_SIZING = [""]    # the SIZES suffix the builders are drawing at: "" is Medium
+
+
+def _emit(root, prefix, comment):
+    """A builder's tree as XML, at the size being built: GUIDs MR.. at Medium, MS.. and ML.. off it."""
+    import gen_mr_emitter as E
+    sfx = _SIZING[0]
+    if sfx:
+        sized(root, sfx)
+        prefix = "M" + SIZES[sfx][2] + prefix[2:]
+        comment += " At %s size, %d/%d." % (SIZE_NAME[sfx], SIZES[sfx][0], SIZES[sfx][1])
+    E.assign(root, prefix)
+    return E.layout(root, comment)
+
+
+def build_at(build, sfx):
+    _SIZING[0] = sfx
+    try:
+        return build()
+    finally:
+        _SIZING[0] = ""
+
+
 def _flat(path, colour=None, offset=(0, 0), dw=0, dh=0, dock=None):
     return {"path": path, "offset": offset, "dw": dw, "dh": dh, "margin": 0, "dock": dock,
             "colour": colour}
@@ -469,8 +696,7 @@ def build_panel():
     p.add(_cell(E, "chart_line", L["chart_line"][2], L["chart_line"][3], size=12))
     p.add(E.C("chart_base", L["chart_base"][2], L["chart_base"][3], image=WHITE, colour_img=DIVIDER_COLOUR))
     p.add(E.C("chart_grid", L["chart_grid"][2], L["chart_grid"][3], image=WHITE, colour_img=GRID_COLOUR))
-    E.assign(root, "MR01")
-    return E.layout(root, "derpy: Resource Overhaul's Stores panel. Created at runtime by "
+    return _emit(root, "MR01", "derpy: Resource Overhaul's Stores panel. Created at runtime by "
                     "script/campaign/mod/derpy_more_resources_stores.lua, which MoveTo's every "
                     "child. Generated by tools/gen_mr_ui.py; do not hand-edit.")
 
@@ -508,11 +734,10 @@ def build_row():
             r.add(E.C("derpy_mr_supic_" + k, L["icon"][2], L["icon"][3], interactive=True, image=ICON_BG))
     r.add(_cell(E, "derpy_mr_sendhere", L["send"][0], L["send"][1], interactive=True, image=BTN_BG,
                 hover=[_flat(BTN_HOVER)], sound=SND_SMALL, align="Center", size=12))
-    for action, width in (("minus", 90), ("auto", 130), ("plus", 114)):
+    for action, width in zip(("minus", "auto", "plus"), L["POLICY_W"]):
         r.add(_cell(E, "derpy_mr_policy_" + action, width, L["send"][1], interactive=True, image=BTN_BG,
                     hover=[_flat(BTN_HOVER)], sound=SND_SMALL, align="Center", size=12))
-    E.assign(root, "MR02")
-    return E.layout(root, "derpy: one row of the Stores panel, created per row into rows_holder. "
+    return _emit(root, "MR02", "derpy: one row of the Stores panel, created per row into rows_holder. "
                     "Generated by tools/gen_mr_ui.py; do not hand-edit.")
 
 
@@ -523,8 +748,7 @@ def build_button():
     root.add(E.C("derpy_mr_stores_button", n, n, interactive=True, sound=SND_OPEN,
                  tooltip=TIP_OPEN, layers=_round("active", OPENER_ICON, 10, "medium"),
                  hover=_round("hover", OPENER_ICON, 10, "medium")))
-    E.assign(root, "MR03")
-    return E.layout(root, "derpy: the button that opens the Stores panel. Generated by "
+    return _emit(root, "MR03", "derpy: the button that opens the Stores panel. Generated by "
                     "tools/gen_mr_ui.py; do not hand-edit.")
 
 
@@ -540,8 +764,7 @@ def build_list():
                  layoutengine={"type": "List", "sizetocontent": True, "margins": "0.00,0.00",
                                "columns": [w]}))
     lst.add(ca_vslider(h - 2 * L["SLIDER_CAP"], L["HANDLE_H"]))
-    E.assign(root, "MR04")
-    return E.layout(root, "derpy: the Stores panel's scrolling list. rows_holder is adopted into "
+    return _emit(root, "MR04", "derpy: the Stores panel's scrolling list. rows_holder is adopted into "
                     "list_clip. Generated by tools/gen_mr_ui.py; do not hand-edit.")
 
 
@@ -595,8 +818,7 @@ def build_sp():
     w = L["list"][2]
     root = E.C("root", w, L["PITCH"])
     root.add(E.C("derpy_mr_stores_sp", w, L["PITCH"]))
-    E.assign(root, "MR05")
-    return E.layout(root, "derpy: one empty row of the Stores panel's list. Generated by "
+    return _emit(root, "MR05", "derpy: one empty row of the Stores panel's list. Generated by "
                     "tools/gen_mr_ui.py; do not hand-edit.")
 
 
@@ -606,8 +828,7 @@ def build_bar():
     root = E.C("root", L["BAR_W"], L["bars"][3])
     root.add(E.C("derpy_mr_stores_bar", L["BAR_W"], L["bars"][3], interactive=True,
                  image=WHITE, colour_img=BAR_COLOUR))
-    E.assign(root, "MR06")
-    return E.layout(root, "derpy: one bar of the Stores panel's history chart, created twenty "
+    return _emit(root, "MR06", "derpy: one bar of the Stores panel's history chart, created twenty "
                     "times into the panel. Generated by tools/gen_mr_ui.py; do not hand-edit.")
 
 
@@ -628,8 +849,7 @@ def build_mapdot():
     hover = dict(_flat(L["MAP_TOWN_ICON"]), shader="brighten_t0", shader_vars="0.50,0.00,0.00,0.00")
     root.add(E.C("derpy_mr_stores_mapdot", L["MAP_CAP"], L["MAP_CAP"], interactive=True,
                  image=L["MAP_TOWN_ICON"], sound=SND_SMALL, hover=[hover]))
-    E.assign(root, "MR07")
-    return E.layout(root, "derpy: a settlement on the Stores panel's Map tab. Generated by "
+    return _emit(root, "MR07", "derpy: a settlement on the Stores panel's Map tab. Generated by "
                     "tools/gen_mr_ui.py; do not hand-edit.")
 
 
@@ -639,8 +859,7 @@ def build_mapcart():
     s = L["MAP_CART_SIZE"]
     root = E.C("root", s, s)
     root.add(E.C("derpy_mr_stores_mapcart", s, s, interactive=True, image=L["MAP_CART"], sound=SND_SMALL))
-    E.assign(root, "MR08")
-    return E.layout(root, "derpy: a convoy on the Stores panel's Map tab. Generated by "
+    return _emit(root, "MR08", "derpy: a convoy on the Stores panel's Map tab. Generated by "
                     "tools/gen_mr_ui.py; do not hand-edit.")
 
 
@@ -661,8 +880,7 @@ def build_mappath(n):
     root = E.C("root", s, s)
     root.add(E.C("derpy_mr_stores_mappath_%d" % n, s, s, layers=[
         _flat(WHITE, colour="#000000CC"), _flat(WHITE, colour=ink, offset=(1, 1), dw=-2, dh=-2)]))
-    E.assign(root, "MR9%X" % n)
-    return E.layout(root, "derpy: one dot of a trade road on the Stores panel's Map tab. Generated "
+    return _emit(root, "MR9%X" % n, "derpy: one dot of a trade road on the Stores panel's Map tab. Generated "
                     "by tools/gen_mr_ui.py; do not hand-edit.")
 
 
@@ -672,8 +890,7 @@ def build_maplabel():
     w, h = L["map_label"]
     root = E.C("root", w, h)
     root.add(_cell(E, "derpy_mr_stores_maplabel", w, h, size=11))
-    E.assign(root, "MR10")
-    return E.layout(root, "derpy: a province capital's name on the Stores panel's Map tab. Generated "
+    return _emit(root, "MR10", "derpy: a province capital's name on the Stores panel's Map tab. Generated "
                     "by tools/gen_mr_ui.py; do not hand-edit.")
 
 
@@ -703,8 +920,7 @@ def build_mapart():
         clip.add(_cell(E, name, L["zoom_in"][2], L["zoom_in"][3], interactive=True, sound=SND_SMALL,
                        align="Center", size=18, layers=[_flat(ROUND_SMALL % "active")],
                        hover=[_flat(ROUND_SMALL % "hover")]))
-    E.assign(root, "MR11")
-    return E.layout(root, "derpy: CA's campaign minimap under the Stores panel's Map tab. Generated "
+    return _emit(root, "MR11", "derpy: CA's campaign minimap under the Stores panel's Map tab. Generated "
                     "by tools/gen_mr_ui.py; do not hand-edit.")
 
 
@@ -715,8 +931,7 @@ def build_card():
     w, h = L["CARD_W"], L["CARD_H"]
     root = E.C("root", w, h)
     root.add(E.C("derpy_mr_stores_card", w, h, interactive=True, image=sorted(unit_cards().values())[0][0]))
-    E.assign(root, "MR12")
-    return E.layout(root, "derpy: one card of a shipment's escort on the Stores panel's Spending tab. "
+    return _emit(root, "MR12", "derpy: one card of a shipment's escort on the Stores panel's Spending tab. "
                     "Generated by tools/gen_mr_ui.py; do not hand-edit.")
 
 
@@ -822,7 +1037,7 @@ def check_capture_kinds():
 
 
 # what a named recipe carries into the flows header beyond a rare work's fields
-RECIPE_FIELDS = ("goods", "amount", "bundle", "turns", "trait", "rank", "wait", "lord")
+RECIPE_FIELDS = ("goods", "amount", "bundle", "turns", "trait", "rank", "wait", "lord", "not_races")
 
 
 @functools.lru_cache(None)
@@ -923,14 +1138,28 @@ def header():
              "-- Edit the source or the generator, never this file.",
              "DERPY_MR_STORES_L = {"]
     lines += ["    %s = %s," % (k, _lua(L[k])) for k in sorted(L)]
+    lines.append("}")
+    # EACH PANEL SIZE: its factor (a decimal: a literal left of an operator miscompiles in the game's
+    # Lua, CLAUDE.md), its .twui.xml suffix and the layout above at that size
+    lines.append("DERPY_MR_STORES_SIZES = {")
+    for sfx in ("_sm", "", "_lg"):
+        if not sfx:
+            lines.append('    medium = {f = 1, suffix = "", layout = DERPY_MR_STORES_L},')
+            continue
+        n, d = SIZES[sfx][:2]
+        lay = scaled_layout(sfx)
+        lines.append('    %s = {f = %r, suffix = "%s", layout = {' % (SIZE_NAME[sfx], n / float(d), sfx))
+        lines += ["        %s = %s," % (k, _lua(lay[k])) for k in sorted(lay)]
+        lines.append("    }},")
     lines += ["}", "DERPY_MR_STORES_GOODS = {"]
     lines += ['    {stem = "%s", res = "%s", icon = "%s", use = "%s", rare = %s},'
               % (s, r, i, use_of(s), _rare(s)) for s, r, i in goods()]
     lines += ["}", "DERPY_MR_CAPTURE_KIND = {"]
     lines += ['    [%d] = "%s",' % kv for kv in capture_kinds()]
-    lines += ["}", "DERPY_MR_STORES_BUNDLES = {"]
-    lines += ['    {key = "%s", icon = "ui/campaign ui/effect_bundles/%s"},' % (k, i) for _u, k, i, *_r in bundles()]
     import gen_resource_overhaul as G
+    # the race variants last, so the use bundles keep their places
+    lines += ["}", "DERPY_MR_STORES_BUNDLES = {"]
+    lines += ['    {key = "%s", icon = "ui/campaign ui/effect_bundles/%s"},' % (k, i) for _u, k, i, *_r in G.use_bundles()]
     lines += ["}", "DERPY_MR_STORES_ORDERS = {"]
     lines += ['    {key = "%s", use = "%s", label = "%s", what = "%s", turns = %d},' % (k, u, t, w, G.ORDER_TURNS)
               for k, u, _b, _i, t, w, _f in G.ORDERS]
@@ -959,6 +1188,14 @@ def header():
     # FOUNDING: each rare good's three level names, as CA's building browser shows them
     lines += ["DERPY_MR_STORES_FOUND = {"]
     lines += ['    %s = {"%s", "%s", "%s"},' % ((g,) + tuple(G.RARE[g]["levels"])) for g in sorted(G.RARE)]
+    lines.append("}")
+    # TRADE EDICTS (Part B): the Resources tab's three rows, each option's label and the text of its effects
+    lines += ["DERPY_MR_STORES_EDICTS = {"]
+    for k, name, tip, _d, opts in EDICTS:
+        lines.append('    {key = "%s", name = "%s", tip = "%s", options = {%s}},'
+                     % (k, name, tip, ", ".join('{key = "%s", label = "%s", tip = %s%s}'
+                                                % (o[0], o[1], _lstr(o[2]), (", tip_chd = %s" % _lstr(o[4])) if o[4] else "")
+                                                for o in opts)))
     lines.append("}")
     return "\n".join(lines) + "\n"
 
@@ -992,6 +1229,35 @@ def trade_values():
     return out
 
 
+@functools.lru_cache(None)
+def bandit_qb():
+    """{subculture: quest-battle faction} for every escorted subculture CA ships a _qb1 faction for: the
+    first by key, which is the main one where there are two (the Empire's, not its rebels')."""
+    import gen_resource_overhaul as G
+    qb = {}
+    for r in G.db("factions_tables")[1]:
+        if r["key"].endswith("_qb1"):
+            qb.setdefault(r["subculture"], []).append(r["key"])
+    return {sc: sorted(qb[sc])[0] for sc in escort_templates() if sc in qb}
+
+
+def road_lua():
+    """DERPY_MR_FLOWS_ROAD and DERPY_MR_FLOWS_BANDIT_QB (Part D): every bandit faction is one CA ships."""
+    import gen_resource_overhaul as G
+    keys = {r["key"] for r in G.db("factions_tables")[1]}
+    qb = bandit_qb()
+    assert ROAD_QB_DEFAULT in keys and all(k in keys for k in qb.values()), "a bandit faction CA does not ship"
+    assert len(qb) >= 15, "too few races with bandits of their own"
+    assert qb.get(ROAD_QB_SC) == ROAD_QB_DEFAULT, "the default bandits are not the ogres' own"
+    sizes = ", ".join("{%s, %d}" % ("nil" if t is None else t, n) for t, n in ROAD_SIZES)
+    return "\n".join([
+        'DERPY_MR_FLOWS_ROAD = {cooldown = %d, ambush_min = %d, ai_guard = %d, guard_pct = %d, toll_pct = %d, '
+        'wash_pct = %d, half_pct = %d, sizes = {%s}, encounters = {%s}, qb = "%s", qb_sc = "%s"}'
+        % (ROAD_COOLDOWN, ROAD_AMBUSH_MIN, ROAD_AI_GUARD, ROAD_GUARD_PCT, ROAD_TOLL_PCT, ROAD_WASH_PCT,
+           ROAD_HALF_PCT, sizes, ", ".join('"%s"' % e for e in ROAD_ENCOUNTERS), ROAD_QB_DEFAULT, ROAD_QB_SC),
+        "DERPY_MR_FLOWS_BANDIT_QB = {"] + ['    %s = "%s",' % kv for kv in sorted(qb.items())] + ["}"])
+
+
 def flows_header():
     lines = ["-- GENERATED by tools/gen_mr_ui.py from Modding Files/source/resource_overhaul/flows.lua.",
              "-- Edit the source or the generator, never this file.",
@@ -1000,7 +1266,16 @@ def flows_header():
     lines += ["    %s = %s," % (k, "true" if d else "false") for k, _l, _t, d in SWITCHES]
     lines += ["}", "DERPY_MR_FLOWS_KIND = {"]
     lines += ['    %s = "%s",' % (k, FLOW_KIND[k]) for k in sorted(FLOW_KIND)]
-    lines += ["}", "DERPY_MR_FLOWS_GOODS = {"]
+    assert set(SPOIL_RATES) <= set(USES["provisions"]), "a spoiling good that is not a provision"
+    lines += ["}", 'DERPY_MR_FLOWS_SPOIL = {rates = {%s}, safe = %d, granary = %d, granary_good = "%s", '
+              'granary_works = {%s}}' % (", ".join("%s = %d" % kv for kv in sorted(SPOIL_RATES.items())),
+                                       SPOIL_SAFE_PCT, SPOIL_GRANARY_PCT, SPOIL_GRANARY_GOOD,
+                                       ", ".join('"%s"' % k for k in SPOIL_GRANARY_WORKS))]
+    lines.append(edicts_lua())
+    assert 0 < TOLL_MAX_PCT <= 100, "the toll limit is a share"
+    lines.append("DERPY_MR_FLOWS_TOLL = {max = %d}" % TOLL_MAX_PCT)
+    lines.append(road_lua())
+    lines += ["DERPY_MR_FLOWS_GOODS = {"]
     worth = trade_values()
     import gen_resource_overhaul as G
     # F.hold_exports applies derpy_mr_hold_<stem>; a stem with no marker bundle holds nothing, silently
@@ -1017,9 +1292,12 @@ def flows_header():
               % (G.EVENT_GAP, G.EVENT_AI_PCT), "DERPY_MR_FLOWS_EVENTS = {"]
     for e in G.EVENTS:
         b = e["bundle"]
-        lines.append('    %s = {use = "%s", cost = %d, where = "%s", dilemma = "%s", bundle = %s, turns = %d},'
+        lines.append('    %s = {use = "%s", cost = %d, where = "%s", dilemma = "%s", bundle = %s, turns = %d, '
+                     'races = %s, not_races = %s, needs = %s, human = %s},'
                      % (e["key"], e["use"], e["cost"], e["where"], G.event_dilemma(e["key"]),
-                        '"%s"' % b[0] if b else "nil", b[3] if b else 0))
+                        '"%s"' % b[0] if b else "nil", b[3] if b else 0,
+                        _lua(list(e.get("races", ("all",)))), _lua(list(e.get("not_races", ()))),
+                        _lua(list(e.get("needs", ()))), "true" if e.get("human") else "false"))
     lines.append("}")
     lines += ["DERPY_MR_FLOWS_SUPPLY = {"]
     lines += ['    %s = {use = "%s", bundle = "%s"},' % (k, u, b) for k, u, b, *_r in G.SUPPLY]
@@ -1058,6 +1336,13 @@ def flows_header():
     lines += ["DERPY_MR_FLOWS_NO_STORES = {%s}" % ", ".join('"%s"' % t for t in NO_STORES),
               "DERPY_MR_FLOWS_BUNDLES = {"]
     lines += ['    %s = "%s",' % (u, k) for u, k, *_r in bundles()]
+    # a race's own bundle in place of a use's (gen_resource_overhaul RACE_USE_BUNDLES, check_reach)
+    base = {u: k for u, k, *_r in bundles()}
+    lines += ["}", "DERPY_MR_FLOWS_RACE_BUNDLES = {"]
+    for k in sorted({base[u] for u, *_r in G.RACE_USE_BUNDLES}):
+        lines.append("    %s = {%s}," % (k, ", ".join('{race = "%s", key = "%s"}' % (race, v)
+                                                     for u, race, v, *_r in sorted(G.RACE_USE_BUNDLES, key=lambda r: r[1])
+                                                     if base[u] == k)))
     lines += ["}", "DERPY_MR_FLOWS_WORKS = {"]
     for w in G.works():
         # a named recipe's price and payload (workshop expansion spec section 4)
@@ -1145,10 +1430,11 @@ def mct_lua():
                   'o_%s:set_assigned_section("stores")' % k,
                   "if IN_CAMPAIGN then o_%s:set_locked(true, LOCK_REASON) end" % k]
     for (k, label, tip, d), section in ((PROVISIONS_SWITCH, "using"), (PROCESSING_SWITCH, "using"), (SERVICES_SWITCH, "using"),
-                                        (AI_SWITCH, "stores"), (UPKEEP_SWITCH, "using"),
+                                        (AI_SWITCH, "stores"), (SPOIL_SWITCH, "stores"), (UPKEEP_SWITCH, "using"),
                                         (ACTIONS_SWITCH, "using"), (EVENTS_SWITCH, "using"),
                                         (RANDOM_SWITCH, "using"), (SUPPLY_SWITCH, "using"), (RECRUIT_SWITCH, "using"),
-                                        (ESCORT_SWITCH, "using")):
+                                        (ESCORT_SWITCH, "using"), (EDICT_SWITCH, "using"), (TOLL_SWITCH, "stores"),
+                                        (BANDIT_SWITCH, "using")):
         if k == "upkeep":
             lines += ["", 'm:add_new_section("using", "Using stores")']
         lines += ["",
@@ -1176,11 +1462,29 @@ def mct_lua():
         lines += ['o_%s:add_dropdown_value("%s", "%s", "%s", %s)'
                   % (k, v[0], v[1], v[2], "true" if v[0] == default else "false") for v in values]
         lines.append('o_%s:set_default_value("%s")' % (k, default))
+    k, label, tip = SIZE_OPTION
+    assert [v[0] for v in SIZE_VALUES] == [SIZE_NAME[s] for s in ("_sm", "", "_lg")], SIZE_VALUES
+    lines += ["",
+              "-- DISPLAY ONLY: never locked and never frozen into the save. The panel reads it on every open,",
+              "-- and set_is_global keeps it each player's own in multiplayer: it changes this screen alone.",
+              'm:add_new_section("display", "Display")',
+              'local o_size = m:add_new_option("%s", "dropdown")' % k,
+              'o_size:set_text("%s")' % label,
+              'o_size:set_tooltip_text("%s")' % tip]
+    lines += ['o_size:add_dropdown_value("%s", "%s", "%s", %s)' % (v, t, d, "true" if v == "medium" else "false")
+              for v, t, d in SIZE_VALUES]
+    lines += ['o_size:set_default_value("medium")', 'o_size:set_assigned_section("display")',
+              "o_size:set_is_global(true)"]
     return "\n".join(lines) + "\n"
 
 
 def files():
-    out = {UI_REL + name + ".twui.xml": build() for name, build in BUILDERS}
+    out = {}
+    for name, build in BUILDERS:
+        out[UI_REL + name + ".twui.xml"] = build()
+        if name not in UNSIZED_FILES:
+            for sfx in sorted(SIZES):
+                out[UI_REL + name + sfx + ".twui.xml"] = build_at(build, sfx)
     out[LUA_REL] = stores_lua()
     out[FLOWS_REL] = flows_lua()
     out[MCT_REL] = mct_lua()
@@ -1249,7 +1553,7 @@ def run_harness(harness=HARNESS, flows_text=None, stores_text=None):
 def check_economy_mutations():
     subject = flows_lua().replace("\r\n", "\n")
     mutations = (
-        ("output capacity", "if d.output and F.free(region, d.output[1]) < d.output[2] then", "if false then"),
+        ("output capacity", "if d.output and F.free(region, d.output[1]) < F.output_n(faction, d) then", "if false then"),
         ("complete inputs", "if F.available_stock(v, stem) < n then", "if false then"),
         ("building health", 'd.levels[b:name()] and b:percent_health() == 100', 'd.levels[b:name()]'),
         ("province capital", 'if cap:is_null_interface() or cap:name() ~= region:name() then', 'if false then'),
@@ -1258,7 +1562,7 @@ def check_economy_mutations():
         ("named import target", 'F.SHIP.ai_on * named - held - incoming,', ''),
         ("exact input debit", 'changes[#changes + 1] = { stem, -n, KIND.spend }',
          'changes[#changes + 1] = { stem, 0, KIND.spend }'),
-        ("actual output", 'changes[#changes + 1] = { d.output[1], d.output[2], KIND.process }',
+        ("actual output", 'changes[#changes + 1] = { d.output[1], F.output_n(faction, d), KIND.process }',
          'changes[#changes + 1] = { d.output[1], 0, KIND.process }'),
         ("service benefit", 'cm:apply_effect_bundle_to_region(d.bundle, region:name(), F.BUNDLE_TURNS)', 'do end'),
         ("compensation", 'local delta = before[c[1]] - F.held(region, c[1])', 'local delta = 0'),
@@ -1293,7 +1597,7 @@ def check_economy_mutations():
         ("sell at store price", "F.sell_price(F.local_price(v, stem, fkey))",
          "math.floor(F.price(F.GOOD[stem], fkey) * F.PCT)"),
         ("unpriced store", "if k > 0 and F.price_mult(v, stem) then", "if k > 0 then"),
-        ("zero-pay lot", "if pay > 0 then", "if true then"),
+        ("zero-pay lot", "\n            if pay > 0 then\n", "\n            if true then\n"),
         ("price gradient", "pd >= F.buy_price(ps)", "true"),
         ("price gradient boundary", "pd >= F.buy_price(ps)", "pd > F.buy_price(ps)"),
         ("price gradient keys",
@@ -1331,13 +1635,13 @@ def check_provision_mutations():
         ("army reserve", "math.min(left, F.available_stock(view, g.stem))", "math.min(left, view.held[g.stem] or 0)"),
         ("army debit", 'unload and n or -n)', 'unload and n or 0)'),
         ("army transaction factor", 'F.PREFIX .. g.stem .. "_" .. KIND.move, unload', 'F.PREFIX .. g.stem .. "_move", unload'),
-        ("army sea refill", 'if ch:is_at_sea() then return nil, "At sea: no refill" end', ''),
+        ("army sea refill", 'if ch:is_at_sea() then return nil, "It cannot refill at sea." end', ''),
         ("undead army meals", 'or not F.eats(faction)\n        or not force:has_general()', 'or not F.uses_stores(faction)\n        or not force:has_general()'),
         ("field purchase stamp", 'b and b.field_turn == cm:model():turn_number()', 'false'),
         ("field payment confirmation", 'if paid ~= cost then', 'if false then'),
         ("human auto field spending", 'row.source or not faction:is_human()', 'true'),
         ("field ration cap", 'row.need * 2 - F.provision_total(b)', 'row.need * 10 - F.provision_total(b)'),
-        ("army siege", 'if r:garrison_residence():is_under_siege() then return nil, "Local settlement is besieged" end', ''),
+        ("army siege", 'if r:garrison_residence():is_under_siege() then return nil, "This settlement is under siege." end', ''),
         ("army unit need", 'local need = math.max(1, math.ceil(force:unit_list():num_items() / 4))', 'local need = 1'),
         ("army meal cargo", 'b.goods[g.stem] = b.goods[g.stem] - n', 'b.goods[g.stem] = b.goods[g.stem]'),
         ("army recovery", 'b.short = left == 0 and 0 or b.short + 1', 'b.short = b.short + 1'),
@@ -1385,11 +1689,11 @@ def check_route_mutations():
         ("whole gold settlement", "math.min(s.escrow, F.gold(delivered, s.price_c))",
          "math.min(s.escrow, delivered * s.price_c / F.PCT)"),
         ("unpriced origin", "if partner and not F.price_mult(source, stem) then return nil end", ""),
-        ("pool check at the source", 'if o.seller ~= faction:name() and not F.pool(from, o.stem) then return nil, "No price at the source" end', ""),
+        ("pool check at the source", 'if o.seller ~= faction:name() and not F.pool(from, o.stem) then return nil, "The seller cannot store it" end', ""),
         ("pool check is partner only", 'if o.seller ~= faction:name() and not F.pool(from, o.stem) then',
          'if not F.pool(from, o.stem) then'),
         ("own order stays free", "local partner = order and seller:name() ~= fkey", "local partner = order ~= nil"),
-        ("unaffordable cart", "if escrow > faction:treasury() then return nil end", ""),
+        ("unaffordable cart", "if escrow + toll > 0 and escrow + toll > faction:treasury() then return nil end", ""),
         ("saved cart migration", "F.sanitize_routes()\n    F.sanitize_ships()", "F.sanitize_routes()"),
         ("saved cart price in hundredths", "F.stock_number(s.price) and s.price * F.PCT or 0", "F.stock_number(s.price) and s.price or 0"),
         ("unpaid refund", 'local refund = s.escrow - pay', 'local refund = 0'),
@@ -1437,13 +1741,13 @@ def check_convoy_mutations():
         ("convoy turns count points less one", "math.ceil(F.road_steps(path) / F.ROAD_PER_TURN)", "math.ceil((#path - 1) / F.ROAD_PER_TURN)"),
         ("road hexes ignore the y span", ", math.abs(path[i][2] - path[i - 1][2]))", ")"),
         ("road hex is at least one", "steps = steps + math.max(1, math.abs(", "steps = steps + math.max(0, math.abs("),
-        ("dispatch debit", "F.route_goods(source.region, g.stem, -n, KIND.trade)", "true"),
+        ("dispatch debit", "F.route_goods(p.source.region, p.stem, -p.n, KIND.trade)", "true"),
         ("road from the exporter", "if path[1][1] ~= hx or path[1][2] ~= hy then path = F.reverse(path) end", "do end"),
         ("trade guarded", "F.guard(F.trade, faction)", "F.trade(faction)"),
-        ("refused debit", "elseif F.route_goods(source.region, g.stem, -n, KIND.trade) then",
-         "elseif F.route_goods(source.region, g.stem, -n, KIND.trade) or true then"),
+        ("refused debit", "if F.route_goods(p.source.region, p.stem, -p.n, KIND.trade) then",
+         "if F.route_goods(p.source.region, p.stem, -p.n, KIND.trade) or true then"),
         ("one convoy per partner", "convoy = convoy or F.convoy_new(", "convoy = F.convoy_new("),
-        ("departure ledger line", 'F.log(exporter:name(), g.stem, KIND.trade .. "_out", n)', "do end"),
+        ("departure ledger line", 'F.log(exporter:name(), p.stem, KIND.trade .. "_out", p.n)', "do end"),
         ("reverse is a copy", "    local out = {}\n    for i = #list, 1, -1 do out[#out + 1] = list[i] end\n    return out",
          "    local n = #list\n    for i = 1, math.floor(n / 2) do list[i], list[n + 1 - i] = list[n + 1 - i], list[i] end\n    return list"),
         ("convoy sequence", "F.state.convoy_seq = (F.state.convoy_seq or 0) + 1", "F.state.convoy_seq = 1"),
@@ -1503,11 +1807,30 @@ def check_convoy_mutations():
          "    local exporter, to = F.live(c.f), nil\n    if exporter and c.x then to = F.nearest(exporter, c.x, c.y) elseif exporter then to = F.capital(exporter) end\n    for stem, n in pairs(c.basket) do F.move(nil, to, stem, n, KIND.move, nil, c.f) end\n    F.convoy_drop(c)"),
         ("arrival once", "    if not F.convoy_drop(c) then return end\n    local buyer = F.live(c.buyer)",
          "    F.convoy_drop(c)\n    local buyer = F.live(c.buyer)"),
-        ("convoy follows the capital", "else c.to = F.capital(buyer):name(); F.convoy_step(c, turn) end", "else F.convoy_step(c, turn) end"),
+        ("convoy follows the capital", "                c.to = F.capital(buyer):name()\n", ""),
+        # onto the pair's road of the day (live check 2026-10-24: 17 hexes off the drawn road), F.convoy_on
+        ("convoy keeps yesterday's road", "            if x then c.road, c.x, c.y = F.pack_road(road), x, y end\n", ""),
+        ("convoy moved but its road not saved", "if x then c.road, c.x, c.y = F.pack_road(road), x, y end", "if x then c.x, c.y = x, y end"),
+        ("convoy moved after the army check",
+         "            local open, _, path = F.trade_reach(faction, buyer)\n            local x, y, road = F.convoy_on(c, open and path)\n"
+         "            if x then c.road, c.x, c.y = F.pack_road(road), x, y end\n            -- a convoy with no position has no army near it\n"
+         "            local captor = c.x and c.y and F.captor(faction, c)\n",
+         "            -- a convoy with no position has no army near it\n            local captor = c.x and c.y and F.captor(faction, c)\n"
+         "            local open, _, path = F.trade_reach(faction, buyer)\n            local x, y, road = F.convoy_on(c, open and path)\n"
+         "            if x then c.road, c.x, c.y = F.pack_road(road), x, y end\n"),
+        ("convoy takes a cut-off road", "F.convoy_on(c, open and path)", "F.convoy_on(c, path)"),
+        ("today's road not turned to the exporter",
+         "if path[1][1] ~= s[1] or path[1][2] ~= s[2] then path = F.reverse(path) end", "do end"),
+        ("convoy takes a road from elsewhere", "    if path[1][1] ~= s[1] or path[1][2] ~= s[2] then return nil end\n", ""),
+        ("convoy keeps its point number", "local j = math.floor((#path - 1) * (i - 1) / math.max(1, #road - 1)) + 1",
+         "local j = math.min(#path, i)"),
+        ("the maps get no road", "x = c.x, y = c.y, road = c.road, stem", "x = c.x, y = c.y, stem"),
         ("return needs a settlement", "if exporter and c.x then to = F.nearest(exporter, c.x, c.y) elseif exporter then",
          "if exporter and c.x then to = F.nearest(exporter, c.x, c.y) or cm:get_region(c.from) elseif exporter then"),
-        ("destroyed force skipped", "and not e.mf:is_null_interface() then", "then"),
-        ("garrison is no army", "if not mf:is_armed_citizenry() and mf:has_general() then", "if mf:has_general() then"),
+        ("destroyed force skipped", "if mf and not mf:is_null_interface() and f and not f:is_null_interface() then",
+         "if f and not f:is_null_interface() then"),
+        ("garrison is no army", "\n                if not mf:is_armed_citizenry() and mf:has_general() then",
+         "\n                if mf:has_general() then"),
         ("sweep dead exporters", "if not F.live(convoys[i].f) then table.remove(convoys, i) end", "if false then table.remove(convoys, i) end"),
         ("sweep keeps living ones", "if not F.live(convoys[i].f) then table.remove(convoys, i) end", "if true then table.remove(convoys, i) end"),
         # Task 4: the load keeps only what the convoy code can read (F.convoy_sound, F.sanitize_convoys)
@@ -1632,8 +1955,9 @@ def check_cargo_view_mutations():
         ("trade row out and in swapped", "if c.f == fk then out = out + 1 end", "if c.buyer == fk then out = out + 1 end"),
         ("trade row with nothing on the road", "if #convoys > 0 then", "if true then"),
         ("basket largest first", "return basket[a] > basket[b] end", "return basket[a] < basket[b] end"),
-        ("basket equal amounts by name", "        return a < b\n    end)\n    local parts = {}", "        return a > b\n    end)\n    local parts = {}"),
-        ("tooltip names the arrival turn", '", arrives turn " .. tostring(c.due)', '", arrives turn " .. tostring(c.at)'),
+        ("basket equal amounts by name", "        return a < b\n    end)\n    local parts = {}\n    for _, stem in",
+         "        return a > b\n    end)\n    local parts = {}\n    for _, stem in"),
+        ("tooltip names the arrival turn", '" by turn " .. tostring(c.due)', '" by turn " .. tostring(c.at)'),
         ("tooltip names every convoy", "for i = 1, math.min(#soon, S.CONVOY_LINES) do", "for i = 1, #soon do"),
         ("tooltip names the latest first", "if a.due ~= b.due then return a.due < b.due end",
          "if a.due ~= b.due then return a.due > b.due end"),
@@ -1679,8 +2003,8 @@ def check_cargo_view_mutations():
         ("convoy marker", "            cargo[#cargo + 1] = c\n", "            do end\n"),
         # the decal budget: a convoy's marker only near the camera, a shipment's as before
         ("convoy marker without the camera test", "if near and count < 512 then", "if count < 512 then"),
-        ("shipment marker with the camera test", "        if s.convoy then\n            local dx, dy = cm:log_to_dis(s.x, s.y)",
-         "        if true then\n            local dx, dy = cm:log_to_dis(s.x, s.y)"),
+        ("shipment marker with the camera test", "        if s.convoy then\n            near = R.in_view(",
+         "        if true then\n            near = R.in_view("),
     )
     for label, before, after in markers:
         assert terrain.count(before) == 1, "stale cargo view mutation: " + label
@@ -1803,6 +2127,13 @@ def check_map_cost_mutations():
          "unshared = R.drawn and R.drawn[1] == links and R.drawn[3] or {}", "unshared = {}"),
         ("a changed network keeps the old shared stretches",
          "unshared = R.drawn and R.drawn[1] == links and R.drawn[3] or {}", "unshared = R.drawn and R.drawn[3] or {}"),
+        # a convoy's marker on its pair's road of the day (2026-11-01), worked out again only when something moved
+        ("convoy marker on the road it left on", "            if s[5] then c.x, c.y = s[5], s[6] end\n", ""),
+        ("convoy marker on no agreement's road", "if open and road then agreed[key .. '>' .. partner:name()] = road end", "do end"),
+        ("convoy marker worked out every refresh", "    R.spots = spots\n", "    R.spots = {}\n"),
+        ("convoy marker kept past a new road of the day", "if not (s and s[1] == road and", "if not (s and"),
+        ("convoy marker kept past a turn start's new road", "s[2] == c.road and ", ""),
+        ("convoy marker kept past a step", " and s[3] == c.x and s[4] == c.y)", ")"),
     )
     for label, before, after in mutations:
         assert terrain.count(before) == 1, "stale map cost mutation: " + label
@@ -1875,6 +2206,453 @@ def check_production_mutations():
     print("production mutations: %d/%d caught; restored harness passes" % (len(mutations), len(mutations)))
 
 
+def check_spoil_mutations():
+    """Spoilage (design 2026-11-01, Part A): each rule broken the way somebody would, in the shipped
+    flows script; the flows harness must fail on every one."""
+    subject = flows_lua().replace("\r\n", "\n")
+    turn = "    F.guard(F.upkeep, faction)\n    F.guard(F.provisions_turn, faction)\n    F.guard(F.spoil, faction)"
+    mutations = (
+        ("rounds up", "return math.floor(exposed * rate / 100)", "return math.ceil(exposed * rate / 100)"),
+        ("the safe share kept nothing back", "local exposed = (held or 0) - math.floor((capacity or 0) * safe / 100)",
+         "local exposed = (held or 0)"),
+        ("the Granary keeps every good", "if stem == F.SPOIL.granary_good and lasting", "if lasting"),
+        ("the Granary read writes a book",
+         "local b = F.state.factions[fkey]\n    local lasting = b and b.works and b.works.lasting",
+         "local lasting = F.works_book(fkey).lasting"),
+        ("the switch", "return r.spoilage and (r.ai or faction:is_human()) and F.uses_stores(faction)",
+         "return (r.ai or faction:is_human()) and F.uses_stores(faction)"),
+        ("other factions' stores off", "return r.spoilage and (r.ai or faction:is_human()) and F.uses_stores(faction)",
+         "return r.spoilage and F.uses_stores(faction)"),
+        ("a race with no stores", "return r.spoilage and (r.ai or faction:is_human()) and F.uses_stores(faction)",
+         "return r.spoilage and (r.ai or faction:is_human())"),
+        ("never runs", turn, "    F.guard(F.upkeep, faction)\n    F.guard(F.provisions_turn, faction)\n    do end"),
+        ("runs before the meals", turn,
+         "    F.guard(F.spoil, faction)\n    F.guard(F.upkeep, faction)\n    F.guard(F.provisions_turn, faction)"),
+        ("booked as eaten", "n, KIND.spoil, fkey)", "n, KIND.eat, fkey)"),
+        ("the forecast's net ignores it", "fc.net = p - d - s", "fc.net = p - d"),
+        ("the forecast counts it down like a use", "local d = fc.use_per_turn\n", "local d = fc.use_per_turn + s\n"),
+        ("next turn's loss ignores the switch", "if not (F.SPOIL.rates[stem] and F.spoils(v.faction)) then return 0 end",
+         "if not F.SPOIL.rates[stem] then return 0 end"),
+        ("a computer round reads every store whole", "local p = F.SPOIL.rates[g.stem] and F.pool(region, g.stem)",
+         "local p = F.SPOIL.rates[g.stem] and F.stock(region) and F.pool(region, g.stem)"),
+    )
+    panel = stores_lua().replace("\r\n", "\n")
+    shown = (   # (label, harness, before, after) on the stores script
+        ("the sentence promises a loss of nothing", HARNESS, "if info.due > 0 then", "if info.due >= 0 then"),
+        ("a busy line runs past the chart", HARNESS, "while #line * L.CHAR_W > L.chart_line[3] and #parts > 1 do",
+         "while false do"),
+        ("the forecast line leaves it out", FLOWS_HARNESS,
+         'if (fc.spoil or 0) > 0 then lines[#lines + 1] = "It loses " .. S.num(fc.spoil) .. " to spoiling each turn." end', ''),
+        ("the settlement row leaves it out", HARNESS,
+         'if region then tip = add_line(tip, S.spoil_sentence(S.ask("spoil_info", model_faction, region, d.stem), d.name)) end',
+         ""),
+    )
+    runs = [(label, FLOWS_HARNESS, subject, before, after, "flows_text") for label, before, after in mutations]
+    runs += [(label, harness, panel, before, after, "stores_text") for label, harness, before, after in shown]
+    for label, harness, text, before, after, arg in runs:
+        assert text.count(before) == 1, "stale spoil mutation: " + label
+        changed = text.replace(before, after, 1)
+        syntax = subprocess.run([LUA_EXE.replace("lua.exe", "luac.exe"), "-p", "-"],
+            input=changed, capture_output=True, text=True, encoding="utf-8")
+        assert syntax.returncode == 0, (label, syntax.stderr)
+        code, out = run_harness(harness, **{arg: changed})
+        assert code != 0 and "in function" in out and "syntax" not in out, "survived: %s\n%s" % (label, out)
+        print("  caught:", label)
+    for harness in (FLOWS_HARNESS, HARNESS):
+        code, out = run_harness(harness)
+        assert code == 0, out
+    print("spoil mutations: %d/%d caught; restored harnesses pass" % (len(runs), len(runs)))
+
+
+def check_race_mutations():
+    """Faction-specific buffs (2026-11-01): each way the race's own work, Well fed or Feast could fall
+    back to the general one, in the shipped flows script; the flows harness must fail on every one."""
+    subject = flows_lua().replace("\r\n", "\n")
+    mutations = (
+        ("a work's not_races ignored", "    for _, r in ipairs(w.not_races or {}) do\n        if r == race then return false end",
+         "    for _, r in ipairs({}) do\n        if r == race then return false end"),
+        ("the race's bundle never chosen", "if v.race == race then want = v.key end", "do end"),
+        ("both bundles at once", "if on and b == want then", "if on then"),
+        ("a former owner's bundle kept", "family[#family + 1] = v.key", "do end"),
+        ("an event open to every race", "(F.work_open(faction, e) and F.event_gated(faction, e))",
+         "(true and F.event_gated(faction, e))"),
+        ("the race's event never in the turn", '"feast", "feast_chd", "arsenal"', '"feast", "arsenal"'),
+        ("only the first Granary keeps grain", "if lasting[k] then return F.SPOIL.granary end",
+         "if lasting[F.SPOIL.granary_works[1]] then return F.SPOIL.granary end"),
+    )
+    for label, before, after in mutations:
+        assert subject.count(before) == 1, "stale race mutation: " + label
+        changed = subject.replace(before, after, 1)
+        syntax = subprocess.run([LUA_EXE.replace("lua.exe", "luac.exe"), "-p", "-"],
+            input=changed, capture_output=True, text=True, encoding="utf-8")
+        assert syntax.returncode == 0, (label, syntax.stderr)
+        code, out = run_harness(FLOWS_HARNESS, flows_text=changed)
+        assert code != 0 and "in function" in out and "syntax" not in out, "survived: %s\n%s" % (label, out)
+        print("  caught:", label)
+    code, out = run_harness(FLOWS_HARNESS)
+    assert code == 0, out
+    print("race mutations: %d/%d caught; restored harness passes" % (len(mutations), len(mutations)))
+
+
+def check_turn_end_mutations():
+    """Ending the turn closes the panel (author, 2026-11-01); the stores harness must fail on each."""
+    subject = stores_lua().replace("\r\n", "\n")
+    mutations = (
+        ("never closes", "local done, e = pcall(S.show, false)", "local done, e = true, nil"),
+        ("any faction's turn end closes it",
+         "return context:faction():name() == cm:get_local_faction_name(true) and S.is_open()", "return S.is_open()"),
+    )
+    for label, before, after in mutations:
+        assert subject.count(before) == 1, "stale turn end mutation: " + label
+        code, out = run_harness(HARNESS, stores_text=subject.replace(before, after, 1))
+        assert code != 0 and "in function" in out and "syntax" not in out, "survived: %s\n%s" % (label, out)
+        print("  caught:", label)
+    print("turn end mutations: %d/%d caught" % (len(mutations), len(mutations)))
+
+
+def check_sizes():
+    """The panel sizes against the files they name and the fonts they step to."""
+    import gen_mr_emitter as E
+    for sfx, (n, d, _g, fonts) in SIZES.items():
+        assert set(fonts) == {"body_%d" % s for s in E._BODY_SIZES}, (sfx, fonts)
+        for a, b in fonts.items():
+            # NO FONT MAY GROW PAST ITS BOX (gen_guilds_ui.check_font_steps), or its text runs out of it.
+            # body_10 has nothing below it, so Small keeps it; the assert after this loop is why that is safe.
+            if a == b == "body_10":
+                continue
+            assert _pt(b) * d <= _pt(a) * n, "%s maps %s to %s, wider than its box at %d/%d" % (sfx, a, b, n, d)
+    built = files()
+    medium = {rel: t for rel, t in built.items()
+              if rel.endswith(".twui.xml") and not any(rel.endswith(s + ".twui.xml") for s in SIZES)}
+    # THE ONE body_10 TEXT is the map's names, whose box S.map_names sizes to the name it measures
+    tens = sorted(rel for rel, t in medium.items() if 'fontcat_name="body_10"' in t)
+    assert tens == [UI_REL + "derpy_mr_stores_maplabel.twui.xml"], tens
+    # EVERY PANEL FILE IS CREATED AT THE SIZE DRAWN: one created without the suffix draws Medium's box
+    # inside a Large panel, and the opener created with it asks for a file that does not exist
+    made = re.findall(r"CreateComponent\([^,]+, S\.PATH \.\. ([^)]+)\)", stores_lua())
+    assert len(made) == 9, made
+    for m in made:
+        assert m.endswith(" .. S.SUFFIX") != (m == '"derpy_mr_stores_button"'), m
+    assert set(UNSCALED) | set(GLYPH_FONT) <= set(L), "a layout entry was renamed: %s" % sorted(set(UNSCALED) | set(GLYPH_FONT) - set(L))
+    print("panel sizes: %d files at %d sizes, fonts within their boxes" % (len(built), 1 + len(SIZES)))
+
+
+def check_size_mutations():
+    """MCT Panel size (author, 2026-11-02); the stores harness must fail on each."""
+    subject = stores_lua().replace("\r\n", "\n")
+    mutations = (
+        ("the MCT size is never read", "S.use_size(S.pick_size(S.want_size(), sw, sh",
+         'S.use_size(S.pick_size("medium", sw, sh'),
+        ("the layout stays Medium's", "S.SIZE, S.F, S.SUFFIX, L = k, z.f, z.suffix, z.layout",
+         "S.SIZE, S.F, S.SUFFIX, L = k, z.f, z.suffix, L"),
+        ("the panel at the old size is kept", "if is_uicomponent(p) then pcall(function() p:Destroy() end) end", ""),
+        ("the opener grows with the panel", "local H = DERPY_MR_STORES_L ", "local H = L "),
+    )
+    for label, before, after in mutations:
+        assert subject.count(before) == 1, "stale size mutation: " + label
+        code, out = run_harness(HARNESS, stores_text=subject.replace(before, after, 1))
+        assert code != 0 and "in function" in out and "syntax" not in out, "survived: %s\n%s" % (label, out)
+        print("  caught:", label)
+    print("size mutations: %d/%d caught" % (len(mutations), len(mutations)))
+
+
+def check_edict_mutations():
+    """Trade edicts (design 2026-11-01, Part B): each rule broken the way somebody would, in the shipped
+    flows, stores and terrain scripts; the harness that owns the rule must fail on every one."""
+    flows = flows_lua().replace("\r\n", "\n")
+    panel = stores_lua().replace("\r\n", "\n")
+    with io.open(os.path.join(ROOT, "Modding Files", "source", "resource_overhaul", "terrain_routes.lua"),
+                 encoding="utf-8") as fh:
+        terrain = fh.read().replace("\r\n", "\n")
+    closed = "    local F = DERPY_MR_FLOWS\n    if F and F.edict and F.edict(owner:name(), 'roads') == 'closed' then return true end\n"
+    party = "    for _, p in ipairs(parties) do\n        if owner:name() == p:name() then return false end\n    end\n    -- CLOSED ROADS"
+    first = ("    F.guard(F.edict_turn, faction)\n    -- Arrivals fund this turn; essentials and elective local orders precede exports.\n"
+             "    F.guard(F.convoys_turn, faction)\n    F.guard(F.ships_turn, faction)\n    F.guard(F.upkeep, faction)\n")
+    flows_m = (
+        ("the cooldown ignored", "    if not force and F.edict_wait(fkey, which) > 0 then return false end\n", ""),
+        ("the race bundle ignored", "return (own and own[F.race(faction)]) or F.EDICT.bundles[option]",
+         "return F.EDICT.bundles[option]"),
+        ("the default read from a missing switch", "local b = F.edicts_on() and F.state.edicts and F.state.edicts[fkey]",
+         "local b = F.state.edicts and F.state.edicts[fkey]"),
+        ("F.edict creating a table", "local b = F.edicts_on() and F.state.edicts and F.state.edicts[fkey]",
+         "F.state.edicts = F.state.edicts or {}\n    local b = F.edicts_on() and F.state.edicts[fkey]"),
+        ("Closed not invalidating reach", '    if which == "roads" then F.invalidate_reach() end\n', ""),
+        ("the meal size fixed at F.NEED", 'return F.EDICT.need[F.edict(fkey, "rations")] or F.NEED end',
+         "return F.NEED end"),
+        ("War economy on every output", 'if F.EDICT.war_outputs[d.output[1]] and F.edict(faction:name(), "workshops") == "war" then',
+         'if F.edict(faction:name(), "workshops") == "war" then'),
+        ("the Merchant share not doubled", "then pct = pct * F.EDICT.merchant_trade end", "then pct = pct end"),
+        ("the draw not scaled", "math.ceil(value / F.RECRUIT.per * per * draw / 100)", "math.ceil(value / F.RECRUIT.per * per)"),
+        ("the computer counting rebels", "not o:is_rebel() and o:name() ~= fkey", "o:name() ~= fkey"),
+        ("a rebel war barring Merchant", "if not wars:item_at(i):is_rebel() then return true end", "return true"),
+        ("edict_turn after upkeep", first, first.replace("    F.guard(F.edict_turn, faction)\n", "", 1)
+         + "    F.guard(F.edict_turn, faction)\n"),
+        ("a neighbour counted once per region", "o:name() ~= fkey and not seen[o:name()] then", "o:name() ~= fkey then"),
+        ("Rationing never chosen", "cover < a.ration_low", "cover < 0"),
+        ("Plenty never chosen", "cover > a.ration_high", "cover > 1e9"),
+        ("Merchant on any partner", ">= a.merchant_partners", ">= 0"),
+        ("Closed at one war", "near >= a.closed_wars", "near > 0"),
+        ("Rations for a faction that does not eat",
+         'if which == "rations" and not F.eats(faction) then return false end', ""),
+        ("a player's bundles not caught up", "if faction:is_human() then return F.edict_bundles(faction) end",
+         "if faction:is_human() then return end"),
+        ("computer edicts under other factions' stores off", "if r.edicts and r.ai and F.uses_stores(faction)",
+         "if r.edicts and F.uses_stores(faction)"),
+        ("the rebels' missing trade list read", 'type(partners) ~= "boolean" and partners:num_items()', "partners:num_items()"),
+        ("a missing wars list read", '    if type(wars) == "boolean" then return false end\n    for i = 0, wars:num_items() - 1 do\n        if not wars:item_at(i):is_rebel()',
+         "    for i = 0, wars:num_items() - 1 do\n        if not wars:item_at(i):is_rebel()"),
+        ("Well fed on the edict's own meals", 'fed = F.use_total(held, "provisions") >= F.FED_TURNS * F.NEED * level',
+         'fed = F.use_total(held, "provisions") >= F.FED_TURNS * need'),
+    )
+    panel_m = (
+        ("the active button clickable", "if not ch.on and not ch.off then return S.request(", "if not ch.off then return S.request("),
+        ("the button size not restored", "sized(button, ch and L.EDICT_W or L.POLICY_W[j], L.send[2])",
+         "if ch then sized(button, L.EDICT_W, L.send[2]) end"),
+        ("a waiting edict live", "off = o.key ~= now and wait > 0", "off = false"),
+        ("a Rations row for a faction that does not eat", 'if e.key ~= "rations" or eats then', "if true then"),
+    )
+    terrain_m = (
+        ("R.hostile ignoring Closed", closed, ""),
+        ("a party treated as hostile", party, closed + party),
+    )
+    _run_mutants("edict", flows, flows_m, panel, panel_m, terrain, terrain_m)
+
+
+def _run_mutants(kind, flows, flows_m, panel, panel_m, terrain, terrain_m):
+    """Each (label, before, after) applied alone to its script; the harness that owns that script must fail."""
+    runs = [(label, FLOWS_HARNESS, flows, b, a, "flows_text") for label, b, a in flows_m]
+    runs += [(label, HARNESS, panel, b, a, "stores_text") for label, b, a in panel_m]
+    runs += [(label, None, terrain, b, a, None) for label, b, a in terrain_m]
+    for label, harness, text, before, after, arg in runs:
+        assert text.count(before) == 1, "stale %s mutation: %s" % (kind, label)
+        changed = text.replace(before, after, 1)
+        syntax = subprocess.run([LUA_EXE.replace("lua.exe", "luac.exe"), "-p", "-"],
+            input=changed, capture_output=True, text=True, encoding="utf-8")
+        assert syntax.returncode == 0, (label, syntax.stderr)
+        if harness is None:
+            code, out = run_terrain_harness(changed)
+            assert code != 0 and "harness ok" not in out, "survived: %s\n%s" % (label, out)
+        else:
+            code, out = run_harness(harness, **{arg: changed})
+            assert code != 0 and "in function" in out and "syntax" not in out, "survived: %s\n%s" % (label, out)
+        print("  caught:", label)
+    print("%s mutations: %d/%d caught" % (kind, len(runs), len(runs)))
+
+
+def check_toll_mutations():
+    """Tolls (design 2026-11-01, Part C 6.1): each rule broken the way somebody would, in the shipped flows
+    script; the flows harness must fail on every one."""
+    subject = flows_lua().replace("\r\n", "\n")
+    mutations = (
+        ("the toll limit off", "return math.min(F.rates().toll * n, F.TOLL.max) end", "return F.rates().toll * n end"),
+        ("rounding up", "local each = math.floor(value * F.toll_pct(n) / (n * 100))",
+         "local each = math.ceil(value * F.toll_pct(n) / (n * 100))"),
+        ("a party charged", "local out, seen = {}, { [a:name()] = true, [b:name()] = true }", "local out, seen = {}, {}"),
+        ("a taker charged twice", "if o and not o:is_null_interface() and not seen[o:name()] then",
+         "if o and not o:is_null_interface() then"),
+        ("an ally charged", " and not friends(o, a) and not friends(o, b) then", " then"),
+        ("Open still charging", ' and F.edict(o:name(), "roads") == "tolled"', ""),
+        ("Closed still charging", 'F.edict(o:name(), "roads") == "tolled"', 'F.edict(o:name(), "roads") ~= "open"'),
+        ("the preview leaving out earlier partners' guards",
+         "sources.toll_spent = spent + sum + (fee <= exporter:treasury() - spent - sum and fee or 0)",
+         "sources.toll_spent = spent + sum"),
+        ("an own cart refused to a faction in debt",
+         "if escrow + toll > 0 and escrow + toll > faction:treasury() then return nil end",
+         "if escrow + toll > faction:treasury() then return nil end"),
+        ("an internal shipment charged", "    if partner then\n        local ps = F.local_price(source, stem, seller:name())",
+         "    if true then\n        local ps = F.local_price(source, stem, seller:name())"),
+        ("the uphill test without the toll", "pd >= F.buy_price(ps) + F.toll_unit(ps, #takers)", "pd >= F.buy_price(ps)"),
+        ("an unaffordable partner still sent", "    if sum > 0 and sum > exporter:treasury() - spent then\n", "    if false then\n"),
+        ("a faction in debt refused with nothing due", "    if sum > 0 and sum > exporter:treasury() - spent then\n",
+         "    if sum > exporter:treasury() - spent then\n"),
+        ("the preview forgetting earlier partners' tolls", "local spent = preview and sources.toll_spent or 0", "local spent = 0"),
+        ("the toll charged on the plan and not on what was sent",
+         "local due = F.tolls(F.cargo_value(convoy.basket, prices), takers)",
+         "local due = F.tolls(F.cargo_value(basket, prices), takers)"),
+        ("the toll paid by the seller on a cart", "if toll > 0 and F.pay_tolls(fkey, due) then", "if toll > 0 and F.pay_tolls(seller:name(), due) then"),
+        ("a convoy's bad tolls loaded", "    if not F.tolls_sound(c.tolls) then return nil end\n", ""),
+        ("a cart's bad tolls kept", "            if not F.tolls_sound(s.tolls) then s.tolls = nil end\n", ""),
+    )
+    for label, before, after in mutations:
+        assert subject.count(before) == 1, "stale toll mutation: " + label
+        changed = subject.replace(before, after, 1)
+        syntax = subprocess.run([LUA_EXE.replace("lua.exe", "luac.exe"), "-p", "-"],
+            input=changed, capture_output=True, text=True, encoding="utf-8")
+        assert syntax.returncode == 0, (label, syntax.stderr)
+        code, out = run_harness(FLOWS_HARNESS, flows_text=changed)
+        assert code != 0 and "in function" in out and "syntax" not in out, "survived: %s\n%s" % (label, out)
+        print("  caught:", label)
+    print("toll mutations: %d/%d caught" % (len(mutations), len(mutations)))
+
+
+def check_blockade_mutations():
+    """Blockades and the toll rows (design 2026-11-01, Part C 6.2-6.3): each rule broken the way somebody would,
+    in the shipped flows, stores and terrain scripts; the harness that owns the rule must fail on every one."""
+    with io.open(TERRAIN_SRC, encoding="utf-8") as fh:
+        terrain = fh.read().replace("\r\n", "\n")
+    flows_m = (
+        ("a radius one hex wider", "if dx * dx + dy * dy <= near * near then", "if dx * dx + dy * dy <= (near + 1) * (near + 1) then"),
+        ("only the exporter's enemies counted", "for _, side in ipairs({ a, b }) do", "for _, side in ipairs({ a }) do"),
+        ("duty paid when blockaded", " or F.blockaded(fkey, partner:name())) and 0", ") and 0"),
+        ("the cut-off list without blockades", "        elseif by then out[#out + 1] = { key = p:name(), by = by } end\n", "        end\n"),
+        ("the contract status lost", ' or (why == "blockaded" and "Blockaded")', ""),
+        ("the preview ignoring blockades", "    if not (opts and opts.blockade_ok) then\n",
+         "    if not preview and not (opts and opts.blockade_ok) then\n"),
+        ("the blocker not recorded", "        if not preview then F.record_blockade(exporter:name(), partner:name(), by) end\n", ""),
+        ("a cart leaving through a blockade",
+         '    if partner and F.blockade(seller, faction, road) then return nil, "blockaded" end\n', ""),
+        ("the switch ignored", "if not F.rates().tolls or type(path) ~= \"table\" or #path == 0 then return nil end",
+         "if type(path) ~= \"table\" or #path == 0 then return nil end"),
+        ("the blockades not saved", "        F.state.blockades = F.blockades_kept()\n", ""),
+        ("the blockades not loaded", "    F.sanitize_blockades()\n", ""),
+        ("a damaged saved blockade kept", 'type(v.by) == "string" and type(v.turn) == "number"', "true"),
+    )
+    panel_m = (
+        ("a blockade naming no blocker", 'local why = c.why or ("Blockaded by " .. loc(', 'local why = c.why or ("Blockaded" or loc('),
+        ("the toll rows hidden at 0", "if t[w[1]] > 0 or on then", "if t[w[1]] > 0 then"),
+        ("a convoy's tolls left out",
+         'if type(c.tolls) == "table" and next(c.tolls) then lines[#lines + 1] = S.tolls_text(c.tolls) end', ""),
+    )
+    terrain_m = (
+        ("the map drawing a blockaded pair",
+         "if open and F.blockaded and F.blockaded(key, partner:name()) then open = false end", ""),
+    )
+    _run_mutants("blockade", flows_lua().replace("\r\n", "\n"), flows_m, stores_lua().replace("\r\n", "\n"), panel_m,
+                 terrain, terrain_m)
+
+
+def check_road_mutations():
+    """Bandits on the roads and guards (design 2026-11-01, Part D): each rule broken the way somebody would, in the
+    shipped flows and stores scripts; the harness that owns the rule must fail on every one."""
+    flows_m = (
+        ("the wild rule's rebel case removed", "if region:is_abandoned() or o:is_null_interface() or o:is_rebel() then return 100 end",
+         "if region:is_abandoned() or o:is_null_interface() then return 100 end"),
+        ("CA's figure trusted at 0", 'if ok and type(v) == "number" and v > 0 then', 'if ok and type(v) == "number" and v >= 0 then'),
+        ("the guard halving removed", "(guarded and 50 or 100)", "100"),
+        ("the patrol radius one wider", "    local r2 = F.SHIP.near * F.SHIP.near\n    for _, f in ipairs({ owner, buyer }) do",
+         "    local r2 = (F.SHIP.near + 1) * (F.SHIP.near + 1)\n    for _, f in ipairs({ owner, buyer }) do"),
+        ("a garrison on patrol", "\n            if not mf:is_armed_citizenry() and mf:has_general() then",
+         "\n            if mf:has_general() then"),
+        ("the ambush minimum removed", '(e ~= "ambush" or threat >= F.ROAD.ambush_min)', "true"),
+        ("the washout at sea", ' and (e ~= "washout" or land)', ""),
+        ("the cooldown not recorded", "    cool[e] = turn\n", ""),
+        ("half rounding up", "local cut = math.floor(n * pct / 100)", "local cut = math.ceil(n * pct / 100)"),
+        ("the highwaymen paying past the treasury",
+         "math.min(math.floor(F.cargo_value_base(rec) * F.ROAD.toll_pct / 100), math.max(0, faction:treasury()))",
+         "math.floor(F.cargo_value_base(rec) * F.ROAD.toll_pct / 100)"),
+        ("a computer offered a dilemma", "if faction:is_human() and not cm:is_multiplayer() and", "if not cm:is_multiplayer() and"),
+        ("multiplayer offered a dilemma", "if faction:is_human() and not cm:is_multiplayer() and", "if faction:is_human() and"),
+        ("the lost battle not losing the cargo", "        F.cargo_lose(f.cargo, rec, 100)\n", ""),
+        ("the bandits left after a battle",
+         '    F.bandit_kill(f.force)\n    pcall(function() cm:get_campaign_ui_manager():override("retreat"):unlock() end)\nend',
+         '    pcall(function() cm:get_campaign_ui_manager():override("retreat"):unlock() end)\nend'),
+        ("the bandits not killed after a decline", "    F.bandit_kill(p.bandit)\n    if not rec then return end", "    if not rec then return end"),
+        ("the stale pending encounter not cleared", "if p and (tonumber(p.turn) or 0) < turn then", "if false then"),
+        ("the one-pending rule removed", '        if F.pending(fkey, "road_" .. e) then return false end\n', ""),
+        ("Guards not charged", "        F.guard_fee(exporter, convoy)\n", ""),
+        ("Guards not charged on a cart", "    F.guard_fee(faction, s)\n", ""),
+        ("Guards taken past the treasury", "    if fee > payer:treasury() then return end\n", ""),
+        ("a computer's guards kept too long", "((F.state.road_seen or {})[fkey] or -1000000) >= cm:model():turn_number() - 1",
+         "((F.state.road_seen or {})[fkey] or -1000000) >= cm:model():turn_number() - 3"),
+        ("a convoy's road never rolled", '                F.road_event(faction, "convoy", c, from)\n', ""),
+        ("a cart's road never rolled", '            if F.ship_by_id(s.id) == s then F.road_event(faction, "ship", s, from) end\n', ""),
+        ("the spawn's callback reading the owner's interface", "cm:force_declare_war(qb, owner_key, false, false)",
+         "cm:force_declare_war(qb, owner:name(), false, false)"),
+        ("an encounter rolled at sea", "    if not here or here:is_null_interface() then return end\n", ""),
+        ("Guards a toggle", 'F.state.guards[faction:name()] = want == "on" or nil',
+         "F.state.guards[faction:name()] = not F.state.guards[faction:name()] or nil"),
+        ("Guards taking any request", '    if want ~= "on" and want ~= "off" then return end\n', ""),
+    )
+    panel_m = (
+        ("the guards row without the bandits", "if rates and f and rates().bandits and S.ask(\"uses_stores\", f) then",
+         "if rates and f and S.ask(\"uses_stores\", f) then"),
+        ("Hire sends nothing", '        return S.request("guards", rc.guards)\n', "        return\n"),
+        ("Dismiss asking for guards on", 'guards = on and "off" or "on"', 'guards = "on"'),
+    )
+    _run_mutants("road", flows_lua().replace("\r\n", "\n"), flows_m, stores_lua().replace("\r\n", "\n"), panel_m, "", ())
+
+
+def check_event_mutations():
+    """The six store events (design 2026-11-01, Part E): each rule broken the way somebody would, in the shipped
+    flows script and its event table; the flows harness must fail on every one."""
+    flows_m = (
+        ("Smugglers below 2 turns turned to 3", "if per > 0 and held < per * 2 then", "if per > 0 and held < per * 3 then"),
+        ("Smugglers' 100 limit removed", "local n = math.min(100, per * 5 - held)", "local n = per * 5 - held"),
+        ("Smugglers at the local price", "math.ceil(n * buy * 150 / (F.PCT * F.PCT))", "math.ceil(n * buy * 100 / (F.PCT * F.PCT))"),
+        ("the guild above 75% turned to 50", "h * 100 > c * 75", "h * 100 > c * 50"),
+        # the live pass's cost (2026-11-02): F.stocks has read every store, and the offers read none again
+        ("the guild reading every store again", "        for stem, c in pairs(s.capacity) do",
+         "        local _h, _c, capacity = F.stock(s.region)\n        for stem, c in pairs(capacity) do"),
+        ("Smugglers building a whole view of every store",
+         "            local per, held = uses[r:name()][use] or 0, F.use_total(s.held, use)",
+         "            local per, held = uses[r:name()][use] or 0, F.use_total(s.held, use)\n"
+         "            F.stock_view(faction, r, provinces)"),
+        ("the sale not ending", "if s.left <= 0 or sold < s.per then", "if sold < s.per then"),
+        ("the sale paid at the local price", "F.gold(sold, math.floor(q.sell * 120 / 100))", "F.gold(sold, q.sell)"),
+        ("a finished sale kept on load", "type(s.left) == \"number\" and s.left > 0", "type(s.left) == \"number\" and s.left >= 0"),
+        ("Grain rot's SECOND ignored", "    local fkey, pct = faction:name(), 30\n",
+         "    if choice ~= \"FIRST\" then return end\n    local fkey, pct = faction:name(), 30\n"),
+        ("Grain rot's 50 gold taken from an empty treasury", "if faction:treasury() >= 50 then", "if true then"),
+        ("Grain rot offered to computers", 'needs = {"spoilage"}, human = true', 'needs = {"spoilage"}, human = false'),
+        ("Caravan master's suppression ignored", "    if ((F.state.road_safe or {})[fkey] or -1) >= turn then return end\n", ""),
+        ("Caravan master hired with no gold", "    if fee > faction:treasury() then return end\n    if fee > 0 then cm:treasury_mod(fkey, -fee) end\n    F.state.road_safe",
+         "    if fee > 0 then cm:treasury_mod(fkey, -fee) end\n    F.state.road_safe"),
+        ("Toll dispute's force removed", 'F.edict_set(faction, "roads", "open", true)', 'F.edict_set(faction, "roads", "open")'),
+        ("Toll dispute's bonus sign", "else bonus = -F.DIPLO_BONUS end", "else bonus = F.DIPLO_BONUS end"),
+        ("Blockade runner sending twice", "or not trades_with(faction, p.target) or sent_this_turn(fkey, p.target, turn) then",
+         "or not trades_with(faction, p.target) then"),
+        ("Blockade runner with nothing to run",
+         "if partner and F.trade_pair(faction, partner, nil, true, { blockade_ok = true }) then", "if partner then"),
+        ("Blockade runner past a lapsed trade", "or not trades_with(faction, p.target) ", ""),
+        ("still Blockaded after the runner", "    F.record_blockade(fkey, p.target, nil)\n", ""),
+        ("Toll dispute with the roads Open", '    if F.edict(faction:name(), "roads") ~= "tolled" then return nil end\n', ""),
+        ("the guild's good not named", '        if o.key == "guild" then tf = F.name_good(faction, o.stem) end\n', ""),
+        ("a waiting guild offer not named after a load", "    F.guard(F.name_pending_goods)\n", ""),
+        ("Blockade runner's tenth not paid", "if fee > 0 and fee <= faction:treasury() then cm:treasury_mod(fkey, -fee) end", "do end"),
+        ("an event offered with its part off", "        if not r[s] then return false end\n", ""),
+    )
+    _run_mutants("event", flows_lua().replace("\r\n", "\n"), flows_m, "", (), "", ())
+
+
+def check_kept_mutations():
+    """Nothing from the engine kept past its script entry (the 1.0 live pass, 2026-11-02: a faction interface kept in
+    F.enemy_cache crashed the game from the map's next plan refresh). Each way of keeping one again, in the shipped
+    flows, stores and terrain scripts; the harness that owns the script must fail on every one."""
+    with io.open(os.path.join(ROOT, "Modding Files", "source", "resource_overhaul", "terrain_routes.lua"),
+                 encoding="utf-8") as fh:
+        terrain = fh.read().replace("\r\n", "\n")
+    lookup = ("            local now = {}\n            for _, key in ipairs(parties) do\n"
+              "                local p = cm:get_faction(key)\n"
+              "                if p and not p:is_null_interface() then now[#now + 1] = p end\n            end\n"
+              "            verdicts[name] = R.hostile(owner, now)")
+    flows_m = (
+        ("the enemy list keeping the faction", "list[#list + 1] = { fkey = o:name(), cqi",
+         "list[#list + 1] = { f = o, fkey = o:name(), cqi"),
+        # the final review (2026-11-02): kept positions are as stale as kept interfaces are dead
+        ("a turn start reading a list made earlier in the round",
+         "    -- the armies where they stand now: a list made earlier in the round has them where they stood then\n"
+         "    F.enemy_cache = {}\n", ""),
+    )
+    panel_m = (
+        ("the panel remembering the player's faction", "if ok and f and not f:is_null_interface() then return f end",
+         "if ok and f and not f:is_null_interface() then S.viewer = f; return f end"),
+    )
+    terrain_m = (
+        ("a queued search keeping its parties", "parties[#parties + 1] = owner:name() end", "parties[#parties + 1] = owner end"),
+        ("a queued search judging by its kept parties", lookup, "            verdicts[name] = R.hostile(owner, parties)"),
+        ("a queued search keeping the model",
+         "    return function(x, y, model)\n        local region = (model or cm:model()):get_region_at_logical_position(x, y)",
+         "    local kept = cm:model()\n    return function(x, y, model)\n        local region = kept:get_region_at_logical_position(x, y)"),
+        ("the map remembering the player's faction",
+         "    local faction = cm:get_faction(cm:get_local_faction_name(true))\n"
+         "    if not faction or faction:is_null_interface() then return end\n    local wanted, count",
+         "    R.viewer = R.viewer or cm:get_faction(cm:get_local_faction_name(true))\n    local faction = R.viewer\n"
+         "    if not faction or faction:is_null_interface() then return end\n    local wanted, count"),
+    )
+    _run_mutants("kept", flows_lua().replace("\r\n", "\n"), flows_m, stores_lua().replace("\r\n", "\n"), panel_m,
+                 terrain, terrain_m)
+
+
 def check_layout():
     """Every box inside the panel; headers, list and hint in order; columns clear of each
     other and of the slider. A box that leaves the panel draws over the map."""
@@ -1914,6 +2692,8 @@ def check_layout():
         for n in d["cost"].values():
             assert CHAR_W * len(str(n)) <= L["PRICE_PITCH"] - L["ICON_PITCH"], "an input amount %d does not fit" % n
     names = dict((s, n) for s, (_r, _f, n) in G.store_stems().items())
+    for w in G.works():   # the Workshop's Gives cell: no comma to shorten it with since 2026-11-01
+        assert CHAR_W * len(w["gives"]) <= L["VIEWS"]["workshop"][1][1], "%r overflows the Workshop's Gives" % w["gives"]
     gives = ["%d %s" % (d["output"][1], names[d["output"][0]]) for d in G.PROCESSING.values()]
     gives += ["+2 control", "+5 growth", "-5% cost", "+3% replen."]
     for t in gives:   # after its icon
@@ -1997,6 +2777,16 @@ def check_layout():
             assert x >= end + (2 if j else 0), "%s: no gap for the line before the column at %d" % (view, x)
             end = x + w
         assert end <= lw - L["SLIDER_W"], "%s: the last column runs under the slider" % view
+    # THE EDICTS (Part B) on the Resources tab, at every panel size: each option's label inside its
+    # button, the three buttons inside columns 3-5, the longest wait inside column 2
+    for lay in (L, scaled_layout("_sm"), scaled_layout("_lg")):
+        gc, ew, cw = lay["VIEWS"]["goods"], lay["EDICT_W"], lay["CHAR_W"]
+        for _k, _n, _t, _d, options in EDICTS:
+            for o in options:
+                assert cw * len(o[1]) + 8 <= ew, "edict option %r does not fit its button" % o[1]
+        for j in (2, 3, 4):
+            assert ew <= gc[j][1], "an edict button is wider than goods column %d" % (j + 1)
+        assert cw * len("Wait %d turns" % EDICT_COOLDOWN) <= gc[1][1], "an edict's wait does not fit column 2"
     for k in ("chart_top", "bars", "chart_from", "chart_to", "chart_line"):
         x, y, w, h = L[k]
         assert 0 <= x and 0 <= y and x + w <= W and y + h <= H, "%s leaves the panel" % k
@@ -2065,7 +2855,7 @@ def check_button_faces():
 
 # ponytail: a flat glyph-width estimate for body_12, not a font metric. The cells are "Never
 # split", so text past its column runs into the next one. Measure in game if a column clips.
-CHAR_W = 7
+CHAR_W = L["CHAR_W"]
 
 
 def check_text_fits():
@@ -2089,7 +2879,7 @@ def check_xml():
     """One file per builder; every GUID unique across them and linked; every image and sound real."""
     import gen_mr_emitter as E
     texts = {rel: t for rel, t in files().items() if rel.endswith(".twui.xml")}
-    assert len(texts) == len(BUILDERS), sorted(texts)
+    assert len(texts) == len(BUILDERS) * (1 + len(SIZES)) - len(SIZES) * len(UNSIZED_FILES), sorted(texts)
     seen = {}
     for rel, text in texts.items():
         for g in set(re.findall(r'uniqueguid="([^"]+)"', text)):
@@ -2120,6 +2910,78 @@ def check_xml():
         assert "ui/campaign ui/effect_bundles/" + d["icon"] in have, "no icon for the %s service: %s" % (key, d["icon"])
 
 
+def check_smooth_mutations():
+    """The pre-upload pass (2026-11-03): the carts step on the real clock and only where the camera looks, the map
+    rests in the computers' turns, a turn start reads each store whole once, and the four live findings (the Chaos
+    Dwarf bandits that never came, the runner offered after the goods went, the guards' double click). Each rule
+    broken once; the harness that owns the script must fail on every one."""
+    luac = LUA_EXE.replace("lua.exe", "luac.exe")
+    with io.open(TERRAIN_SRC, encoding="utf-8", newline="") as fh:
+        terrain = fh.read().replace("\r\n", "\n")
+    beat = "trip.due = now - trip.due > R.STEP_LATE and now + R.STEP or trip.due + R.STEP"
+    terrain_m = (
+        ("the beat drifts by the timer's lateness", beat, "trip.due = now + R.STEP"),
+        ("a stall catches up in a burst", beat, "trip.due = trip.due + R.STEP"),
+        ("a cart steps every call", "if trip and trip.active and now >= trip.due then",
+         "if trip and trip.active then"),
+        ("every frame reads the map", "pl = trip.place or R.place(trip)", "pl = R.place(trip)"),
+        ("a step keeps the last hex's scene", "            trip.fresh, trip.place = true, nil\n",
+         "            trip.fresh = true\n"),
+        ("a cleared map keeps the departure wait", "    R.depart_at = nil\n", ""),
+        ("the view ignores the bearing", "v.ux, v.uy = math.sin(b), math.cos(b)", "v.ux, v.uy = 0, 1"),
+        ("the view is the circle alone", "    if not v.ux then return true end\n", "    do return true end\n"),
+        ("a camera turned on the spot is no move", " or math.abs((b or 0)-(camera.b or 0)) > 0.05", ""),
+        ("the map redrawn in the computers' turn", "        if not cm:is_local_players_turn() then return end\n", ""),
+        ("the icon held at the join the old 100 ms", "R.ICON_HOLD = 40\n", "R.ICON_HOLD = 100\n"),
+        ("the old icon dropped as the new one starts", "old=current and current.bank,retire", "old=nil,retire"),
+    )
+    for label, before, after in terrain_m:
+        assert terrain.count(before) == 1, "stale smooth mutation: " + label
+        changed = terrain.replace(before, after, 1)
+        syntax = subprocess.run([luac, "-p", "-"], input=changed, capture_output=True, text=True)
+        assert syntax.returncode == 0, (label, syntax.stderr)
+        code, out = run_terrain_harness(changed)
+        assert code != 0 and "harness ok" not in out, "survived: %s\n%s" % (label, out)
+        print("  caught:", label, "-", _why(out))
+    flows = flows_lua().replace("\r\n", "\n")
+    hit = "    if hit then return copy(hit[1]), hit[2], copy(hit[3]) end\n"
+    flows_m = (
+        ("a turn start reads a store whole every time", hit, ""),
+        ("a reader's change reaches the kept copy", hit, "    if hit then return hit[1], hit[2], hit[3] end\n"),
+        ("the kept copy is the first reader's table", "kept[rk] = { copy(held), cap, copy(capacity) }",
+         "kept[rk] = { held, cap, capacity }"),
+        ("a write keeps the stale copy", "    if F.stock_cache then F.stock_cache[region:name()] = nil end\n", ""),
+        ("the copy outlives the turn start", "    F.stock_cache = nil\n    if not ok then error(e, 0) end\n",
+         "    if not ok then error(e, 0) end\n"),
+        ("a throw leaves the copy", "local ok, e = pcall(F.turn_start, faction)", "local ok, e = true, F.turn_start(faction)"),
+        ("the runner offered after the goods went", " and not sent_this_turn(fkey, k, turn)", ""),
+        ("the Ogre bandits never asked", "for _, s in ipairs(sc == F.ROAD.qb_sc and { sc } or { sc, F.ROAD.qb_sc }) do",
+         "for _, s in ipairs({ sc }) do"),
+        ("a race's bandits that never came taken as made", "            if force then return force end\n",
+         "            do return force end\n"),
+    )
+    for label, before, after in flows_m:
+        assert flows.count(before) == 1, "stale smooth mutation: " + label
+        code, out = run_harness(FLOWS_HARNESS, flows_text=flows.replace(before, after, 1))
+        assert code != 0 and "harness ok" not in out, "survived: %s\n%s" % (label, out)
+        print("  caught:", label, "-", _why(out))
+    stores = stores_lua().replace("\r\n", "\n")
+    stores_m = (
+        ("a double click sends the guards away", "        if S.guards_at and t - S.guards_at < 0.5 then return end\n", ""),
+    )
+    for label, before, after in stores_m:
+        assert stores.count(before) == 1, "stale smooth mutation: " + label
+        code, out = run_harness(HARNESS, stores_text=stores.replace(before, after, 1))
+        assert code != 0 and "harness ok" not in out, "survived: %s\n%s" % (label, out)
+        print("  caught:", label, "-", _why(out))
+    code, out = run_terrain_harness()
+    assert code == 0, out
+    n = len(terrain_m) + len(flows_m) + len(stores_m)
+    print("smooth mutations: %d/%d caught; restored harnesses pass" % (n, n))
+
+
+def selftest():
+    import build_mr_terrain_routes
 def selftest():
     import build_mr_terrain_routes
     build_mr_terrain_routes.selftest()
@@ -2133,6 +2995,7 @@ def selftest():
     check_button_faces()
     check_map_frame()
     check_xml()
+    check_sizes()
     check_capture_kinds()
     check_uses()
     check_recruit()
@@ -2165,6 +3028,17 @@ def selftest():
     check_drag_mutations()
     check_map_cost_mutations()
     check_production_mutations()
+    check_spoil_mutations()
+    check_race_mutations()
+    check_turn_end_mutations()
+    check_size_mutations()
+    check_edict_mutations()
+    check_toll_mutations()
+    check_blockade_mutations()
+    check_road_mutations()
+    check_event_mutations()
+    check_kept_mutations()
+    check_smooth_mutations()
     # the Lua builds derpy_mr_store_<stem>_<kind> from FLOW_KIND; those must be Task 2's junctions
     assert set(FLOW_KIND.values()) == {k for k, _p, _n in G.FLOW_FACTORS}, FLOW_KIND
     assert G.flow_junction("coal", "raided") == "derpy_mr_store_coal_raided"

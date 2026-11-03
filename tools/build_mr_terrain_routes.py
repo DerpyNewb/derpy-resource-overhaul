@@ -47,10 +47,11 @@ COLOUR_SETS = (
      ((0.9, 0.1, 1.0), (0.3, 0.7, 0.7), (1.0, 0.2, 0.0), (1.0, 1.0, 0.7))),
 )
 COLOURS = tuple(rgb for *_text, rgb4 in COLOUR_SETS for rgb in rgb4)   # the palette, set after set
-# key, label, tooltip, the wrapper's scale on the dash and the cargo marker
-SIZES = (('small', 'Small', 'Thinner, shorter dashes.', 0.7),
-         ('normal', 'Normal', 'The dashes as designed.', 1.0),
-         ('large', 'Large', 'Thicker, longer dashes, easier to see from far away.', 1.5))
+# key, label, tooltip, the wrapper's scale on the dash, then on the cargo marker. Small, the default, halved its
+# dashes to 0.35 (author, 2026-11-03) and kept the marker at 0.7.
+SIZES = (('small', 'Small', 'Thinner, shorter dashes.', 0.35, 0.7),
+         ('normal', 'Normal', 'The dashes as designed.', 1.0, 1.0),
+         ('large', 'Large', 'Thicker, longer dashes, easier to see from far away.', 1.5, 1.5))
 ANGLES = 12          # a dash reads the same both ways, so 12 directions 15 degrees apart cover the half turn
 DASH = (1.3, 0.32)   # ParticleScale along and across the route; terrain_routes.lua puts one on every second hex
 BOAT_MODEL = 'rigidmodels/derpy_mr_trade_boat.rigid_model_v2'
@@ -108,12 +109,12 @@ def vehicle_manifest():
 def scenes():
     """(scene key, library emitter suffix, tint, scale, map angle in degrees or None for the cargo marker)."""
     out = []
-    for s, (*_text, scale) in enumerate(SIZES):
+    for s, (*_text, scale, marker) in enumerate(SIZES):
         out += [('derpy_mr_route_dash_%d_%d_%d' % (s, c, a), str(a), rgb, scale, a * 180 // ANGLES)
                 for c, rgb in enumerate(COLOURS) for a in range(ANGLES)]
         out += [('derpy_mr_route_dash_%d_%d_%d_b%d' % (s, c, a, bend+2), str(a), rgb, scale, a * 180 // ANGLES)
                 for c, rgb in enumerate(COLOURS) for a in range(ANGLES) for bend in (-2,-1,1,2)]
-        out.append(('derpy_mr_route_cargo_%d' % s, 'cargo', (1.0, 1.0, 1.0), scale, None))
+        out.append(('derpy_mr_route_cargo_%d' % s, 'cargo', (1.0, 1.0, 1.0), marker, None))
     return out
 
 

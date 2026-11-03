@@ -15,10 +15,10 @@ S.PREFIX = "derpy_mr_store_"
 -- The measured route (docs/TRADE_RESOURCES.md section 19): it lists only the rows whose lore
 -- condition holds, at their real value. The capacity effect has no "_stocked" and is skipped.
 S.CCO = 'BuildingSlotList.JoinString(BuildingContext.EffectList.Filter(EffectKey.StartsWith("derpy_mr_store_")).JoinString(EffectKey + "=" + Value, ","), ",")'
-S.NOTHING = "Nothing is stored yet. Stores fill each turn with what your buildings make."
-S.NO_REALM = "You hold no settlements, so you have no stores."
-S.FULL_TIP = "This store is full. Anything produced here beyond its space is lost."
-S.NO_HISTORY = "No history yet. Check back next turn."
+S.NOTHING = "Nothing is stored here yet."
+S.NO_REALM = "You hold no settlements and so have no stores."
+S.FULL_TIP = "This store is full and anything more made here is lost."
+S.NO_HISTORY = "The history starts next turn."
 S.view, S.focus = "goods", nil
 
 function S.say(msg)
@@ -207,7 +207,7 @@ end
 
 -- A tooltip with one more line, the first line when it has none yet.
 local function add_line(tip, line)
-    if not line then return tip end
+    if not line or line == "" then return tip end
     if tip == "" then return line end
     return tip .. "\n" .. line
 end
@@ -248,11 +248,26 @@ function S.last_line(l)
     add("traded in", l.traded_in or 0)
     add("traded out", -(l.traded_out or 0))
     add("eaten", -(l.eaten_out or 0))
+    add("spoiled", -(l.spoiled_out or 0))
     add("moved", (l.moved_in or 0) - (l.moved_out or 0))      -- netted: what the road lost
     add("spent", -(l.spent_out or 0))
     add("sold", -(l.sold_out or 0))
     if #parts == 0 then return "Last turn: no change" end
-    return "Last turn: " .. table.concat(parts, ", ")
+    local line = "Last turn: " .. table.concat(parts, ", ")
+    -- a busy turn drops its last parts rather than run past the chart line
+    while #line * L.CHAR_W > L.chart_line[3] and #parts > 1 do
+        parts[#parts] = nil
+        line = "Last turn: " .. table.concat(parts, ", ") .. ", ..."
+    end
+    return line
+end
+
+-- "Grain over 250 spoils at 4% a turn, about 6 next turn." nil for a good that keeps.
+function S.spoil_sentence(info, name)
+    if not info then return nil end
+    local s = name .. " over " .. S.num(info.keep) .. " spoils at " .. S.num(info.rate) .. "% a turn"
+    if info.due > 0 then return s .. " and about " .. S.num(info.due) .. " will spoil next turn." end
+    return s .. "."
 end
 
 -- One bar a turn, oldest left, on one scale whose top is the series' highest total. A turn
@@ -301,12 +316,10 @@ S.BULK = "derpy_mr_all_"
 S.BULK_ORDER = { { "export", "allow" }, { "export", "stop" }, { "import", "allow" }, { "import", "stop" } }
 S.BULK_LABEL = { allow = "Allow all ", stop = "Stop all " }
 S.BULK_TIP = {
-    export = { allow = "Let every resource leave your stores by trade, and earn trade income again from next turn.",
-               stop = "Keep every resource in your stores, and out of your trade agreements from next turn: "
-                   .. "no trade income from any of them." },
+    export = { allow = "From next turn every resource can be traded again and earn trade income.",
+               stop = "From next turn no resource can be traded or earn trade income." },
     import = { allow = "Take every resource your trade partners send to your stores.",
-               stop = "Refuse every resource your trade partners send to your stores. "
-                   .. "Trade agreement imports are not affected: you pay import duty on them." },
+               stop = "Refuse every resource your trade partners send.\nTrade agreement imports still come in with import duty." },
 }
 
 -- The flows script's function `name`, or nil without it: the panel must not need it to open.
@@ -338,16 +351,49 @@ end
 function S.trade_line(l)
     local o, i = l.traded_out or 0, l.traded_in or 0
     if o == 0 and i == 0 then return "-" end
-    return "sent " .. S.num(o) .. ", received " .. S.num(i)
+    return "sent " .. S.num(o) .. " and received " .. S.num(i)
 end
 
 S.DUTY_ICON = "ui/campaign ui/effect_bundles/income.png"
 S.RECRUIT_HEAD = "Recruits last turn"
 S.CUT_ICON = "ui/campaign ui/effect_bundles/trade_agreement.png"
+-- ROAD GUARDS (Part D 7.4): a sword, for armed men riding with the cargo (CA's shield icon draws as a blank disc)
+S.GUARD_ICON = "ui/campaign ui/effect_bundles/attribute_unyielding_assault.png"
+S.GUARDS_TIP = "Guards ride with every cart and convoy you send.\nThey cost 5% of the cargo's value when it leaves.\n"
+    .. "They make trouble on the road half as likely."
 function S.cut_tip(cut, turns)
-    local lines = { "No resources or import duty move with these trade partners: the road between your capitals "
-        .. "takes more than " .. turns .. " turns, or crosses lands at war with, or very unfriendly to, one of you." }
-    for _, c in ipairs(cut) do lines[#lines + 1] = loc("factions_screen_name_" .. c.key, c.key) .. ": " .. c.why end
+    local lines = { "Nothing moves between you and these partners.",
+        "The road takes more than " .. turns .. " turns, crosses hostile lands or has an enemy army on it." }
+    for _, c in ipairs(cut) do
+        -- BLOCKADED (Part C): an enemy army on the road this turn, named
+        local why = c.why or ("Blockaded by " .. loc("factions_screen_name_" .. tostring(c.by), tostring(c.by)))
+        lines[#lines + 1] = loc("factions_screen_name_" .. c.key, c.key) .. ": " .. why
+    end
+    return table.concat(lines, "\n")
+end
+
+-- "Tolls: 30 to Name, 12 to Name.": a cargo's tolls, the most first, equal amounts by key (Part C)
+function S.tolls_text(t)
+    local keys = {}
+    for k in pairs(t) do keys[#keys + 1] = k end
+    table.sort(keys, function(a, b)
+        if t[a] ~= t[b] then return t[a] > t[b] end
+        return a < b
+    end)
+    local parts = {}
+    for _, k in ipairs(keys) do parts[#parts + 1] = S.num(t[k]) .. " to " .. loc("factions_screen_name_" .. k, k) end
+    return "Tolls: " .. table.concat(parts, ", ") .. "."
+end
+
+-- Last turn's tolls one way: a line per faction that paid or was paid.
+function S.toll_tip(d, way)
+    local lines = { way == "paid" and "Last turn you paid these factions to cross their lands."
+                    or "Last turn these factions paid you to cross your lands." }
+    local keys = {}
+    for k, b in pairs(d.by) do if (b[way] or 0) > 0 then keys[#keys + 1] = k end end
+    table.sort(keys)
+    for _, k in ipairs(keys) do lines[#lines + 1] = loc("factions_screen_name_" .. k, k) .. ": " .. S.num(d.by[k][way]) end
+    if #keys == 0 then lines[#lines + 1] = "Nothing last turn." end
     return table.concat(lines, "\n")
 end
 
@@ -377,9 +423,8 @@ S.CONVOY_LINES = 8   -- convoys a Cargo on the road tooltip names, soonest first
 
 function S.convoy_tip(convoys)
     local sh = S.flows("SHIP")
-    local lines = { "What your trade agreements have on the road. Each lands in the buyer's capital on the turn shown, "
-        .. "and an army at war with the sender, within " .. ((sh and sh.near) or 3)
-        .. " hexes of it when the sender's turn begins, can seize it." }
+    local lines = { "An army at war with the sender can seize these goods from within "
+        .. ((sh and sh.near) or 3) .. " hexes when the sender begins its turn." }
     local soon = {}
     for i, c in ipairs(convoys) do soon[i] = c end
     -- equal turns in the order the convoys left: by the number in the id, since "10" sorts before "9" as text
@@ -391,8 +436,9 @@ function S.convoy_tip(convoys)
     end)
     for i = 1, math.min(#soon, S.CONVOY_LINES) do
         local c = soon[i]
-        lines[#lines + 1] = "From " .. S.place(c.from) .. " to " .. S.place(c.to) .. ", arrives turn " .. tostring(c.due)
+        lines[#lines + 1] = "From " .. S.place(c.from) .. " to " .. S.place(c.to) .. " by turn " .. tostring(c.due)
             .. ": " .. S.basket_text(c.basket)
+        if type(c.tolls) == "table" and next(c.tolls) then lines[#lines + 1] = S.tolls_text(c.tolls) end
     end
     local more = #soon - S.CONVOY_LINES
     if more > 0 then lines[#lines + 1] = "and " .. more .. " more " .. (more == 1 and "convoy" or "convoys") end
@@ -400,14 +446,14 @@ function S.convoy_tip(convoys)
 end
 
 function S.duty_tip(d, pct)
-    local lines = { "Each turn you pay every trade partner within reach " .. pct .. "% of the value of what its settlements make, "
-        .. "and each partner pays you the same on what yours make. Last turn:" }
+    local lines = { "Each turn you and each trade partner you can reach pay " .. pct .. "% of the value of what the other makes.",
+        "Last turn:" }
     local keys = {}
     for k in pairs(d.by) do keys[#keys + 1] = k end
     table.sort(keys)
     for _, k in ipairs(keys) do
         lines[#lines + 1] = loc("factions_screen_name_" .. k, k) .. ": paid " .. S.num(d.by[k].paid)
-            .. ", received " .. S.num(d.by[k].got)
+            .. " and received " .. S.num(d.by[k].got)
     end
     if #keys == 0 then lines[#lines + 1] = "Nothing paid or received." end
     return table.concat(lines, "\n")
@@ -416,18 +462,15 @@ end
 function S.switch_tip(dir, stopped, name)
     if dir == "export" then
         if stopped then
-            return name .. " stays in your stores and out of your trade agreements: no trade income from it. "
-                .. "Click to allow it again, from next turn."
+            return name .. " is kept out of trade and earns no trade income.\nClick to trade it again from next turn."
         end
-        return name .. " may leave your stores by trade and earns trade income in your trade agreements. "
-            .. "Click to stop both, from next turn."
+        return name .. " can be traded and earns trade income.\nClick to keep it out of trade from next turn."
     end
     if stopped then
-        return "Your trade partners send no " .. name .. " to your stores. Click to allow it again. "
-            .. "Trade agreement imports are not affected: you pay import duty on them."
+        return "Your trade partners send you no " .. name .. ".\nTrade agreement imports still come in.\n"
+            .. "Click to take it again."
     end
-    return "Your trade partners may send " .. name .. " to your stores. Click to refuse it. "
-        .. "Trade agreement imports are not affected: you pay import duty on them."
+    return "Your trade partners can send you " .. name .. ".\nClick to refuse it."
 end
 
 -- which of DERPY_MR_STORES_L.VIEWS the panel shows: both drill-downs share "focus"; the
@@ -446,7 +489,7 @@ S.SEND = "derpy_mr_sendhere"
 S.POLICY = "derpy_mr_policy_"
 S.ORDER = "derpy_mr_order_"
 S.SELL = "derpy_mr_sell"
-S.NO_SHIPS = "Nothing on the road. To send a shipment, open a settlement's resources and press Send here."
+S.NO_SHIPS = "Use Send here in a settlement to put goods on the road."
 S.SUPPLY_KEY = {}
 for _, sp in ipairs(DERPY_MR_STORES_SUPPLY) do S.SUPPLY_KEY[sp.key] = true end
 S.USE_WORD = { provisions = "provisions", building = "building materials", war = "war materials",
@@ -494,14 +537,14 @@ function S.send_tip(plan, d, coming)
     local out
     if plan and plan.busy then
         local f = S.local_faction()
-        out = "You have " .. S.num((f and S.ask("ship_cap", f)) or 0)
-            .. " shipments on the road already, the most you can have."
+        out = "You already have " .. S.num((f and S.ask("ship_cap", f)) or 0)
+            .. " shipments on the road and cannot send more."
     elseif plan then
         local from = loc("regions_onscreen_" .. plan.from:name(), plan.from:name())
         local sh = S.flows("SHIP")
-        out = "Ship " .. S.num(plan.n) .. " " .. d.name .. " from " .. from .. ": " .. S.num(plan.got)
-            .. " arrive in at least " .. turns(plan.turns or (sh and sh.turns) or 2) .. ", " .. S.num(plan.n - plan.got)
-            .. " are lost on the way. An army at war with you can seize it on the road."
+        out = "Send " .. S.num(plan.n) .. " " .. d.name .. " from " .. from .. ".\n" .. S.num(plan.n - plan.got)
+            .. " are lost on the way and the rest arrive in " .. turns(plan.turns or (sh and sh.turns) or 2)
+            .. " or more.\nAn army at war with you can seize it."
     elseif d.full then
         out = "This store of " .. d.name .. " is full."
     elseif d.cap > 0 and d.held + S.coming_total(coming) >= d.cap then
@@ -510,7 +553,7 @@ function S.send_tip(plan, d, coming)
         out = "No other settlement of yours can send " .. d.name .. "."
     end
     for _, s in ipairs(coming or {}) do
-        out = out .. "\nOn the road here: " .. S.num(s.n) .. ", arriving on turn " .. tostring(S.ask("ship_due", s) or s.due) .. "."
+        out = out .. "\n" .. S.num(s.n) .. " more arrive here on turn " .. tostring(S.ask("ship_due", s) or s.due) .. "."
     end
     return out
 end
@@ -539,45 +582,52 @@ function S.supply_tip(sp, st, name)
     local stores = "the stores of " .. name
     local out = sp.label .. "\n"
     if sp.use == "" then
-        out = out .. "When " .. stores .. " run low on a supply that is on, the other settlements you hold "
-            .. "in this province send more by shipment.\n"
+        out = out .. "Your other settlements in this province send more when " .. stores .. " run low.\n"
     else
         out = out .. "Pay " .. S.num(st.cost) .. " " .. (S.USE_WORD[sp.use] or sp.use) .. " a turn from "
             .. stores .. ": " .. sp.what .. " in every settlement you hold in this province.\n"
             .. S.use_goods(sp.use)
             .. "The stores of " .. name .. " hold " .. S.num(st.have[sp.use] or 0) .. ".\n"
         if st.short[sp.key] then
-            out = out .. "Turned off on turn " .. st.short[sp.key] .. ": " .. stores .. " ran short.\n"
+            out = out .. "Turned off on turn " .. st.short[sp.key] .. " because " .. stores .. " ran short.\n"
         end
     end
-    if st.on[sp.key] then return out .. "On. Click to stop it." end
-    return out .. "Off. Click to start it."
+    if st.on[sp.key] then return out .. "Click to stop it." end
+    return out .. "Click to start it."
 end
 
 function S.order_tip(o, st)
     local word = S.USE_WORD[st.use] or st.use
-    local out = o.label .. "\nSpend " .. S.num(st.cost) .. " " .. word .. ": " .. o.what .. ", for " .. turns(o.turns) .. ".\n"
+    local out = o.label .. "\nSpend " .. S.num(st.cost) .. " " .. word .. ": " .. o.what .. " for " .. turns(o.turns) .. ".\n"
         .. S.use_goods(st.use)
-    if st.active then return out .. "Running: " .. turns(st.active) .. " left. Ready again in " .. turns(st.wait) .. "." end
+    if st.active then return out .. "Running for " .. turns(st.active) .. " more and ready again in " .. turns(st.wait) .. "." end
     if st.wait then return out .. "Ready again in " .. turns(st.wait) .. "." end
-    if not st.ok then return out .. "Your stores hold " .. S.num(st.have) .. " " .. word .. "." end
-    return out .. "Your stores hold " .. S.num(st.have) .. ". Click to buy it."
+    if not st.ok then return out .. "You have " .. S.num(st.have) .. " " .. word .. "." end
+    return out .. "You have " .. S.num(st.have) .. ".\nClick to buy it."
 end
 
 -- Cover is turns of the good's use in store (bulk goods), counted over the whole category; fullness is the store's percent (the rest).
+-- "The price is 2.85 instead of 3.00." then "It is cheap because the store is 53% full." A full store is
+-- cheap and an empty one expensive (flows.lua F.quote), so the reason is the store. One sentence a line (author).
 function S.price_tip(q, use)
-    local word = q.mult < 100 and "cheap here" or q.mult > 100 and "dear here" or "fair price"
-    local state = q.cover and (turns(q.cover) .. " of " .. (S.USE_WORD[use] or use) .. " in store") or ("Store " .. S.num(q.fullness) .. "% full")
-    return "Price " .. S.money(q.price) .. " (" .. S.num(q.mult) .. "% of " .. S.money(q.base) .. "). "
-        .. state .. ", " .. word .. ". Buyers pay " .. S.money(q.buy) .. ", sellers get " .. S.money(q.sell) .. "."
+    local out
+    if q.mult == 100 then
+        out = "The price is the normal " .. S.money(q.price) .. "."
+    else
+        local why = q.cover and ("the stores hold " .. (q.mult > 100 and "only " or "") .. turns(q.cover) .. " of "
+            .. (S.USE_WORD[use] or use)) or ("the store is " .. S.num(q.fullness) .. "% full")
+        out = "The price is " .. S.money(q.price) .. " instead of " .. S.money(q.base) .. ".\nIt is "
+            .. (q.mult < 100 and "cheap" or "expensive") .. " because " .. why .. "."
+    end
+    return out .. "\nYou buy for " .. S.money(q.buy) .. " and sell for " .. S.money(q.sell) .. "."
 end
 
 S.SELL_LOTS = 8   -- lots a Sell tooltip names; any more are counted
 
 function S.sell_tip(sale, name)
     if sale then
-        local out = "Sell " .. S.num(sale.n) .. " " .. name .. " for " .. S.num(sale.gold)
-            .. " gold, " .. S.money(sale.price) .. " each: what your stores hold above half their space."
+        local out = "Sell the " .. S.num(sale.n) .. " " .. name .. " your stores hold over half full for "
+            .. S.num(sale.gold) .. " gold (" .. S.money(sale.price) .. " each)."
         local lots = sale.lots or {}
         for i = 1, math.min(#lots, S.SELL_LOTS) do
             out = out .. "\n" .. S.num(lots[i].n) .. " from " .. S.place(lots[i].region) .. " at " .. S.money(lots[i].price)
@@ -586,7 +636,7 @@ function S.sell_tip(sale, name)
         if more > 0 then out = out .. "\nand " .. more .. " more " .. (more == 1 and "store" or "stores") end
         return out
     end
-    return "Nothing to sell: your stores of " .. name .. " hold no more than half their space, or what is over would not fetch a whole gold."
+    return "There is nothing worth selling.\nOnly what your stores of " .. name .. " hold over half full can be sold."
 end
 
 -- THE PANEL'S SHADERS, CA's own, at the values CA's ui packs use most for that meaning (counted
@@ -625,15 +675,14 @@ end
 -- an icon, a tooltip, and what a click on it opens). Pure, so the harness reads it directly.
 -- FOUNDING A RARE BUILDING (spec 2026-10-09): a lore region no building slot offers it in gets one
 -- row above its goods. The flows script decides; this only words it.
-S.FOUND_WHY = { gold = "Needs %s gold.", tier = "Needs a level %d settlement.", slot = "Needs an empty building slot." }
+S.FOUND_WHY = { gold = "It needs %s gold.", tier = "It needs a level %d settlement.", slot = "It needs an empty building slot." }
 function S.found_row(fs, rkey)
     local names, price = DERPY_MR_STORES_FOUND[fs.good], S.num(fs.cost) .. " gold"
     local tip
     if fs.level == 0 then
-        tip = "Found " .. names[1] .. " here for " .. price .. ". No building slot in this region normally takes it;"
-              .. " it is built at once."
+        tip = "Build " .. names[1] .. " here at once for " .. price .. " even though no building slot here normally takes it."
     else
-        tip = "Upgrade to " .. names[fs.next] .. " for " .. price .. ". It is built at once."
+        tip = "Upgrade to " .. names[fs.next] .. " at once for " .. price .. "."
     end
     if fs.why == "gold" then tip = string.format(S.FOUND_WHY.gold, S.num(fs.cost))
     elseif fs.why == "tier" then tip = string.format(S.FOUND_WHY.tier, fs.tier_need)
@@ -663,37 +712,37 @@ end
 function S.trade_focus(v)
     v.title = "Stock rules: " .. S.name(S.focus)
     v.heads = { "Rule", "Amount", "Less", "Default", "More" }
-    v.empty = "Stock rules are unavailable without the stores model and an owned capital."
+    v.empty = "You need to hold a capital to set these."
     local c = S.policy_context(S.focus)
     if not c then return end
     local shared = not c.good.rare
     local word = S.USE_WORD[c.good.use] or c.good.use
-    for _, item in ipairs({ { "keep", "Keep in each store" }, { "target", "Import target at capital" } }) do
+    for _, item in ipairs({ { "keep", "Keep in each store" }, { "target", "Wanted at your capital" } }) do
         local field, label = item[1], item[2]
         local n = c.policy[field]
         local value = n ~= nil and S.num(n) or ("Auto: " .. S.num(c[field]))
-        local tip = field == "keep" and "Protects outgoing trade, shipments and surplus sales in every settlement. Spending and enemy seizure can use this stock."
-            or ("Trade partners deliver toward this target at " .. S.place(c.capital) .. " while it is worth at least 10% more here than in their stores. Domestic shipments use free space. Zero stops requests for this resource.")
-        if n == nil and shared then tip = tip .. " Auto is shared by common " .. word .. ", not reserved for each good." end
+        local tip = field == "keep" and "Every settlement keeps at least this much out of trade and sales.\nYour own spending and enemy raids can still take it."
+            or ("Your trade partners send it to " .. S.place(c.capital) .. " until you have this much.\nSet it to 0 to stop them.")
+        if n == nil and shared then tip = tip .. "\nOn Auto this amount covers all common " .. word .. " together." end
         v.rows[#v.rows + 1] = { label, value, "", "", "", policy = field, stem = S.focus, tip = tip }
     end
-    v.hint = "Step: 10. Auto restores the calculated rule."
+    v.hint = "Less and More change it by 10 and Default sets it back to Auto."
     local x, stem = c.view, S.focus
     v.rows[#v.rows + 1] = { "Capital: " .. S.place(c.capital), "", "", "", "" }
-    v.rows[#v.rows + 1] = { "Held / incoming", S.num(x.held[stem] or 0) .. " / " .. S.num(x.incoming[stem] or 0), "", "", "" }
-    v.rows[#v.rows + 1] = { "Remaining import need", S.num(S.ask("import_need", x, stem) or 0), "", "", "" }
+    v.rows[#v.rows + 1] = { "Held / on the way", S.num(x.held[stem] or 0) .. " / " .. S.num(x.incoming[stem] or 0), "", "", "" }
+    v.rows[#v.rows + 1] = { "Still wanted", S.num(S.ask("import_need", x, stem) or 0), "", "", "" }
     local q = S.ask("quote", x.faction, x.region, stem)
     v.rows[#v.rows + 1] = { "Price at capital", q and S.money(q.price) or "-", "", "", "",
-        tip = "Partners send this good only while it is worth at least 10% more here than in their stores. A full store is cheap and an empty one dear." }
+        tip = "Partners only send it while it sells for at least 10% more here than at home." }
     local stopped = S.flows("stopped")
     if stopped then
         local fk = x.faction:name()
         v.rows[#v.rows + 1] = { "Trade switches", (stopped(fk, "export", stem) and "Exports stopped" or "Exports allowed"), "", "", "",
-            tip = stopped(fk, "import", stem) and "Imports stopped: the target cannot request stock." or "Imports allowed; target and free space still apply." }
+            tip = stopped(fk, "import", stem) and "Nothing is asked for because imports are stopped." or "Imports are allowed up to the wanted amount and the free space." }
     end
     if shared then
-        v.rows[#v.rows + 1] = { "Auto category: " .. word, S.num(x.totals[c.good.use] or 0) .. " held", "", "", "",
-            tip = "Common goods in this category share one reserve and import target. Rare goods do not count." }
+        v.rows[#v.rows + 1] = { "All " .. word, S.num(x.totals[c.good.use] or 0) .. " held", "", "", "",
+            tip = "On Auto all common " .. word .. " share one reserve and one wanted amount.\nRare resources are not counted." }
     else
         local names = {}
         local f = x.faction
@@ -702,20 +751,22 @@ function S.trade_focus(v)
             local work = catalog and catalog[w.key]
             if work and work.rare == stem and S.ask("work_open", f, work) then names[#names + 1] = w.name end
         end
-        v.rows[#v.rows + 1] = { "Auto: one Workshop batch", S.num(c.target), "", "", "", tip = table.concat(names, ", ") }
+        v.rows[#v.rows + 1] = { "Auto: enough for one Workshop purchase", S.num(c.target), "", "", "",
+            tip = #names > 0 and ("Used by: " .. table.concat(names, ", ") .. ".") or "" }
     end
     for _, ship in ipairs(x.due or {}) do
-        if ship.stem == stem then v.rows[#v.rows + 1] = { "Incoming on turn " .. tostring(ship.due), S.num(ship.n), "", "", "" } end
+        if ship.stem == stem then v.rows[#v.rows + 1] = { "Arriving on turn " .. tostring(ship.due), S.num(ship.n), "", "", "" } end
     end
-    if S.actions_on() then v.rows[#v.rows + 1] = { "Supply routes and partner contracts", "", "", "", "",
-        open = "routes:" .. c.capital .. ":" .. stem, tip = "Choose a named source for recurring deliveries to this capital." } end
+    if S.actions_on() then v.rows[#v.rows + 1] = { "Set up a regular supply", "", "", "", "",
+        open = "routes:" .. c.capital .. ":" .. stem, tip = "Pick one of your settlements or a trade partner to keep sending it here." } end
 end
 
-S.ROUTE_TIP = "Each cart carries up to 100 gross units; 10% is lost at dispatch. A cart takes 1 to 6 turns, by the length of its road. Source Keep, trade holds and cart limits apply."
+S.ROUTE_TIP = "Each cart carries up to 100 and loses a tenth as it sets out.\nA cart takes 1 to 6 turns depending on the road."
+S.CART_PRICE = "You pay the selling price plus 10% or your own store price if that is higher.\nYou get your gold back if the cart is lost."
 
 function S.route_offers(v)
-    v.title, v.heads = "Create a supply route", { "Source", "Surplus", "Travel", "Gold / unit", "" }
-    v.hint, v.empty = "Click Create to accept a recurring order. Edit it under Spending.", "No source has exportable surplus."
+    v.title, v.heads = "Set up a regular supply", { "From", "Spare", "Takes", "Price each", "" }
+    v.hint, v.empty = "Press Create to start it and change it later under Spending.", "Nobody has any to spare."
     local rkey, stem = string.match(S.focus, "^routes:([%w_]+):([%w_]+)$")
     local f = S.local_faction()
     local to = f and rkey and S.ask("owned", f, rkey)
@@ -744,9 +795,9 @@ function S.route_offers(v)
                 for _, o in ipairs(S.ask("routes", f) or {}) do
                     if o.from == from:name() and o.to == rkey and o.stem == stem then valid = nil end
                 end
-                local tip = S.name(stem) .. " to " .. S.place(rkey) .. ". Target " .. target .. "; batch 100. " .. S.ROUTE_TIP .. " Travel shows the least it can take."
-                if partner then tip = tip .. "\nEach cart costs the seller's price plus 10% when it leaves, or what the goods would sell for at your store if that is more. Only dispatched carts reserve gold; at most 90 units per cart. The seller is paid after delivery. Cancellation or loss refunds unpaid escrow. War or a lost destination returns net cargo to the seller." end
-                v.rows[#v.rows + 1] = { S.place(from:name()), S.num(available), "at least " .. turns(S.ask("route_turns", from, to) or 2), partner and (price and S.money(price) or "-") or "Internal",
+                local tip = "Sends " .. S.name(stem) .. " to " .. S.place(rkey) .. " until you hold " .. target .. ".\n" .. S.ROUTE_TIP
+                if partner then tip = tip .. "\n" .. S.CART_PRICE end
+                v.rows[#v.rows + 1] = { S.place(from:name()), S.num(available), "at least " .. turns(S.ask("route_turns", from, to) or 2), partner and (price and S.money(price) or "-") or "Your own",
                     "", tip = tip, route_request = { "route_new", from:name(), rkey, stem, tostring(target), "100" },
                     send = { label = "Create", tip = tip, off = not valid } }
             end
@@ -755,38 +806,50 @@ function S.route_offers(v)
 end
 
 function S.route_view(v)
-    v.title, v.heads = "Recurring supply order", { "Rule", "Amount", "Less", "Default", "More" }
+    v.title, v.heads = "Regular supply", { "Rule", "Amount", "Less", "Default", "More" }
+    v.hint = "Less and More change it by 10 and Default sets it to 100."
     local id = string.sub(S.focus, 7)
     local f, order = S.local_faction(), nil
     for _, o in ipairs(f and S.ask("routes", f) or {}) do if o.id == id then order = o end end
-    if not order then v.empty = "Order no longer exists."; return end
+    if not order then v.empty = "This supply has ended."; return end
     local o = order
-    local summary = S.place(o.from) .. " → " .. S.place(o.to) .. ": " .. S.name(o.stem)
-    v.rows[#v.rows + 1] = { summary, o.status or "Not dispatched yet", "", "", "", tip = S.ROUTE_TIP }
+    local summary = S.place(o.from) .. " to " .. S.place(o.to) .. ": " .. S.name(o.stem)
+    v.rows[#v.rows + 1] = { summary, o.status or "No cart sent yet", "", "", "", tip = S.ROUTE_TIP }
     for _, field in ipairs({"target", "batch"}) do
-        v.rows[#v.rows + 1] = { field == "target" and "Net stock target" or "Gross batch limit", S.num(o[field]), "", "", "",
-            policy = field, route = id, tip = "Step 10. Default 100. Target subtracts stock and incoming net cargo; batch is 2–100 gross." }
+        v.rows[#v.rows + 1] = { field == "target" and "Stop at" or "Cart size", S.num(o[field]), "", "", "",
+            policy = field, route = id, tip = field == "target" and "Carts stop once you hold this much including what is on the way."
+                or "Each cart carries this much (2 to 100)." }
     end
     if o.seller ~= f:name() then
         local terms = S.ask("route_status", f, o, "show")
         local now = terms and S.ask("cart_price", terms.seller, terms.from, f, terms.to, o.stem)
-        v.rows[#v.rows + 1] = { "Price per delivered unit", o.last_price_c and S.money(o.last_price_c) or "Set per cart", "", "", "",
-            tip = "Each cart costs the seller's price plus 10% when it leaves, or what the goods would sell for at your store if that is more. Shows the last cart's price. Next cart: " .. (now and S.money(now) or "-") .. "." }
+        v.rows[#v.rows + 1] = { "Price each", o.last_price_c and S.money(o.last_price_c) or "Set per cart", "", "", "",
+            tip = "The last cart cost this and the next one costs "
+                .. (now and (S.money(now) .. " each") or "an unknown amount") .. "." }
     else
-        v.rows[#v.rows + 1] = { "Internal transfer: no gold", "", "", "", "" }
+        v.rows[#v.rows + 1] = { "Your own goods: free", "", "", "", "" }
     end
     local escrow = 0
     for _, s in ipairs(S.ask("ships") or {}) do
         if s.f == f:name() and s.route == id then escrow = escrow + (s.escrow or 0) end
     end
-    v.rows[#v.rows + 1] = { "Gold currently in escrow", S.num(escrow), "", "", "" }
-    v.rows[#v.rows + 1] = { o.enabled and "Dispatch enabled" or "Dispatch paused", "", "", "", "", route_request={"route_ctl",id,"toggle"},
-        send={label=o.enabled and "Pause" or "Resume",tip="Pausing stops future dispatch; travelling cargo completes its journey."} }
-    v.rows[#v.rows + 1] = { "Cancel this order", "", "", "", "", route_request={"route_ctl",id,"cancel"},
-        send={label="Cancel",tip="Removes the order. Partner cargo returns to the seller and refunds unpaid escrow. Internal cargo already travelling still arrives."} }
+    v.rows[#v.rows + 1] = { "Gold set aside", S.num(escrow), "", "", "" }
+    v.rows[#v.rows + 1] = { o.enabled and "Sending" or "Paused", "", "", "", "", route_request={"route_ctl",id,"toggle"},
+        send={label=o.enabled and "Pause" or "Resume",tip="Pause stops new carts but carts on the road still arrive."} }
+    v.rows[#v.rows + 1] = { "End this supply", "", "", "", "", route_request={"route_ctl",id,"cancel"},
+        send={label="Cancel",tip="End this supply and get back any gold set aside.\nYour own carts on the road still arrive."} }
 end
 
-function S.forecast_tip(f, region, settlement)
+-- "a, b and c"
+function S.join(parts)
+    if #parts < 2 then return parts[1] or "" end
+    return table.concat(parts, ", ", 1, #parts - 1) .. " and " .. parts[#parts]
+end
+
+-- WHAT ONE CATEGORY DOES HERE EACH TURN, a sentence a line, for the category the tooltip is about and
+-- the shipments of `stem` (or of the whole category without one). It was five categories of
+-- "4 used/turn; net 2; stable" on every good, which the author called garbled (2026-11-01).
+function S.forecast_tip(f, region, settlement, use, stem)
     local v = S.ask("stock_view", f, region)
     if not v then return "" end
     local made
@@ -796,35 +859,35 @@ function S.forecast_tip(f, region, settlement)
             if not g.rare then made[g.use] = (made[g.use] or 0) + (settlement.made[g.stem] or 0) end
         end
     end
-    local forecasts = S.ask("stock_forecast", v, made)
-    if not forecasts then return "" end
-    local lines = {}
-    for _, use in ipairs({ "provisions", "building", "war", "mounts", "luxuries" }) do
-        local fc = forecasts[use]
-        if fc then
-            local cover = fc.cover and (S.num(fc.cover) .. (fc.mode == "stored" and " turns stored" or " turns cover"))
-                or (fc.mode == "stable" and "stable" or "no recurring use")
-            lines[#lines + 1] = (S.USE_WORD[use] or use) .. ": " .. S.num(fc.held) .. " held; "
-                .. S.num(fc.use_per_turn) .. " used/turn; " .. (fc.production ~= nil and
-                (S.num(fc.production) .. " made; net " .. S.num(fc.net)) or "production unknown") .. "; " .. cover
-                .. "; incoming " .. S.num(fc.incoming) .. "."
+    local fc = (S.ask("stock_forecast", v, made) or {})[use]
+    if not fc then return "" end
+    local lines = { S.place(region:name()) .. " holds " .. S.num(fc.held) .. " " .. (S.USE_WORD[use] or use) .. "." }
+    local parts = {}
+    if (fc.production or 0) > 0 then parts[#parts + 1] = "makes " .. S.num(fc.production) end
+    if fc.use_per_turn > 0 then parts[#parts + 1] = "uses " .. S.num(fc.use_per_turn) end
+    if #parts > 0 then lines[#lines + 1] = "It " .. table.concat(parts, " and ") .. " each turn." end
+    if (fc.spoil or 0) > 0 then lines[#lines + 1] = "It loses " .. S.num(fc.spoil) .. " to spoiling each turn." end
+    if fc.mode == "declining" then lines[#lines + 1] = "At this rate it runs out in " .. turns(fc.cover) .. "."
+    elseif fc.mode == "stored" then lines[#lines + 1] = "That is enough for " .. turns(fc.cover) .. "." end
+    if use == "provisions" and (v.recurring.army_need or 0) > 0 then
+        lines[#lines + 1] = "Armies refilling here take " .. S.num(v.recurring.army_need) .. " of that each turn."
+    end
+    local named = (v.recurring or {}).named or {}
+    if stem and named[stem] then
+        lines[#lines + 1] = "Your production here uses " .. S.num(named[stem]) .. " " .. S.name(stem) .. " a turn."
+    end
+    local due = {}
+    for _, ship in ipairs(v.due or {}) do
+        if ship.stem == stem or (not stem and S.use_of(ship.stem) == use) then
+            local k = ship.stem .. "," .. ship.due
+            if not due[k] then due[k] = { stem = ship.stem, due = ship.due, n = 0 }; due[#due + 1] = due[k] end
+            due[k].n = due[k].n + ship.n
         end
     end
-    for _, ship in ipairs(v.due or {}) do lines[#lines + 1] = S.name(ship.stem) .. " " .. S.num(ship.n) .. " due turn " .. tostring(ship.due) .. "." end
-    local named, stems = (v.recurring or {}).named or {}, {}
-    if (v.recurring.army_need or 0) > 0 then
-        lines[#lines + 1] = "Local armies on Auto: " .. S.num(v.recurring.army_need)
-            .. " provisions per turn included. Army loading can spend its army reserve; settlement Keep remains protected."
+    table.sort(due, function(a, b) return a.due < b.due or (a.due == b.due and a.stem < b.stem) end)
+    for _, d in ipairs(due) do
+        lines[#lines + 1] = S.num(d.n) .. " " .. S.name(d.stem) .. " arrive on turn " .. tostring(d.due) .. "."
     end
-    for stem in pairs(named) do stems[#stems + 1] = stem end
-    table.sort(stems)
-    if #stems > 0 then
-        local parts = {}
-        for _, stem in ipairs(stems) do parts[#parts + 1] = S.num(named[stem]) .. " " .. S.name(stem) end
-        lines[#lines + 1] = "Enabled batch/service input budget: " .. table.concat(parts, ", ")
-            .. " per turn. Paused orders may use less; processing output is conditional. Named inputs are kept separately."
-    end
-    lines[#lines + 1] = "Estimates assume unchanged production and switches; exclude future trade, recruits, battles and purchases. Incoming cargo is separate from current cover."
     return table.concat(lines, "\n")
 end
 
@@ -851,6 +914,7 @@ function S.view_model(realm)
         v.title = "Every resource your settlements keep"
         v.heads = { "Resource", "Held", "Per turn", "Space", "Stored in" }
         v.hint = "Click a resource to see where it is kept."
+        if #realm > 0 then S.edict_rows(v) end
         for _, g in ipairs(S.goods_rows(realm)) do
             v.rows[#v.rows + 1] = { g.name, S.num(g.held), per_turn(g.made),
                                     S.num(g.held) .. " / " .. S.num(g.cap), g.n .. " of " .. g.of,
@@ -879,15 +943,29 @@ function S.view_model(realm)
         local fk = cm:get_local_faction_name(true)
         local switches = stopped ~= nil and S.flows("send") ~= nil
         if switches then
-            v.hint = "Tick to allow. Click a resource for rules."
+            v.hint = "Tick a box to allow trade or click a resource for its rules."
             v.bulk = true
         end
         -- IMPORT DUTY, first: last turn's gold each way (flows.lua F.duty), while the rate is on
         local rates, duty, f = S.flows("rates"), S.flows("duty_last"), S.local_faction()
         if rates and duty and (rates().duty or 0) > 0 and f and S.ask("uses_stores", f) then
             local d = duty(fk) or { paid = 0, got = 0, by = {} }
-            v.rows[#v.rows + 1] = { "Import duty", "", "", "", "paid " .. S.num(d.paid) .. ", received " .. S.num(d.got),
+            v.rows[#v.rows + 1] = { "Import duty", "", "", "", "paid " .. S.num(d.paid) .. " and received " .. S.num(d.got),
                                     icon = S.DUTY_ICON, tip = S.duty_tip(d, rates().duty) }
+        end
+        -- TOLLS (flows.lua F.tolls_last, Part C): last turn's gold each way. A row shows when it is above 0, and both
+        -- at 0 while tolls are on and the player has a partner
+        local tolls = S.flows("tolls_last")
+        if rates and tolls and f and S.ask("uses_stores", f) then
+            local t = tolls(fk) or { paid = 0, got = 0, by = {} }
+            local r, ps = rates(), f:factions_trading_with()
+            local on = r.tolls and (r.toll or 0) > 0 and type(ps) ~= "boolean" and ps:num_items() > 0
+            for _, w in ipairs({ { "paid", "Tolls paid" }, { "got", "Tolls received" } }) do
+                if t[w[1]] > 0 or on then
+                    v.rows[#v.rows + 1] = { w[2], "", "", "", S.num(t[w[1]]) .. " gold", icon = S.DUTY_ICON,
+                                            tip = S.toll_tip(t, w[1]) }
+                end
+            end
         end
         -- TRADE REACH: agreements moving nothing because the road is too long or blocked (flows.lua F.cut_off)
         local cut = rates and f and S.ask("cut_off", f)
@@ -900,8 +978,14 @@ function S.view_model(realm)
         if #convoys > 0 then
             local out = 0
             for _, c in ipairs(convoys) do if c.f == fk then out = out + 1 end end
-            v.rows[#v.rows + 1] = { "Cargo on the road", "", "", "", S.num(out) .. " out, " .. S.num(#convoys - out) .. " in",
+            v.rows[#v.rows + 1] = { "Cargo on the road", "", "", "", S.num(out) .. " out and " .. S.num(#convoys - out) .. " in",
                                     icon = L.MAP_CART, tip = S.convoy_tip(convoys) }
+        end
+        -- ROAD GUARDS (flows.lua F.guards_on, Part D): the player's switch, while the bandits are on
+        if rates and f and rates().bandits and S.ask("uses_stores", f) then
+            local on = S.ask("guards_on", fk) == true
+            v.rows[#v.rows + 1] = { "Road guards", on and "On" or "Off", "", "", "", icon = S.GUARD_ICON, tip = S.GUARDS_TIP,
+                                    guards = on and "off" or "on", send = { label = on and "Dismiss" or "Hire", tip = S.GUARDS_TIP } }
         end
         local rows = S.trade_rows(realm)
         local others = 0
@@ -938,7 +1022,6 @@ function S.view_model(realm)
         v.heads = { "Resource", "Held / Space", "Per turn", "Price", "" }
         local model_faction = S.local_faction()
         local region = model_faction and S.ask("owned", model_faction, s.key)
-        local forecast = region and S.forecast_tip(model_faction, region, s) or ""
         local f = S.actions_on() and model_faction
         local fs = f and S.ask("found_state", f, s.key)
         if fs then v.rows[#v.rows + 1] = S.found_row(fs, s.key) end
@@ -948,11 +1031,13 @@ function S.view_model(realm)
             if d.full then tip = S.FULL_TIP end
             local price, sentence = S.price_of(model_faction, region, d.stem)
             tip = add_line(tip, sentence)
+            if region then tip = add_line(tip, S.spoil_sentence(S.ask("spoil_info", model_faction, region, d.stem), d.name)) end
+            if region then tip = add_line(tip, S.forecast_tip(model_faction, region, s, S.use_of(d.stem), d.stem)) end
             local row = { d.name, held_space(d), per_turn(d.made), price, "", icon = d.icon,
-                          tip = tip .. "\n" .. forecast, stem = d.stem,
+                          tip = tip, stem = d.stem,
                           open = f and ("routes:" .. s.key .. ":" .. d.stem) or nil }
             if f then
-                row.tip = row.tip .. "\nClick the resource to choose a recurring source or partner contract."
+                row.tip = row.tip .. "\nClick to set up a regular supply."
                 local plan = S.ask("send_plan", f, s.key, d.stem)
                 row.send = { tip = S.send_tip(plan, d, S.ask("ships_to", f:name(), s.key, d.stem)),
                              off = plan == nil or plan.busy == true }
@@ -1004,8 +1089,8 @@ S.SERVICE_UNITS = {
 S.ECON_CLOSED = { ["Needs an undamaged workshop"] = "No workshop", ["Province capital only"] = "Capital only",
                   ["Disabled for this campaign"] = "Switched off" }
 S.ECON_WHY = { ["Needs an undamaged workshop"] = "None of your settlements has an undamaged building that runs this.",
-               ["Province capital only"] = "It runs only in a province capital, and you hold none.",
-               ["Disabled for this campaign"] = "Switched off in the mod's settings for this campaign." }
+               ["Province capital only"] = "It runs only in a province capital and you hold none.",
+               ["Disabled for this campaign"] = "Switched off in the mod settings for this campaign." }
 
 -- A RECIPE'S STATE in a word: the economy's own admission check (flows.lua F.economy_state)
 function S.economy_status(st)
@@ -1025,18 +1110,21 @@ function S.economy_cells(st)
         parts[#parts + 1] = S.num(d.cost[stem]) .. " " .. S.name(stem)
         amounts[#amounts + 1] = S.num(d.cost[stem])
     end
-    local result = d.output and (S.num(d.output[2]) .. " " .. S.name(d.output[1])) or d.benefit
+    -- WHAT A BATCH MAKES NOW: the War economy edict makes half as much again of a war material (F.output_n)
+    local made = d.output and (st.made or d.output[2])
+    local result = d.output and (S.num(made) .. " " .. S.name(d.output[1])) or d.benefit
     local reason = st.reason or st.short or ""
     for _, stem in ipairs(stems) do reason = string.gsub(reason, stem, S.name(stem)) end
     local unit = S.SERVICE_UNITS[d.effect]
     return {
         stems = stems, reason = reason,
         amount = table.concat(amounts, " + ") .. (d.output and " / batch" or " / turn"),
-        head = d.label .. "\n" .. (d.output and "Additional batch: " or "Service each turn: ")
-            .. table.concat(parts, ", ") .. " -> " .. result .. ".",
-        note = d.output and "\nPassive building production is unchanged. Full batches only; Keep is respected."
-            or "\nPaid locally after essential upkeep. An unpaid service gives no bonus.",
-        benefit = d.output and (S.num(d.output[2]) .. " made") or
+        head = d.label .. "\n" .. (d.output and ("Turns " .. S.join(parts) .. " into " .. result .. ".")
+            or ("Uses " .. S.join(parts) .. " a turn for " .. string.lower(string.sub(result, 1, 1))
+                .. string.sub(result, 2) .. ".")),
+        note = d.output and "\nYour buildings still make their usual goods.\nThis only runs when it has everything it needs."
+            or "\nIt is paid from this settlement after upkeep.\nIt gives nothing in a turn it cannot be paid.",
+        benefit = d.output and (S.num(made) .. " made") or
             (unit and ((d.value > 0 and "+" or "") .. S.num(d.value) .. unit) or d.benefit),
         -- realm-wide the good has to be named: the Production tab's Gives, after the good's icon or
         -- the one the service's own bonus carries (gen_resource_overhaul.SERVICES)
@@ -1097,8 +1185,8 @@ function S.production_row(f, r, actions)
         row.price[k] = { icon = S.icon_of(stem), short = short,
                          text = short and ("[[col:red]]" .. S.num(need) .. "[[/col]]") or S.num(need) }
         if type(have) == "number" then
-            lines[#lines + 1] = r.s.name .. " can spend " .. S.num(have) .. " of the " .. S.num(need) .. " "
-                .. S.name(stem) .. (d.output and " a batch takes." or " it takes each turn.")
+            lines[#lines + 1] = "It needs " .. S.num(need) .. " " .. S.name(stem) .. (d.output and "" or " a turn") .. " and "
+                .. r.s.name .. " has " .. S.num(have) .. " to spare."
         end
     end
     -- the reason first, unless it is a shortage the lines already show
@@ -1131,7 +1219,7 @@ end
 
 function S.production(v, realm)
     v.title = "What your settlements can make"
-    v.hint = "Processing makes resources; services spend them each turn for a bonus."
+    v.hint = "Workshops make new resources and services spend them for a bonus."
     v.heads = { "Settlement", "Gives", "Inputs", "State", "" }
     v.empty = #realm == 0 and S.NO_REALM or S.NO_RECIPES
     local f = S.local_faction()
@@ -1172,9 +1260,8 @@ end
 -- unit, as CA's army strip draws an army. The cards are 60x130 and cannot fit a 28px row.
 S.CARD = "derpy_mr_card_"
 S.ESCORT_FOCUS = "ship:"
-S.NO_ESCORT = "No escort travels with this shipment. An army at war with you can take it without a fight."
-S.ESCORT_LINE = "These soldiers guard the shipment. An army that tries to take the cargo must beat them first; "
-    .. "if they win, the shipment goes on its way."
+S.NO_ESCORT = "An army at war with you can take this unguarded shipment without a fight."
+S.ESCORT_LINE = "An army has to beat these soldiers to take the shipment."
 
 function S.unit_name(unit)
     local c = DERPY_MR_STORES_CARDS[unit]
@@ -1211,10 +1298,12 @@ end
 -- CA's greyscale (the Exchange's EX.set_off shader): greyed and faded, or back in colour
 S.PAYIC = "derpy_mr_supic_"   -- a Spending row's icon of the good a supply pays with
 
-S.ARMY_TIP = "One ration per four units, rounded up. Auto-refill aims for five turns after eating, up to ten turns capacity. "
-    .. "Only your own unsieged local settlement can load or unload, above its Keep. At sea or without settlements, Load buys field rations: 10 gold each, up to two meals, once per turn. Player Auto never buys. "
-    .. "First missed meal: warning; second: -5% movement; third: -10% movement and -10% replenishment. "
-    .. "A full meal resets shortages. Destroyed or merged-away armies lose their cargo: unload locally before merging."
+-- ONE SENTENCE A LINE (author, 2026-11-01): the rules were one paragraph of fragments on every row.
+-- Each row now says only its own rule.
+S.ARMY_TIP = "An army eats 1 provision a turn for every 4 units and refills in your own settlements."
+S.ARMY_AUTO = "On Auto the army refills to 5 turns of provisions after eating.\nIt carries at most 10 turns and never buys rations."
+S.ARMY_BUY = "Buy up to two meals of rations once a turn at 10 gold each."
+S.ARMY_HUNGER = "After two missed meals the army moves 5% slower.\nAfter three it moves and recovers 10% slower.\nOne full meal ends this."
 
 function S.army_name(row)
     if row.force then
@@ -1229,21 +1318,25 @@ function S.army_view(v)
     local row
     for _, r in ipairs(f and S.ask("provision_rows", f) or {}) do if r.id == id then row = r end end
     if not row then S.focus = nil; return S.spending(v) end
-    v.title = S.army_name(row) .. ": carried provisions"
-    v.heads = { "Action", "Held", "Per turn", "Cover", "" }
-    v.hint = "Unload before merging away this army."
-    local tip = S.ARMY_TIP .. "\n" .. row.reason
-    local source = row.source and "Local stores" or (row.mobile and "Field rations" or "Unavailable")
-    if row.source then tip = tip .. "\n" .. S.place(row.source:name()) end
+    v.title = S.army_name(row) .. ": provisions"
+    v.heads = { "Action", "Held", "Per turn", "Lasts", "" }
+    v.hint = "Unload before you merge this army or its provisions are lost."
+    local here = row.source and S.place(row.source:name())
+    local auto = S.ARMY_AUTO .. "\n" .. row.reason
+    local load = (row.mobile and S.ARMY_BUY or (here and ("Load provisions from " .. here .. " without touching its reserve.")
+        or "This army cannot load here.")) .. "\n" .. row.reason
+    local unload = here and ("Put the provisions back into " .. here .. " and pause Auto.")
+        or "This army can only unload in one of your settlements."
+    local source = row.source and "Local stores" or (row.mobile and "Rations" or "Unavailable")
     v.rows[#v.rows + 1] = { "Auto-refill", S.num(row.held) .. " / " .. S.num(row.cap),
-        S.num(row.need), S.num(math.floor(row.held / row.need)) .. " turns", provisions = "auto", army = id, tip = tip,
+        S.num(row.need), S.num(math.floor(row.held / row.need)) .. " turns", provisions = "auto", army = id, tip = auto,
         icon = S.icon_of("grain"),
-        send = { label = row.auto and "Pause" or "Enable", off = not S.actions_on(), tip = tip } }
-    v.rows[#v.rows + 1] = { row.mobile and "Buy field rations" or "Load here", source, row.mobile and (S.num(row.price) .. " gold") or "", "", provisions = "load", army = id, tip = tip,
-        send = { label = row.mobile and "Buy" or "Load", off = (not row.source and (row.buy or 0) == 0) or not S.actions_on(), tip = tip } }
-    v.rows[#v.rows + 1] = { "Unload here", "Pauses refill", "", "", provisions = "unload", army = id, tip = tip,
-        send = { label = "Unload", off = not row.source or row.held == 0 or not S.actions_on(), tip = tip } }
-    v.rows[#v.rows + 1] = { "Missed meals", S.num(row.short), "", "", "", tip = tip }
+        send = { label = row.auto and "Pause" or "Enable", off = not S.actions_on(), tip = auto } }
+    v.rows[#v.rows + 1] = { row.mobile and "Buy rations" or "Load here", source, row.mobile and (S.num(row.price) .. " gold") or "", "", provisions = "load", army = id, tip = load,
+        send = { label = row.mobile and "Buy" or "Load", off = (not row.source and (row.buy or 0) == 0) or not S.actions_on(), tip = load } }
+    v.rows[#v.rows + 1] = { "Unload here", "Pauses refill", "", "", provisions = "unload", army = id, tip = unload,
+        send = { label = "Unload", off = not row.source or row.held == 0 or not S.actions_on(), tip = unload } }
+    v.rows[#v.rows + 1] = { "Missed meals", S.num(row.short), "", "", "", tip = S.ARMY_HUNGER }
 end
 
 function S.spending(v)
@@ -1254,10 +1347,11 @@ function S.spending(v)
     if not f then return end
     local routes = S.ask("routes", f) or {}
     if #routes > 0 then
-        v.rows[#v.rows + 1] = { S.section("Recurring routes and contracts"), "", "", "", "", section=true }
+        v.rows[#v.rows + 1] = { S.section("Regular supplies"), "", "", "", "", section=true }
         for _, o in ipairs(routes) do
-            v.rows[#v.rows + 1] = { S.name(o.stem), S.place(o.from), S.place(o.to), o.enabled and "Enabled" or "Paused", "",
-                open="route:" .. o.id, tip="Target " .. o.target .. "; gross batch " .. o.batch .. ". " .. (o.status or "Not dispatched yet") .. ". Click to edit." }
+            v.rows[#v.rows + 1] = { S.name(o.stem), S.place(o.from), S.place(o.to), o.enabled and "Sending" or "Paused", "",
+                open="route:" .. o.id, tip="Sends carts of " .. o.batch .. " until you hold " .. o.target .. ".\n"
+                    .. (o.status or "No cart sent yet") .. ".\nClick to change it." }
         end
     end
     if S.supply_on() then
@@ -1270,19 +1364,19 @@ function S.spending(v)
         for _, c in ipairs(caps) do
             local row = { c.name, "", "", "", "", capital = c.key, supply = {},
                           tip = "Each supply costs " .. S.num(c.st.cost) .. " a turn from the stores of " .. c.name
-                              .. ", 2 for each settlement you hold in its province." }
+                              .. ".\nThat is 2 for each settlement you hold in its province." }
             local region = S.ask("owned", f, c.key)
             local settlement = region and S.read_settlement(region)
-            local forecast = region and S.forecast_tip(f, region, settlement) or ""
             for _, sp in ipairs(DERPY_MR_STORES_SUPPLY) do
-                row.supply[sp.key] = { on = c.st.on[sp.key] == true, tip = S.supply_tip(sp, c.st, c.name) .. "\n" .. forecast }
+                local forecast = region and sp.use ~= "" and S.forecast_tip(f, region, settlement, sp.use) or ""
+                row.supply[sp.key] = { on = c.st.on[sp.key] == true, tip = add_line(S.supply_tip(sp, c.st, c.name), forecast) }
                 local pay = sp.use ~= "" and c.st.pay and c.st.pay[sp.use]
                 if pay then
                     row.supply[sp.key].pay = {
                         -- short on the use's total, as F.supply decides: it pays across every good
                         icon = S.icon_of(pay.stem), short = (c.st.have[sp.use] or 0) < c.st.cost,
-                        tip = sp.label .. "\n" .. (pay.n > 0 and ("Paid from " .. S.name(pay.stem) .. " first, the fullest store.")
-                            or ("Nothing to pay with: the stores of " .. c.name .. " hold none.")) }
+                        tip = sp.label .. "\n" .. (pay.n > 0 and ("It pays with " .. S.name(pay.stem) .. " first because that store is the fullest.")
+                            or ("The stores of " .. c.name .. " have nothing to pay with.")) }
                 end
             end
             v.rows[#v.rows + 1] = row
@@ -1308,23 +1402,23 @@ function S.spending(v)
             v.rows[#v.rows + 1] = { S.num(s.n) .. " " .. S.name(s.stem), from, to, "turn " .. due, "", icon = icon,
                                     open = S.ESCORT_FOCUS .. s.id, tip = "Click to see its escort.",
                                     send = { label = "Show", look = { s.x, s.y },
-                                             tip = (s.road and "Travelling from " .. from .. " to " .. to
-                                                 or "Now beside " .. (s.leg == 2 and to or from)) .. ". It reaches " .. to
-                                                 .. " on turn " .. due .. ". Click to see it on the map." } }
+                                             tip = (s.road and "It is travelling from " .. from
+                                                 or "It is now beside " .. (s.leg == 2 and to or from)) .. " and reaches " .. to
+                                                 .. " on turn " .. due .. ".\nClick to see it on the map." } }
         end
     end
     local armies = S.ask("provision_rows", f) or {}
     if #armies > 0 or (S.ask("rates") or {}).army_provisions then
-    v.rows[#v.rows + 1] = { S.section("Army provisions"), S.section("Held"), S.section("Per turn"), S.section("Cover"), "", section = true }
+    v.rows[#v.rows + 1] = { S.section("Army provisions"), S.section("Held"), S.section("Per turn"), S.section("Lasts"), "", section = true }
     if #armies == 0 then
-        v.rows[#v.rows + 1] = { "No provisioned armies", "", "", "", "",
-            tip = "Carried army provisions is enabled by default for new campaigns. Existing saved switches are retained. " .. S.ARMY_TIP }
+        v.rows[#v.rows + 1] = { "No armies carry provisions", "", "", "", "", tip = S.ARMY_TIP }
     end
     for _, a in ipairs(armies) do
         v.rows[#v.rows + 1] = { S.army_name(a), S.num(a.held) .. " / " .. S.num(a.cap), S.num(a.need),
             S.num(math.floor(a.held / a.need)) .. " turns", "", open = "army:" .. a.id,
             icon = S.icon_of("grain"),
-            tip = "Needed per turn: " .. a.need .. " common provisions\n" .. a.reason .. "\nMissed meals: " .. a.short .. "\n" .. S.ARMY_TIP }
+            tip = "This army eats " .. a.need .. " provisions a turn.\n" .. a.reason
+                .. (a.short > 0 and ("\nMissed meals: " .. a.short .. ".") or "") .. "\nClick to manage its provisions." }
     end
     end
     -- RECRUITS (workshop expansion spec section 3): what last turn's recruits took (flows.lua F.on_unit_trained)
@@ -1341,8 +1435,8 @@ function S.spending(v)
         if r.gold > 0 then parts[#parts + 1] = S.num(r.gold) .. " gold" end
         v.rows[#v.rows + 1] = { S.section(S.RECRUIT_HEAD), "", "", "", "", section = true }
         v.rows[#v.rows + 1] = { table.concat(parts, ", "), "", "", "", "", icon = S.DUTY_ICON,
-            tip = "Each unit you recruit takes resources from your stores by its type and worth. What the "
-                .. "stores lack is paid " .. (r.line and "in your own currency, then " or "") .. "in gold."
+            tip = "Each recruit takes resources from your stores by its type and cost.\nAnything missing is paid "
+                .. (r.line and "in your own currency and then " or "") .. "in gold."
                 .. (#lines > 0 and ("\n" .. table.concat(lines, "\n")) or "") }
     end
     if #v.rows == 0 or v.rows[1].section then v.heads = { "", "", "", "", "" } end
@@ -1356,8 +1450,8 @@ function S.spending(v)
 end
 
 -- ---- THE WORKSHOP (spec 2026-10-07): a rare good and a bulk of its use buy something lasting --
-S.WORK_SECTION = { item = "Items", unit = "Units", upgrade = "Settlement upgrades", convert = "Your race's resources",
-                   army = "Army works", trait = "Lord and hero works", lasting = "Works that last", research = "Research" }
+S.WORK_SECTION = { item = "Items", unit = "Units", upgrade = "Settlement upgrades", convert = "Race resources",
+                   army = "Army works", trait = "Lord and hero works", lasting = "Permanent works", research = "Research" }
 S.WORK_ORDER = { "item", "unit", "upgrade", "convert", "army", "trait", "lasting", "research" }
 S.WORK_DONE = { item = "Forged", upgrade = "Built", lasting = "Built", trait = "Has it" }
 -- A FOLDED KIND shows its section row only (the spec's filter by kind). Kept while the campaign
@@ -1388,7 +1482,7 @@ function S.char_name(cqi)
     if ok and type(n) == "string" and n ~= "" then return n end
     return nil
 end
-S.WORK_OFF = "Resource Vault actions are switched off in the mod's settings."
+S.WORK_OFF = "Resource Vault actions are switched off in the mod settings."
 
 -- a price part's figure, red where the stores are short of it
 function S.price_part(have, cost)
@@ -1397,13 +1491,16 @@ function S.price_part(have, cost)
     return n
 end
 
+-- "It needs 120 Grain, and you have 165."
+function S.need_line(cost, what, have)
+    return "It needs " .. S.num(cost) .. " " .. what .. " and you have " .. S.num(have) .. "."
+end
+
 -- why a row cannot be bought, in one line
 function S.work_why(w, st)
     if st.why == "short" and st.goods then
         for _, g in ipairs(st.goods) do
-            if g.have < g.cost then
-                return "Your stores hold " .. S.num(g.have) .. " of " .. S.num(g.cost) .. " " .. S.name(g.stem) .. "."
-            end
+            if g.have < g.cost then return S.need_line(g.cost, S.name(g.stem), g.have) end
         end
     end
     if st.why == "aim" then return S.AIM[w.target] or "" end
@@ -1416,10 +1513,9 @@ function S.work_why(w, st)
     if st.why == "not_yours" and w.target ~= "" then return "Not one of your characters." end
     if st.why == "short" then
         if st.rare and st.rare.have < st.rare.cost then
-            return "Your stores hold " .. S.num(st.rare.have) .. " of " .. S.num(st.rare.cost) .. " " .. S.name(w.rare) .. "."
+            return S.need_line(st.rare.cost, S.name(w.rare), st.rare.have)
         end
-        return "Your stores hold " .. S.num(st.bulk.have) .. " of " .. S.num(st.bulk.cost) .. " "
-            .. (S.USE_WORD[w.use] or w.use) .. "."
+        return S.need_line(st.bulk.cost, "common " .. (S.USE_WORD[w.use] or w.use), st.bulk.have)
     end
     if st.why == "wait" then return "Ready again in " .. turns(st.wait) .. "." end
     if st.why == "done" then return "Already forged." end
@@ -1439,21 +1535,16 @@ end
 function S.work_tip(w, st)
     local out = w.name .. "\n" .. w.detail .. ".\n"
     if st.route == "pool" then
-        out = out .. "Goes into your " .. S.pool_name(w.pool) .. " to recruit. Recruiting it still costs its gold.\n"
+        out = out .. "It goes into your " .. S.pool_name(w.pool) .. ".\nRecruiting it there still costs its gold.\n"
     elseif st.route == "army" then
-        out = out .. "Goes straight into your largest army with room.\n"
+        out = out .. "It goes straight into your largest army with room.\n"
     end
     if st.goods then
-        for _, g in ipairs(st.goods) do
-            out = out .. "Your stores hold " .. S.num(g.have) .. " of " .. S.num(g.cost) .. " " .. S.name(g.stem) .. ".\n"
-        end
+        for _, g in ipairs(st.goods) do out = out .. S.need_line(g.cost, S.name(g.stem), g.have) .. "\n" end
         return out
     end
-    if st.rare then
-        out = out .. "Your stores hold " .. S.num(st.rare.have) .. " of " .. S.num(st.rare.cost) .. " " .. S.name(w.rare) .. ".\n"
-    end
-    out = out .. "Your stores hold " .. S.num(st.bulk.have) .. " of " .. S.num(st.bulk.cost) .. " "
-        .. (S.USE_WORD[w.use] or w.use) .. ", not counting rare resources.\n"
+    if st.rare then out = out .. S.need_line(st.rare.cost, S.name(w.rare), st.rare.have) .. "\n" end
+    out = out .. S.need_line(st.bulk.cost, "common " .. (S.USE_WORD[w.use] or w.use), st.bulk.have) .. "\n"
     return out .. S.use_goods(w.use)
 end
 
@@ -1488,7 +1579,7 @@ function S.workshop(v, realm)
         end
         -- THE PRICE, on the hint's line: it is the same wherever it is built
         if any then
-            v.hint = "Paid from all your stores: " .. S.num(any.rare.cost) .. " " .. S.name(w.rare) .. " and "
+            v.hint = "It is paid from all your stores: " .. S.num(any.rare.cost) .. " " .. S.name(w.rare) .. " and "
                 .. S.num(any.bulk.cost) .. " " .. (S.USE_WORD[w.use] or w.use) .. "."
         end
         return
@@ -1769,8 +1860,8 @@ end
 
 function S.ship_tip(s)
     local what = s.convoy and S.basket_text(s.basket) or (S.num(s.n) .. " " .. S.name(s.stem))
-    return what .. " from " .. S.place(s.from) .. " to " .. S.place(s.to)
-        .. ", arriving on turn " .. tostring(S.ask("ship_due", s) or s.due) .. ".\nClick to fly there."
+    return what .. " from " .. S.place(s.from) .. " to " .. S.place(s.to) .. ".\nIt arrives on turn "
+        .. tostring(S.ask("ship_due", s) or s.due) .. ".\nClick to fly there."
 end
 
 -- SHOW: the camera flies to a shipment's cart, CA's way (wh3_dlc29_middenland_narrative), keeping
@@ -1832,6 +1923,67 @@ S.TAB_ART = {
                 "ui/skins/default/button_square_large_text_hover.png" },
 }
 
+-- ---- PANEL SIZE (author, 2026-11-02: "UI size options, same as the derpy great guilds mod") ------
+-- MCT's Small / Medium / Large, the Great Guilds' (GGUI.SIZES). No call changes a font, and
+-- font_scale stretches the glyphs it already drew (soft text, Great Guilds 2026-10-08), so each size
+-- is its own set of .twui.xml with real fonts. DERPY_MR_STORES_SIZES carries each size's layout, and
+-- L is pointed at it before the panel is built, so every MoveTo here draws at that size. The HUD
+-- opener stays CA's HUD size at every size and reads DERPY_MR_STORES_L.
+S.SIZE, S.F, S.SUFFIX = "medium", 1, ""
+
+-- Read on every open and never frozen into the save. MCT keeps it each player's own in multiplayer.
+function S.want_size()
+    local ok, v = pcall(function()
+        local mct = get_mct and get_mct()
+        local mod = mct and mct:get_mod_by_key("derpy_more_resources")
+        local opt = mod and mod:get_option_by_key("ui_size")
+        return opt and opt:get_finalized_setting()
+    end)
+    if ok and DERPY_MR_STORES_SIZES[v] then return v end
+    return "medium"
+end
+
+-- How far the screen is past the 1920x1080 the panel was laid out for. core:get_screen_resolution()
+-- is already the window over the player's UI Scale, so a 4K screen at 200% is 1 here. Never below 1,
+-- led by height and capped by width, in hundredths.
+function S.scale_for(sw, sh)
+    if type(sw) ~= "number" or type(sh) ~= "number" or sw <= 0 or sh <= 0 then return 1 end
+    local s = math.min(sw / 1920, sh / 1080)
+    if s <= 1 then return 1 end
+    return math.floor(s * 100 + 0.5) / 100
+end
+
+-- THE SIZE THAT IS DRAWN: the file set nearest the size asked for times the screen factor, among the
+-- ones that fit the screen. The screen factor is spent here on a real font and never on font_scale, so
+-- 1440p's Medium draws Large's files, and past Large the panel stays Large.
+function S.pick_size(want, sw, sh, sa)
+    local z = DERPY_MR_STORES_SIZES[want] and want or "medium"
+    local target = DERPY_MR_STORES_SIZES[z].f * (sa or 1)
+    local any = type(sw) ~= "number" or type(sh) ~= "number"
+    local best, gap = "medium", 1e30          -- not math.huge: the game's math library has none
+    for _, k in ipairs({ "small", "medium", "large" }) do
+        local s = DERPY_MR_STORES_SIZES[k]
+        local d = math.abs(s.f - target)
+        if (any or (s.layout.W <= sw and s.layout.H <= sh)) and d < gap then best, gap = k, d end
+    end
+    return best
+end
+
+-- A length the layout does not carry, at the size drawn
+function S.px(v) return math.floor(v * S.F + 0.5) end
+
+-- Point L at a size. The panel built at another size goes, and everything kept about its parts: its
+-- rows, list and map parts are that size's files.
+function S.use_size(k)
+    if k == S.SIZE then return end
+    local p = S.panel()
+    if is_uicomponent(p) then pcall(function() p:Destroy() end) end
+    local z = DERPY_MR_STORES_SIZES[k]
+    S.SIZE, S.F, S.SUFFIX, L = k, z.f, z.suffix, z.layout
+    S.list_key, S.list_broken, S.map_drag, S.map_last = nil, nil, nil, nil
+    for kind in pairs(S.map_made) do S.map_made[kind] = 0 end
+end
+
 function S.root() return core:get_ui_root() end
 function S.panel() return find_uicomponent(S.root(), S.PANEL) end
 
@@ -1864,7 +2016,7 @@ end
 
 function S.build()
     local root = S.root()
-    pcall(function() root:CreateComponent(S.PANEL, S.PATH .. "derpy_mr_stores_panel") end)
+    pcall(function() root:CreateComponent(S.PANEL, S.PATH .. "derpy_mr_stores_panel" .. S.SUFFIX) end)
     local p = S.panel()
     if not is_uicomponent(p) then return nil end
     p:SetVisible(false)
@@ -1885,13 +2037,13 @@ function S.build()
     label(find_uicomponent(p, S.BACK), "Back")
     -- the chart's twenty bars, made once and kept; draw_chart sizes, shows and hides them
     for i = 1, L.BARS do
-        pcall(function() p:CreateComponent(S.BAR .. i, S.PATH .. "derpy_mr_stores_bar") end)
+        pcall(function() p:CreateComponent(S.BAR .. i, S.PATH .. "derpy_mr_stores_bar" .. S.SUFFIX) end)
         local b = find_uicomponent(p, S.BAR .. i)
         if is_uicomponent(b) then b:SetVisible(false) end
     end
     -- an escort's cards, made once and kept; draw_cards shows, places and hides them
     for i = 1, L.CARDS do
-        pcall(function() p:CreateComponent(S.CARD .. i, S.PATH .. "derpy_mr_stores_card") end)
+        pcall(function() p:CreateComponent(S.CARD .. i, S.PATH .. "derpy_mr_stores_card" .. S.SUFFIX) end)
         local c = find_uicomponent(p, S.CARD .. i)
         if is_uicomponent(c) then c:SetVisible(false) end
     end
@@ -1967,7 +2119,7 @@ function S.ensure_list(p, n)
     if S.list_broken then return end
     local holder = find_uicomponent(p, "rows_holder")
     if not is_uicomponent(holder) then return end
-    pcall(function() p:CreateComponent(S.LIST, S.PATH .. "derpy_mr_stores_list") end)
+    pcall(function() p:CreateComponent(S.LIST, S.PATH .. "derpy_mr_stores_list" .. S.SUFFIX) end)
     local list = find_uicomponent(p, S.LIST)
     if not is_uicomponent(list) then return end
     local x, y = holder:Position()
@@ -2001,7 +2153,7 @@ function S.ensure_list(p, n)
     end
     for i = 1, n do
         local name = S.SP .. "_" .. i
-        pcall(function() box:CreateComponent(name, S.PATH .. "derpy_mr_stores_sp") end)
+        pcall(function() box:CreateComponent(name, S.PATH .. "derpy_mr_stores_sp" .. S.SUFFIX) end)
         local sp = find_uicomponent(box, name)
         if is_uicomponent(sp) then sized(sp, w, L.PITCH) end
     end
@@ -2083,7 +2235,7 @@ function S.row(holder, i)
     local name = S.ROW .. i
     local r = find_uicomponent(holder, name)
     if is_uicomponent(r) then return r end
-    pcall(function() holder:CreateComponent(name, S.PATH .. "derpy_mr_stores_row") end)
+    pcall(function() holder:CreateComponent(name, S.PATH .. "derpy_mr_stores_row" .. S.SUFFIX) end)
     return find_uicomponent(holder, name)
 end
 
@@ -2110,6 +2262,30 @@ local function draw_switches(r, rc, rx, ry, cols)
 end
 
 -- Rows are made once and kept; the ones past the end go hidden.
+-- THE EDICTS (design 2026-11-01 Part B), above the goods as CA's Commandments list: one option of
+-- three in force and glowing, the others live while the edict is ready and greyed while it waits.
+-- A faction that does not eat has no Rations row (flows.lua F.edict_set refuses it).
+function S.edict_rows(v)
+    local f = S.local_faction()
+    if not (f and S.ask("edicts_on") and S.ask("uses_stores", f)) then return end
+    local fk, chd, eats = f:name(), S.ask("race", f) == "chd", S.ask("eats", f)
+    v.rows[#v.rows + 1] = { S.section("Edicts"), "", "", "", "", section = true }
+    for _, e in ipairs(DERPY_MR_STORES_EDICTS) do
+        if e.key ~= "rations" or eats then
+            local now, wait = S.ask("edict", fk, e.key), S.ask("edict_wait", fk, e.key) or 0
+            local row = { e.name, wait > 0 and ("Wait " .. turns(wait)) or "Ready", "", "", "",
+                          edict = e.key, tip = e.tip, choices = {} }
+            for j, o in ipairs(e.options) do
+                local tip = (chd and o.tip_chd) or o.tip
+                if wait > 0 then tip = tip .. "\nThis edict can change again in " .. turns(wait) .. "." end
+                row.choices[j] = { key = o.key, label = o.label, tip = tip, on = o.key == now, off = o.key ~= now and wait > 0 }
+            end
+            v.rows[#v.rows + 1] = row
+        end
+    end
+    v.rows[#v.rows + 1] = { S.section("Resources"), "", "", "", "", section = true }
+end
+
 function S.draw_rows(p, rows, heads, cols)
     local holder = find_uicomponent(p, "rows_holder")
     if not is_uicomponent(holder) then return end
@@ -2153,8 +2329,8 @@ function S.draw_rows(p, rows, heads, cols)
                 if is_uicomponent(c) then
                     -- a lead icon (the Workshop's price) puts the text after it
                     local dx = j == 1 and shift or (rc.lead and rc.lead[j] and L.ICON_PITCH) or 0
-                    c:MoveTo(rx + col[1] + dx, ry + 4)
-                    sized(c, col[2] - dx, 20)
+                    c:MoveTo(rx + col[1] + dx, ry + S.px(4))
+                    sized(c, col[2] - dx, S.px(20))
                     align(c, col[3])
                     set(c, rc[j])
                 end
@@ -2192,15 +2368,20 @@ function S.draw_rows(p, rows, heads, cols)
                     end
                 end
             end
+            -- the stock rules' -10 / Auto / +10, or an edict's three options
             for j, action in ipairs({ "minus", "auto", "plus" }) do
                 local button = find_uicomponent(r, S.POLICY .. action)
+                local ch = rc.choices and rc.choices[j]
                 if is_uicomponent(button) then
-                    button:SetVisible(rc.policy ~= nil)
-                    if rc.policy then
+                    button:SetVisible(rc.policy ~= nil or ch ~= nil)
+                    if rc.policy or ch then
+                        -- ROWS ARE POOLED: a width an edict row set stays on the row unless set every draw
+                        sized(button, ch and L.EDICT_W or L.POLICY_W[j], L.send[2])
                         button:MoveTo(rx + cols[j + 2][1], ry + math.floor((L.PITCH - L.send[2]) / 2))
-                        label(button, ({ "-10", rc.route and "100" or "Auto", "+10" })[j])
-                        button:SetTooltipText(rc.tip, true)
-                        S.set_off(button, false)
+                        label(button, ch and ch.label or ({ "-10", rc.route and "100" or "Auto", "+10" })[j])
+                        button:SetTooltipText(ch and ch.tip or rc.tip, true)
+                        S.set_off(button, ch ~= nil and ch.off)
+                        if ch and ch.on then S.fx(button, "glow") end
                     end
                 end
             end
@@ -2248,7 +2429,7 @@ function S.draw_rows(p, rows, heads, cols)
                 if is_uicomponent(n) then
                     n:SetVisible(pk ~= nil)
                     if pk then
-                        n:MoveTo(rx + cols[3][1] + (k - 1) * L.PRICE_PITCH + L.ICON_PITCH, ry + 4)
+                        n:MoveTo(rx + cols[3][1] + (k - 1) * L.PRICE_PITCH + L.ICON_PITCH, ry + S.px(4))
                         set(n, pk.text)
                     end
                 end
@@ -2262,7 +2443,7 @@ function S.draw_rows(p, rows, heads, cols)
                 end
             end
             local div = find_uicomponent(r, "divider")
-            if is_uicomponent(div) then div:MoveTo(rx, ry + L.PITCH - 2) end
+            if is_uicomponent(div) then div:MoveTo(rx, ry + L.PITCH - S.px(2)) end
             -- A FOLDABLE SECTION'S ARROW, in the icon slot: drawn pointing down (open), turned
             -- clockwise by three quarters to point right (folded), as CA's lib_text_pointers turns its own
             local ar = find_uicomponent(r, "fold")
@@ -2293,7 +2474,7 @@ S.MAP_CLIP = "derpy_mr_map_clip"
 function S.map_clip(p)
     local c = find_uicomponent(p, S.MAP_CLIP)
     if is_uicomponent(c) then return c end
-    pcall(function() p:CreateComponent(S.MAP_CLIP, S.PATH .. "derpy_mr_stores_mapart") end)
+    pcall(function() p:CreateComponent(S.MAP_CLIP, S.PATH .. "derpy_mr_stores_mapart" .. S.SUFFIX) end)
     c = find_uicomponent(p, S.MAP_CLIP)
     return is_uicomponent(c) and c or nil
 end
@@ -2311,7 +2492,7 @@ function S.map_names(p, m, bx, by, shown)
     local lh, taken = L.map_label[2], {}
     local ruler = S.map_part(p, "label", 1)
     for _, d in ipairs(order) do
-        local gap = math.floor((d.cap and L.MAP_CAP or L.MAP_DOT) / 2) + 4
+        local gap = math.floor((d.cap and L.MAP_CAP or L.MAP_DOT) / 2) + S.px(4)
         local ok, w = false, nil
         if ruler then ok, w = pcall(function() return ruler:WidthOfTextLine(d.name) end) end
         local tw = (ok and type(w) == "number" and w > 0) and math.ceil(w) or S.label_w(d.name)
@@ -2349,7 +2530,7 @@ function S.map_part(p, kind, i)
     local c = find_uicomponent(p, name)
     if is_uicomponent(c) then return c end
     local on = S.map_surface(p) or p
-    pcall(function() on:CreateComponent(name, S.PATH .. S.MAP_FILE[kind]) end)
+    pcall(function() on:CreateComponent(name, S.PATH .. S.MAP_FILE[kind] .. S.SUFFIX) end)
     c = find_uicomponent(p, name)
     if is_uicomponent(c) and i > S.map_made[kind] then S.map_made[kind] = i end
     return is_uicomponent(c) and c or nil
@@ -2427,7 +2608,7 @@ function S.draw_map(p, m)
             if c then
                 c:SetImagePath(d.cap and L.MAP_CAP_ICON or L.MAP_TOWN_ICON, 0)
                 c:SetImagePath(d.cap and L.MAP_CAP_ICON or L.MAP_TOWN_ICON, 1)   -- its hover: brightened
-                c:SetTooltipText(d.name .. (d.cap and ", a province capital" or "") .. "\nClick to fly there.", true)
+                c:SetTooltipText(d.name .. (d.cap and " (province capital)" or "") .. "\nClick to fly there.", true)
                 S.map_hits[c:Id()] = { d.lx, d.ly }
             end
         end
@@ -2503,7 +2684,7 @@ function S.refresh()
     local px, py = p:Position()
     for j, col in ipairs(v.cols) do
         local h = find_uicomponent(p, "hdr_" .. j)
-        put(h, px, py, { L.list[1] + col[1], L.head_y, col[2], 22 })
+        put(h, px, py, { L.list[1] + col[1], L.head_y, col[2], S.px(22) })
         align(h, col[3])
         set(h, v.heads[j])
         local hl = find_uicomponent(p, "hdr_line_" .. j)
@@ -2513,7 +2694,7 @@ function S.refresh()
         end
     end
     -- THE TABLE'S BORDER round the header and the list, and a rule between them; none on the map
-    local F, top, bottom = L.FRAME, L.head_y - L.FRAME - 2, L.list[2] + L.list[4]
+    local F, top, bottom = L.FRAME, L.head_y - L.FRAME - S.px(2), L.list[2] + L.list[4]
     local edges = {
         t = { L.list[1] - F, top, L.list[3] + F * 2, F },
         b = { L.list[1] - F, bottom, L.list[3] + F * 2, F },
@@ -2622,6 +2803,10 @@ end
 -- Reopening keeps the tab and drops the drill-down. Interactive only while visible: a hidden
 -- panel that still takes the mouse is a dead zone in the middle of the map.
 function S.show(on, focus)
+    if on then
+        local sw, sh = core:get_screen_resolution()
+        S.use_size(S.pick_size(S.want_size(), sw, sh, S.scale_for(sw, sh)))
+    end
     local p = S.panel()
     if not is_uicomponent(p) then p = S.build() end
     if not is_uicomponent(p) then return end
@@ -2702,6 +2887,14 @@ function S.click_send(component)
     local rc = i and S.data[i]
     if rc and rc.route_request and rc.send and not rc.send.off then return S.request(unpack(rc.route_request)) end
     if rc and rc.send and rc.send.look then return S.look_at(rc.send.look[1], rc.send.look[2]) end
+    -- the state wanted, never a toggle; and a click within half a second of the last one is the second half of a double
+    -- click on the row redrawn under the cursor (seen 2026-11-03: Hire then Dismiss), so it is dropped
+    if rc and rc.guards then
+        local t = os.clock()
+        if S.guards_at and t - S.guards_at < 0.5 then return end
+        S.guards_at = t
+        return S.request("guards", rc.guards)
+    end
     if rc and rc.provisions and rc.send and not rc.send.off then
         return S.request("provisions", rc.army, rc.provisions)
     end
@@ -2734,10 +2927,17 @@ function S.click_send(component)
 end
 
 function S.click_policy(action, component)
-    if not component or not S.focus then return end
+    if not component then return end
     local row = UIComponent(UIComponent(component):Parent())
     local i = tonumber(string.match(row:Id() or "", "^derpy_mr_row_(%d+)$"))
     local rc = i and S.data[i]
+    -- AN EDICT ROW: the button's place names its option; the one in force and a waiting edict do nothing
+    local ch = rc and rc.choices and rc.choices[({ minus = 1, auto = 2, plus = 3 })[action]]
+    if ch then
+        if not ch.on and not ch.off then return S.request("edict", rc.edict, ch.key) end
+        return
+    end
+    if not S.focus then return end
     if rc and rc.route and rc.policy then
         local f = S.local_faction()
         for _, o in ipairs(f and S.ask("routes", f) or {}) do
@@ -2834,10 +3034,11 @@ function S.anchor()
     if not is_uicomponent(bar) then return nil end
     local bx, by = bar:Position()
     local bw, bh = bar:Dimensions()
-    local x, y = bx + bw + L.GAP, by + math.floor((bh - L.BUTTON) / 2)
+    local H = DERPY_MR_STORES_L          -- not L: the opener is CA's HUD's size whatever the panel's
+    local x, y = bx + bw + H.GAP, by + math.floor((bh - H.BUTTON) / 2)
     local sw, sh = core:get_screen_resolution()
-    if x < -L.BUTTON or y < -L.BUTTON or x > sw or y > sh then return nil end
-    return math.max(0, math.min(x, sw - L.BUTTON)), math.max(0, math.min(y, sh - L.BUTTON))
+    if x < -H.BUTTON or y < -H.BUTTON or x > sw or y > sh then return nil end
+    return math.max(0, math.min(x, sw - H.BUTTON)), math.max(0, math.min(y, sh - H.BUTTON))
 end
 
 -- Created hidden, shown once placed. While the hub manages it, the hub places and shows it.
@@ -2903,10 +3104,9 @@ function S.army_button_poll()
     end
     button:SetVisible(true)
     S.set_off(button,row.off==true)
-    local tip = row.off and "Provisions\nDisabled in this campaign's saved settings. New campaigns default to enabled."
-        or ("Provisions\nNeeded per turn: " .. row.need .. " common provisions\nCarried: " .. row.held .. " / " .. row.cap
-            .. "\nTo five-meal target: " .. math.max(0,row.need * 5-row.held)
-            .. "\nMissed meals: " .. row.short .. "\n" .. row.reason .. "\n" .. S.ARMY_TIP)
+    local tip = row.off and "Provisions\nArmy provisions are switched off in this campaign."
+        or ("Provisions\nThis army eats " .. row.need .. " a turn and carries " .. row.held .. " of " .. row.cap .. ".\n" .. row.reason
+            .. (row.short > 0 and ("\nMissed meals: " .. row.short .. ".") or "") .. "\n" .. S.ARMY_TIP)
     local count = row.off and "-" or S.num(row.need)
     if button:GetStateText() ~= count then
         local state = button:CurrentState()
@@ -2964,7 +3164,7 @@ end
 function S.plate_tip(pv)
     local foot = "Lost: this army has no settlement"
     if pv.to then foot = "Into " .. loc("regions_onscreen_" .. pv.to, pv.to) end
-    return tip_lines("Raiding takes, each turn:", pv.parts, foot)
+    return tip_lines("Raiding takes each turn:", pv.parts, foot)
 end
 
 -- ONE VALUE PER GOOD, each with that good's icon, most first, up to PLATES: copies of the first of
@@ -3134,6 +3334,13 @@ function S.init()
         function(context) return context:faction():name() == cm:get_local_faction_name(true) end,
         function()
             local done, e = pcall(S.refresh)
+            if not done then S.say(e) end
+        end, true)
+    -- ENDING THE TURN CLOSES IT (author, 2026-11-01): a UI change, on the ender's own machine only
+    core:add_listener("derpy_mr_stores_turn_end", "FactionTurnEnd",
+        function(context) return context:faction():name() == cm:get_local_faction_name(true) and S.is_open() end,
+        function()
+            local done, e = pcall(S.show, false)
             if not done then S.say(e) end
         end, true)
 end

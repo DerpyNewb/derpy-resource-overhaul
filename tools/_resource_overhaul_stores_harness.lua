@@ -529,6 +529,12 @@ click("derpy_mr_tab_settlements")
 FACTIONS.fac_a = faction("fac_a", { A })
 fire("FactionTurnStart", { faction = function() return FACTIONS.fac_a end })
 eq(shown_rows(), 1, "turn start refreshed the open panel")
+-- ENDING THE TURN CLOSES IT (author, 2026-11-01: it stayed open through the computers' turns)
+fire("FactionTurnEnd", { faction = function() return faction("fac_b", {}) end })
+eq(p.visible, true, "another faction's turn end leaves it open")
+fire("FactionTurnEnd", { faction = function() return FACTIONS.fac_a end })
+eq(p.visible, false, "the player's turn end closes it"); eq(p.interactive, false, "and lets the mouse through")
+click("derpy_mr_stores_button"); eq(p.visible, true, "reopened")
 -- close, and the mouse goes through again
 click("derpy_mr_close"); eq(p.visible, false, "closed"); eq(p.interactive, false, "lets the mouse through")
 -- a big empire: every settlement drawn, a slider, keys where the loc has no name
@@ -594,6 +600,17 @@ local widest = S.last_line({ made = 123456, raided_out = 123456, plundered_out =
                              traded_in = 123456, traded_out = 123456, eaten_out = 123456 })
 eq(#widest * 7 <= L.chart_line[3], true, "the widest last-turn line fits: " .. widest)
 eq(#S.NO_HISTORY * 7 <= L.chart_line[3], true, "the no-history line fits")
+-- SPOILAGE (2026-11-01): its own part of the line, and a line of every part still fits
+eq(S.last_line({ made = 40, eaten_out = 20, spoiled_out = 6 }), "Last turn: made +40, eaten -20, spoiled -6", "what spoiled")
+local every = S.last_line({ made = 123456, raided_out = 123456, plundered_out = 123456, traded_in = 123456,
+                            traded_out = 123456, eaten_out = 123456, spoiled_out = 123456, moved_out = 123456,
+                            spent_out = 123456, sold_out = 123456 })
+eq(#every * L.CHAR_W <= L.chart_line[3], true, "every part at once still fits: " .. every)
+eq(string.sub(every, -5), ", ...", "and says it left some out")
+eq(S.spoil_sentence({ rate = 4, keep = 250, due = 6 }, "Grain"),
+   "Grain over 250 spoils at 4% a turn and about 6 will spoil next turn.", "the spoiling sentence")
+eq(S.spoil_sentence({ rate = 4, keep = 250, due = 0 }, "Grain"), "Grain over 250 spoils at 4% a turn.", "with nothing due")
+eq(S.spoil_sentence(nil, "Salt"), nil, "a good that keeps says nothing")
 
 -- on screen
 local function bars_shown()
@@ -727,7 +744,7 @@ for j = 2, 5 do
     eq(find("hdr_line_" .. j).visible, true, "and through the header")
     eq(find("hdr_line_" .. j).x, vl.x, "lined up with the rows'")
 end
-eq(cell(1, 5).text, "sent 15, received 2", "last turn's trade"); eq(cell(2, 5).text, "-", "no trade last turn")
+eq(cell(1, 5).text, "sent 15 and received 2", "last turn's trade"); eq(cell(2, 5).text, "-", "no trade last turn")
 local brim = "pooled_resources_display_name_derpy_mr_store_brimstone"
 LOC[brim] = "Zz Brimstone"; click("derpy_mr_tab_trade")
 eq(cell(2, 1).text, "Zz Brimstone", "a good you make comes before every good you do not, whatever its name")
@@ -735,7 +752,7 @@ LOC[brim] = "Brimstone"; click("derpy_mr_tab_trade")
 press(switch(1, "export"))
 eq(SENT[1], "fac_a|export|coal", "a click sends the local faction's switch")
 eq(switch(1, "export").images[0], S.CHECK[false][1], "and the box empties at once")
-eq(string.find(switch(1, "export").tip, "allow", 1, true) ~= nil, true, "the tooltip says a click allows it again")
+eq(string.find(switch(1, "export").tip, "trade it again", 1, true) ~= nil, true, "the tooltip says a click trades it again")
 press(switch(2, "import")); eq(SENT[2], "fac_a|import|brimstone", "the row's own good (then by name)")
 press(find_uicomponent(find("derpy_mr_row_1"), "c3")); eq(#SENT, 2, "a cell named like ours elsewhere is not a switch")
 -- a greyed row's name cell carries grey markup; its switch's tooltip names the good plainly
@@ -760,7 +777,7 @@ eq(string.find(switch(4, "import").tip, "[[col:", 1, true), nil, "its Imports to
     eq(find("sub_title").text, "Stock rules: Coal", "Trade row opens stock rules")
     eq(S.view_key(), "trade_focus", "own policy columns")
     eq(cell(1, 2).text, "Auto: 105", "resolved shared Auto")
-    eq(string.find(S.data[1].tip, "shared", 1, true) ~= nil, true, "category explanation")
+    eq(string.find(S.data[1].tip, "covers all common", 1, true) ~= nil, true, "category explanation")
     local function pb(i, action) return find_uicomponent(find("derpy_mr_row_" .. i), "derpy_mr_policy_" .. action) end
     eq(pb(1, "plus").visible, true, "policy button visible")
     eq(pb(3, "plus").visible, false, "other row hides policy controls")
@@ -771,9 +788,9 @@ eq(string.find(switch(4, "import").tip, "[[col:", 1, true), nil, "its Imports to
     eq(S.data[6][1], "Price at capital", "the capital's price follows the import need"); eq(S.data[6][2], "-", "no quote shows a dash")
     priced = { price = 321 }; S.refresh()
     eq(S.data[6][2], "3.21", "the price in gold to the hundredth")
-    eq(S.data[6].tip, "Partners send this good only while it is worth at least 10% more here than in their stores. A full store is cheap and an empty one dear.", "and its tip says the rule")
-    eq(string.find(S.data[2].tip, "Trade partners deliver toward this target at " .. S.place("reg_a")
-        .. " while it is worth at least 10% more here than in their stores. Domestic shipments use free space. Zero stops requests for this resource.", 1, true) == 1, true, "the target tip says the same")
+    eq(S.data[6].tip, "Partners only send it while it sells for at least 10% more here than at home.", "and its tip says the rule")
+    eq(string.find(S.data[2].tip, "Your trade partners send it to " .. S.place("reg_a")
+        .. " until you have this much.\nSet it to 0 to stop them.", 1, true) == 1, true, "the target tip says the same")
     dump("trade_focus")
     press(pb(1, "minus")); eq(policy.keep, 100, "Auto minus rounds down to ten")
     press(pb(1, "auto")); eq(policy.keep, nil, "Auto reset")
@@ -841,8 +858,8 @@ do
     fl.convoy_cargo = function() return CONVOYS end
     click("derpy_mr_tab_trade")
     dump("trade")   -- the preview draws the tab with its duty, cut-off and cargo rows (overwrites the plain dump)
-    eq(cell(1, 1).text, "Import duty", "the duty row comes first"); eq(cell(1, 5).text, "paid 11, received 4", "both ways")
-    eq(string.find(find("derpy_mr_row_1").tip, ": paid 11, received 4", 1, true) ~= nil, true, "each partner in its tooltip")
+    eq(cell(1, 1).text, "Import duty", "the duty row comes first"); eq(cell(1, 5).text, "paid 11 and received 4", "both ways")
+    eq(string.find(find("derpy_mr_row_1").tip, ": paid 11 and received 4", 1, true) ~= nil, true, "each partner in its tooltip")
     eq(string.find(find("derpy_mr_row_1").tip, "12%", 1, true) ~= nil, true, "with the rate")
     eq(switch(1, "export").visible or switch(1, "import").visible, false, "and no switches")
     eq(cell(2, 1).text, "Trade cut off", "then the partners cut off"); eq(cell(2, 5).text, "2 partners", "counted")
@@ -850,25 +867,25 @@ do
     eq(string.find(tip, ": Too far for trade", 1, true) ~= nil and string.find(tip, ": Cut off by enemy lands", 1, true) ~= nil,
        true, "each with why"); eq(string.find(tip, "7 turns", 1, true) ~= nil, true, "and the reach")
     eq(switch(2, "export").visible or switch(2, "import").visible, false, "no switches on it either")
-    eq(cell(3, 1).text, "Cargo on the road", "then what the convoys carry"); eq(cell(3, 5).text, "2 out, 1 in", "two out, one in, never the stranger's")
+    eq(cell(3, 1).text, "Cargo on the road", "then what the convoys carry"); eq(cell(3, 5).text, "2 out and 1 in", "two out, one in, never the stranger's")
     local cargo_tip = find("derpy_mr_row_3").tip
-    eq(string.find(cargo_tip, "From Alpha to Bravo, arrives turn 12: 40 Coal, 12 Iron", 1, true) ~= nil, true,
+    eq(string.find(cargo_tip, "From Alpha to Bravo by turn 12: 40 Coal, 12 Iron", 1, true) ~= nil, true,
        "each convoy: where from and to, when, and its basket, the most first")
-    eq(string.find(cargo_tip, "From Bravo to Alpha, arrives turn 14: 8 Coal, 8 Iron", 1, true) ~= nil, true, "the one coming in, equal amounts by name")
-    eq(string.find(cargo_tip, "arrives turn 13: 5 Brimstone", 1, true) ~= nil, true, "and the other going out")
+    eq(string.find(cargo_tip, "From Bravo to Alpha by turn 14: 8 Coal, 8 Iron", 1, true) ~= nil, true, "the one coming in, equal amounts by name")
+    eq(string.find(cargo_tip, "by turn 13: 5 Brimstone", 1, true) ~= nil, true, "and the other going out")
     eq(string.find(cargo_tip, "99 Coal", 1, true), nil, "and not a stranger's")
     eq(find_uicomponent(find("derpy_mr_row_3"), "icon").image, DERPY_MR_STORES_L.MAP_CART, "wearing the convoy icon the Map tab's key does")
     eq(switch(3, "export").visible or switch(3, "import").visible, false, "no switches on it either")
     eq(cell(4, 1).text, "Coal", "the goods follow")
     local all = CONVOYS
-    CONVOYS = { all[3] }; click("derpy_mr_tab_trade"); eq(cell(3, 5).text, "0 out, 1 in", "none out is still said")
-    CONVOYS = { all[1] }; click("derpy_mr_tab_trade"); eq(cell(3, 5).text, "1 out, 0 in", "and none in")
+    CONVOYS = { all[3] }; click("derpy_mr_tab_trade"); eq(cell(3, 5).text, "0 out and 1 in", "none out is still said")
+    CONVOYS = { all[1] }; click("derpy_mr_tab_trade"); eq(cell(3, 5).text, "1 out and 0 in", "and none in")
     -- A CONVOY WITH NO POSITION is on the road all the same: counted and listed here, drawn on no map
     local unplaced = { id = "derpy_mr_cv_5", f = LOCAL, buyer = "fac_b", from = "reg_a", to = "reg_b", due = 17,
                        stem = "coal", n = 3, basket = { coal = 3 }, convoy = true }
     CONVOYS = { unplaced }; click("derpy_mr_tab_trade")
-    eq(cell(3, 1).text, "Cargo on the road", "a convoy with no position still has its row"); eq(cell(3, 5).text, "1 out, 0 in", "and is counted")
-    eq(string.find(find("derpy_mr_row_3").tip, "From Alpha to Bravo, arrives turn 17: 3 Coal", 1, true) ~= nil, true, "and listed in the tooltip")
+    eq(cell(3, 1).text, "Cargo on the road", "a convoy with no position still has its row"); eq(cell(3, 5).text, "1 out and 0 in", "and is counted")
+    eq(string.find(find("derpy_mr_row_3").tip, "From Alpha to Bravo by turn 17: 3 Coal", 1, true) ~= nil, true, "and listed in the tooltip")
     -- A BIG REALM: ten convoys out, the tooltip names the eight that land soonest and counts the rest
     fl.SHIP = { near = 4 }   -- not the real 3: the tooltip's number is shown to come from here
     CONVOYS = {}
@@ -878,13 +895,13 @@ do
     end
     click("derpy_mr_tab_trade")
     local big = find("derpy_mr_row_3").tip
-    local _, shown = string.gsub(big, "arrives turn", "")
-    eq(cell(3, 5).text, "10 out, 0 in", "all ten counted"); eq(shown, 8, "eight named")
-    eq(string.find(big, "arrives turn 21: 10 Coal", 1, true) ~= nil, true, "starting with the soonest")
-    eq(string.find(big, "arrives turn 29", 1, true), nil, "the two that land last are not named")
+    local _, shown = string.gsub(big, "by turn", "")
+    eq(cell(3, 5).text, "10 out and 0 in", "all ten counted"); eq(shown, 8, "eight named")
+    eq(string.find(big, "by turn 21: 10 Coal", 1, true) ~= nil, true, "starting with the soonest")
+    eq(string.find(big, "by turn 29", 1, true), nil, "the two that land last are not named")
     eq(string.sub(big, -#"and 2 more convoys"), "and 2 more convoys", "but counted")
     -- THE SEIZURE RULE as the flows script keeps it: the sender's enemy, near the convoy at the sender's turn start
-    eq(string.find(big, "and an army at war with the sender, within 4 hexes of it when the sender's turn begins, can seize it.", 1, true) ~= nil,
+    eq(string.find(big, "An army at war with the sender can seize these goods from within 4 hexes when the sender begins its turn.", 1, true) ~= nil,
        true, "the tooltip says who seizes it and from how near")
     -- EQUAL TURNS LIST IN THE ORDER THE CONVOYS LEFT: by the number in the id, not its text, where "10" sorts before "9"
     CONVOYS = {
@@ -901,10 +918,91 @@ do
     cut = { cut[1] }; click("derpy_mr_tab_trade"); eq(cell(2, 5).text, "1 partner", "one is one partner")
     cut = {}; click("derpy_mr_tab_trade"); eq(cell(2, 1).text, "Coal", "nobody cut off, no row")
     fl.duty_last = function() return nil end; click("derpy_mr_tab_trade")
-    eq(cell(1, 5).text, "paid 0, received 0", "nothing booked yet reads as nothing")
+    eq(cell(1, 5).text, "paid 0 and received 0", "nothing booked yet reads as nothing")
     stores = false; click("derpy_mr_tab_trade"); eq(cell(1, 1).text, "Coal", "no row for a faction that never pays it")
     stores, pct = true, 0; click("derpy_mr_tab_trade"); eq(cell(1, 1).text, "Coal", "no row while the duty is off")
     fl.rates, fl.duty_last, fl.uses_stores, fl.cut_off, fl.SHIP = nil, nil, nil, nil, nil; click("derpy_mr_tab_trade")
+end
+do
+    -- TOLLS AND BLOCKADES (Part C): last turn's tolls each way after Import duty, a blockaded partner among those
+    -- cut off, and each convoy's tolls in the cargo tooltip
+    local fl, f = DERPY_MR_FLOWS, FACTIONS[LOCAL]
+    local partners = f.factions_trading_with
+    local rate, book = 3, { paid = 30, got = 12, by = { fac_b = { paid = 30, got = 0 }, fac_c = { paid = 0, got = 12 } } }
+    fl.rates = function() return { duty = 12, tolls = true, toll = rate, reach = 6, bandits = true } end
+    fl.guards_on = function() return false end   -- the preview draws the Road guards row too (Part D)
+    fl.uses_stores = function() return true end
+    fl.duty_last = function() return { paid = 11, got = 4, by = { fac_b = { paid = 11, got = 4 } } } end
+    fl.tolls_last = function(fk) eq(fk, LOCAL, "the local faction's tolls"); return book end
+    fl.cut_off = function() return { { key = "fac_c", why = "Too far for trade" }, { key = "fac_d", by = "fac_b" } } end
+    CONVOYS = { { id = "derpy_mr_cv_1", f = LOCAL, buyer = "fac_b", from = "reg_a", to = "reg_b", due = 12, x = 150, y = 250,
+                  stem = "coal", n = 40, basket = { coal = 40 }, convoy = true, tolls = { fac_c = 12, fac_d = 30 } } }
+    fl.convoy_cargo = function() return CONVOYS end
+    f.factions_trading_with = function() return list({ faction("fac_b", {}) }) end
+    click("derpy_mr_tab_trade")
+    dump("trade")   -- the preview draws the tab with duty, tolls, cut-off and cargo rows (overwrites the plain dump)
+    local function has(i, part) return string.find(find("derpy_mr_row_" .. i).tip, part, 1, true) ~= nil end
+    eq(cell(1, 1).text, "Import duty", "the duty row first")
+    eq(cell(2, 1).text .. "|" .. cell(2, 5).text, "Tolls paid|30 gold", "then the tolls paid")
+    eq(cell(3, 1).text .. "|" .. cell(3, 5).text, "Tolls received|12 gold", "and received")
+    eq(has(2, "Last turn you paid these factions to cross their lands.") and has(2, ": 30"), true, "each faction paid in its tooltip")
+    eq(has(2, ": 12"), false, "and only those paid")
+    eq(has(3, "Last turn these factions paid you to cross your lands.") and has(3, ": 12"), true, "each faction that paid you")
+    eq(find_uicomponent(find("derpy_mr_row_2"), "icon").image, S.DUTY_ICON, "in the duty's icon")
+    eq(cell(4, 1).text, "Trade cut off", "then the partners cut off")
+    eq(has(4, "Nothing moves between you and these partners.") and has(4, ": Blockaded by "), true, "a blockaded partner says by whom")
+    eq(has(4, ": Too far for trade") and has(4, "6 turns"), true, "beside the reach reasons")
+    eq(has(5, "Tolls: 30 to ") and has(5, ", 12 to "), true, "a convoy's tolls, the most first")
+    -- nothing booked: both rows at 0 while the rate is on and you have a partner
+    book = { paid = 0, got = 0, by = {} }; click("derpy_mr_tab_trade")
+    eq(cell(2, 5).text .. "|" .. cell(3, 5).text, "0 gold|0 gold", "nothing booked reads as nothing")
+    f.factions_trading_with = function() return list({}) end; click("derpy_mr_tab_trade")
+    eq(cell(2, 1).text, "Trade cut off", "no partner and nothing booked: no toll rows")
+    f.factions_trading_with = function() return list({ faction("fac_b", {}) }) end
+    rate = 0; click("derpy_mr_tab_trade")
+    eq(cell(2, 1).text, "Trade cut off", "tolls off and nothing booked: no toll rows")
+    book = { paid = 7, got = 0, by = { fac_b = { paid = 7, got = 0 } } }; click("derpy_mr_tab_trade")
+    eq(cell(2, 1).text .. "|" .. cell(3, 1).text, "Tolls paid|Trade cut off", "tolls off but paid last turn: that row only")
+    f.factions_trading_with = partners
+    fl.rates, fl.duty_last, fl.uses_stores, fl.cut_off, fl.tolls_last, fl.convoy_cargo = nil, nil, nil, nil, nil, nil
+    fl.guards_on = nil
+    CONVOYS = {}; click("derpy_mr_tab_trade")
+end
+do
+    -- ROAD GUARDS (Part D 7.4): the player's switch on the Trade tab while the bandits are on
+    local fl, on, sent = DERPY_MR_FLOWS, false, {}
+    local req = fl.request
+    fl.rates = function() return { duty = 0, bandits = true } end
+    fl.uses_stores = function() return true end
+    fl.guards_on = function(fk) eq(fk, LOCAL, "the local faction's guards"); return on end
+    fl.request = function(_, ...) sent[#sent + 1] = table.concat({ ... }, ",") end
+    local function guards()
+        for i, rc in ipairs(S.data) do
+            if rc[1] == "Road guards" then return i, rc, find_uicomponent(find("derpy_mr_row_" .. i), S.SEND) end
+        end
+    end
+    click("derpy_mr_tab_trade")
+    local i, rc, b = guards()
+    eq(rc ~= nil and rc[2], "Off", "a Road guards row, off")
+    eq(b.visible and b.text, "Hire", "with a Hire button")
+    eq(find("derpy_mr_row_" .. i).tip, "Guards ride with every cart and convoy you send.\nThey cost 5% of the cargo's value "
+       .. "when it leaves.\nThey make trouble on the road half as likely.", "its tooltip says what they do and cost")
+    local clock, now = os.clock, 100
+    os.clock = function() return now end
+    press(b); eq(table.concat(sent, ";"), "guards,on", "Hire asks for guards on")
+    on = true; click("derpy_mr_tab_trade")
+    i, rc, b = guards()
+    eq(rc[2] .. "," .. b.text, "On,Dismiss", "guards on: Dismiss")
+    -- A DOUBLE CLICK (seen 2026-11-03): the row redraws as Dismiss under the cursor, and the second click sent them away
+    now = now + 0.2
+    press(b); eq(#sent, 1, "a second click straight after: nothing more")
+    now = now + 1
+    press(b); eq(sent[#sent], "guards,off", "Dismiss asks for them off")
+    os.clock = clock
+    fl.rates = function() return { duty = 0, bandits = false } end; click("derpy_mr_tab_trade")
+    eq(guards(), nil, "the bandits off: no row")
+    fl.rates, fl.uses_stores, fl.guards_on, fl.request = nil, nil, nil, req
+    click("derpy_mr_tab_trade")
 end
 -- ALL AT ONCE: four buttons under the list, on the Trade tab only
 local function bulk(dir, mode) return find("derpy_mr_all_" .. dir .. "_" .. mode) end
@@ -949,6 +1047,90 @@ eq(find("hdr_3").halign, "right", "and the Goods tab's own alignment back")
 DERPY_MR_FLOWS = nil; click("derpy_mr_tab_trade")
 eq(switch(1, "export").visible, false, "without the flows script: no switches"); eq(#ERRORS, 0, "and no error")
 eq(bulk("import", "allow").visible, false, "nor all-at-once buttons")
+
+-- ---- TRADE EDICTS (design 2026-11-01 Part B): the Edicts section at the top of the Resources tab ----
+-- EDICT_FLOWS(base): the flows script's edict answers over `base`; the size previews draw with it too.
+EDICT_NOW, EDICT_WAIT, EDICT_SENT, EDICT_RACE, EDICT_ON, EDICT_EATS = {}, {}, {}, "emp", true, true
+function EDICT_FLOWS(base)
+    return setmetatable({
+        edicts_on = function() return EDICT_ON end,
+        uses_stores = function() return true end,
+        eats = function() return EDICT_EATS end,
+        race = function() return EDICT_RACE end,
+        edict = function(fk, which)
+            eq(fk, LOCAL, "the local faction's edict")
+            return EDICT_NOW[which] or ({ rations = "normal", workshops = "balanced", roads = "tolled" })[which]
+        end,
+        edict_wait = function(_, which) return EDICT_WAIT[which] or 0 end,
+        request = function(_, ...) EDICT_SENT[#EDICT_SENT + 1] = table.concat({ ... }, ",") end,
+    }, { __index = base or {} })
+end
+;(function()   -- a function, not a do block: the main chunk is at its 200 locals
+    DERPY_MR_FLOWS = EDICT_FLOWS(nil)
+    click("derpy_mr_tab_goods")
+    local function labels(i)
+        local t = {}
+        for _, c in ipairs(S.data[i].choices or {}) do t[#t + 1] = c.label end
+        return table.concat(t, ",")
+    end
+    local function eb(i, j) return find_uicomponent(find("derpy_mr_row_" .. i), "derpy_mr_policy_" .. ({ "minus", "auto", "plus" })[j]) end
+    eq(S.data[1][1], S.section("Edicts"), "the first row is the Edicts section")
+    eq(S.data[1].section and not S.data[1].fold, true, "a section row that does not fold")
+    eq(S.data[2][1] .. "|" .. S.data[2][2] .. "|" .. labels(2), "Rations|Ready|Plenty,Normal,Rationing", "Rations, ready, its three options")
+    eq(S.data[2].choices[2].on, true, "Normal is the one in force")
+    eq(S.data[2].choices[1].on or S.data[2].choices[1].off, false, "and Plenty can be chosen")
+    eq(S.data[3][1] .. "," .. labels(3), "Workshops,War economy,Balanced,Merchant", "then Workshops")
+    eq(S.data[4][1] .. "," .. labels(4), "Roads,Open,Tolled,Closed", "then Roads")
+    eq(S.data[5][1], S.section("Resources"), "and a Resources section above the goods")
+    eq(S.data[6].open ~= nil, true, "the goods follow it")
+    eq(eb(2, 1).text .. "," .. eb(2, 2).text .. "," .. eb(2, 3).text, "Plenty,Normal,Rationing", "each button is labelled with its option")
+    eq(eb(2, 1).w .. "," .. eb(2, 2).w .. "," .. eb(2, 3).w, LL.EDICT_W .. "," .. LL.EDICT_W .. "," .. LL.EDICT_W, "at the edict width")
+    eq(eb(2, 2).shader, "glow_pulse_t0", "the option in force glows")
+    eq(eb(2, 1).shader .. "," .. tostring(eb(2, 1).disabled), "normal_t0,false", "a ready option is live")
+    eq(eb(1, 1).visible or eb(5, 1).visible, false, "a section row has no buttons")
+    eq(eb(2, 1).tip, "Settlements eat 3 provisions a turn for each level.\nGrowth +10 in every province.", "an option's tooltip says its effects")
+    -- a waiting edict: its status, its other options greyed, and every tooltip says when
+    EDICT_WAIT.roads, EDICT_NOW.roads = 4, "closed"
+    S.refresh()
+    eq(S.data[4][2], "Wait 4 turns", "Roads waits 4 turns")
+    eq(S.data[4].choices[1].off and S.data[4].choices[2].off, true, "its two other options are off")
+    eq(S.data[4].choices[3].on and not S.data[4].choices[3].off, true, "and Closed is in force")
+    eq(eb(4, 1).shader .. "," .. tostring(eb(4, 1).disabled), "set_greyscale_t0,true", "a waiting option is greyed")
+    for j = 1, 3 do
+        local tip = S.data[4].choices[j].tip
+        eq(string.sub(tip, -#"This edict can change again in 4 turns."), "This edict can change again in 4 turns.", "tooltip " .. j .. " says when")
+    end
+    EDICT_WAIT.roads = 1; S.refresh(); eq(S.data[4][2], "Wait 1 turn", "one turn is singular")
+    -- a Chaos Dwarf viewer: Plenty gives control, not growth
+    EDICT_RACE = "chd"; S.refresh()
+    local plenty = S.data[2].choices[1].tip
+    eq(string.find(plenty, "Control +2", 1, true) ~= nil and string.find(plenty, "Growth", 1, true) == nil, true, "a Chaos Dwarf's Plenty")
+    EDICT_RACE = "emp"
+    -- clicks: Rationing sends the change, the option in force and a waiting one send nothing
+    EDICT_SENT = {}
+    press(eb(2, 3)); eq(table.concat(EDICT_SENT, ";"), "edict,rations,rationing", "Rationing is asked for")
+    EDICT_SENT = {}
+    press(eb(2, 2)); press(eb(4, 1)); press(eb(4, 3))
+    eq(#EDICT_SENT, 0, "the option in force and a waiting edict send nothing")
+    -- POOLED ROWS: the same row's buttons go back to their own widths on a view with stock rules
+    local v = S.view_model(S.read_realm(FACTIONS[LOCAL]))
+    S.draw_rows(find("derpy_mr_stores_panel"), { { "a", "", "", "", "", policy = "keep", tip = "" },
+        { "b", "", "", "", "", policy = "keep", tip = "" } }, v.heads, v.cols)
+    eq(eb(2, 1).w .. "," .. eb(2, 2).w .. "," .. eb(2, 3).w, table.concat(LL.POLICY_W, ","), "a policy row sizes them back")
+    eq(eb(2, 2).text .. "," .. eb(2, 2).shader, "Auto,normal_t0", "with its own label and no glow")
+    -- a faction that does not eat has no Rations row
+    EDICT_EATS = false; S.refresh()
+    eq(S.data[2][1] .. "," .. S.data[3][1], "Workshops,Roads", "no Rations for a faction that does not eat")
+    EDICT_EATS = true
+    -- the switch off: no section at all
+    EDICT_ON = false; S.refresh()
+    eq(S.data[1].section == nil and S.data[1].open ~= nil, true, "with edicts off the goods come first")
+    EDICT_ON, EDICT_WAIT, EDICT_NOW = true, {}, {}
+    S.refresh()
+    dump("goods")   -- the preview draws the tab with its Edicts section (overwrites the plain dump)
+    DERPY_MR_FLOWS = nil
+    eq(#ERRORS, 0, "edicts: no script errors")
+end)()
 
 -- ---- phase 7: the panel's actions ------------------------------------------------------
 local REQ, PLAN, ORDER_ST, SALE, ACT_ON = {}, {}, {}, nil, true
@@ -1001,7 +1183,7 @@ do
     eq(S.data[2].send.label, "Pause", "active recipe can pause")
     eq(S.data[3].send.label, "Enable", "service starts disabled")
     eq(S.data[3][2], "4 + 1 / turn", "recurring full basket shown")
-    eq(string.find(S.data[2].tip, "Passive building production is unchanged") ~= nil, true, "additional batch explained")
+    eq(string.find(S.data[2].tip, "Your buildings still make their usual goods") ~= nil, true, "additional batch explained")
     local n = #REQ
     press(sendb(2))
     eq(REQ[#REQ], LOCAL .. "|economy|reg_a|brew", "recipe button uses synchronized request door")
@@ -1009,6 +1191,26 @@ do
     dump("economy")
     table.remove(REQ)
     fl.economy_rows, fl.owned = nil, owned_before
+    S.refresh()
+end
+-- SPOILAGE on the drill-down: a spoiling good's row says what is safe and what goes next turn
+do
+    local fl = DERPY_MR_FLOWS
+    local owned_before = fl.owned
+    fl.owned = function(_f, key) if key == "reg_a" then return A end end
+    fl.spoil_info = function(_f, region, stem)
+        eq(region:name(), "reg_a", "asked about the settlement on screen")
+        if stem == "coal" then return { rate = 4, keep = 250, due = 6 } end
+    end
+    S.refresh()
+    local coal, other
+    for _, row in ipairs(S.data) do
+        if row.stem == "coal" then coal = row elseif row.stem then other = row end
+    end
+    eq(string.find(coal.tip, "Coal over 250 spoils at 4% a turn and about 6 will spoil next turn.", 1, true) ~= nil, true,
+       "the row says it: " .. coal.tip)
+    eq(string.find(other.tip, "spoils", 1, true), nil, "a good that keeps says nothing")
+    fl.spoil_info, fl.owned = nil, owned_before
     S.refresh()
 end
 -- A RECIPE'S STATE, the word both views show: the economy's own verdict, never a guess
@@ -1113,7 +1315,7 @@ do
     eq(D[4][1], "Alpha", "where it runs"); eq(D[4][2], "8 Tools", "what it gives"); eq(D[4][4], "Short", "on, short")
     eq(D[4].price[1].text, "[[col:red]]6[[/col]]", "iron is red"); eq(D[4].price[2].text, "2", "timber is not")
     eq(D[4].price[1].icon, S.icon_of("iron"), "each input after its icon")
-    eq(string.find(D[4].tip, "Alpha can spend 3 of the 6 Iron a batch takes.", 1, true) ~= nil, true, "the tooltip says how short")
+    eq(string.find(D[4].tip, "It needs 6 Iron and Alpha has 3 to spare.", 1, true) ~= nil, true, "the tooltip says how short")
     eq(string.find(D[4].tip, "Short of", 1, true), nil, "and does not say it twice")
     eq(D[4].send.label, "Pause", "it can be paused"); eq(D[4].send.off, false, "live")
     eq(D[6][1] .. "|" .. D[6][4] .. "|" .. D[6][2], "Alpha|Paid|-5% cost", "a paid service")
@@ -1188,8 +1390,8 @@ end
 
 eq(sendb(1).x, find("derpy_mr_row_1").x + LL.VIEWS.focus[5][1], "in the fifth column")
 eq(sendb(1).disabled, false, "live when something can come"); eq(sendb(1).shader, "normal_t0", "and drawn live")
-eq(sendb(1).tip, "Ship 12 Coal from Bravo: 10 arrive in at least 2 turns, 2 are lost on the way. An army at war "
-   .. "with you can seize it on the road.", "the tooltip says what happens")
+eq(sendb(1).tip, "Send 12 Coal from Bravo.\n2 are lost on the way and the rest arrive in 2 turns or more.\n"
+   .. "An army at war with you can seize it.", "the tooltip says what happens")
 eq(sendb(2).disabled, true, "Brimstone: nobody can send it"); eq(sendb(2).shader, "set_greyscale_t0", "and it looks it")
 eq(sendb(2).tip, "No other settlement of yours can send Brimstone.", "the tooltip says why")
 eq(S.send_tip(nil, { name = "Coal", full = true }), "This store of Coal is full.", "a full store says so")
@@ -1199,8 +1401,8 @@ press(sendb(2)); eq(#REQ, 1, "a greyed button asks for nothing")
 PLAN.coal.busy = true; SHIPS_TO.coal = { { n = 34, due = 52 }, { n = 5, due = 53 } }
 click("derpy_mr_back"); click("derpy_mr_row_1")
 eq(sendb(1).disabled, true, "the most shipments on the road: greyed")
-eq(sendb(1).tip, "You have 3 shipments on the road already, the most you can have.\nOn the road here: 34, "
-   .. "arriving on turn 52.\nOn the road here: 5, arriving on turn 53.", "says why, and what is coming")
+eq(sendb(1).tip, "You already have 3 shipments on the road and cannot send more.\n34 more arrive here "
+   .. "on turn 52.\n5 more arrive here on turn 53.", "says why, and what is coming")
 press(sendb(1)); eq(#REQ, 1, "and asks for nothing")
 PLAN.coal.busy, SHIPS_TO.coal = nil, nil
 -- what is on the road fills the store: that is why nothing more can be sent, not a lack of senders
@@ -1268,9 +1470,9 @@ click("derpy_mr_tab_goods"); click("derpy_mr_tab_spending")
 eq(payic(1, "materials").shader, "normal_t0", "off and covered: plain")
 SUPPLY_ST.pay.building.n = 26; SUPPLY_ST.on.materials = true
 click("derpy_mr_tab_goods"); click("derpy_mr_tab_spending")
-eq(string.find(payic(1, "materials").tip, "Paid from Coal first, the fullest store.", 1, true) ~= nil, true,
+eq(string.find(payic(1, "materials").tip, "It pays with Coal first because that store is the fullest.", 1, true) ~= nil, true,
    "the icon says what pays and why that one")
-eq(string.find(payic(1, "stable").tip, "Nothing to pay with: the stores of Alpha hold none.", 1, true) ~= nil, true,
+eq(string.find(payic(1, "stable").tip, "The stores of Alpha have nothing to pay with.", 1, true) ~= nil, true,
    "and when there is nothing to pay with")
 eq(box(1, "materials").images[0], S.CHECK[true][1], "a supply that is on is ticked")
 eq(box(1, "arms").images[0], S.CHECK[false][1], "one that is off is not")
@@ -1282,10 +1484,10 @@ eq(string.find(mtip, "construction cost -25% in every settlement you hold in thi
 eq(string.find(mtip, "The stores of Alpha hold 26.", 1, true) ~= nil, true, "what the capital holds")
 names_use(mtip, "building", "Materials on hand"); names_use(atip, "war", "Arms stocked")
 eq(string.find(box(1, "standing").tip, "[[img:", 1, true), nil, "Supply the capital pays nothing, so names no goods")
-eq(string.find(mtip, "On. Click to stop it.", 1, true) ~= nil, true, "and what a click does")
-eq(string.find(atip, "Turned off on turn 37: the stores of Alpha ran short.", 1, true) ~= nil, true,
+eq(string.find(mtip, "Click to stop it.", 1, true) ~= nil, true, "and what a click does")
+eq(string.find(atip, "Turned off on turn 37 because the stores of Alpha ran short.", 1, true) ~= nil, true,
    "a supply that ran short says when")
-eq(string.find(box(1, "standing").tip, "Off. Click to start it.", 1, true) ~= nil, true, "Supply the capital, off")
+eq(string.find(box(1, "standing").tip, "Click to start it.", 1, true) ~= nil, true, "Supply the capital, off")
 REQ = {}
 press(box(1, "materials")); eq(REQ[1], "fac_a|supply|reg_a|materials", "a click toggles that capital's supply")
 -- the shipments: a section row, then one row each, the local faction's only
@@ -1487,9 +1689,9 @@ eq(out_cart.visible and in_cart.visible, true, "a cart for the convoy going out 
 eq(mapc("cart", 4) == false or mapc("cart", 4).visible == false, true, "and none for a stranger's convoy")
 eq(out_cart.shader, "glow_pulse_t0", "pulsing, like any convoy on the road")
 eq(inside(out_cart) and inside(in_cart), true, "both inside the box")
-eq(string.find(out_cart.tip, "40 Coal, 12 Iron from Bravo to Alpha, arriving on turn 14.", 1, true) ~= nil, true,
+eq(string.find(out_cart.tip, "40 Coal, 12 Iron from Bravo to Alpha.\nIt arrives on turn 14.", 1, true) ~= nil, true,
    "the tooltip lists the basket, the most first, with where from and to and when")
-eq(string.find(in_cart.tip, "8 Iron from Bravo to Alpha, arriving on turn 15.", 1, true) ~= nil, true, "the one coming in too")
+eq(string.find(in_cart.tip, "8 Iron from Bravo to Alpha.\nIt arrives on turn 15.", 1, true) ~= nil, true, "the one coming in too")
 eq(out_cart.x > cart.x and out_cart.y > cart.y, true, "the convoy is further along the road from Alpha to Bravo than the shipment, east and south")
 local function road(colour, each)
     local n, i = 0, 1
@@ -1602,15 +1804,15 @@ do
     eq(stack.visible, true, "a cart for the twenty convoys"); eq(mapc("cart", 3).visible, false, "and no second one")
     eq(math.abs(stack.x + stack.w / 2 - (da.x + da.w / 2)) <= 1 and math.abs(stack.y + stack.h / 2 - (da.y + da.h / 2)) <= 1, true,
        "on the capital where they stand")
-    local _, named = string.gsub(stack.tip, "arrives turn", "")
+    local _, named = string.gsub(stack.tip, "by turn", "")
     eq(named, 8, "its tooltip names eight")
-    eq(string.find(stack.tip, "arrives turn 21: 1 Coal", 1, true) ~= nil, true, "the soonest first")
+    eq(string.find(stack.tip, "by turn 21: 1 Coal", 1, true) ~= nil, true, "the soonest first")
     eq(string.sub(stack.tip, -#"and 12 more convoys"), "and 12 more convoys", "and counts the other twelve")
     -- a convoy somewhere else keeps its own cart and its own tooltip
     CONVOYS[21] = listed[1]
     click("derpy_mr_tab_goods"); click("derpy_mr_tab_map")
     eq(mapc("cart", 3).visible, true, "a convoy on another spot has a cart of its own")
-    eq(string.find(mapc("cart", 3).tip, "40 Coal, 12 Iron from Bravo to Alpha, arriving on turn 14.", 1, true) ~= nil, true,
+    eq(string.find(mapc("cart", 3).tip, "40 Coal, 12 Iron from Bravo to Alpha.\nIt arrives on turn 14.", 1, true) ~= nil, true,
        "with the tooltip a lone convoy has")
     press(mapc("cart", 2)); eq(CAMERA[1], 100 * 2, "a click on the stack flies the camera to it"); eq(CAMERA[2], 300 * 2, "both co-ordinates")
     CONVOYS = listed
@@ -1900,12 +2102,12 @@ end
 local fest = act("derpy_mr_order_festival")
 eq(fest.disabled, false, "Festival can be bought")
 eq(string.find(fest.tip, "Spend 200 luxuries", 1, true) ~= nil, true, "the tooltip gives the price")
-eq(string.find(fest.tip, "public order +4 in every province, for 5 turns", 1, true) ~= nil, true, "and what it buys")
+eq(string.find(fest.tip, "public order +4 in every province for 5 turns", 1, true) ~= nil, true, "and what it buys")
 for _, o in ipairs(DERPY_MR_STORES_ORDERS) do names_use(act("derpy_mr_order_" .. o.key).tip, o.use, o.label) end
 eq(act("derpy_mr_order_muster").disabled, true, "Muster is waiting")
 eq(string.find(act("derpy_mr_order_muster").tip, "Ready again in 7 turns.", 1, true) ~= nil, true, "and says how long")
 eq(act("derpy_mr_order_great_works").disabled, true, "Great Works is short")
-eq(string.find(act("derpy_mr_order_great_works").tip, "Your stores hold 120 building materials.", 1, true) ~= nil, true,
+eq(string.find(act("derpy_mr_order_great_works").tip, "You have 120 building materials.", 1, true) ~= nil, true,
    "and says how short")
 eq(find("hint_text").y < fest.y, true, "the hint is clear of the orders' line")
 -- A RUNNING ORDER GLOWS (CA's active-state glow_pulse_t0) and still cannot be bought
@@ -1914,7 +2116,7 @@ click("derpy_mr_tab_goods"); click("derpy_mr_tab_spending")
 local runb = act("derpy_mr_order_festival")
 eq(runb.shader, "glow_pulse_t0", "a running order glows"); eq(runb.disabled, true, "and cannot be bought again")
 eq(runb.vars[1] == S.FX.glow[2] and runb.vars[2] == S.FX.glow[3], true, "at CA's values")
-eq(string.find(runb.tip, "Running: 3 turns left. Ready again in 8 turns.", 1, true) ~= nil, true, "and says so")
+eq(string.find(runb.tip, "Running for 3 turns more and ready again in 8 turns.", 1, true) ~= nil, true, "and says so")
 REQ = {}; press(runb); eq(#REQ, 0, "a click on a running order asks for nothing")
 eq(act("derpy_mr_order_muster").shader, "set_greyscale_t0", "a waiting one is grey, not glowing")
 ORDER_ST.festival = { ok = true, have = 250, cost = 200, use = "luxuries" }
@@ -1930,12 +2132,12 @@ SALE = { n = 120, gold = 840, price = 700 }
 click("derpy_mr_tab_goods"); click("derpy_mr_row_1"); eq(find("sub_title").text, "Where Coal is kept", "Coal's drill-down")
 local sell = act("derpy_mr_sell")
 eq(sell.visible, true, "a Sell button"); eq(sell.text, "Sell surplus", "labelled"); eq(sell.x, slot(4), "in slot 4")
-eq(sell.tip, "Sell 120 Coal for 840 gold, 7.00 each: what your stores hold above half their space.", "priced in its tooltip")
+eq(sell.tip, "Sell the 120 Coal your stores hold over half full for 840 gold (7.00 each).", "priced in its tooltip")
 eq(act("derpy_mr_order_festival").visible, false, "no orders on a drill-down")
 press(sell); eq(REQ[2], "fac_a|sell|coal", "a click sells it")
 SALE = nil; click("derpy_mr_back"); click("derpy_mr_row_1")
 eq(act("derpy_mr_sell").disabled, true, "nothing to sell: greyed")
-eq(act("derpy_mr_sell").tip, "Nothing to sell: your stores of Coal hold no more than half their space, or what is over would not fetch a whole gold.", "and says why")
+eq(act("derpy_mr_sell").tip, "There is nothing worth selling.\nOnly what your stores of Coal hold over half full can be sold.", "and says why")
 press(act("derpy_mr_sell")); eq(#REQ, 2, "a greyed Sell asks for nothing")
 -- FOUNDING (spec 2026-10-09): a row above the goods of a region no slot offers its rare building in
 ;(function()
@@ -1949,7 +2151,7 @@ press(act("derpy_mr_sell")); eq(#REQ, 2, "a greyed Sell asks for nothing")
     eq(cell(1, 3).text, "", "nothing under Per turn: a price there reads as income")
     eq(sendb(1).visible, true, "a button"); eq(sendb(1).text, "Found", "labelled Found")
     eq(sendb(1).disabled, false, "live")
-    eq(string.find(sendb(1).tip, "No building slot in this region normally takes it", 1, true) ~= nil, true,
+    eq(string.find(sendb(1).tip, "no building slot here normally takes it", 1, true) ~= nil, true,
        "the tooltip says why it is here")
     eq(S.data[1].icon, S.icon_of("dragon_bone"), "the good's own icon")
     eq(S.data[2].stem ~= nil, true, "the goods follow it")
@@ -1965,12 +2167,12 @@ press(act("derpy_mr_sell")); eq(#REQ, 2, "a greyed Sell asks for nothing")
     click("derpy_mr_back"); click("derpy_mr_row_1")
     eq(cell(1, 1).text, names[1], "the building it has"); eq(cell(1, 2).text, "Level 1 of 3", "at its level")
     eq(sendb(1).text, "Upgrade", "Upgrade after"); eq(sendb(1).disabled, true, "greyed below the tier")
-    eq(sendb(1).tip, "Needs a level 2 settlement.", "says why")
+    eq(sendb(1).tip, "It needs a level 2 settlement.", "says why")
     local n = #REQ; press(sendb(1)); eq(#REQ, n, "a greyed row asks for nothing")
     FOUND_ST.reg_a = { good = "dragon_bone", level = 0, next = 1, cost = 1000, tier_need = 1, why = "gold" }
-    click("derpy_mr_back"); click("derpy_mr_row_1"); eq(sendb(1).tip, "Needs 1000 gold.", "short of gold")
+    click("derpy_mr_back"); click("derpy_mr_row_1"); eq(sendb(1).tip, "It needs 1000 gold.", "short of gold")
     FOUND_ST.reg_a = { good = "dragon_bone", level = 0, next = 1, cost = 1000, tier_need = 1, why = "slot" }
-    click("derpy_mr_back"); click("derpy_mr_row_1"); eq(sendb(1).tip, "Needs an empty building slot.", "no slot")
+    click("derpy_mr_back"); click("derpy_mr_row_1"); eq(sendb(1).tip, "It needs an empty building slot.", "no slot")
     ACT_ON = false; click("derpy_mr_back"); click("derpy_mr_row_1")
     eq(S.data[1].found, nil, "actions off: no row"); ACT_ON = true
     FOUND_ST.reg_a = nil
@@ -2025,10 +2227,10 @@ click("derpy_mr_tab_goods")
                                                S.section("Research") }, ","), "sections in order")
     -- A UNIT SAYS WHERE IT GOES: its race's pool (and that recruiting it still costs gold), or an army
     local _, ib = row_of("unit_wh_main_dwf_inf_ironbreakers")
-    eq(string.find(ib.tip, "Goes into your Book of Grudges to recruit. Recruiting it still costs its gold.", 1, true) ~= nil,
+    eq(string.find(ib.tip, "It goes into your Book of Grudges.\nRecruiting it there still costs its gold.", 1, true) ~= nil,
        true, "the pool route says where, and that gold is still due")
     local ihm, hm = row_of("unit_wh_main_dwf_inf_hammerers")
-    eq(string.find(hm.tip, "Goes straight into your largest army with room.", 1, true) ~= nil, true, "the army route says so")
+    eq(string.find(hm.tip, "It goes straight into your largest army with room.", 1, true) ~= nil, true, "the army route says so")
     eq(sendb(ihm).disabled, true, "no army with room: greyed"); eq(sendb(ihm).tip, "No army of yours has room for it.", "says why")
     eq(S.data[1].section, true, "a section row first")
     local ia, arm = row_of("item_gromril_armour")
@@ -2039,7 +2241,7 @@ click("derpy_mr_tab_goods")
     eq(sendb(ia).visible, true, "a Buy button"); eq(sendb(ia).text, "Buy", "labelled")
     eq(sendb(ia).x, find("derpy_mr_row_" .. ia).x + LL.VIEWS.workshop[5][1], "in the fifth column")
     eq(sendb(ia).disabled, false, "a row you can pay: live")
-    eq(sendb(ih).disabled, true, "short: greyed"); eq(sendb(ih).tip, "Your stores hold 10 of 40 " .. S.name("dragon_bone") .. ".", "and says why")
+    eq(sendb(ih).disabled, true, "short: greyed"); eq(sendb(ih).tip, "It needs 40 " .. S.name("dragon_bone") .. " and you have 10.", "and says why")
     eq(axe.send.label, "Forged", "forged once: says so"); eq(sendb(row_of("item_gromril_greataxe")).disabled, true, "greyed")
     -- the price: two parts, each a real icon at its column's start and the figure after it
     local hr = find("derpy_mr_row_" .. ih)
@@ -2057,7 +2259,7 @@ click("derpy_mr_tab_goods")
     eq(find_uicomponent(rr, "use1").x, rr.x + LL.VIEWS.workshop[4][1], "its one icon in the bulk's column")
     eq(find_uicomponent(rr, "use2").visible, false, "and no second")
     names_use(helm.tip, "mounts", "Dragonhelm")
-    eq(string.find(helm.tip, "not counting rare resources", 1, true) ~= nil, true, "the tooltip says rare resources do not pay")
+    eq(string.find(helm.tip, "common mounts and you have", 1, true) ~= nil, true, "the tooltip says only common goods pay")
     -- the research row waits
     local _, res = row_of("research")
     eq(res.send.off, true, "research waiting: greyed"); eq(res.send.tip, "Ready again in 4 turns.", "says how long")
@@ -2075,7 +2277,7 @@ click("derpy_mr_tab_goods")
     eq(back.visible, true, "a drill-down, with Back")
     eq(find("sub_title").text, "Where to build Gromril Gate", "titled for it")
     eq(find("hdr_1").w, LL.VIEWS.workshop_focus[1][2], "in its own columns")
-    eq(find("hint_text").text, "Paid from all your stores: 60 " .. S.name("gromril") .. " and 200 war materials.",
+    eq(find("hint_text").text, "It is paid from all your stores: 60 " .. S.name("gromril") .. " and 200 war materials.",
        "the price on the hint's line")
     click("derpy_mr_back"); click("derpy_mr_row_" .. iu)
     eq(find("sub_title").text, "Where to build Gromril Gate", "a click on the row opens it as well")
@@ -2095,7 +2297,7 @@ click("derpy_mr_tab_goods")
     WON = false; click("derpy_mr_tab_goods"); click("derpy_mr_tab_workshop")
     ia = row_of("item_gromril_armour")
     eq(sendb(ia).disabled, true, "switched off: greyed")
-    eq(sendb(ia).tip, "Resource Vault actions are switched off in the mod's settings.", "and says why")
+    eq(sendb(ia).tip, "Resource Vault actions are switched off in the mod settings.", "and says why")
     press(sendb(ia)); eq(#WREQ, 2, "and asks nothing")
     -- no flows script: no rows, no error
     DERPY_MR_FLOWS = nil; click("derpy_mr_tab_goods"); click("derpy_mr_tab_workshop")
@@ -2154,8 +2356,8 @@ end)()
     eq(find_uicomponent(hr, "use2").shader, "set_greyscale_t0", "a short good's icon grey")
     eq(find_uicomponent(hr, "use1").shader, "normal_t0", "a covered one's not")
     eq(cell(ig, 3).text .. cell(ig, 4).text, "", "no rare or bulk figures")
-    eq(sendb(ig).tip, "Your stores hold 50 of 120 " .. S.name("salt") .. ".", "short: says which good")
-    eq(string.find(S.data[ig].tip, "Your stores hold 50 of 120 " .. S.name("salt"), 1, true) ~= nil, true,
+    eq(sendb(ig).tip, "It needs 120 " .. S.name("salt") .. " and you have 50.", "short: says which good")
+    eq(string.find(S.data[ig].tip, "It needs 120 " .. S.name("salt") .. " and you have 50", 1, true) ~= nil, true,
        "the tooltip lists each good")
     -- AN ARMY WORK: greyed with nothing selected and says so; with a lord selected it names him and aims
     local ia = row_of("army_ammo")
@@ -2194,15 +2396,15 @@ end)()
     local rare_row = find("derpy_mr_row_" .. ia)
     eq(find_uicomponent(rare_row, "pn3").visible, false, "two goods: the third pair hidden")
     -- FOLDING: a section's click hides its kind and says so
-    click("derpy_mr_row_" .. sec_of("Works that last"))
+    click("derpy_mr_row_" .. sec_of("Permanent works"))
     eq(row_of("last_granary"), nil, "folded: its rows hidden")
     dump("workshop_folded")   -- the preview draws a folded section's arrow
-    local wl = find_uicomponent(find("derpy_mr_row_" .. sec_of("Works that last")), "fold")
+    local wl = find_uicomponent(find("derpy_mr_row_" .. sec_of("Permanent works")), "fold")
     eq(wl.visible and wl.rot[0], math.pi * 3 / 2, "the section's arrow points right")
-    eq(string.find(S.data[sec_of("Works that last")][1], "hidden", 1, true), nil, "and no word says so")
+    eq(string.find(S.data[sec_of("Permanent works")][1], "hidden", 1, true), nil, "and no word says so")
     eq(row_of("army_ammo") ~= nil, true, "other kinds stay")
-    click("derpy_mr_row_" .. sec_of("Works that last")); eq(row_of("last_granary") ~= nil, true, "unfolded again")
-    eq(find_uicomponent(find("derpy_mr_row_" .. sec_of("Works that last")), "fold").rot[0], 0, "its arrow points down")
+    click("derpy_mr_row_" .. sec_of("Permanent works")); eq(row_of("last_granary") ~= nil, true, "unfolded again")
+    eq(find_uicomponent(find("derpy_mr_row_" .. sec_of("Permanent works")), "fold").rot[0], 0, "its arrow points down")
     eq(#ERRORS, 0, "no errors: " .. table.concat(ERRORS, "; "))
     FACTIONS.fac_a, DERPY_MR_FLOWS, cm.get_campaign_ui_manager = realm0, flows0, cuim0
     CHARS[91] = nil
@@ -2335,7 +2537,7 @@ end
 do
     local fl = DERPY_MR_FLOWS
     DERPY_MR_FLOWS = { rates = function() return {actions=true,army_provisions=true} end, provision_rows = function()
-        return {{id="801", held=25, cap=50, need=5, short=0, auto=true, source=A, reason="Local stores above Keep"}}
+        return {{id="801", held=25, cap=50, need=5, short=0, auto=true, source=A, reason="It refills from this settlement."}}
     end, request=function(f,...) REQ[#REQ+1]=f .. "|" .. table.concat({...},"|") end }
     local view, focus = S.view, S.focus
     S.view, S.focus = "spending", "army:801"
@@ -2351,10 +2553,10 @@ do
     dump("army")
     DERPY_MR_FLOWS.provision_rows=function()
         return {{id="801",held=0,cap=50,need=5,short=2,auto=true,mobile=true,buy=10,price=100,
-            reason="Field rations: 10 for 100 gold. Load to buy."}}
+            reason="You can buy 10 rations for 100 gold."}}
     end
     S.refresh()
-    eq(S.data[2][1],"Buy field rations","mobile purchase is explicit")
+    eq(S.data[2][1],"Buy rations","mobile purchase is explicit")
     eq(S.data[2][3],"100 gold","field price is visible")
     eq(S.data[2].send.label,"Buy","field action names its payment")
     eq(S.data[2].send.off,false,"mobile army may buy without local store")
@@ -2389,8 +2591,8 @@ do
     S.view,S.focus="spending","route:77"; S.refresh()
     eq(S.view_key(),"trade_focus","order editor uses rule columns")
     eq(S.data[2].route,"77","target row identifies saved order")
-    eq(S.data[4][1],"Internal transfer: no gold","an own-faction order carries no price")
-    eq(S.data[5][1],"Gold currently in escrow","and no last-cart row")
+    eq(S.data[4][1],"Your own goods: free","an own-faction order carries no price")
+    eq(S.data[5][1],"Gold set aside","and no last-cart row")
     local n=#REQ
     press(find_uicomponent(find("derpy_mr_row_2"),"derpy_mr_policy_plus"))
     eq(REQ[#REQ],LOCAL.."|route_edit|77|target|110","target button reaches synchronized door")
@@ -2398,15 +2600,15 @@ do
     press(sendb(7)); eq(REQ[#REQ],LOCAL.."|route_ctl|77|cancel","cancel button requests correct action")
     dump("route")
     order.seller="fac_p"; order.last_price_c=82; S.refresh()
-    eq(S.data[4][1],"Price per delivered unit","a partner order is priced per delivered unit")
+    eq(S.data[4][1],"Price each","a partner order is priced per cart")
     eq(S.data[4][2],"0.82","at the last cart's price, in gold to the hundredth")
-    local WHY="Each cart costs the seller's price plus 10% when it leaves, or what the goods would sell for at your store if that is more. Shows the last cart's price. Next cart: "
-    eq(S.data[4].tip,WHY.."1.57.","and the tip says what it costs and what the next cart will")
+    local WHY="The last cart cost this and the next one costs "
+    eq(S.data[4].tip,WHY.."1.57 each.","and the tip says what it costs and what the next cart will")
     eq(CART_ARGS[1],"t_seller","the next cart is priced for the order's seller"); eq(CART_ARGS[2],"t_from","from its source")
     eq(CART_ARGS[3]:name(),LOCAL,"for the buyer"); eq(CART_ARGS[4],"t_to","into its destination"); eq(CART_ARGS[5],"coal","in its good")
     NEXT_CART=nil; S.refresh()
-    eq(S.data[4].tip,WHY.."-.","a cart with no price shows a dash"); NEXT_CART=157; S.refresh()
-    eq(S.data[5][1],"Gold currently in escrow","in one row, not two")
+    eq(S.data[4].tip,WHY.."an unknown amount.","a cart with no price shows a dash"); NEXT_CART=157; S.refresh()
+    eq(S.data[5][1],"Gold set aside","in one row, not two")
     dump("route_partner")
     order.last_price_c=nil; S.refresh()
     eq(S.data[4][2],"Set per cart","no price to show before the first cart")
@@ -2414,7 +2616,7 @@ do
     order.from="reg_c"
     S.view,S.focus="settlements","routes:reg_a:coal"; S.refresh()
     eq(S.data[1][3],"at least 3 turns","offer displays the calculator's figure as a least: no road is searched for a panel")
-    eq(string.find(S.data[1].tip,"by the length of its road",1,true)~=nil,true,"and the tip says a cart takes its road's length")
+    eq(string.find(S.data[1].tip,"depending on the road",1,true)~=nil,true,"and the tip says a cart takes its road's length")
     eq(string.find(S.data[1].tip,"coordinate distance",1,true),nil,"and no longer says the straight line decides")
     press(sendb(1))
     eq(REQ[#REQ],LOCAL.."|route_new|reg_b|reg_a|coal|100|100","Create button requests explicit recurring terms")
@@ -2422,11 +2624,11 @@ do
     f.factions_trading_with=function() return list({faction("fac_p",{B})}) end
     NEXT_CART=1483
     S.refresh()
-    eq(S.data[1][4],"Internal","an own-faction offer needs no gold")
+    eq(S.data[1][4],"Your own","an own-faction offer needs no gold")
     eq(S.data[2][4],"14.83","a partner's offer shows what a cart costs")
     eq(CART_ARGS[1]:name(),"fac_p","priced for the partner selling"); eq(CART_ARGS[2]:name(),"reg_b","from its store")
     eq(CART_ARGS[3]:name(),LOCAL,"for the buyer"); eq(CART_ARGS[4]:name(),"reg_a","into the buyer's store"); eq(CART_ARGS[5],"coal","in that good")
-    eq(string.find(S.data[2].tip,"Each cart costs the seller's price plus 10% when it leaves, or what the goods would sell for at your store if that is more.",1,true)~=nil,true,"and says what that is")
+    eq(string.find(S.data[2].tip,"You pay the selling price plus 10% or your own store price if that is higher.",1,true)~=nil,true,"and says what that is")
     eq(string.find(S.data[2].tip,"fixed price",1,true),nil,"and no longer calls it fixed")
     NEXT_CART=nil; S.refresh()
     eq(S.data[2][4],"-","a cart with no price shows no price")
@@ -2448,7 +2650,7 @@ do
     cm.get_campaign_ui_manager=function() return {get_char_selected_cqi=function() return pick end} end
     DERPY_MR_FLOWS = {rates=function() return {army_provisions=enabled,actions=true} end,
         provision_force=function() return allowed end,
-        provision_rows=function() return {{id="801",held=25,cap=50,need=5,short=0,auto=true,reason="Local stores above Keep"}} end}
+        provision_rows=function() return {{id="801",held=25,cap=50,need=5,short=0,auto=true,reason="It refills from this settlement."}} end}
     local army = new("button_group_army",UI_ROOT);army.x,army.y,army.w,army.h=500,800,169,55
     local template = new("button_recruitment",army);template.w,template.h=55,55
     S.show(false); S.army_button_poll()
@@ -2457,7 +2659,7 @@ do
     eq(widget.images[0],"ui/skins/default/derpy_mr_provisions.png","provisions use a padded native army-bar icon")
     eq(widget.text,"5","icon badge shows food needed per turn")
     eq(widget.parent,army,"provisions belongs to native army bar")
-    eq(string.find(widget.tip,"Carried: 25 / 50")~=nil,true,"tooltip shows carried provisions")
+    eq(string.find(widget.tip,"carries 25 of 50")~=nil,true,"tooltip shows carried provisions")
     local n=#REQ
     click("derpy_mr_army_open")
     eq(S.focus,"army:801","button opens selected force")
@@ -2498,11 +2700,11 @@ end
         series = function() return { 3, 4, 5 }, { 0, 50, 100 } end, last = function() return { made = 12 } end,
     }
     local function has(text, part) return string.find(text, part, 1, true) ~= nil end
-    local PRICE = "Price 0.75 (25% of 3.00). 20 turns of war materials in store, cheap here. Buyers pay 0.82, sellers get 0.68."
+    local PRICE = "The price is 0.75 instead of 3.00.\nIt is cheap because the stores hold 20 turns of war materials.\nYou buy for 0.82 and sell for 0.68."
     eq(S.price_tip(CHEAP, "war"), PRICE, "stock cover, below 100, counted over the category")
-    eq(S.price_tip(DEAR, "war"), "Price 5.25 (175% of 3.00). Store 25% full, dear here. Buyers pay 5.77, sellers get 4.77.", "fullness, above 100")
-    eq(S.price_tip(FAIR, "war"), "Price 3.00 (100% of 3.00). 1 turn of war materials in store, fair price. Buyers pay 3.30, sellers get 2.72.", "at 100")
-    eq(S.price_tip(CHEAP, "provisions"), "Price 0.75 (25% of 3.00). 20 turns of provisions in store, cheap here. Buyers pay 0.82, sellers get 0.68.", "each category by its own word")
+    eq(S.price_tip(DEAR, "war"), "The price is 5.25 instead of 3.00.\nIt is expensive because the store is 25% full.\nYou buy for 5.77 and sell for 4.77.", "fullness, above 100")
+    eq(S.price_tip(FAIR, "war"), "The price is the normal 3.00.\nYou buy for 3.30 and sell for 2.72.", "at 100")
+    eq(S.price_tip(CHEAP, "provisions"), "The price is 0.75 instead of 3.00.\nIt is cheap because the stores hold 20 turns of provisions.\nYou buy for 0.82 and sell for 0.68.", "each category by its own word")
     eq(S.use_of("coal"), "war", "a good's use comes from the goods list")
     -- a settlement's stores: Bravo's coal is full and cheap, its iron has no price
     S.view = "settlements"; S.show(true, "reg_b")
@@ -2511,30 +2713,30 @@ end
     for _, r in ipairs(S.data) do if r.stem == "coal" then coal = r elseif r.stem == "iron" then iron = r end end
     eq(coal[2], "200 / 200 [[col:red]]Full[[/col]]", "a full store keeps its mark in Held / Space")
     eq(coal[4], "0.75", "the price in gold to the hundredth"); eq(cell(1, 4).text, "0.75", "drawn in the fourth cell")
-    eq(has(coal.tip, PRICE), true, "the tooltip carries the price sentence"); eq(has(coal.tip, "cheap here"), true, "cheap here")
+    eq(has(coal.tip, PRICE), true, "the tooltip carries the price sentence"); eq(has(coal.tip, "cheap because"), true, "cheap")
     eq(has(coal.tip, S.FULL_TIP), true, "and still says the store is full")
     eq(iron[2], "50 / 200", "not full: no mark"); eq(iron[4], "-", "a good with no quote shows a dash")
-    eq(has(iron.tip, "Price"), false, "and no price sentence")
+    eq(has(iron.tip, "The price is"), false, "and no price sentence")
     eq(find("hdr_4").halign, "right", "the Price head is right-aligned like the figures before it")
     eq(cell(1, 4).halign, "right", "and so is its cell"); eq(cell(1, 3).halign, "right", "as Per turn is")
     dump("settlement_focus")   -- the preview draws Bravo with its prices (overwrites Alpha's plain dump)
     -- a quote the sentence cannot be built from: the price still shows, with no sentence, and no error
     BAD = true; S.refresh()
     for _, r in ipairs(S.data) do if r.stem == "iron" then iron = r end end
-    eq(iron[4], "0.75", "a malformed quote still gives its price"); eq(has(iron.tip, "Price"), false, "and no sentence")
+    eq(iron[4], "0.75", "a malformed quote still gives its price"); eq(has(iron.tip, "The price is"), false, "and no sentence")
     eq(#ERRORS, 0, "and raises nothing"); BAD = false
     -- a good's drill-down: a row a settlement, each with its own price
     S.view = "goods"; S.show(true, "coal")
     eq(find("hdr_4").text, "Price", "the good drill-down's fourth header")
     eq(S.data[1][1], "Bravo", "most held first"); eq(S.data[1][2], "200 / 200 [[col:red]]Full[[/col]]", "the full mark in Held / Space")
     eq(S.data[1][4], "0.75", "Bravo's price"); eq(S.data[2][4], "5.25", "Alpha's price")
-    eq(has(S.data[1].tip, S.FULL_TIP), true, "Bravo's tooltip still says full"); eq(has(S.data[1].tip, "cheap here"), true, "and cheap")
-    eq(has(S.data[2].tip, "Store 25% full, dear here."), true, "Alpha's says dear")
-    eq(find("derpy_mr_sell").tip, "Sell 180 Coal for 114 gold, 0.63 each: what your stores hold above half their space."
+    eq(has(S.data[1].tip, S.FULL_TIP), true, "Bravo's tooltip still says full"); eq(has(S.data[1].tip, "cheap because"), true, "and cheap")
+    eq(has(S.data[2].tip, "expensive because the store is 25% full"), true, "Alpha's says dear")
+    eq(find("derpy_mr_sell").tip, "Sell the 180 Coal your stores hold over half full for 114 gold (0.63 each)."
         .. "\n150 from Bravo at 0.68\n30 from Alpha at 0.40", "the Sell tooltip lists each store's lot")
     eq(find("hdr_4").halign, "right", "the drill-down's Price head too"); eq(cell(1, 4).halign, "right", "and its cell")
     -- THE SELL TOOLTIP names at most 8 stores and counts the rest
-    local many, want = {}, "Sell 55 Coal for 100 gold, 1.81 each: what your stores hold above half their space."
+    local many, want = {}, "Sell the 55 Coal your stores hold over half full for 100 gold (1.81 each)."
     for i = 1, 10 do many[i] = { region = "reg_" .. i, n = i, price = i } end
     for i = 1, 8 do want = want .. string.format("\n%d from reg_%d at 0.%02d", i, i, i) end
     eq(S.sell_tip({ n = 55, gold = 100, price = 181, lots = many }, "Coal"), want .. "\nand 2 more stores", "ten lots: eight lines and a count")
@@ -2546,5 +2748,93 @@ end
     DERPY_MR_FLOWS, S.view, S.focus, f.region_list = fl, view, focus, regions
     S.show(false)
 end)()
+-- ---- PANEL SIZE (author, 2026-11-02: "UI size options, same as the derpy great guilds mod") -----
+-- MCT's Small / Medium / Large, each its own set of .twui.xml with real fonts. The screen factor is
+-- spent on the same choice, so 1440p's Medium draws Large's files (GGUI.pick_size).
+eq(S.pick_size("medium", 1920, 1080, 1), "medium", "1080p: Medium is Medium")
+eq(S.pick_size("small", 1920, 1080, 1), "small", "1080p: Small")
+eq(S.pick_size("large", 1920, 1080, 1), "large", "1080p: Large")
+eq(S.pick_size("huge", 1920, 1080, 1), "medium", "an unknown size opens at Medium")
+eq(S.scale_for(2560, 1440), 1.33, "1440p is a third larger than the design screen")
+eq(S.scale_for(1600, 900), 1, "never below the design size")
+eq(S.pick_size("medium", 2560, 1440, 1.33), "large", "1440p: Medium draws Large's files")
+eq(S.pick_size("small", 2560, 1440, 1.33), "medium", "and Small draws Medium's")
+eq(S.pick_size("large", 1100, 800, 1), "medium", "a Large panel that does not fit the screen opens at Medium")
+;(function()   -- a function, not a do block: the main chunk is at its 200 locals
+    local want
+    get_mct = function() return { get_mod_by_key = function(_, k)
+        eq(k, "derpy_more_resources", "the size is this mod's own option")
+        return { get_option_by_key = function(_, o)
+            eq(o, "ui_size", "the Panel size option")
+            return { get_finalized_setting = function() return want end } end } end } end
+    local opener = find("derpy_mr_stores_button")
+    REPEATS.derpy_mr_follow_bar()
+    local ox, oy, ow = opener.x, opener.y, opener.w
+    local campaign = CAMPAIGN
+    S.view, S.focus = "goods", nil
+    -- the size previews draw the Edicts section too
+    local base_flows = DERPY_MR_FLOWS
+    DERPY_MR_FLOWS = EDICT_FLOWS(base_flows)
+    -- {size, file suffix, panel w, h, row pitch, a cell's drop into its row}
+    for _, t in ipairs({ { "large", "_lg", 1147, 853, 37, 5 }, { "small", "_sm", 737, 549, 24, 3 },
+                         { "medium", "", 860, 640, 28, 4 } }) do
+        want = t[1]
+        S.show(false); S.show(true)
+        local pn = find("derpy_mr_stores_panel")
+        eq(pn.file, "derpy_mr_stores_panel" .. t[2], t[1] .. ": the panel is built from its own files")
+        eq(pn.w .. "x" .. pn.h, t[3] .. "x" .. t[4], t[1] .. ": the panel's size")
+        eq(pn.x .. "," .. pn.y, math.floor((1920 - t[3]) / 2) .. "," .. math.floor((1080 - t[4]) / 2), t[1] .. ": centred")
+        local n = 0
+        for _, k in ipairs(UI_ROOT.kids) do if k.name == "derpy_mr_stores_panel" then n = n + 1 end end
+        eq(n, 1, t[1] .. ": the panel at the old size is gone")
+        eq(find("derpy_mr_row_1").file, "derpy_mr_stores_row" .. t[2], t[1] .. ": rows from its own file")
+        eq(find("derpy_mr_row_2").y - find("derpy_mr_row_1").y, t[5], t[1] .. ": row pitch")
+        eq(cell(1, 1).y - find("derpy_mr_row_1").y, t[6], t[1] .. ": a cell's place in its row scales too")
+        eq(find("list_clip").h, DERPY_MR_STORES_L.ROWS * t[5], t[1] .. ": the list shows as many rows")
+        REPEATS.derpy_mr_follow_bar()
+        eq(opener.x .. "," .. opener.y .. "," .. opener.w, ox .. "," .. oy .. "," .. ow,
+           t[1] .. ": the HUD opener keeps its size and place")
+        if t[1] ~= "medium" then
+            dump("size_" .. t[1])
+            CAMPAIGN = "wh3_main_combi"; click("derpy_mr_tab_map")
+            dump("size_" .. t[1] .. "_map")
+            CAMPAIGN = campaign; click("derpy_mr_tab_goods")
+        end
+    end
+    DERPY_MR_FLOWS = base_flows
+    -- the same size again keeps the panel it has
+    local before = find("derpy_mr_stores_panel")
+    S.show(false); S.show(true)
+    eq(find("derpy_mr_stores_panel") == before, true, "the same size reopens the same panel")
+    S.show(false)
+    get_mct = nil
+end)()
 eq(#ERRORS, 0, "script errors: " .. table.concat(ERRORS, "; "))
+-- NOTHING KEPT, the whole module (the 1.0 live pass, 2026-11-02): once every test above has run, no engine interface
+-- is reachable from S through its tables or its functions' upvalues. A stub interface stands in for the engine's
+-- userdata: a table with its own is_null_interface.
+do
+    local found, seen = {}, {}
+    local function walk(v, path)
+        if seen[v] then return end
+        if type(v) == "table" then
+            seen[v] = true
+            if type(rawget(v, "is_null_interface")) == "function" then found[#found + 1] = path; return end
+            for k, x in pairs(v) do walk(x, path .. "." .. tostring(k)) end
+        elseif type(v) == "function" then
+            seen[v] = true
+            local i = 1
+            while true do
+                local name, x = debug.getupvalue(v, i)
+                if not name then break end
+                walk(x, path .. "<" .. name .. ">")
+                i = i + 1
+            end
+        end
+    end
+    walk(S, "S")
+    table.sort(found)
+    assert(#found == 0, "engine interfaces kept in the stores module: " .. table.concat(found, " "))
+end
+
 print("harness ok")

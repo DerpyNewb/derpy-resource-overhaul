@@ -34,7 +34,9 @@ import preview_guilds_panel as PG                                    # noqa: E40
 
 PREFIX = "derpy_mr_stores_"
 TABS = ("goods", "goods_focus", "settlements", "settlement_focus", "economy", "army", "army_mobile", "route", "route_partner", "route_offer", "found", "trade", "trade_focus", "spending", "escort", "workshop", "workshop_focus", "workshop_folded", "production", "map",
-        "map_wh3_main_combi", "map_cr_combi_expanded", "map_wh3_main_chaos")
+        "map_wh3_main_combi", "map_cr_combi_expanded", "map_wh3_main_chaos",
+        # MCT Panel size (2026-11-02): the list and the map at Small and Large
+        "size_small", "size_small_map", "size_large", "size_large_map")
 # Where a campaign's minimap is: CA's data_maps.pack, or the map mod's own pack (IEE).
 MAP_PACKS = (os.path.join(PG.GAME, "data_maps.pack"),
              os.path.join(os.path.dirname(os.path.dirname(PG.GAME)), "..", "workshop", "content", "1142710",

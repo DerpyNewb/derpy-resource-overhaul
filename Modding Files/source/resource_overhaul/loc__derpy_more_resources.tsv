@@ -366,6 +366,8 @@ pooled_resource_factors_display_name_positive_derpy_mr_spent	Spent	false
 pooled_resource_factors_display_name_negative_derpy_mr_spent	Spent	false
 pooled_resource_factors_display_name_positive_derpy_mr_sold	Sold	false
 pooled_resource_factors_display_name_negative_derpy_mr_sold	Sold	false
+pooled_resource_factors_display_name_positive_derpy_mr_spoiled	Spoiled	false
+pooled_resource_factors_display_name_negative_derpy_mr_spoiled	Spoiled	false
 pooled_resources_display_name_derpy_mr_store_salted_fish	Salted Fish	false
 pooled_resources_description_derpy_mr_store_salted_fish	Salted Fish kept in this settlement's stores. They fill each turn with what its buildings make.	false
 pooled_resources_positive_factors_display_name_derpy_mr_store_salted_fish	Stocked	false
@@ -798,6 +800,8 @@ effect_bundles_localised_title_derpy_mr_garrison_stocked	Garrison stocked	false
 effect_bundles_localised_description_derpy_mr_garrison_stocked	War materials fill at least a quarter of one store's space in this settlement.	false
 effect_bundles_localised_title_derpy_mr_comforts	Comforts	false
 effect_bundles_localised_description_derpy_mr_comforts	Luxuries fill at least a quarter of one store's space in this settlement.	false
+effect_bundles_localised_title_derpy_mr_well_fed_chd	Well fed	false
+effect_bundles_localised_description_derpy_mr_well_fed_chd	After eating, this settlement's stores still hold five turns of provisions, and its fed slaves are quieter.	false
 effect_bundles_localised_title_derpy_mr_service_archives	Scholars' halls	false
 effect_bundles_localised_description_derpy_mr_service_archives	Paid each turn from this province capital's stores. Province growth +5.	false
 effect_bundles_localised_title_derpy_mr_service_builders	Builders' yards	false
@@ -820,16 +824,20 @@ effect_bundles_localised_title_derpy_mr_event_siege	Siege Stores	false
 effect_bundles_localised_description_derpy_mr_event_siege	This settlement's stores feed its besieged garrison.	false
 effect_bundles_localised_title_derpy_mr_event_restore	Restored	false
 effect_bundles_localised_description_derpy_mr_event_restore	Repaired from this settlement's own stores: public order is up.	false
+effect_bundles_localised_title_derpy_mr_event_feast_chd	Full Rations	false
+effect_bundles_localised_description_derpy_mr_event_feast_chd	Provisions from this settlement's stores feed its slaves: public order is up.	false
+effect_bundles_localised_title_derpy_mr_event_smugglers	Smuggled Goods	false
+effect_bundles_localised_description_derpy_mr_event_smugglers	Goods bought from smugglers fill this settlement's stores: control is down.	false
 effect_bundles_localised_title_derpy_mr_supply_materials	Materials on hand	false
 effect_bundles_localised_description_derpy_mr_supply_materials	Supplied from the province capital's stores each turn: construction cost -25%.	false
 effect_bundles_localised_title_derpy_mr_supply_stable	Stable stocked	false
-effect_bundles_localised_description_derpy_mr_supply_stable	Supplied from the province capital's stores each turn: recruit cost -15% for cavalry and monsters.	false
+effect_bundles_localised_description_derpy_mr_supply_stable	Supplied from the province capital's stores each turn: recruit cost -15% for cavalry, monsters and gyrocopters.	false
 effect_bundles_localised_title_derpy_mr_supply_arms	Arms stocked	false
 effect_bundles_localised_description_derpy_mr_supply_arms	Supplied from the province capital's stores each turn: recruit cost -15% for infantry and artillery.	false
 effect_bundles_localised_title_derpy_mr_up_gromril	Gromril Gate	false
-effect_bundles_localised_description_derpy_mr_up_gromril	Built from your stores: melee defence +10 for your armies here, armour +10 in the province.	false
+effect_bundles_localised_description_derpy_mr_up_gromril	Built from your stores: melee defence +10 for your armies here and armour +10 in the province.	false
 effect_bundles_localised_title_derpy_mr_up_ithilmar	Ithilmar Spire	false
-effect_bundles_localised_description_derpy_mr_up_ithilmar	Built from your stores: public order +3 in the province, income +10% here.	false
+effect_bundles_localised_description_derpy_mr_up_ithilmar	Built from your stores: public order +3 in the province and income +10% here.	false
 effect_bundles_localised_title_derpy_mr_up_dragon_bone	Dragon Bone Shrine	false
 effect_bundles_localised_description_derpy_mr_up_dragon_bone	Built from your stores: units recruited in the province gain a rank.	false
 effect_bundles_localised_title_derpy_mr_up_sea_dragon_hide	Sea Dragon Moorings	false
@@ -848,6 +856,20 @@ effect_bundles_localised_title_derpy_mr_order_muster	Muster	false
 effect_bundles_localised_description_derpy_mr_order_muster	Paid for from your stores: recruit rank +1 for every unit.	false
 effect_bundles_localised_title_derpy_mr_order_great_works	Great Works	false
 effect_bundles_localised_description_derpy_mr_order_great_works	Paid for from your stores: construction cost -20% for every building.	false
+effect_bundles_localised_title_derpy_mr_edict_plenty	Plenty	false
+effect_bundles_localised_description_derpy_mr_edict_plenty	Settlements eat 3 provisions a turn for each level. Growth +10 in every province.	false
+effect_bundles_localised_title_derpy_mr_edict_plenty_chd	Plenty	false
+effect_bundles_localised_description_derpy_mr_edict_plenty_chd	Settlements eat 3 provisions a turn for each level. Control +2 in every province.	false
+effect_bundles_localised_title_derpy_mr_edict_rationing	Rationing	false
+effect_bundles_localised_description_derpy_mr_edict_rationing	Settlements eat 1 provision a turn for each level. Control -2 in every province.	false
+effect_bundles_localised_title_derpy_mr_edict_war	War economy	false
+effect_bundles_localised_description_derpy_mr_edict_war	Workshops that make blackpowder, tools or leather make half as much again. Trade income -10%.	false
+effect_bundles_localised_title_derpy_mr_edict_merchant	Merchant	false
+effect_bundles_localised_description_derpy_mr_edict_merchant	Trade agreements send twice their usual share. Recruits take a quarter more from your stores.	false
+effect_bundles_localised_title_derpy_mr_edict_open	Open roads	false
+effect_bundles_localised_description_derpy_mr_edict_open	Trade crossing your lands pays no tolls. Trade income +5%.	false
+effect_bundles_localised_title_derpy_mr_edict_closed	Closed roads	false
+effect_bundles_localised_description_derpy_mr_edict_closed	Other factions' trade cannot cross your lands. Control +1 in every province.	false
 effect_bundles_localised_title_derpy_mr_army_hungry	Short rations	false
 effect_bundles_localised_description_derpy_mr_army_hungry	Two missed meals. Refill locally or buy field rations where available.	false
 effect_bundles_localised_title_derpy_mr_army_starved	Empty provision wagons	false
@@ -855,24 +877,37 @@ effect_bundles_localised_description_derpy_mr_army_starved	Three or more missed 
 event_feed_strings_text_derpy_mr_army_food_title	Provision wagons running dry	false
 event_feed_strings_text_derpy_mr_army_food_primary	An army has missed its meal.	false
 event_feed_strings_text_derpy_mr_army_food_secondary	Open Resource Vault > Spending to check army provisions. Refill from your own unsieged local settlement above Keep. Repeated shortages reduce movement and replenishment.	false
+event_feed_strings_text_derpy_mr_road_loss_title	Cargo robbed on the road	false
+event_feed_strings_text_derpy_mr_road_loss_primary	Bandits took part of a cargo bound for you.	false
+event_feed_strings_text_derpy_mr_road_loss_secondary	Open Resource Vault > Trade to see what arrived.	false
 effect_bundles_localised_title_derpy_mr_rc_army_ammo	Ammunition Train	false
-effect_bundles_localised_description_derpy_mr_rc_army_ammo	Paid for from your stores: ammunition +20%, 5 turns.	false
+effect_bundles_localised_description_derpy_mr_rc_army_ammo	Paid for from your stores: ammunition +20% (5 turns).	false
 effect_bundles_localised_title_derpy_mr_rc_army_forge	Field Forge	false
-effect_bundles_localised_description_derpy_mr_rc_army_forge	Paid for from your stores: armour +15, 5 turns.	false
+effect_bundles_localised_description_derpy_mr_rc_army_forge	Paid for from your stores: armour +15 (5 turns).	false
 effect_bundles_localised_title_derpy_mr_rc_army_remounts	Remounts	false
-effect_bundles_localised_description_derpy_mr_rc_army_remounts	Paid for from your stores: replenishment +10%, 5 turns.	false
+effect_bundles_localised_description_derpy_mr_rc_army_remounts	Paid for from your stores: replenishment +10% (5 turns).	false
 effect_bundles_localised_title_derpy_mr_rc_army_medicine	Medicine Chests	false
-effect_bundles_localised_description_derpy_mr_rc_army_medicine	Paid for from your stores: attrition -25%, 5 turns.	false
+effect_bundles_localised_description_derpy_mr_rc_army_medicine	Paid for from your stores: attrition -25% (5 turns).	false
 effect_bundles_localised_title_derpy_mr_rc_last_granary	Great Granary	false
-effect_bundles_localised_description_derpy_mr_rc_last_granary	Paid for from your stores: growth +15, for good.	false
+effect_bundles_localised_description_derpy_mr_rc_last_granary	Paid for from your stores: growth +15 in every province. Grain is safe from spoiling up to half of each store. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_granary_chd	Great Granary	false
+effect_bundles_localised_description_derpy_mr_rc_last_granary_chd	Paid for from your stores: Labour taken after battles +15%. Grain is safe from spoiling up to half of each store. Permanent.	false
 effect_bundles_localised_title_derpy_mr_rc_last_records	Hall of Records	false
-effect_bundles_localised_description_derpy_mr_rc_last_records	Paid for from your stores: research +15%, for good.	false
+effect_bundles_localised_description_derpy_mr_rc_last_records	Paid for from your stores: research rate +15%. Permanent.	false
 effect_bundles_localised_title_derpy_mr_rc_last_bazaar	Grand Bazaar	false
-effect_bundles_localised_description_derpy_mr_rc_last_bazaar	Paid for from your stores: trade income +15%, for good.	false
+effect_bundles_localised_description_derpy_mr_rc_last_bazaar	Paid for from your stores: trade income +15%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_loot	Loot Hoard	false
+effect_bundles_localised_description_derpy_mr_rc_last_loot	Paid for from your stores: income from sacking and looting settlements +15%. Permanent.	false
 effect_bundles_localised_title_derpy_mr_rc_last_arsenal	Arsenal	false
-effect_bundles_localised_description_derpy_mr_rc_last_arsenal	Paid for from your stores: upkeep -10%, for good.	false
+effect_bundles_localised_description_derpy_mr_rc_last_arsenal	Paid for from your stores: army upkeep -10%. Permanent.	false
 effect_bundles_localised_title_derpy_mr_rc_last_stables	Royal Stables	false
-effect_bundles_localised_description_derpy_mr_rc_last_stables	Paid for from your stores: cavalry cost -20%, for good.	false
+effect_bundles_localised_description_derpy_mr_rc_last_stables	Paid for from your stores: cavalry recruitment cost -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_engineers	Engineers' Yard	false
+effect_bundles_localised_description_derpy_mr_rc_last_engineers	Paid for from your stores: artillery recruitment cost -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_pens	Beast Pens	false
+effect_bundles_localised_description_derpy_mr_rc_last_pens	Paid for from your stores: monster recruitment cost -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_boneyard	Bone Yard	false
+effect_bundles_localised_description_derpy_mr_rc_last_boneyard	Paid for from your stores: monster recruitment cost -20%. Permanent.	false
 effect_bundles_localised_title_derpy_mr_exports_held	Exports held	false
 effect_bundles_localised_description_derpy_mr_exports_held	You are holding some resources back from your trade agreements (the Resource Vault's Trade tab). Your regions make none of them for trade, so they earn you no trade income. Your stores still fill.	false
 dilemmas_localised_title_derpy_mr_dil_feast	A Feast	false
@@ -925,6 +960,93 @@ campaign_payload_ui_details_description_derpy_mr_dil_raid_reward	Win and the car
 cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_raidSECOND	Let it pass	false
 cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_raidSECOND	The shipment goes on its way.	false
 campaign_payload_ui_details_description_derpy_mr_dil_raid_pass	The shipment goes on its way	false
+dilemmas_localised_title_derpy_mr_dil_feast_chd	Full Rations	false
+dilemmas_localised_description_derpy_mr_dil_feast_chd	The stores of {{CcoCampaignEventDilemma:RegionTargetName}} overflow with provisions. Fed, the slaves in its pits would work quietly.	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_feast_chdFIRST	Feed the pits	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_feast_chdFIRST	Spend 100 provisions: public order +10 there for 5 turns.	false
+campaign_payload_ui_details_description_derpy_mr_dil_feast_chd_cost	Spend 100 provisions	false
+campaign_payload_ui_details_description_derpy_mr_dil_feast_chd_reward	Public order +10 there for 5 turns	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_feast_chdSECOND	Keep the stores	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_feast_chdSECOND	Nothing is spent.	false
+dilemmas_localised_title_derpy_mr_dil_road_ambush	Bandit Ambush	false
+dilemmas_localised_description_derpy_mr_dil_road_ambush	Bandits lie in wait for your cargo near {{CcoCampaignEventDilemma:RegionTargetName}}.	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_road_ambushFIRST	Fight them	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_road_ambushFIRST	Your guards fight the bandits: win and the cargo goes on.	false
+campaign_payload_ui_details_description_derpy_mr_dil_road_ambush_cost	Your guards fight the bandits	false
+campaign_payload_ui_details_description_derpy_mr_dil_road_ambush_reward	Win and the cargo goes on	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_road_ambushSECOND	Let it go	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_road_ambushSECOND	The bandits take half the cargo.	false
+campaign_payload_ui_details_description_derpy_mr_dil_road_ambush_pass	The bandits take half the cargo	false
+dilemmas_localised_title_derpy_mr_dil_road_highwaymen	Highwaymen	false
+dilemmas_localised_description_derpy_mr_dil_road_highwaymen	Highwaymen block the road near {{CcoCampaignEventDilemma:RegionTargetName}} and ask a price to let your cargo pass.	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_road_highwaymenFIRST	Pay them	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_road_highwaymenFIRST	Pay a fifth of the cargo's value: the cargo goes on.	false
+campaign_payload_ui_details_description_derpy_mr_dil_road_highwaymen_cost	Pay a fifth of the cargo's value	false
+campaign_payload_ui_details_description_derpy_mr_dil_road_highwaymen_reward	The cargo goes on	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_road_highwaymenSECOND	Refuse	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_road_highwaymenSECOND	They attack your guards: lose and the cargo is lost.	false
+campaign_payload_ui_details_description_derpy_mr_dil_road_highwaymen_pass	They attack your guards: lose and the cargo is lost	false
+dilemmas_localised_title_derpy_mr_dil_road_washout	A Washed-out Road	false
+dilemmas_localised_description_derpy_mr_dil_road_washout	Rain has washed out the road near {{CcoCampaignEventDilemma:RegionTargetName}}.	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_road_washoutFIRST	Wait	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_road_washoutFIRST	The cargo arrives a turn later: none of it is lost.	false
+campaign_payload_ui_details_description_derpy_mr_dil_road_washout_cost	The cargo arrives a turn later	false
+campaign_payload_ui_details_description_derpy_mr_dil_road_washout_reward	None of it is lost	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_road_washoutSECOND	Push on	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_road_washoutSECOND	Push through the mud: a tenth of the cargo is lost.	false
+campaign_payload_ui_details_description_derpy_mr_dil_road_washout_pass	Push through the mud: a tenth of the cargo is lost	false
+dilemmas_localised_title_derpy_mr_dil_smugglers	Smugglers	false
+dilemmas_localised_description_derpy_mr_dil_smugglers	The stores of {{CcoCampaignEventDilemma:RegionTargetName}} run low. Smugglers offer to fill them at a steep price.	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_smugglersFIRST	Buy from them	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_smugglersFIRST	Pay half again the local price, and control there falls by 3 for 5 turns: enough for 5 turns arrives now.	false
+campaign_payload_ui_details_description_derpy_mr_dil_smugglers_cost	Pay half again the local price, and control there falls by 3 for 5 turns	false
+campaign_payload_ui_details_description_derpy_mr_dil_smugglers_reward	Enough for 5 turns arrives now	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_smugglersSECOND	Send them away	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_smugglersSECOND	Nothing is spent.	false
+campaign_payload_ui_details_description_derpy_mr_dil_smugglers_pass	Nothing is spent	false
+dilemmas_localised_title_derpy_mr_dil_guild	Merchant Guild	false
+dilemmas_localised_description_derpy_mr_dil_guild	A merchant guild wants to buy your surplus {{CcoCampaignEventDilemma:ScriptObjectContext(Format("derpy_mr_guild_good_%d", PrimaryTargetFactionContext.CQI)).StringValue}} and pays well for it.	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_guildFIRST	Sign the contract	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_guildFIRST	Sell 20 a turn for 10 turns: you are paid a fifth above the local price.	false
+campaign_payload_ui_details_description_derpy_mr_dil_guild_cost	Sell 20 a turn for 10 turns	false
+campaign_payload_ui_details_description_derpy_mr_dil_guild_reward	You are paid a fifth above the local price	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_guildSECOND	Keep the stores	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_guildSECOND	Nothing is spent.	false
+dilemmas_localised_title_derpy_mr_dil_grain_rot	Grain Rot	false
+dilemmas_localised_description_derpy_mr_dil_grain_rot	Rot is spreading through the grain stored in {{CcoCampaignEventDilemma:RegionTargetName}}.	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_grain_rotFIRST	Clean the granary	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_grain_rotFIRST	Pay 50 gold: only a twentieth of the grain is lost.	false
+campaign_payload_ui_details_description_derpy_mr_dil_grain_rot_cost	Pay 50 gold	false
+campaign_payload_ui_details_description_derpy_mr_dil_grain_rot_reward	Only a twentieth of the grain is lost	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_grain_rotSECOND	Let it rot	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_grain_rotSECOND	Close to a third of the grain is lost.	false
+campaign_payload_ui_details_description_derpy_mr_dil_grain_rot_pass	Close to a third of the grain is lost	false
+dilemmas_localised_title_derpy_mr_dil_caravan_master	Caravan Master	false
+dilemmas_localised_description_derpy_mr_dil_caravan_master	A caravan master offers to see your cargo safely through the roads ahead.	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_caravan_masterFIRST	Hire him	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_caravan_masterFIRST	Pay a twentieth of your cargo's value: no trouble on the roads for 10 turns.	false
+campaign_payload_ui_details_description_derpy_mr_dil_caravan_master_cost	Pay a twentieth of your cargo's value	false
+campaign_payload_ui_details_description_derpy_mr_dil_caravan_master_reward	No trouble on the roads for 10 turns	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_caravan_masterSECOND	Send him away	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_caravan_masterSECOND	Nothing is spent.	false
+campaign_payload_ui_details_description_derpy_mr_dil_caravan_master_pass	Nothing is spent	false
+dilemmas_localised_title_derpy_mr_dil_toll_dispute	Toll Dispute	false
+dilemmas_localised_description_derpy_mr_dil_toll_dispute	{{CcoCampaignEventDilemma:FirstTargetFactionNameWithIcon}} resents the tolls its traders pay to cross your lands.	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_toll_disputeFIRST	Open the roads	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_toll_disputeFIRST	Your Roads edict becomes Open: relations with them improve.	false
+campaign_payload_ui_details_description_derpy_mr_dil_toll_dispute_cost	Your Roads edict becomes Open	false
+campaign_payload_ui_details_description_derpy_mr_dil_toll_dispute_reward	Relations with them improve	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_toll_disputeSECOND	Keep the tolls	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_toll_disputeSECOND	The tolls stay: relations with them get worse.	false
+campaign_payload_ui_details_description_derpy_mr_dil_toll_dispute_pass	The tolls stay: relations with them get worse	false
+dilemmas_localised_title_derpy_mr_dil_blockade_runner	Blockade Runner	false
+dilemmas_localised_description_derpy_mr_dil_blockade_runner	An enemy army blocks the road to {{CcoCampaignEventDilemma:FirstTargetFactionNameWithIcon}}. A runner knows a way past it.	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_blockade_runnerFIRST	Pay the runner	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_blockade_runnerFIRST	Pay a tenth of the cargo's value: this turn's goods leave anyway.	false
+campaign_payload_ui_details_description_derpy_mr_dil_blockade_runner_cost	Pay a tenth of the cargo's value	false
+campaign_payload_ui_details_description_derpy_mr_dil_blockade_runner_reward	This turn's goods leave anyway	false
+cdir_events_dilemma_choice_details_localised_choice_label_derpy_mr_dil_blockade_runnerSECOND	Keep the stores	false
+cdir_events_dilemma_choice_details_localised_choice_title_derpy_mr_dil_blockade_runnerSECOND	Nothing is spent.	false
 campaign_interactable_marker_infos_name_derpy_mr_shipment	Shipment	false
 campaign_interactable_marker_infos_tooltip_derpy_mr_shipment	A shipment of resources on the road between two settlements. An army at war with its owner can seize it by marching in.	false
 ancillaries_onscreen_name_derpy_mr_anc_gromril_armour	Gromril Armour	false

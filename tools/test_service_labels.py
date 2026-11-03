@@ -18,7 +18,7 @@ def check():
     assert set(expected)==set(goods.SERVICES),'Add the new service to the label check'
     states=[dict(key=k,definition=definitions[k],on=True,paid=True,open=True) for k in sorted(expected)]
     code='local states='+ui._lua(states)+'\n'
-    code+='S={ask=function() return states end,section=function(s) return s end,num=tostring,name=function(s) return s end}\n'
+    code+='S={ask=function() return states end,section=function(s) return s end,num=tostring,name=function(s) return s end,join=table.concat}\n'
     code+=source[start:end]
     code+='\nlocal v={rows={}}; S.economy_rows(v,{}, {name=function() return "test_region" end})\n'
     code+='for _,r in ipairs(v.rows) do if r.economy then print(r.economy.."|"..r[4]) end end\n'

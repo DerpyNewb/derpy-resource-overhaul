@@ -115,7 +115,7 @@ RULES = [
     ("incense", lambda g: g["climate"] == "climate_desert" and g["areas"] & {"araby", "nehekara"},
      "Frankincense of Araby, burned in the tombs of Nehekhara."),
     ("salted_meat", lambda g: True,
-     "Hunting buildings and settlement provisioners preserve local meat."),
+     "Hunting buildings, herds on the pastures and settlement provisioners preserve local meat."),
     # second batch, 2026-10-01
     ("carpets", lambda g: g["areas"] & {"araby"},
      "Arabyan carpets, woven in the cities of Araby."),
@@ -128,7 +128,7 @@ RULES = [
     ("glassware", lambda g: g["origin"] == "teb" or g["tail"] in ("marienburg", "lothern"),
      "Glass blown in the Tilean and Estalian cities, Marienburg's workshops, and Lothern."),
     ("wool", lambda g: g["areas"] & OLD_WORLD_FARMLAND and g["climate"] in ("climate_mountain", "climate_frozen"),
-     "Sheep graze the uplands and cold hills of the Old World's farmland."),
+     "Sheep graze the uplands and cold hills of the Old World's farmland, on its farms and pastures."),
     ("porcelain", lambda g: g["areas"] & {"cathay", "northern_cathay", "southern_cathay"}
      and g["climate"] in ("climate_temperate", "climate_savannah"),
      "Fired in the kilns of Cathay's lowland cities."),
@@ -150,7 +150,7 @@ RULES = [
 # Same shape as RULES; gen_resource_overhaul ships these through CA's own production effects.
 RULES += [
     ("hardtack", lambda g: False, "Campaign biscuits are processed from stored grain and salt."),
-    ("leather", lambda g: True, "Hunting camps cure hides for ordinary equipment."),
+    ("leather", lambda g: True, "Hunting camps and herds give hides for ordinary equipment."),
     ("cloth", lambda g: True, "Craft workshops weave plain cloth for everyday use."),
     ("tools", lambda g: True, "Metalworking workshops make tools."),
 ]
@@ -170,6 +170,13 @@ CA_RULES = [
      and (g["areas"] & {"bretonnia", "southern_empire", "border_princes", "eastern_border_princes",
                         "western_border_princes", "ulthuan"} or g["origin"] == "teb"),
      "Vineyards of Bretonnia, the southern Empire, the Border Princes, Tilea, Estalia and Ulthuan."),
+    # 2026-11-02: the quarries and pens CA gives no good of their own deposit (Chaos Dwarf, Greenskin)
+    ("marble", lambda g: "res_rom_marble" in g["deposits"],
+     "Every marble quarry cuts stone, the Chaos Dwarfs' included."),
+    ("timber", lambda g: "res_rom_timber" in g["deposits"],
+     "Every logging camp fells timber, the Chaos Dwarfs' included."),
+    ("animals", lambda g: "res_animals" in g["deposits"],
+     "Beasts are penned wherever the wild ones are caught, the Greenskins' pens included."),
 ]
 
 
