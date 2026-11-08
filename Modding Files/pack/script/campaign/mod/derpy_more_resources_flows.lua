@@ -26,6 +26,10 @@ DERPY_MR_FLOWS_DEFAULTS = {
     edicts = true,
     tolls = true,
     bandits = true,
+    ai_home_fed = true,
+    ai_field_rations = true,
+    ai_half_rations = false,
+    ai_food = false,
 }
 DERPY_MR_FLOWS_KIND = {
     eat = "eaten",
@@ -386,6 +390,653 @@ DERPY_MR_FLOWS_POOL_HAS = {
     wh_dlc07_brt_units_of_renown_pool = {wh2_dlc14_brt_chevaliers_de_lyonesse = true, wh_main_brt_bordeleaux = true, wh_main_brt_bretonnia = true, wh_main_brt_carcassonne = true},
     wh_dlc08_nor_units_of_renown_pool = {wh3_dlc20_nor_dolgan = true, wh3_dlc27_nor_sayl = true, wh3_dlc27_the_narj = true, wh_dlc08_nor_norsca = true, wh_dlc08_nor_wintertooth = true},
 }
+DERPY_MR_LOC_KEYS = {
+    ["Nothing is stored here yet."] = "derpy_mr_ui_9287bbc6af",
+    ["You hold no settlements and so have no stores."] = "derpy_mr_ui_34a9352977",
+    ["This store is full and anything more made here is lost."] = "derpy_mr_ui_92f77f56ea",
+    ["The history starts next turn."] = "derpy_mr_ui_726c1d67bc",
+    ["{1} [[col:red]]Full[[/col]]"] = "derpy_mr_ui_2f0091807b",
+    ["traded in"] = "derpy_mr_ui_d6e9e3b5b4",
+    ["traded out"] = "derpy_mr_ui_9bb32a5d4c",
+    ["Last turn: no change"] = "derpy_mr_ui_9b92ea99d8",
+    ["Last turn: {1}"] = "derpy_mr_ui_802464f5a6",
+    ["Last turn: {1}, ..."] = "derpy_mr_ui_914ff4e104",
+    ["{1} over {2} spoils at {3}% a turn"] = "derpy_mr_ui_758a938aea",
+    ["{1} and about {2} will spoil next turn."] = "derpy_mr_ui_88081346a0",
+    ["Turn {1}"] = "derpy_mr_ui_8479983520",
+    ["Start of turn {1}: {2} held"] = "derpy_mr_ui_f933e8567a",
+    ["[[col:{1}]]{2}[[/col]]"] = "derpy_mr_ui_a81debb8ff",
+    ["Click to hide the resources you do not have."] = "derpy_mr_ui_8051ad5bf6",
+    ["Click to show the resources you do not have."] = "derpy_mr_ui_ac659b4bd6",
+    ["Allow all "] = "derpy_mr_ui_278c53a96e",
+    ["Stop all "] = "derpy_mr_ui_d153ba9e62",
+    ["From next turn every resource can be traded again and earn trade income."] = "derpy_mr_ui_cfbb700901",
+    ["From next turn no resource can be traded or earn trade income."] = "derpy_mr_ui_d0618a5640",
+    ["Take every resource your trade partners send to your stores."] = "derpy_mr_ui_f85fe8117a",
+    ["Refuse every resource your trade partners send.\nTrade agreement imports still come in with import duty."] = "derpy_mr_ui_a1092e68ce",
+    ["sent {1} and received {2}"] = "derpy_mr_ui_84871287aa",
+    ["Recruits last turn"] = "derpy_mr_ui_4c58cb4a29",
+    ["Guards ride with every cart and convoy you send.\nThey cost 5% of the cargo's value when it leaves.\nThey make trouble on the road half as likely."] = "derpy_mr_ui_3e18f60438",
+    ["Nothing moves between you and these partners."] = "derpy_mr_ui_8f57993ed3",
+    ["The road takes more than {1}, crosses hostile lands or has an enemy army on it."] = "derpy_mr_ui_eded1a9e96",
+    ["1 turn"] = "derpy_mr_ui_8f63d54d46",
+    ["{1} turns"] = "derpy_mr_ui_d990c8ca79",
+    ["Blockaded by {1}"] = "derpy_mr_ui_be4cb55986",
+    ["{1} to {2}"] = "derpy_mr_ui_6edd4d932c",
+    ["Tolls: {1}."] = "derpy_mr_ui_4154950a10",
+    ["Last turn you paid these factions to cross their lands."] = "derpy_mr_ui_1c80d897f3",
+    ["Last turn these factions paid you to cross your lands."] = "derpy_mr_ui_7fd215a628",
+    ["Nothing last turn."] = "derpy_mr_ui_dbdb73f937",
+    ["An army at war with the sender can seize these goods from within {1} hexes when the sender begins its turn."] = "derpy_mr_ui_b299a80ae5",
+    ["From {1} to {2} by turn {3}: {4}"] = "derpy_mr_ui_1ee1192a9d",
+    ["and {1} more {2}"] = "derpy_mr_ui_1cad9fee87",
+    ["convoy"] = "derpy_mr_ui_2687429b16",
+    ["convoys"] = "derpy_mr_ui_dc0d0ace54",
+    ["Each turn you and each trade partner you can reach pay {1}% of the value of what the other makes."] = "derpy_mr_ui_a615d19d86",
+    ["Last turn:"] = "derpy_mr_ui_b6f366013c",
+    ["{1}: paid {2} and received {3}"] = "derpy_mr_ui_62ae77d784",
+    ["Nothing paid or received."] = "derpy_mr_ui_cc0fbd3d31",
+    ["{1} is kept out of trade and earns no trade income.\nClick to trade it again from next turn."] = "derpy_mr_ui_19362ce827",
+    ["{1} can be traded and earns trade income.\nClick to keep it out of trade from next turn."] = "derpy_mr_ui_1ffaef82e2",
+    ["Your trade partners send you no {1}.\nTrade agreement imports still come in.\nClick to take it again."] = "derpy_mr_ui_b91ae092cc",
+    ["Your trade partners can send you {1}.\nClick to refuse it."] = "derpy_mr_ui_e9b4d71631",
+    ["Use Send here in a settlement to put goods on the road."] = "derpy_mr_ui_8c04f3a4b1",
+    ["provisions"] = "derpy_mr_ui_9e72f24a14",
+    ["building materials"] = "derpy_mr_ui_4c5bbca164",
+    ["war materials"] = "derpy_mr_ui_182362c2e6",
+    ["You already have {1} shipments on the road and cannot send more."] = "derpy_mr_ui_806a22b926",
+    ["Send {1} {2} from {3}.\n{4} are lost on the way and the rest arrive in {5} or more.\nAn army at war with you can seize it."] = "derpy_mr_ui_24b3e77ceb",
+    ["This store of {1} is full."] = "derpy_mr_ui_5818cdebf6",
+    ["What is already on the road will fill this store of {1}."] = "derpy_mr_ui_c1f18f3880",
+    ["No other settlement of yours can send {1}."] = "derpy_mr_ui_2c84ddaf55",
+    ["{1}\n{2} more arrive here on turn {3}."] = "derpy_mr_ui_0af4fedece",
+    ["[[img:{1}]][[/img]] {2}"] = "derpy_mr_ui_cd79e6428c",
+    ["the stores of {1}"] = "derpy_mr_ui_bdcd479669",
+    ["{1}Your other settlements in this province send more when {2} run low.\n"] = "derpy_mr_ui_9e2a97fdd8",
+    ["{1}Pay {2} {3} a turn from {4}: {5} in every settlement you hold in this province.\n{6}The stores of {7} hold {8}.\n"] = "derpy_mr_ui_5e5f696d30",
+    ["{1}Turned off on turn {2} because {3} ran short.\n"] = "derpy_mr_ui_2366be518e",
+    ["{1}Click to stop it."] = "derpy_mr_ui_1622364a71",
+    ["{1}Click to start it."] = "derpy_mr_ui_7a02ce5633",
+    ["{1}\nSpend {2} {3}: {4} for {5}.\n{6}"] = "derpy_mr_ui_353f8be874",
+    ["{1}Running for {2} more and ready again in {3}."] = "derpy_mr_ui_7034f18e89",
+    ["{1}Ready again in {2}."] = "derpy_mr_ui_5cd6587705",
+    ["{1}You have {2} {3}."] = "derpy_mr_ui_4c9bc93920",
+    ["{1}You have {2}.\nClick to buy it."] = "derpy_mr_ui_4a409cd4a2",
+    ["The price is the normal {1}."] = "derpy_mr_ui_aa7f2b0ec8",
+    ["the stores hold {1}{2} of {3}"] = "derpy_mr_ui_ccf01ccda5",
+    ["only "] = "derpy_mr_ui_3184e0a775",
+    ["the store is {1}% full"] = "derpy_mr_ui_cb7834682c",
+    ["The price is {1} instead of {2}.\nIt is {3} because {4}."] = "derpy_mr_ui_16605bd88f",
+    ["cheap"] = "derpy_mr_ui_e40b34e338",
+    ["expensive"] = "derpy_mr_ui_f384d48efa",
+    ["{1}\nYou buy for {2} and sell for {3}."] = "derpy_mr_ui_a39f9251e5",
+    ["Sell the {1} {2} your stores hold over half full for {3} gold ({4} each)."] = "derpy_mr_ui_f6a1c2399a",
+    ["{1}\n{2} from {3} at {4}"] = "derpy_mr_ui_5fb5c0c5eb",
+    ["{1}\nand {2} more {3}"] = "derpy_mr_ui_a41eb7761c",
+    ["store"] = "derpy_mr_ui_8cd892b7b9",
+    ["stores"] = "derpy_mr_ui_61af09f34b",
+    ["There is nothing worth selling.\nOnly what your stores of {1} hold over half full can be sold."] = "derpy_mr_ui_b427b908bc",
+    ["It needs %s gold."] = "derpy_mr_ui_355aa79dec",
+    ["It needs a level %d settlement."] = "derpy_mr_ui_9c5c64e37f",
+    ["It needs an empty building slot."] = "derpy_mr_ui_0879a569dc",
+    ["{1} gold"] = "derpy_mr_ui_0a6b5ab016",
+    ["Build {1} here at once for {2} even though no building slot here normally takes it."] = "derpy_mr_ui_925fb2cc83",
+    ["Upgrade to {1} at once for {2}."] = "derpy_mr_ui_14fe83513b",
+    ["Not built"] = "derpy_mr_ui_12bc4d809b",
+    ["Level {1} of 3"] = "derpy_mr_ui_79a15cf527",
+    ["Found"] = "derpy_mr_ui_5d695cc28c",
+    ["Upgrade"] = "derpy_mr_ui_f683581d3e",
+    ["Stock rules: {1}"] = "derpy_mr_ui_3d822107ed",
+    ["Rule"] = "derpy_mr_ui_ab7a485ebe",
+    ["Amount"] = "derpy_mr_ui_b2f4069085",
+    ["Less"] = "derpy_mr_ui_1cfdf0e8d0",
+    ["Default"] = "derpy_mr_ui_7a1920d611",
+    ["More"] = "derpy_mr_ui_d3da97e2d9",
+    ["You need to hold a capital to set these."] = "derpy_mr_ui_65b5049ff0",
+    ["Keep in each store"] = "derpy_mr_ui_e0a2fca116",
+    ["Wanted at your capital"] = "derpy_mr_ui_6c6abb662f",
+    ["Auto: {1}"] = "derpy_mr_ui_03a156ea6d",
+    ["Every settlement keeps at least this much out of trade and sales.\nYour own spending and enemy raids can still take it."] = "derpy_mr_ui_53d223233e",
+    ["Your trade partners send it to {1} until you have this much.\nSet it to 0 to stop them."] = "derpy_mr_ui_91c2b5fd70",
+    ["{1}\nOn Auto this amount covers all common {2} together."] = "derpy_mr_ui_8b756e0bd6",
+    ["Less and More change it by 10 and Default sets it back to Auto."] = "derpy_mr_ui_66e79fa51d",
+    ["Capital: {1}"] = "derpy_mr_ui_5d640ce426",
+    ["Held / on the way"] = "derpy_mr_ui_f5e6311df4",
+    ["Still wanted"] = "derpy_mr_ui_b5c2f32d1e",
+    ["Price at capital"] = "derpy_mr_ui_118c4155c6",
+    ["Partners only send it while it sells for at least 10% more here than at home."] = "derpy_mr_ui_844c8cdbfa",
+    ["Trade switches"] = "derpy_mr_ui_d70414169f",
+    ["Exports stopped"] = "derpy_mr_ui_197187c055",
+    ["Exports allowed"] = "derpy_mr_ui_f52dfa5770",
+    ["Nothing is asked for because imports are stopped."] = "derpy_mr_ui_cc0079925a",
+    ["Imports are allowed up to the wanted amount and the free space."] = "derpy_mr_ui_c76d9cb701",
+    ["All {1}"] = "derpy_mr_ui_7364494d28",
+    ["{1} held"] = "derpy_mr_ui_7715715856",
+    ["On Auto all common {1} share one reserve and one wanted amount.\nRare resources are not counted."] = "derpy_mr_ui_bd71b1c8c4",
+    ["Auto: enough for one Workshop purchase"] = "derpy_mr_ui_64854b13a5",
+    ["Used by: {1}."] = "derpy_mr_ui_92d389dcbb",
+    ["Arriving on turn {1}"] = "derpy_mr_ui_93efe7f2e9",
+    ["Set up a regular supply"] = "derpy_mr_ui_d5be1c8643",
+    ["Pick one of your settlements or a trade partner to keep sending it here."] = "derpy_mr_ui_1e751501a7",
+    ["Each cart carries up to 100 and loses a tenth as it sets out.\nA cart takes 1 to 6 turns depending on the road."] = "derpy_mr_ui_c6bddd0038",
+    ["You pay the selling price plus 10% or your own store price if that is higher.\nYou get your gold back if the cart is lost."] = "derpy_mr_ui_334b7c6888",
+    ["From"] = "derpy_mr_ui_5da618e8e4",
+    ["Spare"] = "derpy_mr_ui_ae6a5f0d6a",
+    ["Takes"] = "derpy_mr_ui_2960f998eb",
+    ["Price each"] = "derpy_mr_ui_131597a3b4",
+    ["Press Create to start it and change it later under Spending."] = "derpy_mr_ui_0e01e50596",
+    ["Nobody has any to spare."] = "derpy_mr_ui_12af38af18",
+    ["Sends {1} to {2} until you hold {3}.\n{4}"] = "derpy_mr_ui_7597078271",
+    ["at least {1}"] = "derpy_mr_ui_638a9b6efb",
+    ["Your own"] = "derpy_mr_ui_6c05fcfd56",
+    ["Create"] = "derpy_mr_ui_686e697538",
+    ["Regular supply"] = "derpy_mr_ui_90a51fbfee",
+    ["Less and More change it by 10 and Default sets it to 100."] = "derpy_mr_ui_fe242d1817",
+    ["This supply has ended."] = "derpy_mr_ui_aa70044618",
+    ["{1} to {2}: {3}"] = "derpy_mr_ui_33202d7c2c",
+    ["No cart sent yet"] = "derpy_mr_ui_46f1d03760",
+    ["Stop at"] = "derpy_mr_ui_5f8cc571c0",
+    ["Cart size"] = "derpy_mr_ui_218bc19def",
+    ["Carts stop once you hold this much including what is on the way."] = "derpy_mr_ui_2cab2051c7",
+    ["Each cart carries this much (2 to 100)."] = "derpy_mr_ui_13807422b9",
+    ["Set per cart"] = "derpy_mr_ui_d8913ed302",
+    ["The last cart cost this and the next one costs {1}."] = "derpy_mr_ui_57f6828a8c",
+    ["{1} each"] = "derpy_mr_ui_50c26ad305",
+    ["an unknown amount"] = "derpy_mr_ui_562f5cef6f",
+    ["Your own goods: free"] = "derpy_mr_ui_a410ff505c",
+    ["Gold set aside"] = "derpy_mr_ui_288282f76e",
+    ["Sending"] = "derpy_mr_ui_e4b0c2b6d5",
+    ["Paused"] = "derpy_mr_ui_e99180abf4",
+    ["Pause"] = "derpy_mr_ui_105b296a83",
+    ["Resume"] = "derpy_mr_ui_f1cefec9e2",
+    ["Pause stops new carts but carts on the road still arrive."] = "derpy_mr_ui_0cee91b1f3",
+    ["End this supply"] = "derpy_mr_ui_93622a5e4c",
+    ["Cancel"] = "derpy_mr_ui_ea4788705e",
+    ["End this supply and get back any gold set aside.\nYour own carts on the road still arrive."] = "derpy_mr_ui_0f1e7dbd32",
+    ["{1} and {2}"] = "derpy_mr_ui_9f59edb964",
+    ["{1} holds {2} {3}."] = "derpy_mr_ui_2367d97467",
+    ["makes {1}"] = "derpy_mr_ui_df8242d54a",
+    ["uses {1}"] = "derpy_mr_ui_c3e5410514",
+    ["It {1} each turn."] = "derpy_mr_ui_214b183aab",
+    [" and "] = "derpy_mr_ui_0060636b44",
+    ["It loses {1} to spoiling each turn."] = "derpy_mr_ui_c40868994e",
+    ["At this rate it runs out in {1}."] = "derpy_mr_ui_13df2c2216",
+    ["That is enough for {1}."] = "derpy_mr_ui_baf0e4e40c",
+    ["Armies refilling here take {1} of that each turn."] = "derpy_mr_ui_7df8b2bb1c",
+    ["Your production here uses {1} {2} a turn."] = "derpy_mr_ui_f01298d8cf",
+    ["{1} {2} arrive on turn {3}."] = "derpy_mr_ui_bf7e65182d",
+    ["Where {1} is kept"] = "derpy_mr_ui_35f2f71322",
+    ["Settlement"] = "derpy_mr_ui_1610f44571",
+    ["Held / Space"] = "derpy_mr_ui_1f6c15b842",
+    ["Per turn"] = "derpy_mr_ui_cd8877dddb",
+    ["Price"] = "derpy_mr_ui_3601146c4e",
+    ["Every resource your settlements keep"] = "derpy_mr_ui_0df4c13a21",
+    ["Resource"] = "derpy_mr_ui_be8545ae7a",
+    ["Held"] = "derpy_mr_ui_effe06cc3b",
+    ["Space"] = "derpy_mr_ui_d511f8439e",
+    ["Stored in"] = "derpy_mr_ui_a188cf4ff8",
+    ["Click a resource to see where it is kept."] = "derpy_mr_ui_d579a05bc8",
+    ["{1} of {2}"] = "derpy_mr_ui_5b1c261789",
+    ["Where your settlements and convoys are"] = "derpy_mr_ui_0f0673c521",
+    ["Click a convoy or a settlement to fly there."] = "derpy_mr_ui_b132684a78",
+    ["What your settlements trade"] = "derpy_mr_ui_b555ac5acf",
+    ["Exports"] = "derpy_mr_ui_66f453635e",
+    ["Imports"] = "derpy_mr_ui_dc658425ca",
+    ["Last turn"] = "derpy_mr_ui_80d0c9cd88",
+    ["Tick a box to allow trade or click a resource for its rules."] = "derpy_mr_ui_9cbba968ba",
+    ["Import duty"] = "derpy_mr_ui_5c96b3af84",
+    ["paid {1} and received {2}"] = "derpy_mr_ui_5e4fb845ec",
+    ["Tolls paid"] = "derpy_mr_ui_e86776c830",
+    ["Tolls received"] = "derpy_mr_ui_53475f45e7",
+    ["Trade cut off"] = "derpy_mr_ui_35a5714c0c",
+    [" partner"] = "derpy_mr_ui_f090224e60",
+    [" partners"] = "derpy_mr_ui_ec831dfc63",
+    ["Cargo on the road"] = "derpy_mr_ui_047d8955fc",
+    ["{1} out and {2} in"] = "derpy_mr_ui_8b4db81bfa",
+    ["Road guards"] = "derpy_mr_ui_a94510ffd7",
+    ["On"] = "derpy_mr_ui_521c36a31c",
+    ["Off"] = "derpy_mr_ui_d15305d7a4",
+    ["Dismiss"] = "derpy_mr_ui_c8a59e7135",
+    ["Hire"] = "derpy_mr_ui_012706ea3b",
+    ["Resources you do not have ({1})"] = "derpy_mr_ui_e24e3c67d7",
+    ["Stores of {1}"] = "derpy_mr_ui_f6920afb08",
+    ["{1}\nClick to set up a regular supply."] = "derpy_mr_ui_97c80fbbb4",
+    ["Every settlement you hold"] = "derpy_mr_ui_34863afc5d",
+    ["Level"] = "derpy_mr_ui_a0db49ba47",
+    ["Using"] = "derpy_mr_ui_3f05d6f388",
+    ["Resources"] = "derpy_mr_ui_ddcf50c292",
+    ["Fullest store"] = "derpy_mr_ui_48e74aa3fb",
+    ["Click a settlement to see its stores."] = "derpy_mr_ui_2297eadc63",
+    ["Using: {1}"] = "derpy_mr_ui_c1144d49ac",
+    [" control"] = "derpy_mr_ui_1b770fb1d6",
+    [" growth"] = "derpy_mr_ui_88dd130532",
+    ["% cost"] = "derpy_mr_ui_10e4f7333e",
+    ["% healing"] = "derpy_mr_ui_8f5a884f71",
+    ["No workshop"] = "derpy_mr_ui_e4e7218225",
+    ["Capital only"] = "derpy_mr_ui_4447f09e08",
+    ["Switched off"] = "derpy_mr_ui_1aaf2e2da4",
+    ["None of your settlements has an undamaged building that runs this."] = "derpy_mr_ui_3926e86a49",
+    ["It runs only in a province capital and you hold none."] = "derpy_mr_ui_0bd632fcdf",
+    ["Switched off in the mod settings for this campaign."] = "derpy_mr_ui_e7a67dc8e6",
+    ["Paid"] = "derpy_mr_ui_e0010a0a1a",
+    ["Next turn"] = "derpy_mr_ui_9b39e4a396",
+    ["Store full"] = "derpy_mr_ui_ee79af707a",
+    ["Short"] = "derpy_mr_ui_30bb747c98",
+    ["Short of {1}"] = "derpy_mr_ui_60b5b9a584",
+    [" / batch"] = "derpy_mr_ui_b594fc2d76",
+    [" / turn"] = "derpy_mr_ui_fd89973f0f",
+    ["Turns {1} into {2}."] = "derpy_mr_ui_d4f07da764",
+    ["Uses {1} a turn for {2}{3}."] = "derpy_mr_ui_07f2564fb6",
+    ["\nYour buildings still make their usual goods.\nThis only runs when it has everything it needs."] = "derpy_mr_ui_0e547a50a3",
+    ["\nIt is paid from this settlement after upkeep.\nIt gives nothing in a turn it cannot be paid."] = "derpy_mr_ui_f524c3cb1d",
+    ["{1} made"] = "derpy_mr_ui_0f555351d7",
+    ["Processing and services"] = "derpy_mr_ui_f733129eb9",
+    ["Inputs"] = "derpy_mr_ui_ee611c8b9d",
+    ["State"] = "derpy_mr_ui_46a2a41cc6",
+    ["Benefit"] = "derpy_mr_ui_d0b37cb641",
+    ["Enable"] = "derpy_mr_ui_2faec1f9f8",
+    ["Stored resources"] = "derpy_mr_ui_abd5ca87bd",
+    ["Your race has no processing or services."] = "derpy_mr_ui_58755c1e0c",
+    ["It needs {1} {2}{3} and {4} has {5} to spare."] = "derpy_mr_ui_9261cc5c1a",
+    [" a turn"] = "derpy_mr_ui_6a1b9c173f",
+    ["None of your settlements"] = "derpy_mr_ui_12a13313ce",
+    ["{1}\nBuildings that run it: {2}."] = "derpy_mr_ui_cc4341eb69",
+    ["What your settlements can make"] = "derpy_mr_ui_d02f595b82",
+    ["Workshops make new resources and services spend them for a bonus."] = "derpy_mr_ui_8c9c6b3c57",
+    ["Gives"] = "derpy_mr_ui_e96f7a63ac",
+    ["Click to show these."] = "derpy_mr_ui_dce8ad5334",
+    ["Click to hide these."] = "derpy_mr_ui_278135487e",
+    ["An army at war with you can take this unguarded shipment without a fight."] = "derpy_mr_ui_695ab00526",
+    ["An army has to beat these soldiers to take the shipment."] = "derpy_mr_ui_a80e92ea8b",
+    ["Escort of {1} {2}, {3} to {4}"] = "derpy_mr_ui_565c5dd864",
+    ["An army eats 1 provision a turn for every 4 units and refills in your own settlements."] = "derpy_mr_ui_50dac4a4c9",
+    ["On Auto the army refills to 5 turns of provisions after eating.\nIt carries at most 10 turns and never buys rations."] = "derpy_mr_ui_a4be6e93f1",
+    ["Buy up to two meals of rations once a turn at 10 gold each."] = "derpy_mr_ui_505892cc96",
+    ["After two missed meals the army moves 5% slower.\nAfter three it moves and recovers 10% slower.\nOne full meal ends this."] = "derpy_mr_ui_695657aa45",
+    ["Army {1}"] = "derpy_mr_ui_d195aa1ad9",
+    ["{1}: provisions"] = "derpy_mr_ui_4bf42dd83a",
+    ["Action"] = "derpy_mr_ui_004bf6c9a4",
+    ["Lasts"] = "derpy_mr_ui_d8de6a6d45",
+    ["Unload before you merge this army or its provisions are lost."] = "derpy_mr_ui_82361cd653",
+    ["Fill the army to 10 turns of provisions from {1}.\nIts reserve is not touched."] = "derpy_mr_ui_03361f42cc",
+    ["This army cannot load here."] = "derpy_mr_ui_ea15f48cee",
+    ["Put the provisions back into {1} and pause Auto."] = "derpy_mr_ui_8ca5b1db20",
+    ["This army can only unload in one of your settlements."] = "derpy_mr_ui_60aa1163f4",
+    ["Local stores"] = "derpy_mr_ui_546878fc49",
+    ["Rations"] = "derpy_mr_ui_8777bf6dd6",
+    ["Unavailable"] = "derpy_mr_ui_453e6aa38d",
+    ["Auto-refill"] = "derpy_mr_ui_066f34133f",
+    ["Buy rations"] = "derpy_mr_ui_0fae14a215",
+    ["Load here"] = "derpy_mr_ui_f494484f18",
+    ["Buy"] = "derpy_mr_ui_831a28f1e8",
+    ["Load"] = "derpy_mr_ui_f19dbf2edb",
+    ["Unload here"] = "derpy_mr_ui_42d6fc179d",
+    ["Pauses refill"] = "derpy_mr_ui_2bcdc93724",
+    ["Unload"] = "derpy_mr_ui_ae11d3ee07",
+    ["Missed meals"] = "derpy_mr_ui_19ac7bf0e6",
+    ["What your stores pay for"] = "derpy_mr_ui_bf7236074d",
+    ["Province capital"] = "derpy_mr_ui_fb230f0265",
+    ["Materials"] = "derpy_mr_ui_23ce0eb7d1",
+    ["Stables"] = "derpy_mr_ui_74b2c238f8",
+    ["Arms"] = "derpy_mr_ui_4b9b1c9686",
+    ["Supply capital"] = "derpy_mr_ui_2e60a55812",
+    ["Tick a supply to pay for it each turn."] = "derpy_mr_ui_a611e9f0cc",
+    ["Regular supplies"] = "derpy_mr_ui_24a51077a5",
+    ["Sends carts of {1} until you hold {2}.\n{3}.\nClick to change it."] = "derpy_mr_ui_351e4bd6ca",
+    ["Each supply costs {1} a turn from the stores of {2}.\nThat is 2 for each settlement you hold in its province."] = "derpy_mr_ui_89e7895ab6",
+    ["It pays with {1} first because that store is the fullest."] = "derpy_mr_ui_0f067ed1e9",
+    ["The stores of {1} have nothing to pay with."] = "derpy_mr_ui_7c019dd52c",
+    ["On the road ({1} of {2})"] = "derpy_mr_ui_5eeb947b46",
+    ["To"] = "derpy_mr_ui_e12167aa0a",
+    ["Arrives"] = "derpy_mr_ui_32ef9d3a3b",
+    ["turn {1}"] = "derpy_mr_ui_af364698df",
+    ["Click to see its escort."] = "derpy_mr_ui_f814508a46",
+    ["Show"] = "derpy_mr_ui_498f79c4c5",
+    ["{1} and reaches {2} on turn {3}.\nClick to see it on the map."] = "derpy_mr_ui_a0806781f4",
+    ["It is travelling from {1}"] = "derpy_mr_ui_595ac9289c",
+    ["It is now beside {1}"] = "derpy_mr_ui_e2bce56593",
+    ["Army provisions"] = "derpy_mr_ui_c05d45b406",
+    ["No armies carry provisions"] = "derpy_mr_ui_2fa3647b2f",
+    ["This army eats {1}{2} a turn.\n{3}{4}\nClick to manage its provisions."] = "derpy_mr_ui_8fd91afb64",
+    [" provision"] = "derpy_mr_ui_5778290e8e",
+    [" provisions"] = "derpy_mr_ui_618357a20a",
+    ["\nMissed meals: {1}."] = "derpy_mr_ui_778df9cd96",
+    ["{1} resources"] = "derpy_mr_ui_a5da103f78",
+    ["Each recruit takes resources from your stores by its type and cost.\nAnything missing is paid {1}in gold.{2}"] = "derpy_mr_ui_0959b5c477",
+    ["in your own currency and then "] = "derpy_mr_ui_a99f34353f",
+    ["Items"] = "derpy_mr_ui_9dea4016db",
+    ["Units"] = "derpy_mr_ui_e5771a362d",
+    ["Settlement upgrades"] = "derpy_mr_ui_81c26bc551",
+    ["Race resources"] = "derpy_mr_ui_a05a8b4ed0",
+    ["Army works"] = "derpy_mr_ui_5b4bfa5551",
+    ["Lord and hero works"] = "derpy_mr_ui_1047e81a77",
+    ["Permanent works"] = "derpy_mr_ui_49d3de3210",
+    ["Research"] = "derpy_mr_ui_f027f27d0d",
+    ["Forged"] = "derpy_mr_ui_4f39f4f50d",
+    ["Built"] = "derpy_mr_ui_2d9f7fa495",
+    ["Has it"] = "derpy_mr_ui_bd0d0846e4",
+    ["Select one of your armies on the map first."] = "derpy_mr_ui_7af402304b",
+    ["Select one of your lords or heroes on the map first."] = "derpy_mr_ui_41aa0ec7cf",
+    ["Select one of your lords on the map first."] = "derpy_mr_ui_82b3a2a463",
+    ["Resource Vault actions are switched off in the mod settings."] = "derpy_mr_ui_68b42aa611",
+    ["It needs {1} {2} and you have {3}."] = "derpy_mr_ui_b25b4ec0f3",
+    ["Only a lord can take this."] = "derpy_mr_ui_f5b8faa02b",
+    ["Your faction cannot hold this."] = "derpy_mr_ui_4606ffa655",
+    ["You hold as much of it as you can."] = "derpy_mr_ui_97e21cd8bf",
+    ["They have this already."] = "derpy_mr_ui_8066cac426",
+    ["Built already."] = "derpy_mr_ui_cdfab4df28",
+    ["The selected character leads no army."] = "derpy_mr_ui_e388fdf0b5",
+    ["Not one of your characters."] = "derpy_mr_ui_fbae3af410",
+    ["common {1}"] = "derpy_mr_ui_5df292c6ba",
+    ["Ready again in {1}."] = "derpy_mr_ui_faa8a48aa4",
+    ["Already forged."] = "derpy_mr_ui_36729582db",
+    ["Built here already."] = "derpy_mr_ui_67a891343e",
+    ["Your mercenary pool holds as many as it can."] = "derpy_mr_ui_0937b68cbd",
+    ["Not your settlement."] = "derpy_mr_ui_ff4d28ac9a",
+    ["No army of yours has room for it."] = "derpy_mr_ui_448986f575",
+    ["Book of Grudges"] = "derpy_mr_ui_1c1762bdb8",
+    ["Regiments of Renown"] = "derpy_mr_ui_bc63cdd280",
+    ["{1}It goes into your {2}.\nRecruiting it there still costs its gold.\n"] = "derpy_mr_ui_6c594d91c1",
+    ["{1}It goes straight into your largest army with room.\n"] = "derpy_mr_ui_55df6537bc",
+    ["Click to buy it."] = "derpy_mr_ui_be90fc15d5",
+    ["Where to build {1}"] = "derpy_mr_ui_1c248bec9a",
+    ["Buy here"] = "derpy_mr_ui_240f6a6ed1",
+    ["It is paid from all your stores: {1} {2} and {3} {4}."] = "derpy_mr_ui_2623d98d9d",
+    ["What your stores can buy"] = "derpy_mr_ui_457141916e",
+    ["Rare resources are made only in their own buildings."] = "derpy_mr_ui_12795510c5",
+    ["Applies to: {1}."] = "derpy_mr_ui_cd56da65dd",
+    ["the selected character"] = "derpy_mr_ui_6e9377d97f",
+    ["{1}Click to choose a settlement."] = "derpy_mr_ui_0fed18d53f",
+    ["Choose"] = "derpy_mr_ui_961f2247a2",
+    ["Choose the settlement to build it in."] = "derpy_mr_ui_92c6b02e01",
+    ["{1} from {2} to {3}.\nIt arrives on turn {4}.\nClick to fly there."] = "derpy_mr_ui_da02954a34",
+    ["Convoy"] = "derpy_mr_ui_c1ca40ce29",
+    ["Resource Vault"] = "derpy_mr_ui_e7b28cadea",
+    ["Settlements"] = "derpy_mr_ui_a0ddecb224",
+    ["Trade"] = "derpy_mr_ui_5f390d80b2",
+    ["Spending"] = "derpy_mr_ui_471cc3b690",
+    ["Map"] = "derpy_mr_ui_46f3ea056c",
+    ["Workshop"] = "derpy_mr_ui_8e5d9dbc85",
+    ["Production"] = "derpy_mr_ui_756d97bb25",
+    ["Back"] = "derpy_mr_ui_0557fa923d",
+    ["Edicts"] = "derpy_mr_ui_57e3c3573c",
+    ["Wait {1}"] = "derpy_mr_ui_09937ef678",
+    ["Ready"] = "derpy_mr_ui_e7d31fc060",
+    ["{1}\nThis edict can change again in {2}."] = "derpy_mr_ui_766af8c1ae",
+    ["Auto"] = "derpy_mr_ui_06b9281e39",
+    ["Send here"] = "derpy_mr_ui_21b5931e27",
+    ["Zoom out"] = "derpy_mr_ui_52ebc26c29",
+    ["Draw more of the map."] = "derpy_mr_ui_d9619fd96f",
+    ["Zoom in"] = "derpy_mr_ui_7b91156d64",
+    ["Draw the map closer."] = "derpy_mr_ui_e4252f90aa",
+    ["As far as it goes."] = "derpy_mr_ui_063a328164",
+    ["{1}{2}\nClick to fly there."] = "derpy_mr_ui_b73ed59ec2",
+    [" (province capital)"] = "derpy_mr_ui_32343d79e8",
+    ["Sell surplus"] = "derpy_mr_ui_cb2640295a",
+    ["Provisions\nArmy provisions are switched off in this campaign."] = "derpy_mr_ui_92f2e11c8e",
+    ["Provisions\nThis army eats {1} a turn and carries {2} of {3}.\n{4}{5}\n{6}"] = "derpy_mr_ui_9eba32e8c5",
+    ["and {1} more"] = "derpy_mr_ui_4f03ad1d6f",
+    ["Lost: this army has no settlement"] = "derpy_mr_ui_b8dde67e95",
+    ["Into {1}"] = "derpy_mr_ui_7769700682",
+    ["Raiding takes each turn:"] = "derpy_mr_ui_9ce3ef4881",
+    ["Sacking"] = "derpy_mr_ui_af853435f1",
+    ["Razing"] = "derpy_mr_ui_c6f4edb530",
+    ["Occupying"] = "derpy_mr_ui_a2eb01615f",
+    ["Occupying keeps its stores:"] = "derpy_mr_ui_176bb9b379",
+    ["They stay in this settlement"] = "derpy_mr_ui_99c8685ce3",
+    ["Into your nearest settlement"] = "derpy_mr_ui_b3bc9ae672",
+    ["Lost: you hold no settlement"] = "derpy_mr_ui_7728e376d1",
+    ["{1} takes:"] = "derpy_mr_ui_6e72bb8353",
+    ["Too far for trade"] = "derpy_mr_ui_2a3d4aba22",
+    ["Cut off by enemy lands"] = "derpy_mr_ui_f48b5ea6c8",
+    ["Not your stores"] = "derpy_mr_ui_ea31ab51dc",
+    ["Not available to this culture"] = "derpy_mr_ui_d617532330",
+    ["Province capital only"] = "derpy_mr_ui_e5a5e6850f",
+    ["Needs an undamaged workshop"] = "derpy_mr_ui_7da18bce2a",
+    ["Disabled for this campaign"] = "derpy_mr_ui_ce0ba322fb",
+    ["Short of "] = "derpy_mr_ui_d0f00cf9f7",
+    ["Output store full"] = "derpy_mr_ui_855f0d9669",
+    ["It cannot refill at sea."] = "derpy_mr_ui_59145d6e87",
+    ["There is no settlement here to refill from."] = "derpy_mr_ui_48d5922f68",
+    ["This settlement is not yours."] = "derpy_mr_ui_ac6aae4aee",
+    ["This settlement is under siege."] = "derpy_mr_ui_c869fd27de",
+    ["It refills from this settlement."] = "derpy_mr_ui_53d78dcc3a",
+    ["This settlement has {1} provisions to spare."] = "derpy_mr_ui_f8ea19175a",
+    ["This settlement has no provisions to spare."] = "derpy_mr_ui_13ae2fc7bf",
+    ["You can buy {1} rations for {2} gold."] = "derpy_mr_ui_a8f16cf995",
+    ["The army cannot buy more rations this turn."] = "derpy_mr_ui_bf90d57f02",
+    ["The seller or buyer is gone"] = "derpy_mr_ui_8e6f48ab81",
+    ["One of the two settlements has changed hands"] = "derpy_mr_ui_747eb8a2b4",
+    ["Needs a trade agreement"] = "derpy_mr_ui_2786f77e53",
+    ["One side keeps no stores"] = "derpy_mr_ui_fea7acba12",
+    ["Trade in this resource is stopped"] = "derpy_mr_ui_c8aaddb03d",
+    ["The seller cannot store it"] = "derpy_mr_ui_784f7bbc8d",
+    ["Cart sent"] = "derpy_mr_ui_d31d7785c9",
+    ["Blockaded"] = "derpy_mr_ui_b08ea8431e",
+    ["Waiting for goods or gold or road space"] = "derpy_mr_ui_190425d901",
+    ["You have enough including what is on the way"] = "derpy_mr_ui_62d4b07f26",
+    ["Festival"] = "derpy_mr_ui_11e8fe8bff",
+    ["public order +4 in every province"] = "derpy_mr_ui_dfb36d3880",
+    ["Muster"] = "derpy_mr_ui_610c1bec79",
+    ["recruit rank +1 for every unit"] = "derpy_mr_ui_faa2a08d45",
+    ["Great Works"] = "derpy_mr_ui_29826a6968",
+    ["construction cost -20% for every building"] = "derpy_mr_ui_1a7791121b",
+    ["Materials on hand"] = "derpy_mr_ui_495b345411",
+    ["construction cost -25%"] = "derpy_mr_ui_79af500e73",
+    ["Stable stocked"] = "derpy_mr_ui_cea6fd3d6e",
+    ["recruit cost -15% for cavalry, monsters and gyrocopters"] = "derpy_mr_ui_4f76354330",
+    ["Arms stocked"] = "derpy_mr_ui_e56035a31b",
+    ["recruit cost -15% for infantry and artillery"] = "derpy_mr_ui_e46cc12f79",
+    ["Supply the capital"] = "derpy_mr_ui_a6bc2731b5",
+    ["Gromril Armour"] = "derpy_mr_ui_71a12b5480",
+    ["Armour"] = "derpy_mr_ui_865800a9e2",
+    ["Armour for a lord or hero"] = "derpy_mr_ui_98386f4f1b",
+    ["Gromril Greataxe"] = "derpy_mr_ui_0652b8cb73",
+    ["Weapon"] = "derpy_mr_ui_18c8366992",
+    ["Weapon for a lord or hero"] = "derpy_mr_ui_088dc24b5e",
+    ["Enchanted Ithilmar Breastplate"] = "derpy_mr_ui_df88e54637",
+    ["Dragonhelm"] = "derpy_mr_ui_5962560044",
+    ["Dragonbane Gem"] = "derpy_mr_ui_041e5a6497",
+    ["Talisman"] = "derpy_mr_ui_67b587b7da",
+    ["Talisman for a lord or hero"] = "derpy_mr_ui_2fd2d5119d",
+    ["Dragonscale Shield"] = "derpy_mr_ui_265ae18bc4",
+    ["Dragon Slayer's Scales"] = "derpy_mr_ui_b0601014da",
+    ["Dragon's Claw"] = "derpy_mr_ui_a6ab2d46a0",
+    ["Sea Dragon Cloak"] = "derpy_mr_ui_492c72a38c",
+    ["Lotus-Venom Blade"] = "derpy_mr_ui_07c898c316",
+    ["Starwood Bow"] = "derpy_mr_ui_4fd6180cc3",
+    ["Featherfoe Torc"] = "derpy_mr_ui_50756430f5",
+    ["Enchanted item"] = "derpy_mr_ui_bccdc8c51d",
+    ["Enchanted item for a lord or hero"] = "derpy_mr_ui_ae7601491e",
+    ["Wyvernbone Bow"] = "derpy_mr_ui_8da593e017",
+    ["Wyvern-Scale Armour"] = "derpy_mr_ui_fdc133f55b",
+    ["Armour of Borek Beetlebrow"] = "derpy_mr_ui_3a7571c95f",
+    ["Ironbeard's Armour"] = "derpy_mr_ui_c460266175",
+    ["Helm of Fortune"] = "derpy_mr_ui_ed1e46de52",
+    ["Armour of Caledor"] = "derpy_mr_ui_e0d31c8b86",
+    ["Icon of the Spirit Dragon"] = "derpy_mr_ui_b83004d8d7",
+    ["Drake Hunters' Banner"] = "derpy_mr_ui_8cffd8e8c9",
+    ["Banner"] = "derpy_mr_ui_6ff29916f9",
+    ["Banner for a lord or hero"] = "derpy_mr_ui_c599459c58",
+    ["Cloak of Hag Graef"] = "derpy_mr_ui_8aaf234682",
+    ["Sea Serpent Standard"] = "derpy_mr_ui_e052251890",
+    ["Hail of Doom Arrow"] = "derpy_mr_ui_15da98bb57",
+    ["Enchanted item for Glade Lords and Waystalkers"] = "derpy_mr_ui_3cbbd98ef0",
+    ["The Bow of Loren"] = "derpy_mr_ui_3410a08be2",
+    ["Weapon for Glade Captains, Glade Lords, Waystalkers and the Sisters"] = "derpy_mr_ui_fb8626c744",
+    ["Extinguished Phoenix Pinion"] = "derpy_mr_ui_7322019f2d",
+    ["Griffon Banner"] = "derpy_mr_ui_fc8fee79db",
+    ["Glittering Scales"] = "derpy_mr_ui_e8fbabd869",
+    ["Venom Sword"] = "derpy_mr_ui_68b490b6cf",
+    ["Corrosive Blade"] = "derpy_mr_ui_24bddb3741",
+    ["Ironbreakers"] = "derpy_mr_ui_082bdeaa87",
+    ["Unit (2 at most)"] = "derpy_mr_ui_5cf01d434e",
+    ["Up to 2 at a time"] = "derpy_mr_ui_89c5d52428",
+    ["Hammerers"] = "derpy_mr_ui_2da4b63dcd",
+    ["Swordmasters of Hoeth"] = "derpy_mr_ui_067c0d8a10",
+    ["Phoenix Guard"] = "derpy_mr_ui_742b5b7824",
+    ["Dragon Princes"] = "derpy_mr_ui_34c3e136c7",
+    ["Lammasu"] = "derpy_mr_ui_8df495c3da",
+    ["Bale Taurus"] = "derpy_mr_ui_2e14a75818",
+    ["Black Ark Corsairs"] = "derpy_mr_ui_162578dc46",
+    ["Witch Elves"] = "derpy_mr_ui_64cf03901c",
+    ["Gutter Runners"] = "derpy_mr_ui_8ca0d1eb5b",
+    ["Glade Guard"] = "derpy_mr_ui_f7338a418a",
+    ["Pegasus Knights"] = "derpy_mr_ui_09ccbb1ce6",
+    ["Demigryph Knights"] = "derpy_mr_ui_76206b9a01",
+    ["Black Orcs (Great Weapons)"] = "derpy_mr_ui_a6864b5642",
+    ["Stonehorn"] = "derpy_mr_ui_1887925efe",
+    ["Thundertusk"] = "derpy_mr_ui_2b928add70",
+    ["Irondrakes"] = "derpy_mr_ui_272ed058ec",
+    ["Silver Helms"] = "derpy_mr_ui_da4a3ef081",
+    ["Zombie Dragon"] = "derpy_mr_ui_fd6b294f40",
+    ["Celestial Dragon Guard"] = "derpy_mr_ui_5558ba0b99",
+    ["Chaos Frost Dragon"] = "derpy_mr_ui_24a1144a7e",
+    ["Black Ark Corsairs (Handbows)"] = "derpy_mr_ui_949343f349",
+    ["Waywatchers"] = "derpy_mr_ui_78f947e417",
+    ["Poisoned Wind Globadiers"] = "derpy_mr_ui_2b4c9139e8",
+    ["Gromril Gate"] = "derpy_mr_ui_1b6f0cf125",
+    ["Melee defence and armour"] = "derpy_mr_ui_cec73f719b",
+    ["Melee defence +10 for your armies here and armour +10 in the province. Permanent"] = "derpy_mr_ui_88dbb6b438",
+    ["Ithilmar Spire"] = "derpy_mr_ui_fb16c0e8ef",
+    ["Public order and income"] = "derpy_mr_ui_c97c8a8693",
+    ["Public order +3 in the province and income +10% here. Permanent"] = "derpy_mr_ui_0555063bee",
+    ["Dragon Bone Shrine"] = "derpy_mr_ui_ddb282db5f",
+    ["Recruits gain a rank"] = "derpy_mr_ui_3d8346f8e0",
+    ["Units recruited in the province gain a rank. Permanent"] = "derpy_mr_ui_4e1f1bca84",
+    ["Sea Dragon Moorings"] = "derpy_mr_ui_95752b9598",
+    ["Income +15% here"] = "derpy_mr_ui_f5aef1c403",
+    ["Income +15% here. Permanent"] = "derpy_mr_ui_796411bcf3",
+    ["Black Lotus Gardens"] = "derpy_mr_ui_e99018d8d9",
+    ["Hero actions succeed more"] = "derpy_mr_ui_4770cc284c",
+    ["Hero actions from here succeed more often (+10). Permanent"] = "derpy_mr_ui_eb791f05dd",
+    ["Starwood Grove"] = "derpy_mr_ui_18ff9a900b",
+    ["Growth +20"] = "derpy_mr_ui_e622841f73",
+    ["Growth +20 in the province. Permanent"] = "derpy_mr_ui_ff64e1b59e",
+    ["Eyrie"] = "derpy_mr_ui_8d51a2966a",
+    ["Recruitment cost -15%"] = "derpy_mr_ui_856ed27284",
+    ["Recruitment cost -15% in the province. Permanent"] = "derpy_mr_ui_7cb2164988",
+    ["Wyvern Roost"] = "derpy_mr_ui_822f544c40",
+    ["Army upkeep -5%"] = "derpy_mr_ui_feef73ceba",
+    ["Upkeep -5% for your armies here. Permanent"] = "derpy_mr_ui_79d8832775",
+    ["Armaments"] = "derpy_mr_ui_0afc19dc3a",
+    ["30 Armaments"] = "derpy_mr_ui_27b18c6fb2",
+    ["Makes 30 Armaments from your stores once a turn"] = "derpy_mr_ui_f784dc3fa5",
+    ["Food"] = "derpy_mr_ui_0a38e7286e",
+    ["4 Food"] = "derpy_mr_ui_014b151a31",
+    ["Makes 4 Food from your stores once a turn"] = "derpy_mr_ui_f88879b15d",
+    ["Oathgold"] = "derpy_mr_ui_857f4b6060",
+    ["30 Oathgold"] = "derpy_mr_ui_0ef21a458a",
+    ["Makes 30 Oathgold from your stores once a turn"] = "derpy_mr_ui_e281080b19",
+    ["Infamy"] = "derpy_mr_ui_f9867b50c3",
+    ["50 Infamy"] = "derpy_mr_ui_614b286066",
+    ["Makes 50 Infamy from your stores once a turn"] = "derpy_mr_ui_65d637b329",
+    ["Rations and Drill"] = "derpy_mr_ui_30f6e453b6",
+    ["The army gains a rank"] = "derpy_mr_ui_d9fd017b75",
+    ["Every unit in the selected army gains a rank"] = "derpy_mr_ui_50888397ee",
+    ["Ammunition Train"] = "derpy_mr_ui_ef032adacf",
+    ["Ammunition +20% (5 turns)"] = "derpy_mr_ui_b05b914cc7",
+    ["The selected army's ammunition +20% for 5 turns"] = "derpy_mr_ui_d47fefd129",
+    ["Field Forge"] = "derpy_mr_ui_b2e4a184d1",
+    ["Armour +15 (5 turns)"] = "derpy_mr_ui_862d50c5b2",
+    ["The selected army's armour +15 for 5 turns"] = "derpy_mr_ui_77e4464e2b",
+    ["Remounts"] = "derpy_mr_ui_0a91353e6d",
+    ["Replenishment +10% (5 turns)"] = "derpy_mr_ui_5d7b1aa64e",
+    ["The selected army replenishes 10% faster for 5 turns"] = "derpy_mr_ui_edf6f3722f",
+    ["Medicine Chests"] = "derpy_mr_ui_c3d400e1df",
+    ["Attrition -25% (5 turns)"] = "derpy_mr_ui_1ab60fd597",
+    ["The selected army suffers 25% less attrition for 5 turns"] = "derpy_mr_ui_2691776b85",
+    ["Silk-robed"] = "derpy_mr_ui_5171ba2116",
+    ["Diplomacy +10"] = "derpy_mr_ui_92010e8244",
+    ["A trait for the selected lord or hero: diplomatic relations +10"] = "derpy_mr_ui_e48dca0199",
+    ["Steel-shod"] = "derpy_mr_ui_31b1a90e5d",
+    ["Armour +10"] = "derpy_mr_ui_e592ff3348",
+    ["A trait for the selected lord or hero: armour +10"] = "derpy_mr_ui_3dc845f461",
+    ["Well-read"] = "derpy_mr_ui_4f6277485e",
+    ["Experience +20%"] = "derpy_mr_ui_281c255f94",
+    ["A trait for the selected lord or hero: experience gained +20%"] = "derpy_mr_ui_b8555c7eb1",
+    ["Spice-hardened"] = "derpy_mr_ui_f680486a19",
+    ["Leadership +4 (movement -5%)"] = "derpy_mr_ui_6f3c0dd6f0",
+    ["A trait for the selected lord: leadership +4 for the army and movement -5%"] = "derpy_mr_ui_409854f698",
+    ["Furred and Booted"] = "derpy_mr_ui_75da0bcd65",
+    ["Attrition -25%"] = "derpy_mr_ui_3383d0027a",
+    ["A trait for the selected lord: their army suffers 25% less attrition"] = "derpy_mr_ui_0fdb742ca1",
+    ["Great Granary"] = "derpy_mr_ui_2d61ec260f",
+    ["Growth +15 Permanent"] = "derpy_mr_ui_61be484d03",
+    ["Growth +15 in every province. Grain is safe from spoiling up to half of each store. Permanent"] = "derpy_mr_ui_b8ff2b6b78",
+    ["Battle Labour +15% Permanent"] = "derpy_mr_ui_43572e848c",
+    ["Labour taken after battles +15%. Grain is safe from spoiling up to half of each store. Permanent"] = "derpy_mr_ui_bb7f95a0c8",
+    ["Hall of Records"] = "derpy_mr_ui_4ab91fe114",
+    ["Research +15% Permanent"] = "derpy_mr_ui_9b24cdc976",
+    ["Research rate +15%. Permanent"] = "derpy_mr_ui_0f8f70fc5e",
+    ["Grand Bazaar"] = "derpy_mr_ui_f2bce8752a",
+    ["Trade income +15% Permanent"] = "derpy_mr_ui_270e808e60",
+    ["Trade income +15%. Permanent"] = "derpy_mr_ui_a3f4672985",
+    ["Loot Hoard"] = "derpy_mr_ui_463e693ed9",
+    ["Loot income +15% Permanent"] = "derpy_mr_ui_aa6c156740",
+    ["Income from sacking and looting settlements +15%. Permanent"] = "derpy_mr_ui_5b1488b35f",
+    ["Arsenal"] = "derpy_mr_ui_4fc9baf210",
+    ["Upkeep -10% Permanent"] = "derpy_mr_ui_b526767a45",
+    ["Army upkeep -10%. Permanent"] = "derpy_mr_ui_f2dba5d873",
+    ["Royal Stables"] = "derpy_mr_ui_92dafabe1c",
+    ["Cavalry cost -20% Permanent"] = "derpy_mr_ui_22fc3259a9",
+    ["Cavalry recruitment cost -20%. Permanent"] = "derpy_mr_ui_e0f93a14a1",
+    ["Engineers' Yard"] = "derpy_mr_ui_712acc597b",
+    ["Artillery -20% Permanent"] = "derpy_mr_ui_87dca18a0d",
+    ["Artillery recruitment cost -20%. Permanent"] = "derpy_mr_ui_ecc13fc21f",
+    ["Beast Pens"] = "derpy_mr_ui_53ba9051ca",
+    ["Monster cost -20% Permanent"] = "derpy_mr_ui_f7b145ee2b",
+    ["Monster recruitment cost -20%. Permanent"] = "derpy_mr_ui_84c4f586f4",
+    ["Bone Yard"] = "derpy_mr_ui_a726f67005",
+    ["400 research points"] = "derpy_mr_ui_83d611872d",
+    ["400 research points at once"] = "derpy_mr_ui_11b63ab3c7",
+    ["Lotus Gatherers"] = "derpy_mr_ui_2c272532be",
+    ["Lotus Garden"] = "derpy_mr_ui_f9672d870e",
+    ["Black Lotus Plantation"] = "derpy_mr_ui_84d5b141a3",
+    ["Bone Pickers"] = "derpy_mr_ui_f52e6dfa5b",
+    ["Dragon Bone Digs"] = "derpy_mr_ui_1dd078ed2e",
+    ["Dragon Graveyard Excavation"] = "derpy_mr_ui_279207d5b2",
+    ["Eyrie Climbers"] = "derpy_mr_ui_b94f2a6ec8",
+    ["Mountain Eyrie"] = "derpy_mr_ui_52d46a1b4b",
+    ["Great Eyrie"] = "derpy_mr_ui_5ea2e43226",
+    ["Gromril Prospect"] = "derpy_mr_ui_2db5671c5e",
+    ["Gromril Delving"] = "derpy_mr_ui_832e5d4b27",
+    ["Deep Gromril Mine"] = "derpy_mr_ui_fe1b0da582",
+    ["Ithilmar Lode"] = "derpy_mr_ui_f9e00943eb",
+    ["Ithilmar Mine"] = "derpy_mr_ui_6af99ca4cd",
+    ["Ithilmar Deepworks"] = "derpy_mr_ui_8b52340833",
+    ["Flensing Yard"] = "derpy_mr_ui_bcc7e4b5fe",
+    ["Sea Dragon Hunters"] = "derpy_mr_ui_07eb5f426c",
+    ["Sea Dragon Fleet"] = "derpy_mr_ui_80362dba32",
+    ["Glade of Gifts"] = "derpy_mr_ui_d759a2237f",
+    ["Grove of the Willing"] = "derpy_mr_ui_b62911c0ed",
+    ["Scale Scavengers"] = "derpy_mr_ui_f64252ab4e",
+    ["Wyvern Hunters' Lodge"] = "derpy_mr_ui_303b0c41e9",
+    ["How much your settlements eat each turn."] = "derpy_mr_ui_9efe801703",
+    ["Plenty"] = "derpy_mr_ui_452a65d23d",
+    ["Settlements eat 3 provisions a turn for each level.\nGrowth +10 in every province."] = "derpy_mr_ui_9587e86f6e",
+    ["Settlements eat 3 provisions a turn for each level.\nControl +2 in every province."] = "derpy_mr_ui_9b2c329408",
+    ["Normal"] = "derpy_mr_ui_960b44c579",
+    ["Settlements eat 2 provisions a turn for each level."] = "derpy_mr_ui_33733987b3",
+    ["Rationing"] = "derpy_mr_ui_06608c8819",
+    ["Settlements eat 1 provision a turn for each level.\nControl -2 in every province."] = "derpy_mr_ui_598a6a4d7e",
+    ["Workshops"] = "derpy_mr_ui_d7ec78ebbb",
+    ["What your workshops and trade favour."] = "derpy_mr_ui_7f368cb3b2",
+    ["Wartime"] = "derpy_mr_ui_b40138ea3a",
+    ["Workshops that make blackpowder, tools or leather make half as much again.\nTrade income -10%."] = "derpy_mr_ui_522e1fd2a8",
+    ["Balanced"] = "derpy_mr_ui_c6589f5236",
+    ["Workshops make their usual amounts."] = "derpy_mr_ui_2c1ea0177b",
+    ["Merchant"] = "derpy_mr_ui_896890bfb7",
+    ["Trade agreements send twice their usual share.\nRecruits take a quarter more from your stores."] = "derpy_mr_ui_1a93747e53",
+    ["Roads"] = "derpy_mr_ui_8eb4008d5f",
+    ["Who may cross your lands with trade."] = "derpy_mr_ui_ba4642e7c4",
+    ["Open"] = "derpy_mr_ui_c3bf447eab",
+    ["Trade crossing your lands pays no tolls.\nTrade income +5%."] = "derpy_mr_ui_eaa7adbd3f",
+    ["Tolled"] = "derpy_mr_ui_1c35dc7719",
+    ["Trade crossing your lands pays you tolls."] = "derpy_mr_ui_852a45c04f",
+    ["Closed"] = "derpy_mr_ui_03f4a47830",
+    ["Other factions' trade cannot cross your lands.\nControl +1 in every province."] = "derpy_mr_ui_3f6e486e32",
+}
 -- Derpy Resource Overhaul: stores flows. Raids, sacks and razes carry stock out of a settlement's
 -- stores into the taker's; trade agreements carry it between partners; a ledger and a 20-turn
 -- history feed the Stores panel's chart.
@@ -402,6 +1053,33 @@ DERPY_MR_FLOWS_POOL_HAS = {
 DERPY_MR_FLOWS = DERPY_MR_FLOWS or {}
 local F = DERPY_MR_FLOWS
 local KIND = DERPY_MR_FLOWS_KIND
+
+-- TRANSLATABLE TEXT (stores_panel.lua S.T, the same rule). F.T is for text only the panel shows. A
+-- string the model keeps or compares (a saved status, a reason the panel looks up) stays English inside
+-- F.EN, which only lists it for text/db/derpy_mr_ui.loc: the panel puts it through S.T where it shows it.
+function F.EN(text) return text end
+F.T_CACHE = F.T_CACHE or {}
+function F.T(text, ...)
+    if type(text) ~= "string" then return text end
+    local out = F.T_CACHE[text]
+    if out == nil then
+        out = text
+        local key = DERPY_MR_LOC_KEYS and DERPY_MR_LOC_KEYS[text]
+        if key and common and common.get_localised_string then
+            local ok, s = pcall(common.get_localised_string, key)
+            -- the loc arrives through RPFM's TSV import, which cannot hold a line break: \n is kept as two characters
+            if ok and type(s) == "string" and s ~= "" and s ~= key then out = (string.gsub(s, "\\n", "\n")) end
+        end
+        F.T_CACHE[text] = out
+    end
+    if select("#", ...) == 0 then return out end
+    local args = { ... }
+    return (string.gsub(out, "{(%d+)}", function(i)
+        local v = args[tonumber(i)]
+        if v == nil then return "" end
+        return tostring(v)
+    end))
+end
 
 F.PREFIX = "derpy_mr_store_"
 F.MCT = "derpy_more_resources"
@@ -731,7 +1409,7 @@ end
 -- the same on every machine. mode nil: the economy, recomputed each turn. 'peek': any answer already known,
 -- or nil. 'show': as peek, else worked out now - single player only, where nothing has to stay in step.
 F.ROAD_PER_TURN = 40   -- hexes a turn, F.route_turns' pace
-F.REACH_WHY = { far = "Too far for trade", enemy = "Cut off by enemy lands" }
+F.REACH_WHY = { far = F.EN("Too far for trade"), enemy = F.EN("Cut off by enemy lands") }
 F.reach_known = F.reach_known or {}
 function F.invalidate_reach()
     F.reach_known = {}
@@ -1205,6 +1883,23 @@ function F.draw(region, held, use, n, kind, fkey)
     return F.draw_realm({ { region = region, held = held } }, F.bulk(use), n, kind, fkey)
 end
 
+-- KEPT ON, NOT RENEWED (2026-11-08): a turn's upkeep and supply bundles were applied again to every settlement
+-- every turn, about 19,000 region bundle calls a computer round on the Old World map, and that round ran about 85 s
+-- longer than with computer stores off (measured: 187 s against 102 s without the mod). A bundle is now put on
+-- for good and left alone while it should stay; every caller still takes it off the turn it should go. One that
+-- an older build put on with a duration is put on again for good, once.
+function F.keep_bundle(region, key)
+    local list = region:effect_bundles()
+    for i = 0, list:num_items() - 1 do
+        local b = list:item_at(i)
+        if b:key() == key then
+            if b:duration() == 0 then return end
+            break
+        end
+    end
+    cm:apply_effect_bundle_to_region(key, region:name(), 0)
+end
+
 -- A RACE'S OWN BUNDLE for a use (2026-11-01: growth does nothing for Chaos Dwarfs), and never two:
 -- a captured settlement's former owner's goes
 function F.bundle(rkey, region, use, on)
@@ -1216,11 +1911,28 @@ function F.bundle(rkey, region, use, on)
     end
     for _, b in ipairs(family) do
         if on and b == want then
-            cm:apply_effect_bundle_to_region(b, rkey, F.BUNDLE_TURNS)
+            F.keep_bundle(region, b)
         elseif region:has_effect_bundle(b) then
             cm:remove_effect_bundle_from_region(b, rkey)
         end
     end
+end
+
+-- MORE FOOD FOR OTHER FACTIONS (MCT, off by default; author, 2026-11-08): the computer does not build for food, so
+-- a settlement of a faction no player controls makes what it eats at Normal rations, in the race's never-spoiling ration.
+function F.ration_stem(race)
+    local biscuit = race == "emp" or race == "brt" or race == "dwf" or race == "hef"
+        or race == "def" or race == "ksl" or race == "cth"
+    return biscuit and "hardtack" or "salted_meat"
+end
+
+function F.grow_food(region, held, level)
+    local stem = F.ration_stem(F.race(region:owning_faction()))
+    local n = math.min(F.NEED * level, F.free(region, stem))
+    if n <= 0 then return end
+    local before = F.held(region, stem)
+    F.pool_add(region, F.PREFIX .. stem .. "_" .. KIND.process, n)
+    held[stem] = (held[stem] or 0) + math.max(0, F.held(region, stem) - before)
 end
 
 function F.upkeep_region(region, fkey, uses)
@@ -1231,6 +1943,7 @@ function F.upkeep_region(region, fkey, uses)
         pcall(function() level = region:settlement():primary_slot():building():building_level() end)
         local need = F.need(fkey) * level
         if need > 0 and F.eats(region:owning_faction()) then
+            if F.rates().ai_food and not region:owning_faction():is_human() then F.grow_food(region, held, level) end
             F.draw(region, held, "provisions", need, KIND.eat, fkey)
             -- five turns of NORMAL meals, whatever the Rations edict: on Rationing's own meals it took half the food
             fed = F.use_total(held, "provisions") >= F.FED_TURNS * F.NEED * level
@@ -1909,13 +2622,13 @@ function F.economy_book(rkey, make, fkey)
 end
 
 function F.economy_open(faction, region, d)
-    if not F.uses_stores(faction) or not F.owned(faction, region:name()) then return false, "Not your stores" end
+    if not F.uses_stores(faction) or not F.owned(faction, region:name()) then return false, F.EN("Not your stores") end
     local race, match = F.race(faction), false
     for _, r in ipairs(d.races) do if race == r then match = true end end
-    if not match then return false, "Not available to this culture" end
+    if not match then return false, F.EN("Not available to this culture") end
     if d.kind == "services" then
         local cap = region:province():capital_region()
-        if cap:is_null_interface() or cap:name() ~= region:name() then return false, "Province capital only" end
+        if cap:is_null_interface() or cap:name() ~= region:name() then return false, F.EN("Province capital only") end
     else
         local slots = region:slot_list()
         for i = 0, slots:num_items() - 1 do
@@ -1925,7 +2638,7 @@ function F.economy_open(faction, region, d)
                 if d.levels[b:name()] and b:percent_health() == 100 then return true end
             end
         end
-        return false, "Needs an undamaged workshop"
+        return false, F.EN("Needs an undamaged workshop")
     end
     return true
 end
@@ -1936,7 +2649,7 @@ function F.economy_state(faction, region, key)
     local b = F.economy_book(region:name(), false, faction:name())
     local on = b and b.orders[key] == true or false
     local open, reason = F.economy_open(faction, region, d)
-    if not F.rates()[d.kind] then open, reason = false, "Disabled for this campaign" end
+    if not F.rates()[d.kind] then open, reason = false, F.EN("Disabled for this campaign") end
     local ready, short = false, nil
     if open then ready, short = F.economy_admit(faction, region, d) end
     return { key = key, definition = d, on = on, open = open, reason = reason,
@@ -2011,10 +2724,10 @@ function F.economy_admit(faction, region, d, batches)
     local v = F.economy_view(faction, region, d)
     for _, stem in ipairs(F.economy_stems(d)) do
         local n = d.cost[stem] * (batches or 1)
-        if F.available_stock(v, stem) < n then return false, "Short of " .. stem end
+        if F.available_stock(v, stem) < n then return false, F.EN("Short of ") .. stem end
         F.stock_adjust(v, stem, -n)
     end
-    if d.output and F.free(region, d.output[1]) < F.output_n(faction, d) then return false, "Output store full" end
+    if d.output and F.free(region, d.output[1]) < F.output_n(faction, d) then return false, F.EN("Output store full") end
     return true
 end
 
@@ -2269,7 +2982,7 @@ function F.stock_view(faction, region, provinces)
     for _, use in ipairs({ "provisions", "building", "war", "mounts", "luxuries" }) do
         local has_pool = false
         for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
-            if F.bulk(use)(g) and capacity[g.stem] then has_pool = true; break end
+            if g.use == use and not g.rare and capacity[g.stem] then has_pool = true; break end   -- F.bulk, with no closure a good
         end
         if not has_pool then v.recurring[use] = nil end
         local floor = 0
@@ -2280,8 +2993,9 @@ function F.stock_view(faction, region, provinces)
         v.auto_target[use] = math.max(F.SHIP.ai_on * cost, floor)
     end
     if F.uses_stores(faction) and (rates.ai or faction:is_human()) then
+        local race = F.race(faction)
         for _, w in ipairs(DERPY_MR_FLOWS_WORKS) do
-            if F.work_open(faction, w) then
+            if F.work_open(faction, w, race) then
                 v.work_target[w.rare] = math.max(v.work_target[w.rare] or 0, w.rare_n)
             end
         end
@@ -2446,8 +3160,10 @@ end
 
 -- A work or an event is open to its races ("all" for every one), less its not_races: a race gets its
 -- own where the general one would do nothing for it (2026-11-01)
-function F.work_open(faction, w)
-    local race = F.race(faction)
+-- race: the caller's F.race(faction), when it asks for many works at once (2026-11-08: 263,000 F.race calls
+-- in one computer round, from F.stock_view asking for all 86 works per settlement)
+function F.work_open(faction, w, race)
+    race = race or F.race(faction)
     for _, r in ipairs(w.not_races or {}) do
         if r == race then return false end
     end
@@ -2894,9 +3610,25 @@ end
 
 -- A SETTLEMENT CHANGES HANDS: an upgrade works for the faction that bought it and for nobody
 -- else, and comes back when its buyer takes the settlement back.
+-- THE KEPT BUNDLES GO WITH THE OLD OWNER (F.keep_bundle): they no longer lapse on their own, and a new owner
+-- with no stores (Tomb Kings, Khorne) never runs the upkeep that would take them off. Its own next turn start
+-- puts back whatever it has the stores for.
+function F.drop_bundles(region)
+    local keys = {}
+    for _, base in pairs(DERPY_MR_FLOWS_BUNDLES) do
+        keys[#keys + 1] = base
+        for _, v in ipairs(DERPY_MR_FLOWS_RACE_BUNDLES[base] or {}) do keys[#keys + 1] = v.key end
+    end
+    for _, k in ipairs(DERPY_MR_FLOWS_SUPPLY_ORDER) do keys[#keys + 1] = DERPY_MR_FLOWS_SUPPLY[k].bundle end
+    for _, key in ipairs(keys) do
+        if region:has_effect_bundle(key) then cm:remove_effect_bundle_from_region(key, region:name()) end
+    end
+end
+
 function F.on_region_change(region)
     local rk = region:name()
     F.economy_clear(region)
+    F.drop_bundles(region)
     local ups = F.state.upgrades and F.state.upgrades[rk]
     if not ups then return end
     local owner = region:owning_faction()
@@ -3045,14 +3777,14 @@ end
 
 function F.provision_source(faction, force)
     local ch = force:general_character()
-    if ch:is_at_sea() then return nil, "It cannot refill at sea." end
-    if not ch:has_region() then return nil, "There is no settlement here to refill from." end
+    if ch:is_at_sea() then return nil, F.T("It cannot refill at sea.") end
+    if not ch:has_region() then return nil, F.T("There is no settlement here to refill from.") end
     local r = ch:region()
     if r:is_null_interface() or r:is_abandoned() or r:owning_faction():name() ~= faction:name() then
-        return nil, "This settlement is not yours."
+        return nil, F.T("This settlement is not yours.")
     end
-    if r:garrison_residence():is_under_siege() then return nil, "This settlement is under siege." end
-    return r, "It refills from this settlement."
+    if r:garrison_residence():is_under_siege() then return nil, F.T("This settlement is under siege.") end
+    return r, F.T("It refills from this settlement.")
 end
 
 function F.provision_need(faction, region)
@@ -3113,18 +3845,20 @@ function F.provision_rows(faction)
                         F.stock_adjust(view, g.stem, -n)
                     end
                 end
-                reason = available > 0 and ("This settlement has " .. tostring(available) .. " provisions to spare.")
-                    or "This settlement has no provisions to spare."
+                reason = available > 0 and F.T("This settlement has {1} provisions to spare.", available)
+                    or F.T("This settlement has no provisions to spare.")
             end
+            -- RATIONS ABROAD (MCT, on by default): an army no player controls buys them anywhere away from home
             local row = { id = id, force = force, need = need, cap = 10 * need,
                 held = F.provision_total(b), short = b and b.short or 0, auto = not b or b.auto ~= false,
                 source = source, reason = reason,
-                mobile = not source and (force:general_character():is_at_sea() or faction:region_list():num_items() == 0) }
+                mobile = not source and (force:general_character():is_at_sea() or faction:region_list():num_items() == 0
+                    or (rates.ai_field_rations and not faction:is_human())) }
             row.buy = F.provision_quote(faction, row, b)
             row.price = row.buy * F.FIELD_RATION_PRICE
             if row.mobile then
-                row.reason = row.buy > 0 and ("You can buy " .. row.buy .. " rations for " .. row.price .. " gold.")
-                    or "The army cannot buy more rations this turn."
+                row.reason = row.buy > 0 and F.T("You can buy {1} rations for {2} gold.", row.buy, row.price)
+                    or F.T("The army cannot buy more rations this turn.")
             end
             rows[#rows + 1] = row
         end
@@ -3196,10 +3930,7 @@ function F.provision_record(faction, row)
     if not b then
         b = { f = faction:name(), goods = {}, auto = true, short = 0 }
         if not F.state.army_issued[row.id] then
-            local race = F.race(faction)
-            local biscuit = race == "emp" or race == "brt" or race == "dwf" or race == "hef"
-                or race == "def" or race == "ksl" or race == "cth"
-            b.goods[biscuit and "hardtack" or "salted_meat"] = row.need * 5
+            b.goods[F.ration_stem(F.race(faction))] = row.need * 5
             b.done = cm:model():turn_number()
         end
         F.state.armies[row.id] = b
@@ -3264,7 +3995,9 @@ function F.provisions_turn(faction)
         if not b then b = F.provision_record(faction, row) end
         if b.done ~= turn then
             if b.auto and (row.source or not faction:is_human()) then F.provision_refill(faction, row, b, false) end
-            local left = row.need
+            local other = not faction:is_human()
+            -- HALF RATIONS (MCT, off by default): an army no player controls eats half, rounded up
+            local left = (other and rates.ai_half_rations) and math.ceil(row.need / 2) or row.need
             for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
                 local n = math.min(left, b.goods[g.stem] or 0)
                 if n > 0 then
@@ -3274,7 +4007,8 @@ function F.provisions_turn(faction)
                 end
             end
             local previous = b.short
-            b.short = left == 0 and 0 or b.short + 1
+            -- FED AT HOME (MCT, on by default): no meal is missed in its own unbesieged settlement (row.source)
+            b.short = (left == 0 or (other and row.source and rates.ai_home_fed)) and 0 or b.short + 1
             b.done = turn
             warn = warn or (b.short > previous and b.short <= 3)
             for _, key in ipairs(F.PROVISION_BUNDLES) do cm:remove_effect_bundle_from_force(key, tonumber(row.id)) end
@@ -3363,20 +4097,20 @@ end
 -- mode: as F.reach; the panel passes 'show', the model's own callers nothing.
 function F.route_status(faction, o, mode)
     local seller = F.live(o.seller)
-    if not seller or not F.live(faction:name()) then return nil, "The seller or buyer is gone" end
+    if not seller or not F.live(faction:name()) then return nil, F.EN("The seller or buyer is gone") end
     local from, to = F.owned(seller, o.from), F.owned(faction, o.to)
-    if not from or not to then return nil, "One of the two settlements has changed hands" end
-    if o.seller ~= faction:name() and not F.partners(faction, seller) then return nil, "Needs a trade agreement" end
+    if not from or not to then return nil, F.EN("One of the two settlements has changed hands") end
+    if o.seller ~= faction:name() and not F.partners(faction, seller) then return nil, F.EN("Needs a trade agreement") end
     if o.seller ~= faction:name() then
         local open, why = F.reach(from, to, mode)
         if open == false then return nil, F.REACH_WHY[why] end
     end
-    if not F.uses_stores(faction) or not F.uses_stores(seller) then return nil, "One side keeps no stores" end
+    if not F.uses_stores(faction) or not F.uses_stores(seller) then return nil, F.EN("One side keeps no stores") end
     if F.stopped(o.seller, "export", o.stem) or F.stopped(faction:name(), "import", o.stem) then
-        return nil, "Trade in this resource is stopped"
+        return nil, F.EN("Trade in this resource is stopped")
     end
-    if o.seller ~= faction:name() and not F.pool(from, o.stem) then return nil, "The seller cannot store it" end
-    return { from = from, to = to, seller = seller }, "Ready"
+    if o.seller ~= faction:name() and not F.pool(from, o.stem) then return nil, F.EN("The seller cannot store it") end
+    return { from = from, to = to, seller = seller }, F.EN("Ready")
 end
 
 function F.route_create(faction, from_key, to_key, stem, target, batch)
@@ -3496,9 +4230,9 @@ function F.routes_turn(faction)
                 local fit = F.fit_delivery(o.batch, need)
                 if fit then
                     local ship, why = F.ship(faction, st.from, st.to, o.stem, fit.n, o)
-                    o.status = (ship and "Cart sent") or (why == "blockaded" and "Blockaded")
-                        or "Waiting for goods or gold or road space"
-                else o.status = "You have enough including what is on the way" end
+                    o.status = (ship and F.EN("Cart sent")) or (why == "blockaded" and F.EN("Blockaded"))
+                        or F.EN("Waiting for goods or gold or road space")
+                else o.status = F.EN("You have enough including what is on the way") end
             end
         end
     end
@@ -5357,7 +6091,7 @@ function F.supply(faction)
             for _, k in ipairs(DERPY_MR_FLOWS_SUPPLY_ORDER) do
                 local bk, rk = DERPY_MR_FLOWS_SUPPLY[k].bundle, region:name()
                 if paid[k] then
-                    cm:apply_effect_bundle_to_region(bk, rk, F.BUNDLE_TURNS)
+                    F.keep_bundle(region, bk)
                 elseif region:has_effect_bundle(bk) then
                     cm:remove_effect_bundle_from_region(bk, rk)
                 end

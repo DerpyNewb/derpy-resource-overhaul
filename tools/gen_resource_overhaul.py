@@ -4113,8 +4113,13 @@ def pack(t, frag=FRAG):
     main = frag == FRAG   # loc and icons ship once, in the main pack
     if main:
         plan.append(("text/db/%s.loc" % frag, {"type": "loc"}, "loc__%s.tsv" % frag, OUT))
+        import gen_mr_ui   # the Lua's own text, its own loc file so a translation overrides it alone
+        plan.append(("text/db/%s.loc" % gen_mr_ui.UI_LOC, {"type": "loc"}, "loc__%s.tsv" % gen_mr_ui.UI_LOC, OUT))
     for path, _n, tsv, _o, *tk in plan:   # the files on disk must be what build() makes
         rows = sum(1 for _ in open(os.path.join(OUT, tsv), encoding="utf-8")) - 2
+        if tsv == "loc__derpy_mr_ui.tsv":
+            assert rows == len(gen_mr_ui.ui_loc()), "%s is stale - run py tools/gen_mr_ui.py" % tsv
+            continue
         want = len(t[tk[0]][2]) if tk else n_loc()
         assert rows == want, "%s has %d rows, build() makes %d - run without --pack first" % (tsv, rows, want)
     check_keys(plan)

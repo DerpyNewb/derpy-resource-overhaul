@@ -14,11 +14,13 @@ def check():
     definitions=goods.economy_definitions()
     expected={'halls':'+2 control','records':'+5 growth','tea':'+2 control',
         'feasts':'+2 control','archives':'+5 growth','mess':'+2 control',
-        'builders':'-5% cost','hospital':'+3% replen.'}
+        'builders':'-5% cost','hospital':'+3% healing'}
     assert set(expected)==set(goods.SERVICES),'Add the new service to the label check'
     states=[dict(key=k,definition=definitions[k],on=True,paid=True,open=True) for k in sorted(expected)]
     code='local states='+ui._lua(states)+'\n'
     code+='S={ask=function() return states end,section=function(s) return s end,num=tostring,name=function(s) return s end,join=table.concat}\n'
+    # S.T with no loc: the English, its {n} filled in (stores_panel.lua's own S.T)
+    code+='function S.T(t,...) local a={...}; return (string.gsub(t,"{(%d+)}",function(i) return tostring(a[tonumber(i)]) end)) end\n'
     code+=source[start:end]
     code+='\nlocal v={rows={}}; S.economy_rows(v,{}, {name=function() return "test_region" end})\n'
     code+='for _,r in ipairs(v.rows) do if r.economy then print(r.economy.."|"..r[4]) end end\n'

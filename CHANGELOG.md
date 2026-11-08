@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-11-08 (second upload)
+
+- Computer armies now handle their provisions. Four new MCT options: Other armies fed at home (on), Other armies buy rations abroad (on), Other armies eat half (off), Other factions make more food (off).
+- Faster end turns.
+- Settlement bonuses no longer reapplied every turn.
+- Resource Vault button no longer goes missing on a long load.
+- "War economy" edict now reads Wartime and fits its button.
+- "+3% replen." now reads "+3% healing".
+- Panel text can now be translated: text/db/derpy_mr_ui.loc.
+
+## 2026-11-08
+
+- Load fills an army to 10 turns, not 5.
+- Caravans and convoys carry no provisions.
+- No Smugglers in the first turns.
+- Less map stutter: only new or changed trade links are redrawn.
+- Provisions tooltip rewritten. "1 turn", not "1 turns".
+
 ## 2026-11-03
 
 - Trade route lines: Small dashes half as thick.

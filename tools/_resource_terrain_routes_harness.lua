@@ -197,6 +197,13 @@ local ok, why, road = R.reach(settled(1, 4), settled(3, 4), 10)
 assert(ok and road and crossings(road) == 0, 'a safe road within reach keeps the trade')
 local journey = R.journey(settled(1, 1), settled(3, 1))
 assert(journey and crossings(journey) == 0, 'cargo must use a solved road round hostile ground')
+-- KEPT JOURNEYS (2026-11-08): the same pair again searches nothing while its regions judge the same, and each
+-- caller gets its own list, as a cargo keeps it
+lookups = 0
+local again_journey = R.journey(settled(1, 1), settled(3, 1))
+assert(lookups == 0, 'an unchanged journey was searched again: ' .. lookups .. ' hexes')
+assert(again_journey ~= journey and #again_journey == #journey, 'a kept journey handed out its own list')
+for i = 1, #journey do assert(again_journey[i] == journey[i], 'a kept journey changed at step ' .. i) end
 ok, why = R.reach(settled(1, 4), settled(3, 4), 9)
 assert(ok == false and why == 'enemy', 'only the enemy stands between them: ' .. tostring(why))
 ok, why = R.reach(settled(1, 4), settled(3, 4), 1)
@@ -222,6 +229,9 @@ local trader_land = open_land.owning_faction
 open_land.owning_faction = function() return fac('x', true) end   -- the detour's land declares war
 ok, why = R.reach(settled(1, 4), settled(3, 4), 10)
 assert(ok == false and why == 'enemy', 'a kept road outlived a war on its own land: ' .. tostring(ok))
+lookups = 0
+R.journey(settled(1, 1), settled(3, 1))
+assert(lookups > 0, 'a kept journey outlived a war on its own land')
 open_land.owning_faction = function() return fac('y') end   -- taken by a friend: the detour opens
 lookups = 0
 ok = R.reach(settled(1, 4), settled(3, 4), 10)

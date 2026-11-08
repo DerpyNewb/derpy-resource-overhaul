@@ -66,6 +66,13 @@ local function region(key, x, y, cap, held)
         is_abandoned = function() return r.owner == nil end,
         public_order = function() return r.po or 0 end,   -- Part D: the wild-land rule
         has_effect_bundle = function(_, b) return BUNDLES[key] ~= nil and BUNDLES[key][b] ~= nil end,
+        effect_bundles = function()
+            local t = {}
+            for b, turns in pairs(BUNDLES[key] or {}) do
+                t[#t + 1] = { key = function() return b end, duration = function() return turns end }
+            end
+            return list(t)
+        end,
         owning_faction = function() return r.owner and r.owner.iface or NULL end,
         settlement = function() return settlement end,
         slot_list = settlement.slot_list,
@@ -1185,13 +1192,37 @@ eq(u1.held.grain, 24, "a level-3 settlement eats 6, from its fullest provisions 
 eq(u1.held.salt, 10, "and leaves the next one alone when the first covers it")
 eq(F.book("uF").now.grain.eaten_out, 6, "booked as eaten, for the panel's last-turn line")
 eq(has(u1, WF), true, "Well fed: 34 left, five turns' need is 30")
-eq(BUNDLES.u1[WF], F.BUNDLE_TURNS, "for a short spell, renewed each turn, so a leftover lapses")
+eq(BUNDLES.u1[WF], 0, "kept on for good, not renewed each turn (2026-11-08)")
 eq(has(u1, GS), true, "Garrison stocked: 60 war materials, a quarter of one store is 50")
 eq(has(u1, CF), false, "no Comforts: 49 luxuries is under a quarter")
 eq(u1.held.coal, 60, "war materials are not eaten"); eq(u1.held.silk, 49, "nor luxuries")
 u1.held.coal, u1.held.silk = 10, 50; turn_start(uF)
 eq(has(u1, GS), false, "Garrison stocked ends the turn the stock falls under a quarter")
 eq(has(u1, CF), true, "Comforts at exactly a quarter")
+-- KEPT, NOT RENEWED (2026-11-08: about 19,000 region bundle calls a computer round on the Old World map, which
+-- ran about 85 s longer than with computer stores off)
+do
+    local kF = faction("kF", { human = true })
+    local k1 = region("k1", 5300, 0, 1000, { grain = 600, coal = 600, silk = 600 }); k1.level = 1
+    own(kF, k1, true)
+    turn_start(kF)
+    eq(has(k1, WF) and has(k1, GS) and has(k1, CF), true, "all three bonuses on")
+    local calls, apply = 0, cm.apply_effect_bundle_to_region
+    cm.apply_effect_bundle_to_region = function(self, b, rk, turns)
+        if rk == "k1" and (b == WF or b == GS or b == CF) then calls = calls + 1 end
+        return apply(self, b, rk, turns)
+    end
+    turn_start(kF)
+    eq(calls, 0, "a settlement whose bonuses hold gets no bundle call the next turn")
+    BUNDLES.k1[CF] = 2   -- put on by an older build, which renewed it each turn
+    turn_start(kF)
+    eq(calls, 1, "an older build's bundle is put on again"); eq(BUNDLES.k1[CF], 0, "for good")
+    turn_start(kF)
+    eq(calls, 1, "and only once")
+    cm.apply_effect_bundle_to_region = apply
+    F.on_region_change(k1.iface)
+    eq(has(k1, WF) or has(k1, GS) or has(k1, CF), false, "a settlement changing hands loses them: they no longer lapse")
+end
 -- the drawing rule: fullest first, then the next, until the need is met
 local u2 = region("u2", 5100, 0, 200, { grain = 3, salt = 2, wine = 1 }); u2.level = 2; own(uF, u2)
 turn_start(uF)
@@ -1676,7 +1707,7 @@ turn_start(pP)
 eq(pc.held.timber, 26, "paid from the capital's fullest building material")
 eq(pc.held.marble, 4, "only as far as needed"); eq(po.held.timber, 100, "never from another settlement")
 eq(bundled(pc, "materials"), true, "the capital gets Materials on hand")
-eq(BUNDLES.pc[SP.materials.bundle], F.BUNDLE_TURNS, "renewed each turn, like the stores' other bonuses")
+eq(BUNDLES.pc[SP.materials.bundle], 0, "kept on for good, like the stores' other bonuses")
 eq(bundled(po, "materials"), true, "so does every settlement you hold in the province")
 eq(bundled(px, "materials"), false, "not one you do not hold")
 eq(bundled(pc, "stable"), false, "and no switch that is off")
@@ -4326,6 +4357,50 @@ end)()
     eq(r.held.grain,140,"AI switch prevents debit")
     eq(F.state.armies["802"],nil,"AI switch removes penalties and cargo book")
     F.state.rates.ai=true
+    -- OTHER FACTIONS' ARMY MEALS (MCT, 2026-11-08): the campaign AI knows nothing of provisions
+    local R0 = F.state.rates
+    R0.ai_home_fed, R0.ai_field_rations, R0.ai_half_rations, R0.ai_food = true, false, false, false
+    r.held={}; F.state.armies={["802"]={f=f.name,goods={},short=0,auto=false}}; cb=F.state.armies["802"]
+    TURN=310; F.provisions_turn(f.iface); eq(cb.short,0,"fed at home: no meal missed in its own settlement")
+    R0.ai_home_fed=false
+    TURN=311; F.provisions_turn(f.iface); eq(cb.short,1,"fed at home off: an empty store is a missed meal")
+    r.siege=true; R0.ai_home_fed=true
+    TURN=312; F.provisions_turn(f.iface); eq(cb.short,2,"fed at home: not in a besieged settlement")
+    r.siege=false; cb.short=0
+    f.human=true; TURN=313; F.provisions_turn(f.iface); eq(cb.short,1,"fed at home: never a player's army")
+    f.human=false; cb.short=0
+    cb.goods={grain=100}; R0.ai_half_rations=true
+    TURN=314; F.provisions_turn(f.iface); eq(F.provision_total(cb),95,"half rations: 5 of a 10 meal")
+    f.human=true; TURN=315; F.provisions_turn(f.iface); eq(F.provision_total(cb),85,"half rations: never a player's army")
+    f.human=false; R0.ai_half_rations=false
+    TURN=316; F.provisions_turn(f.iface); eq(F.provision_total(cb),75,"half rations off: the whole meal")
+    c.r=nil; cb.goods={}; cb.auto=true; cb.short=0
+    TURN=317; F.provisions_turn(f.iface)
+    eq(F.provision_total(cb)..","..cb.short,"0,1","rations abroad off: nothing to buy away from home")
+    R0.ai_field_rations=true
+    TURN=318; F.provisions_turn(f.iface)
+    eq(F.provision_total(cb)..","..cb.short,"10,0","rations abroad: two meals bought, one eaten")
+    f.human=true; cb.goods={}; TURN=319; F.provisions_turn(f.iface)
+    eq(F.provision_total(cb),0,"rations abroad: a player's army still buys only at sea")
+    f.human=false; c.r=r
+    local made, tx = {}, cm.entity_add_pooled_resource_transaction
+    cm.entity_add_pooled_resource_transaction=function(s,reg,key,n)
+        if string.find(key,"_processed",1,true) then made[#made+1]=key..":"..n end
+        return tx(s,reg,key,n)
+    end
+    r.held={}
+    F.upkeep_region(r.iface,f.name,true); eq(#made,0,"more food off: nothing made")
+    R0.ai_food=true
+    F.upkeep_region(r.iface,f.name,true)
+    eq(made[1],"derpy_mr_store_hardtack_processed:"..(F.NEED*1),"more food: a level's meals in the Empire's hardtack")
+    local sc0=f.iface.subculture; f.iface.subculture=function() return "wh3_dlc23_sc_chd_chaos_dwarfs" end; made={}
+    F.upkeep_region(r.iface,f.name,true)
+    eq(made[1],"derpy_mr_store_salted_meat_processed:"..(F.NEED*1),"more food: the Chaos Dwarfs' salted meat")
+    f.iface.subculture=sc0
+    f.human=true; made={}
+    F.upkeep_region(r.iface,f.name,true); eq(#made,0,"more food: never a player's settlement")
+    f.human=false; cm.entity_add_pooled_resource_transaction=tx
+    R0.ai_home_fed, R0.ai_field_rations, R0.ai_half_rations, R0.ai_food = true, true, false, false
     local d=force(803,4); d.garrison=true
     eq(#F.provision_rows(f.iface),1,"garrison excluded")
     d.garrison=false; F.state.fight={escort=803}
@@ -5022,14 +5097,14 @@ end)()
     local CW = "derpy_mr_well_fed_chd"
     BUNDLES.race_rc = { [WF] = 2 }
     F.bundle("race_rc", rc.iface, "provisions", true)
-    eq(BUNDLES.race_rc[CW], F.BUNDLE_TURNS, "Chaos Dwarfs get their own Well fed, for the usual turns")
+    eq(BUNDLES.race_rc[CW], 0, "Chaos Dwarfs get their own Well fed, kept on")
     eq(BUNDLES.race_rc[WF], nil, "and a former owner's goes")
     F.bundle("race_rc", rc.iface, "provisions", false)
     eq(next(BUNDLES.race_rc), nil, "unfed, neither")
     local re = region("race_re", 3, 0, 1000, { grain = 200 }); re.level = 1; own(emp, re, true)
     BUNDLES.race_re = { [CW] = 2 }
     F.bundle("race_re", re.iface, "provisions", true)
-    eq(BUNDLES.race_re[WF], F.BUNDLE_TURNS, "everyone else keeps the usual Well fed")
+    eq(BUNDLES.race_re[WF], 0, "everyone else keeps the usual Well fed")
     eq(BUNDLES.race_re[CW], nil, "and a Chaos Dwarf former owner's goes")
     -- the Feast: the race's own, in its own words
     eq(F.event_offer(chd.iface, "feast", F.stocks(chd.iface)), nil, "no Feast for Chaos Dwarfs")
@@ -6192,6 +6267,16 @@ end)()
         F.provision_seed_all = seed
     end
     eq(CONTEXT_VALUES["derpy_mr_guild_good_" .. G.cqi], "Iron", "after a load the waiting offer names its good again")
+    -- A LINE BREAK IN THE LOC: RPFM's TSV import keeps \n as two characters, CA's loc holds a real one
+    do
+        local keys0 = DERPY_MR_LOC_KEYS
+        DERPY_MR_LOC_KEYS = { ["Line one\nline two"] = "derpy_mr_ui_test" }
+        common.get_localised_string = function(k) return k == "derpy_mr_ui_test" and "Ligne un\\nligne deux" or "" end
+        F.T_CACHE["Line one\nline two"] = nil
+        eq(F.T("Line one\nline two"), "Ligne un\nligne deux", "a loc line break is a real one on screen")
+        F.T_CACHE["Line one\nline two"] = nil
+        DERPY_MR_LOC_KEYS = keys0
+    end
     common.get_localised_string = loc0
     answer(G, EV.guild.dilemma, "FIRST")
     local sale = F.state.sales and F.state.sales.e2G

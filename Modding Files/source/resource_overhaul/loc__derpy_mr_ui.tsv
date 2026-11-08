@@ -1,0 +1,747 @@
+key	text	tooltip
+#Loc;1;text/db/derpy_mr_ui.loc
+derpy_mr_ui_9287bbc6af	Nothing is stored here yet.	false
+derpy_mr_ui_34a9352977	You hold no settlements and so have no stores.	false
+derpy_mr_ui_92f77f56ea	This store is full and anything more made here is lost.	false
+derpy_mr_ui_726c1d67bc	The history starts next turn.	false
+derpy_mr_ui_2f0091807b	{1} [[col:red]]Full[[/col]]	false
+derpy_mr_ui_d6e9e3b5b4	traded in	false
+derpy_mr_ui_9bb32a5d4c	traded out	false
+derpy_mr_ui_9b92ea99d8	Last turn: no change	false
+derpy_mr_ui_802464f5a6	Last turn: {1}	false
+derpy_mr_ui_914ff4e104	Last turn: {1}, ...	false
+derpy_mr_ui_758a938aea	{1} over {2} spoils at {3}% a turn	false
+derpy_mr_ui_88081346a0	{1} and about {2} will spoil next turn.	false
+derpy_mr_ui_8479983520	Turn {1}	false
+derpy_mr_ui_f933e8567a	Start of turn {1}: {2} held	false
+derpy_mr_ui_a81debb8ff	[[col:{1}]]{2}[[/col]]	false
+derpy_mr_ui_8051ad5bf6	Click to hide the resources you do not have.	false
+derpy_mr_ui_ac659b4bd6	Click to show the resources you do not have.	false
+derpy_mr_ui_278c53a96e	Allow all 	false
+derpy_mr_ui_d153ba9e62	Stop all 	false
+derpy_mr_ui_cfbb700901	From next turn every resource can be traded again and earn trade income.	false
+derpy_mr_ui_d0618a5640	From next turn no resource can be traded or earn trade income.	false
+derpy_mr_ui_f85fe8117a	Take every resource your trade partners send to your stores.	false
+derpy_mr_ui_a1092e68ce	Refuse every resource your trade partners send.\nTrade agreement imports still come in with import duty.	false
+derpy_mr_ui_84871287aa	sent {1} and received {2}	false
+derpy_mr_ui_4c58cb4a29	Recruits last turn	false
+derpy_mr_ui_3e18f60438	Guards ride with every cart and convoy you send.\nThey cost 5% of the cargo's value when it leaves.\nThey make trouble on the road half as likely.	false
+derpy_mr_ui_8f57993ed3	Nothing moves between you and these partners.	false
+derpy_mr_ui_eded1a9e96	The road takes more than {1}, crosses hostile lands or has an enemy army on it.	false
+derpy_mr_ui_8f63d54d46	1 turn	false
+derpy_mr_ui_d990c8ca79	{1} turns	false
+derpy_mr_ui_be4cb55986	Blockaded by {1}	false
+derpy_mr_ui_6edd4d932c	{1} to {2}	false
+derpy_mr_ui_4154950a10	Tolls: {1}.	false
+derpy_mr_ui_1c80d897f3	Last turn you paid these factions to cross their lands.	false
+derpy_mr_ui_7fd215a628	Last turn these factions paid you to cross your lands.	false
+derpy_mr_ui_dbdb73f937	Nothing last turn.	false
+derpy_mr_ui_b299a80ae5	An army at war with the sender can seize these goods from within {1} hexes when the sender begins its turn.	false
+derpy_mr_ui_1ee1192a9d	From {1} to {2} by turn {3}: {4}	false
+derpy_mr_ui_1cad9fee87	and {1} more {2}	false
+derpy_mr_ui_2687429b16	convoy	false
+derpy_mr_ui_dc0d0ace54	convoys	false
+derpy_mr_ui_a615d19d86	Each turn you and each trade partner you can reach pay {1}% of the value of what the other makes.	false
+derpy_mr_ui_b6f366013c	Last turn:	false
+derpy_mr_ui_62ae77d784	{1}: paid {2} and received {3}	false
+derpy_mr_ui_cc0fbd3d31	Nothing paid or received.	false
+derpy_mr_ui_19362ce827	{1} is kept out of trade and earns no trade income.\nClick to trade it again from next turn.	false
+derpy_mr_ui_1ffaef82e2	{1} can be traded and earns trade income.\nClick to keep it out of trade from next turn.	false
+derpy_mr_ui_b91ae092cc	Your trade partners send you no {1}.\nTrade agreement imports still come in.\nClick to take it again.	false
+derpy_mr_ui_e9b4d71631	Your trade partners can send you {1}.\nClick to refuse it.	false
+derpy_mr_ui_8c04f3a4b1	Use Send here in a settlement to put goods on the road.	false
+derpy_mr_ui_9e72f24a14	provisions	false
+derpy_mr_ui_4c5bbca164	building materials	false
+derpy_mr_ui_182362c2e6	war materials	false
+derpy_mr_ui_806a22b926	You already have {1} shipments on the road and cannot send more.	false
+derpy_mr_ui_24b3e77ceb	Send {1} {2} from {3}.\n{4} are lost on the way and the rest arrive in {5} or more.\nAn army at war with you can seize it.	false
+derpy_mr_ui_5818cdebf6	This store of {1} is full.	false
+derpy_mr_ui_c1f18f3880	What is already on the road will fill this store of {1}.	false
+derpy_mr_ui_2c84ddaf55	No other settlement of yours can send {1}.	false
+derpy_mr_ui_0af4fedece	{1}\n{2} more arrive here on turn {3}.	false
+derpy_mr_ui_cd79e6428c	[[img:{1}]][[/img]] {2}	false
+derpy_mr_ui_bdcd479669	the stores of {1}	false
+derpy_mr_ui_9e2a97fdd8	{1}Your other settlements in this province send more when {2} run low.\n	false
+derpy_mr_ui_5e5f696d30	{1}Pay {2} {3} a turn from {4}: {5} in every settlement you hold in this province.\n{6}The stores of {7} hold {8}.\n	false
+derpy_mr_ui_2366be518e	{1}Turned off on turn {2} because {3} ran short.\n	false
+derpy_mr_ui_1622364a71	{1}Click to stop it.	false
+derpy_mr_ui_7a02ce5633	{1}Click to start it.	false
+derpy_mr_ui_353f8be874	{1}\nSpend {2} {3}: {4} for {5}.\n{6}	false
+derpy_mr_ui_7034f18e89	{1}Running for {2} more and ready again in {3}.	false
+derpy_mr_ui_5cd6587705	{1}Ready again in {2}.	false
+derpy_mr_ui_4c9bc93920	{1}You have {2} {3}.	false
+derpy_mr_ui_4a409cd4a2	{1}You have {2}.\nClick to buy it.	false
+derpy_mr_ui_aa7f2b0ec8	The price is the normal {1}.	false
+derpy_mr_ui_ccf01ccda5	the stores hold {1}{2} of {3}	false
+derpy_mr_ui_3184e0a775	only 	false
+derpy_mr_ui_cb7834682c	the store is {1}% full	false
+derpy_mr_ui_16605bd88f	The price is {1} instead of {2}.\nIt is {3} because {4}.	false
+derpy_mr_ui_e40b34e338	cheap	false
+derpy_mr_ui_f384d48efa	expensive	false
+derpy_mr_ui_a39f9251e5	{1}\nYou buy for {2} and sell for {3}.	false
+derpy_mr_ui_f6a1c2399a	Sell the {1} {2} your stores hold over half full for {3} gold ({4} each).	false
+derpy_mr_ui_5fb5c0c5eb	{1}\n{2} from {3} at {4}	false
+derpy_mr_ui_a41eb7761c	{1}\nand {2} more {3}	false
+derpy_mr_ui_8cd892b7b9	store	false
+derpy_mr_ui_61af09f34b	stores	false
+derpy_mr_ui_b427b908bc	There is nothing worth selling.\nOnly what your stores of {1} hold over half full can be sold.	false
+derpy_mr_ui_355aa79dec	It needs %s gold.	false
+derpy_mr_ui_9c5c64e37f	It needs a level %d settlement.	false
+derpy_mr_ui_0879a569dc	It needs an empty building slot.	false
+derpy_mr_ui_0a6b5ab016	{1} gold	false
+derpy_mr_ui_925fb2cc83	Build {1} here at once for {2} even though no building slot here normally takes it.	false
+derpy_mr_ui_14fe83513b	Upgrade to {1} at once for {2}.	false
+derpy_mr_ui_12bc4d809b	Not built	false
+derpy_mr_ui_79a15cf527	Level {1} of 3	false
+derpy_mr_ui_5d695cc28c	Found	false
+derpy_mr_ui_f683581d3e	Upgrade	false
+derpy_mr_ui_3d822107ed	Stock rules: {1}	false
+derpy_mr_ui_ab7a485ebe	Rule	false
+derpy_mr_ui_b2f4069085	Amount	false
+derpy_mr_ui_1cfdf0e8d0	Less	false
+derpy_mr_ui_7a1920d611	Default	false
+derpy_mr_ui_d3da97e2d9	More	false
+derpy_mr_ui_65b5049ff0	You need to hold a capital to set these.	false
+derpy_mr_ui_e0a2fca116	Keep in each store	false
+derpy_mr_ui_6c6abb662f	Wanted at your capital	false
+derpy_mr_ui_03a156ea6d	Auto: {1}	false
+derpy_mr_ui_53d223233e	Every settlement keeps at least this much out of trade and sales.\nYour own spending and enemy raids can still take it.	false
+derpy_mr_ui_91c2b5fd70	Your trade partners send it to {1} until you have this much.\nSet it to 0 to stop them.	false
+derpy_mr_ui_8b756e0bd6	{1}\nOn Auto this amount covers all common {2} together.	false
+derpy_mr_ui_66e79fa51d	Less and More change it by 10 and Default sets it back to Auto.	false
+derpy_mr_ui_5d640ce426	Capital: {1}	false
+derpy_mr_ui_f5e6311df4	Held / on the way	false
+derpy_mr_ui_b5c2f32d1e	Still wanted	false
+derpy_mr_ui_118c4155c6	Price at capital	false
+derpy_mr_ui_844c8cdbfa	Partners only send it while it sells for at least 10% more here than at home.	false
+derpy_mr_ui_d70414169f	Trade switches	false
+derpy_mr_ui_197187c055	Exports stopped	false
+derpy_mr_ui_f52dfa5770	Exports allowed	false
+derpy_mr_ui_cc0079925a	Nothing is asked for because imports are stopped.	false
+derpy_mr_ui_c76d9cb701	Imports are allowed up to the wanted amount and the free space.	false
+derpy_mr_ui_7364494d28	All {1}	false
+derpy_mr_ui_7715715856	{1} held	false
+derpy_mr_ui_bd71b1c8c4	On Auto all common {1} share one reserve and one wanted amount.\nRare resources are not counted.	false
+derpy_mr_ui_64854b13a5	Auto: enough for one Workshop purchase	false
+derpy_mr_ui_92d389dcbb	Used by: {1}.	false
+derpy_mr_ui_93efe7f2e9	Arriving on turn {1}	false
+derpy_mr_ui_d5be1c8643	Set up a regular supply	false
+derpy_mr_ui_1e751501a7	Pick one of your settlements or a trade partner to keep sending it here.	false
+derpy_mr_ui_c6bddd0038	Each cart carries up to 100 and loses a tenth as it sets out.\nA cart takes 1 to 6 turns depending on the road.	false
+derpy_mr_ui_334b7c6888	You pay the selling price plus 10% or your own store price if that is higher.\nYou get your gold back if the cart is lost.	false
+derpy_mr_ui_5da618e8e4	From	false
+derpy_mr_ui_ae6a5f0d6a	Spare	false
+derpy_mr_ui_2960f998eb	Takes	false
+derpy_mr_ui_131597a3b4	Price each	false
+derpy_mr_ui_0e01e50596	Press Create to start it and change it later under Spending.	false
+derpy_mr_ui_12af38af18	Nobody has any to spare.	false
+derpy_mr_ui_7597078271	Sends {1} to {2} until you hold {3}.\n{4}	false
+derpy_mr_ui_638a9b6efb	at least {1}	false
+derpy_mr_ui_6c05fcfd56	Your own	false
+derpy_mr_ui_686e697538	Create	false
+derpy_mr_ui_90a51fbfee	Regular supply	false
+derpy_mr_ui_fe242d1817	Less and More change it by 10 and Default sets it to 100.	false
+derpy_mr_ui_aa70044618	This supply has ended.	false
+derpy_mr_ui_33202d7c2c	{1} to {2}: {3}	false
+derpy_mr_ui_46f1d03760	No cart sent yet	false
+derpy_mr_ui_5f8cc571c0	Stop at	false
+derpy_mr_ui_218bc19def	Cart size	false
+derpy_mr_ui_2cab2051c7	Carts stop once you hold this much including what is on the way.	false
+derpy_mr_ui_13807422b9	Each cart carries this much (2 to 100).	false
+derpy_mr_ui_d8913ed302	Set per cart	false
+derpy_mr_ui_57f6828a8c	The last cart cost this and the next one costs {1}.	false
+derpy_mr_ui_50c26ad305	{1} each	false
+derpy_mr_ui_562f5cef6f	an unknown amount	false
+derpy_mr_ui_a410ff505c	Your own goods: free	false
+derpy_mr_ui_288282f76e	Gold set aside	false
+derpy_mr_ui_e4b0c2b6d5	Sending	false
+derpy_mr_ui_e99180abf4	Paused	false
+derpy_mr_ui_105b296a83	Pause	false
+derpy_mr_ui_f1cefec9e2	Resume	false
+derpy_mr_ui_0cee91b1f3	Pause stops new carts but carts on the road still arrive.	false
+derpy_mr_ui_93622a5e4c	End this supply	false
+derpy_mr_ui_ea4788705e	Cancel	false
+derpy_mr_ui_0f1e7dbd32	End this supply and get back any gold set aside.\nYour own carts on the road still arrive.	false
+derpy_mr_ui_9f59edb964	{1} and {2}	false
+derpy_mr_ui_2367d97467	{1} holds {2} {3}.	false
+derpy_mr_ui_df8242d54a	makes {1}	false
+derpy_mr_ui_c3e5410514	uses {1}	false
+derpy_mr_ui_214b183aab	It {1} each turn.	false
+derpy_mr_ui_0060636b44	 and 	false
+derpy_mr_ui_c40868994e	It loses {1} to spoiling each turn.	false
+derpy_mr_ui_13df2c2216	At this rate it runs out in {1}.	false
+derpy_mr_ui_baf0e4e40c	That is enough for {1}.	false
+derpy_mr_ui_7df8b2bb1c	Armies refilling here take {1} of that each turn.	false
+derpy_mr_ui_f01298d8cf	Your production here uses {1} {2} a turn.	false
+derpy_mr_ui_bf7e65182d	{1} {2} arrive on turn {3}.	false
+derpy_mr_ui_35f2f71322	Where {1} is kept	false
+derpy_mr_ui_1610f44571	Settlement	false
+derpy_mr_ui_1f6c15b842	Held / Space	false
+derpy_mr_ui_cd8877dddb	Per turn	false
+derpy_mr_ui_3601146c4e	Price	false
+derpy_mr_ui_0df4c13a21	Every resource your settlements keep	false
+derpy_mr_ui_be8545ae7a	Resource	false
+derpy_mr_ui_effe06cc3b	Held	false
+derpy_mr_ui_d511f8439e	Space	false
+derpy_mr_ui_a188cf4ff8	Stored in	false
+derpy_mr_ui_d579a05bc8	Click a resource to see where it is kept.	false
+derpy_mr_ui_5b1c261789	{1} of {2}	false
+derpy_mr_ui_0f0673c521	Where your settlements and convoys are	false
+derpy_mr_ui_b132684a78	Click a convoy or a settlement to fly there.	false
+derpy_mr_ui_b555ac5acf	What your settlements trade	false
+derpy_mr_ui_66f453635e	Exports	false
+derpy_mr_ui_dc658425ca	Imports	false
+derpy_mr_ui_80d0c9cd88	Last turn	false
+derpy_mr_ui_9cbba968ba	Tick a box to allow trade or click a resource for its rules.	false
+derpy_mr_ui_5c96b3af84	Import duty	false
+derpy_mr_ui_5e4fb845ec	paid {1} and received {2}	false
+derpy_mr_ui_e86776c830	Tolls paid	false
+derpy_mr_ui_53475f45e7	Tolls received	false
+derpy_mr_ui_35a5714c0c	Trade cut off	false
+derpy_mr_ui_f090224e60	 partner	false
+derpy_mr_ui_ec831dfc63	 partners	false
+derpy_mr_ui_047d8955fc	Cargo on the road	false
+derpy_mr_ui_8b4db81bfa	{1} out and {2} in	false
+derpy_mr_ui_a94510ffd7	Road guards	false
+derpy_mr_ui_521c36a31c	On	false
+derpy_mr_ui_d15305d7a4	Off	false
+derpy_mr_ui_c8a59e7135	Dismiss	false
+derpy_mr_ui_012706ea3b	Hire	false
+derpy_mr_ui_e24e3c67d7	Resources you do not have ({1})	false
+derpy_mr_ui_f6920afb08	Stores of {1}	false
+derpy_mr_ui_97c80fbbb4	{1}\nClick to set up a regular supply.	false
+derpy_mr_ui_34863afc5d	Every settlement you hold	false
+derpy_mr_ui_a0db49ba47	Level	false
+derpy_mr_ui_3f05d6f388	Using	false
+derpy_mr_ui_ddcf50c292	Resources	false
+derpy_mr_ui_48e74aa3fb	Fullest store	false
+derpy_mr_ui_2297eadc63	Click a settlement to see its stores.	false
+derpy_mr_ui_c1144d49ac	Using: {1}	false
+derpy_mr_ui_1b770fb1d6	 control	false
+derpy_mr_ui_88dd130532	 growth	false
+derpy_mr_ui_10e4f7333e	% cost	false
+derpy_mr_ui_8f5a884f71	% healing	false
+derpy_mr_ui_e4e7218225	No workshop	false
+derpy_mr_ui_4447f09e08	Capital only	false
+derpy_mr_ui_1aaf2e2da4	Switched off	false
+derpy_mr_ui_3926e86a49	None of your settlements has an undamaged building that runs this.	false
+derpy_mr_ui_0bd632fcdf	It runs only in a province capital and you hold none.	false
+derpy_mr_ui_e7a67dc8e6	Switched off in the mod settings for this campaign.	false
+derpy_mr_ui_e0010a0a1a	Paid	false
+derpy_mr_ui_9b39e4a396	Next turn	false
+derpy_mr_ui_ee79af707a	Store full	false
+derpy_mr_ui_30bb747c98	Short	false
+derpy_mr_ui_60b5b9a584	Short of {1}	false
+derpy_mr_ui_b594fc2d76	 / batch	false
+derpy_mr_ui_fd89973f0f	 / turn	false
+derpy_mr_ui_d4f07da764	Turns {1} into {2}.	false
+derpy_mr_ui_07f2564fb6	Uses {1} a turn for {2}{3}.	false
+derpy_mr_ui_0e547a50a3	\nYour buildings still make their usual goods.\nThis only runs when it has everything it needs.	false
+derpy_mr_ui_f524c3cb1d	\nIt is paid from this settlement after upkeep.\nIt gives nothing in a turn it cannot be paid.	false
+derpy_mr_ui_0f555351d7	{1} made	false
+derpy_mr_ui_f733129eb9	Processing and services	false
+derpy_mr_ui_ee611c8b9d	Inputs	false
+derpy_mr_ui_46a2a41cc6	State	false
+derpy_mr_ui_d0b37cb641	Benefit	false
+derpy_mr_ui_2faec1f9f8	Enable	false
+derpy_mr_ui_abd5ca87bd	Stored resources	false
+derpy_mr_ui_58755c1e0c	Your race has no processing or services.	false
+derpy_mr_ui_9261cc5c1a	It needs {1} {2}{3} and {4} has {5} to spare.	false
+derpy_mr_ui_6a1b9c173f	 a turn	false
+derpy_mr_ui_12a13313ce	None of your settlements	false
+derpy_mr_ui_cc4341eb69	{1}\nBuildings that run it: {2}.	false
+derpy_mr_ui_d02f595b82	What your settlements can make	false
+derpy_mr_ui_8c9c6b3c57	Workshops make new resources and services spend them for a bonus.	false
+derpy_mr_ui_e96f7a63ac	Gives	false
+derpy_mr_ui_dce8ad5334	Click to show these.	false
+derpy_mr_ui_278135487e	Click to hide these.	false
+derpy_mr_ui_695ab00526	An army at war with you can take this unguarded shipment without a fight.	false
+derpy_mr_ui_a80e92ea8b	An army has to beat these soldiers to take the shipment.	false
+derpy_mr_ui_565c5dd864	Escort of {1} {2}, {3} to {4}	false
+derpy_mr_ui_50dac4a4c9	An army eats 1 provision a turn for every 4 units and refills in your own settlements.	false
+derpy_mr_ui_a4be6e93f1	On Auto the army refills to 5 turns of provisions after eating.\nIt carries at most 10 turns and never buys rations.	false
+derpy_mr_ui_505892cc96	Buy up to two meals of rations once a turn at 10 gold each.	false
+derpy_mr_ui_695657aa45	After two missed meals the army moves 5% slower.\nAfter three it moves and recovers 10% slower.\nOne full meal ends this.	false
+derpy_mr_ui_d195aa1ad9	Army {1}	false
+derpy_mr_ui_4bf42dd83a	{1}: provisions	false
+derpy_mr_ui_004bf6c9a4	Action	false
+derpy_mr_ui_d8de6a6d45	Lasts	false
+derpy_mr_ui_82361cd653	Unload before you merge this army or its provisions are lost.	false
+derpy_mr_ui_03361f42cc	Fill the army to 10 turns of provisions from {1}.\nIts reserve is not touched.	false
+derpy_mr_ui_ea15f48cee	This army cannot load here.	false
+derpy_mr_ui_8ca5b1db20	Put the provisions back into {1} and pause Auto.	false
+derpy_mr_ui_60aa1163f4	This army can only unload in one of your settlements.	false
+derpy_mr_ui_546878fc49	Local stores	false
+derpy_mr_ui_8777bf6dd6	Rations	false
+derpy_mr_ui_453e6aa38d	Unavailable	false
+derpy_mr_ui_066f34133f	Auto-refill	false
+derpy_mr_ui_0fae14a215	Buy rations	false
+derpy_mr_ui_f494484f18	Load here	false
+derpy_mr_ui_831a28f1e8	Buy	false
+derpy_mr_ui_f19dbf2edb	Load	false
+derpy_mr_ui_42d6fc179d	Unload here	false
+derpy_mr_ui_2bcdc93724	Pauses refill	false
+derpy_mr_ui_ae11d3ee07	Unload	false
+derpy_mr_ui_19ac7bf0e6	Missed meals	false
+derpy_mr_ui_bf7236074d	What your stores pay for	false
+derpy_mr_ui_fb230f0265	Province capital	false
+derpy_mr_ui_23ce0eb7d1	Materials	false
+derpy_mr_ui_74b2c238f8	Stables	false
+derpy_mr_ui_4b9b1c9686	Arms	false
+derpy_mr_ui_2e60a55812	Supply capital	false
+derpy_mr_ui_a611e9f0cc	Tick a supply to pay for it each turn.	false
+derpy_mr_ui_24a51077a5	Regular supplies	false
+derpy_mr_ui_351e4bd6ca	Sends carts of {1} until you hold {2}.\n{3}.\nClick to change it.	false
+derpy_mr_ui_89e7895ab6	Each supply costs {1} a turn from the stores of {2}.\nThat is 2 for each settlement you hold in its province.	false
+derpy_mr_ui_0f067ed1e9	It pays with {1} first because that store is the fullest.	false
+derpy_mr_ui_7c019dd52c	The stores of {1} have nothing to pay with.	false
+derpy_mr_ui_5eeb947b46	On the road ({1} of {2})	false
+derpy_mr_ui_e12167aa0a	To	false
+derpy_mr_ui_32ef9d3a3b	Arrives	false
+derpy_mr_ui_af364698df	turn {1}	false
+derpy_mr_ui_f814508a46	Click to see its escort.	false
+derpy_mr_ui_498f79c4c5	Show	false
+derpy_mr_ui_a0806781f4	{1} and reaches {2} on turn {3}.\nClick to see it on the map.	false
+derpy_mr_ui_595ac9289c	It is travelling from {1}	false
+derpy_mr_ui_e2bce56593	It is now beside {1}	false
+derpy_mr_ui_c05d45b406	Army provisions	false
+derpy_mr_ui_2fa3647b2f	No armies carry provisions	false
+derpy_mr_ui_8fd91afb64	This army eats {1}{2} a turn.\n{3}{4}\nClick to manage its provisions.	false
+derpy_mr_ui_5778290e8e	 provision	false
+derpy_mr_ui_618357a20a	 provisions	false
+derpy_mr_ui_778df9cd96	\nMissed meals: {1}.	false
+derpy_mr_ui_a5da103f78	{1} resources	false
+derpy_mr_ui_0959b5c477	Each recruit takes resources from your stores by its type and cost.\nAnything missing is paid {1}in gold.{2}	false
+derpy_mr_ui_a99f34353f	in your own currency and then 	false
+derpy_mr_ui_9dea4016db	Items	false
+derpy_mr_ui_e5771a362d	Units	false
+derpy_mr_ui_81c26bc551	Settlement upgrades	false
+derpy_mr_ui_a05a8b4ed0	Race resources	false
+derpy_mr_ui_5b4bfa5551	Army works	false
+derpy_mr_ui_1047e81a77	Lord and hero works	false
+derpy_mr_ui_49d3de3210	Permanent works	false
+derpy_mr_ui_f027f27d0d	Research	false
+derpy_mr_ui_4f39f4f50d	Forged	false
+derpy_mr_ui_2d9f7fa495	Built	false
+derpy_mr_ui_bd0d0846e4	Has it	false
+derpy_mr_ui_7af402304b	Select one of your armies on the map first.	false
+derpy_mr_ui_41aa0ec7cf	Select one of your lords or heroes on the map first.	false
+derpy_mr_ui_82b3a2a463	Select one of your lords on the map first.	false
+derpy_mr_ui_68b42aa611	Resource Vault actions are switched off in the mod settings.	false
+derpy_mr_ui_b25b4ec0f3	It needs {1} {2} and you have {3}.	false
+derpy_mr_ui_f5b8faa02b	Only a lord can take this.	false
+derpy_mr_ui_4606ffa655	Your faction cannot hold this.	false
+derpy_mr_ui_97e21cd8bf	You hold as much of it as you can.	false
+derpy_mr_ui_8066cac426	They have this already.	false
+derpy_mr_ui_cdfab4df28	Built already.	false
+derpy_mr_ui_e388fdf0b5	The selected character leads no army.	false
+derpy_mr_ui_fbae3af410	Not one of your characters.	false
+derpy_mr_ui_5df292c6ba	common {1}	false
+derpy_mr_ui_faa8a48aa4	Ready again in {1}.	false
+derpy_mr_ui_36729582db	Already forged.	false
+derpy_mr_ui_67a891343e	Built here already.	false
+derpy_mr_ui_0937b68cbd	Your mercenary pool holds as many as it can.	false
+derpy_mr_ui_ff4d28ac9a	Not your settlement.	false
+derpy_mr_ui_448986f575	No army of yours has room for it.	false
+derpy_mr_ui_1c1762bdb8	Book of Grudges	false
+derpy_mr_ui_bc63cdd280	Regiments of Renown	false
+derpy_mr_ui_6c594d91c1	{1}It goes into your {2}.\nRecruiting it there still costs its gold.\n	false
+derpy_mr_ui_55df6537bc	{1}It goes straight into your largest army with room.\n	false
+derpy_mr_ui_be90fc15d5	Click to buy it.	false
+derpy_mr_ui_1c248bec9a	Where to build {1}	false
+derpy_mr_ui_240f6a6ed1	Buy here	false
+derpy_mr_ui_2623d98d9d	It is paid from all your stores: {1} {2} and {3} {4}.	false
+derpy_mr_ui_457141916e	What your stores can buy	false
+derpy_mr_ui_12795510c5	Rare resources are made only in their own buildings.	false
+derpy_mr_ui_cd56da65dd	Applies to: {1}.	false
+derpy_mr_ui_6e9377d97f	the selected character	false
+derpy_mr_ui_0fed18d53f	{1}Click to choose a settlement.	false
+derpy_mr_ui_961f2247a2	Choose	false
+derpy_mr_ui_92c6b02e01	Choose the settlement to build it in.	false
+derpy_mr_ui_da02954a34	{1} from {2} to {3}.\nIt arrives on turn {4}.\nClick to fly there.	false
+derpy_mr_ui_c1ca40ce29	Convoy	false
+derpy_mr_ui_e7b28cadea	Resource Vault	false
+derpy_mr_ui_a0ddecb224	Settlements	false
+derpy_mr_ui_5f390d80b2	Trade	false
+derpy_mr_ui_471cc3b690	Spending	false
+derpy_mr_ui_46f3ea056c	Map	false
+derpy_mr_ui_8e5d9dbc85	Workshop	false
+derpy_mr_ui_756d97bb25	Production	false
+derpy_mr_ui_0557fa923d	Back	false
+derpy_mr_ui_57e3c3573c	Edicts	false
+derpy_mr_ui_09937ef678	Wait {1}	false
+derpy_mr_ui_e7d31fc060	Ready	false
+derpy_mr_ui_766af8c1ae	{1}\nThis edict can change again in {2}.	false
+derpy_mr_ui_06b9281e39	Auto	false
+derpy_mr_ui_21b5931e27	Send here	false
+derpy_mr_ui_52ebc26c29	Zoom out	false
+derpy_mr_ui_d9619fd96f	Draw more of the map.	false
+derpy_mr_ui_7b91156d64	Zoom in	false
+derpy_mr_ui_e4252f90aa	Draw the map closer.	false
+derpy_mr_ui_063a328164	As far as it goes.	false
+derpy_mr_ui_b73ed59ec2	{1}{2}\nClick to fly there.	false
+derpy_mr_ui_32343d79e8	 (province capital)	false
+derpy_mr_ui_cb2640295a	Sell surplus	false
+derpy_mr_ui_92f2e11c8e	Provisions\nArmy provisions are switched off in this campaign.	false
+derpy_mr_ui_9eba32e8c5	Provisions\nThis army eats {1} a turn and carries {2} of {3}.\n{4}{5}\n{6}	false
+derpy_mr_ui_4f03ad1d6f	and {1} more	false
+derpy_mr_ui_b8dde67e95	Lost: this army has no settlement	false
+derpy_mr_ui_7769700682	Into {1}	false
+derpy_mr_ui_9ce3ef4881	Raiding takes each turn:	false
+derpy_mr_ui_af853435f1	Sacking	false
+derpy_mr_ui_c6f4edb530	Razing	false
+derpy_mr_ui_a2eb01615f	Occupying	false
+derpy_mr_ui_176bb9b379	Occupying keeps its stores:	false
+derpy_mr_ui_99c8685ce3	They stay in this settlement	false
+derpy_mr_ui_b3bc9ae672	Into your nearest settlement	false
+derpy_mr_ui_7728e376d1	Lost: you hold no settlement	false
+derpy_mr_ui_6e72bb8353	{1} takes:	false
+derpy_mr_ui_2a3d4aba22	Too far for trade	false
+derpy_mr_ui_f48b5ea6c8	Cut off by enemy lands	false
+derpy_mr_ui_ea31ab51dc	Not your stores	false
+derpy_mr_ui_d617532330	Not available to this culture	false
+derpy_mr_ui_e5a5e6850f	Province capital only	false
+derpy_mr_ui_7da18bce2a	Needs an undamaged workshop	false
+derpy_mr_ui_ce0ba322fb	Disabled for this campaign	false
+derpy_mr_ui_d0f00cf9f7	Short of 	false
+derpy_mr_ui_855f0d9669	Output store full	false
+derpy_mr_ui_59145d6e87	It cannot refill at sea.	false
+derpy_mr_ui_48d5922f68	There is no settlement here to refill from.	false
+derpy_mr_ui_ac6aae4aee	This settlement is not yours.	false
+derpy_mr_ui_c869fd27de	This settlement is under siege.	false
+derpy_mr_ui_53d78dcc3a	It refills from this settlement.	false
+derpy_mr_ui_f8ea19175a	This settlement has {1} provisions to spare.	false
+derpy_mr_ui_13ae2fc7bf	This settlement has no provisions to spare.	false
+derpy_mr_ui_a8f16cf995	You can buy {1} rations for {2} gold.	false
+derpy_mr_ui_bf90d57f02	The army cannot buy more rations this turn.	false
+derpy_mr_ui_8e6f48ab81	The seller or buyer is gone	false
+derpy_mr_ui_747eb8a2b4	One of the two settlements has changed hands	false
+derpy_mr_ui_2786f77e53	Needs a trade agreement	false
+derpy_mr_ui_fea7acba12	One side keeps no stores	false
+derpy_mr_ui_c8aaddb03d	Trade in this resource is stopped	false
+derpy_mr_ui_784f7bbc8d	The seller cannot store it	false
+derpy_mr_ui_d31d7785c9	Cart sent	false
+derpy_mr_ui_b08ea8431e	Blockaded	false
+derpy_mr_ui_190425d901	Waiting for goods or gold or road space	false
+derpy_mr_ui_62d4b07f26	You have enough including what is on the way	false
+derpy_mr_ui_11e8fe8bff	Festival	false
+derpy_mr_ui_dfb36d3880	public order +4 in every province	false
+derpy_mr_ui_610c1bec79	Muster	false
+derpy_mr_ui_faa2a08d45	recruit rank +1 for every unit	false
+derpy_mr_ui_29826a6968	Great Works	false
+derpy_mr_ui_1a7791121b	construction cost -20% for every building	false
+derpy_mr_ui_495b345411	Materials on hand	false
+derpy_mr_ui_79af500e73	construction cost -25%	false
+derpy_mr_ui_cea6fd3d6e	Stable stocked	false
+derpy_mr_ui_4f76354330	recruit cost -15% for cavalry, monsters and gyrocopters	false
+derpy_mr_ui_e56035a31b	Arms stocked	false
+derpy_mr_ui_e46cc12f79	recruit cost -15% for infantry and artillery	false
+derpy_mr_ui_a6bc2731b5	Supply the capital	false
+derpy_mr_ui_71a12b5480	Gromril Armour	false
+derpy_mr_ui_865800a9e2	Armour	false
+derpy_mr_ui_98386f4f1b	Armour for a lord or hero	false
+derpy_mr_ui_0652b8cb73	Gromril Greataxe	false
+derpy_mr_ui_18c8366992	Weapon	false
+derpy_mr_ui_088dc24b5e	Weapon for a lord or hero	false
+derpy_mr_ui_df88e54637	Enchanted Ithilmar Breastplate	false
+derpy_mr_ui_5962560044	Dragonhelm	false
+derpy_mr_ui_041e5a6497	Dragonbane Gem	false
+derpy_mr_ui_67b587b7da	Talisman	false
+derpy_mr_ui_2fd2d5119d	Talisman for a lord or hero	false
+derpy_mr_ui_265ae18bc4	Dragonscale Shield	false
+derpy_mr_ui_b0601014da	Dragon Slayer's Scales	false
+derpy_mr_ui_a6ab2d46a0	Dragon's Claw	false
+derpy_mr_ui_492c72a38c	Sea Dragon Cloak	false
+derpy_mr_ui_07c898c316	Lotus-Venom Blade	false
+derpy_mr_ui_4fd6180cc3	Starwood Bow	false
+derpy_mr_ui_50756430f5	Featherfoe Torc	false
+derpy_mr_ui_bccdc8c51d	Enchanted item	false
+derpy_mr_ui_ae7601491e	Enchanted item for a lord or hero	false
+derpy_mr_ui_8da593e017	Wyvernbone Bow	false
+derpy_mr_ui_fdc133f55b	Wyvern-Scale Armour	false
+derpy_mr_ui_3a7571c95f	Armour of Borek Beetlebrow	false
+derpy_mr_ui_c460266175	Ironbeard's Armour	false
+derpy_mr_ui_ed1e46de52	Helm of Fortune	false
+derpy_mr_ui_e0d31c8b86	Armour of Caledor	false
+derpy_mr_ui_b83004d8d7	Icon of the Spirit Dragon	false
+derpy_mr_ui_8cffd8e8c9	Drake Hunters' Banner	false
+derpy_mr_ui_6ff29916f9	Banner	false
+derpy_mr_ui_c599459c58	Banner for a lord or hero	false
+derpy_mr_ui_8aaf234682	Cloak of Hag Graef	false
+derpy_mr_ui_e052251890	Sea Serpent Standard	false
+derpy_mr_ui_15da98bb57	Hail of Doom Arrow	false
+derpy_mr_ui_3cbbd98ef0	Enchanted item for Glade Lords and Waystalkers	false
+derpy_mr_ui_3410a08be2	The Bow of Loren	false
+derpy_mr_ui_fb8626c744	Weapon for Glade Captains, Glade Lords, Waystalkers and the Sisters	false
+derpy_mr_ui_7322019f2d	Extinguished Phoenix Pinion	false
+derpy_mr_ui_fc8fee79db	Griffon Banner	false
+derpy_mr_ui_e8fbabd869	Glittering Scales	false
+derpy_mr_ui_68b490b6cf	Venom Sword	false
+derpy_mr_ui_24bddb3741	Corrosive Blade	false
+derpy_mr_ui_082bdeaa87	Ironbreakers	false
+derpy_mr_ui_5cf01d434e	Unit (2 at most)	false
+derpy_mr_ui_89c5d52428	Up to 2 at a time	false
+derpy_mr_ui_2da4b63dcd	Hammerers	false
+derpy_mr_ui_067c0d8a10	Swordmasters of Hoeth	false
+derpy_mr_ui_742b5b7824	Phoenix Guard	false
+derpy_mr_ui_34c3e136c7	Dragon Princes	false
+derpy_mr_ui_8df495c3da	Lammasu	false
+derpy_mr_ui_2e14a75818	Bale Taurus	false
+derpy_mr_ui_162578dc46	Black Ark Corsairs	false
+derpy_mr_ui_64cf03901c	Witch Elves	false
+derpy_mr_ui_8ca0d1eb5b	Gutter Runners	false
+derpy_mr_ui_f7338a418a	Glade Guard	false
+derpy_mr_ui_09ccbb1ce6	Pegasus Knights	false
+derpy_mr_ui_76206b9a01	Demigryph Knights	false
+derpy_mr_ui_a6864b5642	Black Orcs (Great Weapons)	false
+derpy_mr_ui_1887925efe	Stonehorn	false
+derpy_mr_ui_2b928add70	Thundertusk	false
+derpy_mr_ui_272ed058ec	Irondrakes	false
+derpy_mr_ui_da4a3ef081	Silver Helms	false
+derpy_mr_ui_fd6b294f40	Zombie Dragon	false
+derpy_mr_ui_5558ba0b99	Celestial Dragon Guard	false
+derpy_mr_ui_24a1144a7e	Chaos Frost Dragon	false
+derpy_mr_ui_949343f349	Black Ark Corsairs (Handbows)	false
+derpy_mr_ui_78f947e417	Waywatchers	false
+derpy_mr_ui_2b4c9139e8	Poisoned Wind Globadiers	false
+derpy_mr_ui_1b6f0cf125	Gromril Gate	false
+derpy_mr_ui_cec73f719b	Melee defence and armour	false
+derpy_mr_ui_88dbb6b438	Melee defence +10 for your armies here and armour +10 in the province. Permanent	false
+derpy_mr_ui_fb16c0e8ef	Ithilmar Spire	false
+derpy_mr_ui_c97c8a8693	Public order and income	false
+derpy_mr_ui_0555063bee	Public order +3 in the province and income +10% here. Permanent	false
+derpy_mr_ui_ddb282db5f	Dragon Bone Shrine	false
+derpy_mr_ui_3d8346f8e0	Recruits gain a rank	false
+derpy_mr_ui_4e1f1bca84	Units recruited in the province gain a rank. Permanent	false
+derpy_mr_ui_95752b9598	Sea Dragon Moorings	false
+derpy_mr_ui_f5aef1c403	Income +15% here	false
+derpy_mr_ui_796411bcf3	Income +15% here. Permanent	false
+derpy_mr_ui_e99018d8d9	Black Lotus Gardens	false
+derpy_mr_ui_4770cc284c	Hero actions succeed more	false
+derpy_mr_ui_eb791f05dd	Hero actions from here succeed more often (+10). Permanent	false
+derpy_mr_ui_18ff9a900b	Starwood Grove	false
+derpy_mr_ui_e622841f73	Growth +20	false
+derpy_mr_ui_ff64e1b59e	Growth +20 in the province. Permanent	false
+derpy_mr_ui_8d51a2966a	Eyrie	false
+derpy_mr_ui_856ed27284	Recruitment cost -15%	false
+derpy_mr_ui_7cb2164988	Recruitment cost -15% in the province. Permanent	false
+derpy_mr_ui_822f544c40	Wyvern Roost	false
+derpy_mr_ui_feef73ceba	Army upkeep -5%	false
+derpy_mr_ui_79d8832775	Upkeep -5% for your armies here. Permanent	false
+derpy_mr_ui_0afc19dc3a	Armaments	false
+derpy_mr_ui_27b18c6fb2	30 Armaments	false
+derpy_mr_ui_f784dc3fa5	Makes 30 Armaments from your stores once a turn	false
+derpy_mr_ui_0a38e7286e	Food	false
+derpy_mr_ui_014b151a31	4 Food	false
+derpy_mr_ui_f88879b15d	Makes 4 Food from your stores once a turn	false
+derpy_mr_ui_857f4b6060	Oathgold	false
+derpy_mr_ui_0ef21a458a	30 Oathgold	false
+derpy_mr_ui_e281080b19	Makes 30 Oathgold from your stores once a turn	false
+derpy_mr_ui_f9867b50c3	Infamy	false
+derpy_mr_ui_614b286066	50 Infamy	false
+derpy_mr_ui_65d637b329	Makes 50 Infamy from your stores once a turn	false
+derpy_mr_ui_30f6e453b6	Rations and Drill	false
+derpy_mr_ui_d9fd017b75	The army gains a rank	false
+derpy_mr_ui_50888397ee	Every unit in the selected army gains a rank	false
+derpy_mr_ui_ef032adacf	Ammunition Train	false
+derpy_mr_ui_b05b914cc7	Ammunition +20% (5 turns)	false
+derpy_mr_ui_d47fefd129	The selected army's ammunition +20% for 5 turns	false
+derpy_mr_ui_b2e4a184d1	Field Forge	false
+derpy_mr_ui_862d50c5b2	Armour +15 (5 turns)	false
+derpy_mr_ui_77e4464e2b	The selected army's armour +15 for 5 turns	false
+derpy_mr_ui_0a91353e6d	Remounts	false
+derpy_mr_ui_5d7b1aa64e	Replenishment +10% (5 turns)	false
+derpy_mr_ui_edf6f3722f	The selected army replenishes 10% faster for 5 turns	false
+derpy_mr_ui_c3d400e1df	Medicine Chests	false
+derpy_mr_ui_1ab60fd597	Attrition -25% (5 turns)	false
+derpy_mr_ui_2691776b85	The selected army suffers 25% less attrition for 5 turns	false
+derpy_mr_ui_5171ba2116	Silk-robed	false
+derpy_mr_ui_92010e8244	Diplomacy +10	false
+derpy_mr_ui_e48dca0199	A trait for the selected lord or hero: diplomatic relations +10	false
+derpy_mr_ui_31b1a90e5d	Steel-shod	false
+derpy_mr_ui_e592ff3348	Armour +10	false
+derpy_mr_ui_3dc845f461	A trait for the selected lord or hero: armour +10	false
+derpy_mr_ui_4f6277485e	Well-read	false
+derpy_mr_ui_281c255f94	Experience +20%	false
+derpy_mr_ui_b8555c7eb1	A trait for the selected lord or hero: experience gained +20%	false
+derpy_mr_ui_f680486a19	Spice-hardened	false
+derpy_mr_ui_6f3c0dd6f0	Leadership +4 (movement -5%)	false
+derpy_mr_ui_409854f698	A trait for the selected lord: leadership +4 for the army and movement -5%	false
+derpy_mr_ui_75da0bcd65	Furred and Booted	false
+derpy_mr_ui_3383d0027a	Attrition -25%	false
+derpy_mr_ui_0fdb742ca1	A trait for the selected lord: their army suffers 25% less attrition	false
+derpy_mr_ui_2d61ec260f	Great Granary	false
+derpy_mr_ui_61be484d03	Growth +15 Permanent	false
+derpy_mr_ui_b8ff2b6b78	Growth +15 in every province. Grain is safe from spoiling up to half of each store. Permanent	false
+derpy_mr_ui_43572e848c	Battle Labour +15% Permanent	false
+derpy_mr_ui_bb7f95a0c8	Labour taken after battles +15%. Grain is safe from spoiling up to half of each store. Permanent	false
+derpy_mr_ui_4ab91fe114	Hall of Records	false
+derpy_mr_ui_9b24cdc976	Research +15% Permanent	false
+derpy_mr_ui_0f8f70fc5e	Research rate +15%. Permanent	false
+derpy_mr_ui_f2bce8752a	Grand Bazaar	false
+derpy_mr_ui_270e808e60	Trade income +15% Permanent	false
+derpy_mr_ui_a3f4672985	Trade income +15%. Permanent	false
+derpy_mr_ui_463e693ed9	Loot Hoard	false
+derpy_mr_ui_aa6c156740	Loot income +15% Permanent	false
+derpy_mr_ui_5b1488b35f	Income from sacking and looting settlements +15%. Permanent	false
+derpy_mr_ui_4fc9baf210	Arsenal	false
+derpy_mr_ui_b526767a45	Upkeep -10% Permanent	false
+derpy_mr_ui_f2dba5d873	Army upkeep -10%. Permanent	false
+derpy_mr_ui_92dafabe1c	Royal Stables	false
+derpy_mr_ui_22fc3259a9	Cavalry cost -20% Permanent	false
+derpy_mr_ui_e0f93a14a1	Cavalry recruitment cost -20%. Permanent	false
+derpy_mr_ui_712acc597b	Engineers' Yard	false
+derpy_mr_ui_87dca18a0d	Artillery -20% Permanent	false
+derpy_mr_ui_ecc13fc21f	Artillery recruitment cost -20%. Permanent	false
+derpy_mr_ui_53ba9051ca	Beast Pens	false
+derpy_mr_ui_f7b145ee2b	Monster cost -20% Permanent	false
+derpy_mr_ui_84c4f586f4	Monster recruitment cost -20%. Permanent	false
+derpy_mr_ui_a726f67005	Bone Yard	false
+derpy_mr_ui_83d611872d	400 research points	false
+derpy_mr_ui_11b63ab3c7	400 research points at once	false
+derpy_mr_ui_2c272532be	Lotus Gatherers	false
+derpy_mr_ui_f9672d870e	Lotus Garden	false
+derpy_mr_ui_84d5b141a3	Black Lotus Plantation	false
+derpy_mr_ui_f52e6dfa5b	Bone Pickers	false
+derpy_mr_ui_1dd078ed2e	Dragon Bone Digs	false
+derpy_mr_ui_279207d5b2	Dragon Graveyard Excavation	false
+derpy_mr_ui_b94f2a6ec8	Eyrie Climbers	false
+derpy_mr_ui_52d46a1b4b	Mountain Eyrie	false
+derpy_mr_ui_5ea2e43226	Great Eyrie	false
+derpy_mr_ui_2db5671c5e	Gromril Prospect	false
+derpy_mr_ui_832e5d4b27	Gromril Delving	false
+derpy_mr_ui_fe1b0da582	Deep Gromril Mine	false
+derpy_mr_ui_f9e00943eb	Ithilmar Lode	false
+derpy_mr_ui_6af99ca4cd	Ithilmar Mine	false
+derpy_mr_ui_8b52340833	Ithilmar Deepworks	false
+derpy_mr_ui_bcc7e4b5fe	Flensing Yard	false
+derpy_mr_ui_07eb5f426c	Sea Dragon Hunters	false
+derpy_mr_ui_80362dba32	Sea Dragon Fleet	false
+derpy_mr_ui_d759a2237f	Glade of Gifts	false
+derpy_mr_ui_b62911c0ed	Grove of the Willing	false
+derpy_mr_ui_f64252ab4e	Scale Scavengers	false
+derpy_mr_ui_303b0c41e9	Wyvern Hunters' Lodge	false
+derpy_mr_ui_9efe801703	How much your settlements eat each turn.	false
+derpy_mr_ui_452a65d23d	Plenty	false
+derpy_mr_ui_9587e86f6e	Settlements eat 3 provisions a turn for each level.\nGrowth +10 in every province.	false
+derpy_mr_ui_9b2c329408	Settlements eat 3 provisions a turn for each level.\nControl +2 in every province.	false
+derpy_mr_ui_960b44c579	Normal	false
+derpy_mr_ui_33733987b3	Settlements eat 2 provisions a turn for each level.	false
+derpy_mr_ui_06608c8819	Rationing	false
+derpy_mr_ui_598a6a4d7e	Settlements eat 1 provision a turn for each level.\nControl -2 in every province.	false
+derpy_mr_ui_d7ec78ebbb	Workshops	false
+derpy_mr_ui_7f368cb3b2	What your workshops and trade favour.	false
+derpy_mr_ui_b40138ea3a	Wartime	false
+derpy_mr_ui_522e1fd2a8	Workshops that make blackpowder, tools or leather make half as much again.\nTrade income -10%.	false
+derpy_mr_ui_c6589f5236	Balanced	false
+derpy_mr_ui_2c1ea0177b	Workshops make their usual amounts.	false
+derpy_mr_ui_896890bfb7	Merchant	false
+derpy_mr_ui_1a93747e53	Trade agreements send twice their usual share.\nRecruits take a quarter more from your stores.	false
+derpy_mr_ui_8eb4008d5f	Roads	false
+derpy_mr_ui_ba4642e7c4	Who may cross your lands with trade.	false
+derpy_mr_ui_c3bf447eab	Open	false
+derpy_mr_ui_eaa7adbd3f	Trade crossing your lands pays no tolls.\nTrade income +5%.	false
+derpy_mr_ui_1c35dc7719	Tolled	false
+derpy_mr_ui_852a45c04f	Trade crossing your lands pays you tolls.	false
+derpy_mr_ui_03f4a47830	Closed	false
+derpy_mr_ui_3f6e486e32	Other factions' trade cannot cross your lands.\nControl +1 in every province.	false
+mct_derpy_more_resources_title	Derpy Resource Overhaul	false
+mct_derpy_more_resources_description	How goods move between settlement stores. These are fixed for the life of a campaign: change them from the main menu before starting a new one. In a multiplayer campaign they are ignored and every value is the default on every machine. The trade route lines can be changed at any time.	false
+mct_derpy_more_resources_stores_section_text	Stores	false
+mct_derpy_more_resources_raid_text	Raid share per turn	false
+mct_derpy_more_resources_raid_tooltip	Each turn an army raids a settlement, it carries off this share of every resource the settlement keeps, into its own nearest settlement as far as that has room. 0 turns this off.	false
+mct_derpy_more_resources_sack_text	Sack share	false
+mct_derpy_more_resources_sack_tooltip	Sacking a settlement carries off this share of every resource it keeps, into the sacker's nearest settlement as far as that has room. 0 turns this off.	false
+mct_derpy_more_resources_raze_text	Raze share	false
+mct_derpy_more_resources_raze_tooltip	Razing a settlement carries off this share of every resource it keeps before it burns. 0 turns this off.	false
+mct_derpy_more_resources_trade_text	Trade share per turn	false
+mct_derpy_more_resources_trade_tooltip	Each turn, trade partners receive this share of removable surplus toward their capital import targets. Keep reserves and cargo already on the road are respected. The goods travel the road between the two capitals, a turn for every 40 hexes, and an army at war with the sender can seize them on the way. 0 turns this off.	false
+mct_derpy_more_resources_duty_text	Import duty	false
+mct_derpy_more_resources_duty_tooltip	Each turn, every faction pays each trade partner this share of the value of what that partner's settlements made that turn, at the value trade agreements put on it. The gold goes to the partner. 0 turns this off.	false
+mct_derpy_more_resources_reach_text	Trade reach in turns	false
+mct_derpy_more_resources_reach_tooltip	Trade agreements move resources and import duty only while the road between the two capitals takes no more than this many turns and keeps out of lands at war with, or very unfriendly to, either side. The Trade tab lists the partners cut off and why.	false
+mct_derpy_more_resources_ships_text	Shipments on the road	false
+mct_derpy_more_resources_ships_tooltip	How many shipments of yours can be on the road at once. Sending a resource between your settlements takes one to six turns, by the length of its road, and an army at war with you can seize it on the way. Other factions keep one.	false
+mct_derpy_more_resources_recruit_per_text	Resources per 100 gold of a recruit	false
+mct_derpy_more_resources_recruit_per_tooltip	How many resources a recruit takes from your stores for each 100 gold it is worth. 0 turns this off.	false
+mct_derpy_more_resources_toll_text	Tolls	false
+mct_derpy_more_resources_toll_tooltip	Each turn, trade that crosses another faction's lands pays that faction this share of the value of the goods it carries. All the tolls on one cargo together are at most 15%. A faction whose Roads edict is Open charges nothing. Neither do your allies and vassals. 0 turns tolls off.	false
+mct_derpy_more_resources_road_danger_text	Road danger	false
+mct_derpy_more_resources_road_danger_tooltip	How likely trouble on the road is on the most dangerous land, each turn. Half as dangerous land is half as likely. 0 turns road encounters off.	false
+mct_derpy_more_resources_army_provisions_text	Carried army provisions	false
+mct_derpy_more_resources_army_provisions_tooltip	Armies eat the provisions they carry once a turn. In your own settlements they refill from the stores, never below what a settlement keeps: Auto keeps 5 turns, and Load fills the army to 10. At sea, or with no settlements, Load buys two meals at 10 gold each, once a turn. Armies cannot refill in foreign lands. Missed meals slow an army and its recovery. Caravans and convoys carry none. This is fixed when a campaign starts: changing it later does nothing to a campaign already under way. In multiplayer it is always on.	false
+mct_derpy_more_resources_processing_text	Additional processing batches	false
+mct_derpy_more_resources_processing_tooltip	Allow local workshops to spend stored inputs on extra batches. Passive production is unchanged. Enable individual recipes in a settlement's Stores view.	false
+mct_derpy_more_resources_services_text	Sustained services	false
+mct_derpy_more_resources_services_tooltip	Allow optional province services paid each turn with named goods. Enable them in the province capital's Stores view.	false
+mct_derpy_more_resources_ai_text	Other factions use their stores	false
+mct_derpy_more_resources_ai_tooltip	Factions no player controls raid, sack, trade, eat, recruit and gain bonuses from their stores as a player does. Off: resources move only when a player's faction is one of the two. Other factions' settlements do not eat or gain bonuses, their grain, beer and kvas do not spoil, and their recruits take nothing. Turns run faster on a slow machine.	false
+mct_derpy_more_resources_ai_home_fed_text	Other armies fed at home	false
+mct_derpy_more_resources_ai_home_fed_tooltip	An army of a faction no player controls never goes hungry while it stands in one of its own settlements that is not under siege. Off: it goes hungry there when the stores run out.	false
+mct_derpy_more_resources_ai_field_rations_text	Other armies buy rations abroad	false
+mct_derpy_more_resources_ai_field_rations_tooltip	An army of a faction no player controls buys rations with gold when it is away from its own settlements, as any army can at sea: up to two meals at 10 gold each, once a turn. Off: away from home it eats only what it carried.	false
+mct_derpy_more_resources_ai_half_rations_text	Other armies eat half	false
+mct_derpy_more_resources_ai_half_rations_tooltip	Armies of factions no player controls eat half the provisions a player's army eats, rounded up. Off: they eat the same.	false
+mct_derpy_more_resources_ai_food_text	Other factions make more food	false
+mct_derpy_more_resources_ai_food_tooltip	Each settlement of a faction no player controls makes, every turn, the provisions it eats at Normal rations: 2 for each settlement level. Off: it makes only what its buildings make.	false
+mct_derpy_more_resources_spoilage_text	Spoilage	false
+mct_derpy_more_resources_spoilage_tooltip	Each turn, grain loses 4% and beer and kvas 2% of what a store holds above a quarter of its space. With the Great Granary, grain is safe up to half. Hardtack, salted meat, salted fish, wine and every other good never spoil. Off: nothing spoils.	false
+mct_derpy_more_resources_using_section_text	Using stores	false
+mct_derpy_more_resources_upkeep_text	Settlements use their stores	false
+mct_derpy_more_resources_upkeep_tooltip	Each turn every settlement eats provisions from its stores. Five turns of provisions left make it Well fed; war materials and luxuries filling a quarter of one store's space give Garrison stocked and Comforts. Off: settlements eat nothing and give no bonuses. Spoilage has its own switch.	false
+mct_derpy_more_resources_actions_text	Resource Vault actions	false
+mct_derpy_more_resources_actions_tooltip	The Resource Vault can send a resource between your settlements, buy a Festival, Muster or Great Works with your stores, and sell what your stores hold above half their space. Off: the panel only shows.	false
+mct_derpy_more_resources_events_text	Store events	false
+mct_derpy_more_resources_events_tooltip	Now and then a full store offers a choice: a feast, opening the stores to a besieged garrison, a gift to a neighbour or re-arming an army. Accepting spends the resources. Other factions make the same choices on their own. Off: no events.	false
+mct_derpy_more_resources_random_off_text	Turn off random dilemmas	false
+mct_derpy_more_resources_random_off_tooltip	Stops the game's random dilemmas, the ones that come up on their own, for every faction. Dilemmas that a campaign's story or this mod's store events bring still come. Off: they come as usual.	false
+mct_derpy_more_resources_supply_text	Province supplies	false
+mct_derpy_more_resources_supply_tooltip	A province capital can pay from its stores each turn for Materials on hand, Stable stocked and Arms stocked in every settlement you hold in its province, and can send for resources from the province's other settlements. Off: no province supplies.	false
+mct_derpy_more_resources_recruit_text	Recruits use the stores	false
+mct_derpy_more_resources_recruit_tooltip	Every unit you recruit takes resources from your stores by its type and worth (cavalry and monsters take mounts, infantry and war machines take war materials, the finest also take your rare resource). What the stores lack is paid in your race's own currency where it has one, then in gold. Off: recruiting takes nothing.	false
+mct_derpy_more_resources_escort_text	Escort battles	false
+mct_derpy_more_resources_escort_tooltip	Every shipment travels with an escort of its owner's soldiers. An army that reaches it must beat the escort to take the cargo, and you are asked before your army attacks one. Off: an army at war takes a shipment without a fight.	false
+mct_derpy_more_resources_edicts_text	Trade edicts	false
+mct_derpy_more_resources_edicts_tooltip	Each faction sets three edicts in the Resource Vault: Rations, Workshops and Roads. Each has three choices. A change waits 10 turns before the next. Other factions choose theirs by their situation. Off: there are no edicts.	false
+mct_derpy_more_resources_tolls_text	Tolls and blockades	false
+mct_derpy_more_resources_tolls_tooltip	Trade agreements and partner contracts pay tolls to the factions whose lands their roads cross. An army at war with either side standing within 3 hexes of the road stops that agreement's trade for the turn. Off: no tolls and no blockades.	false
+mct_derpy_more_resources_bandits_text	Bandits on the roads	false
+mct_derpy_more_resources_bandits_tooltip	Bandits, highwaymen and washed-out roads can meet your cargo on the road. Dangerous lands meet them more often. You choose what to do, and some choices lead to a battle. Guards on the Trade tab make it less likely. Off: the roads are safe.	false
+mct_derpy_more_resources_routes_section_text	Trade route lines	false
+mct_derpy_more_resources_route_agreements_text	Trade agreements	false
+mct_derpy_more_resources_route_agreements_tooltip	Show agreement roads permitted by the resource import and export switches.	false
+mct_derpy_more_resources_route_contracts_text	Standing contracts	false
+mct_derpy_more_resources_route_contracts_tooltip	Show roads for enabled standing contracts.	false
+mct_derpy_more_resources_route_shipments_text	Travelling shipments	false
+mct_derpy_more_resources_route_shipments_tooltip	Show roads and markers for cargo already dispatched. Stopping future trade does not recall it.	false
+mct_derpy_more_resources_route_carts_text	Moving carts and boats	false
+mct_derpy_more_resources_route_carts_tooltip	Show decorative minecarts on land and transport boats at sea. This does not change deliveries.	false
+mct_derpy_more_resources_route_icons_text	Resource icons above traffic	false
+mct_derpy_more_resources_route_icons_tooltip	Show an available resource permitted by the trade switches. Shipment and contract vehicles show their assigned resource. Empty returns have no icon.	false
+mct_derpy_more_resources_route_size_text	Line size	false
+mct_derpy_more_resources_route_size_tooltip	How big the dashes of the trade route lines on the campaign map are. A change shows within a few seconds, in a campaign too.	false
+mct_derpy_more_resources_route_colours_text	Line colours	false
+mct_derpy_more_resources_route_colours_tooltip	The four colours of the trade route lines on the campaign map. Each faction's routes keep one of the four, so you can tell whose they are. A change shows within a few seconds, in a campaign too.	false
+mct_derpy_more_resources_display_section_text	Display	false
+mct_derpy_more_resources_ui_size_text	Panel size	false
+mct_derpy_more_resources_ui_size_tooltip	Sets the size of the Resource Vault and its text. The new size shows the next time you open the Vault. On a screen larger than 1080p the Vault grows to fit and some sizes look the same.	false
+mct_derpy_more_resources_route_size_small_text	Small	false
+mct_derpy_more_resources_route_size_small_tooltip	Thinner, shorter dashes.	false
+mct_derpy_more_resources_route_size_normal_text	Normal	false
+mct_derpy_more_resources_route_size_normal_tooltip	The dashes as designed.	false
+mct_derpy_more_resources_route_size_large_text	Large	false
+mct_derpy_more_resources_route_size_large_tooltip	Thicker, longer dashes, easier to see from far away.	false
+mct_derpy_more_resources_route_colours_default_text	Default	false
+mct_derpy_more_resources_route_colours_default_tooltip	Gold, blue, green and red.	false
+mct_derpy_more_resources_route_colours_bright_text	Bright	false
+mct_derpy_more_resources_route_colours_bright_tooltip	Aqua, violet, yellow and amber: strong colours that stand out from far away.	false
+mct_derpy_more_resources_route_colours_pale_text	Pale	false
+mct_derpy_more_resources_route_colours_pale_tooltip	Pale blue, pink, cream and sage.	false
+mct_derpy_more_resources_route_colours_colourblind_text	Colour-blind friendly	false
+mct_derpy_more_resources_route_colours_colourblind_tooltip	Magenta, teal, red-orange and light yellow: they stay apart for every common kind of colour blindness.	false
+mct_derpy_more_resources_ui_size_small_text	Small	false
+mct_derpy_more_resources_ui_size_small_tooltip	A seventh smaller than Medium.	false
+mct_derpy_more_resources_ui_size_medium_text	Medium	false
+mct_derpy_more_resources_ui_size_medium_tooltip	The standard size.	false
+mct_derpy_more_resources_ui_size_large_text	Large	false
+mct_derpy_more_resources_ui_size_large_tooltip	A third larger than Medium.	false

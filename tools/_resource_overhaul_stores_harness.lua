@@ -180,6 +180,16 @@ S.view, S.focus = "goods", nil
 local v = S.view_model(realm)
 eq(v.heads[2], "Held", "goods header"); eq(v.rows[1][1], "Coal", "name"); eq(v.rows[1][3], "+6", "per turn")
 eq(v.rows[1][4], "300 / 600", "space"); eq(v.rows[1][5], "2 of 3", "stored in"); eq(v.rows[1].open, "coal", "opens coal")
+-- TRANSLATION (2026-11-08): a loc row replaces the English with its placeholders in its own order, and
+-- the view carries it; with no row the English is back
+do
+    local key = DERPY_MR_LOC_KEYS["{1} of {2}"]
+    eq(type(key), "string", "the template has a loc key")
+    LOC[key] = "[{2}] <- {1}"; S.T_CACHE = {}
+    eq(S.view_model(realm).rows[1][5], "[3] <- 2", "a translation draws, its placeholders reordered")
+    LOC[key] = nil; S.T_CACHE = {}
+    eq(S.view_model(realm).rows[1][5], "2 of 3", "no loc row: the English")
+end
 eq(v.rows[3][2], "0", "made, nothing held yet")
 S.focus = "coal"; v = S.view_model(realm)
 eq(v.title, "Where Coal is kept", "drill-down title")
@@ -425,6 +435,12 @@ bar.y = -40; REPEATS.derpy_mr_follow_bar(); eq(b.y, 0, "a strip just above the s
 bar.y = -4
 unlink(bar); eq(S.anchor(), nil, "no strip, no anchor"); REPEATS.derpy_mr_follow_bar()
 eq(b.x, 1535, "and the button stays put"); bar.parent = UI_ROOT; UI_ROOT.kids[#UI_ROOT.kids + 1] = bar
+-- THE RETRIES RAN OUT (2026-11-04: an opening screen kept the strip away past all 150): the follow places it
+S.placed, b.visible = false, false; unlink(bar); REPEATS.derpy_mr_follow_bar()
+eq(b.visible, false, "no strip yet, so still hidden")
+bar.parent = UI_ROOT; UI_ROOT.kids[#UI_ROOT.kids + 1] = bar; REPEATS.derpy_mr_follow_bar()
+eq(S.placed, true, "the follow places a button the retries gave up on")
+eq(b.visible, true, "and shows it"); eq(b.x, 1535, "at the strip's end")
 local hub
 for _, r in ipairs(DERPY_HUB_QUEUE) do if r.key == "mr" then hub = r end end
 eq(hub.button, "derpy_mr_stores_button", "hub entry"); eq(hub.order, 4, "fourth in the column")
@@ -1079,7 +1095,7 @@ end
     eq(S.data[2][1] .. "|" .. S.data[2][2] .. "|" .. labels(2), "Rations|Ready|Plenty,Normal,Rationing", "Rations, ready, its three options")
     eq(S.data[2].choices[2].on, true, "Normal is the one in force")
     eq(S.data[2].choices[1].on or S.data[2].choices[1].off, false, "and Plenty can be chosen")
-    eq(S.data[3][1] .. "," .. labels(3), "Workshops,War economy,Balanced,Merchant", "then Workshops")
+    eq(S.data[3][1] .. "," .. labels(3), "Workshops,Wartime,Balanced,Merchant", "then Workshops")
     eq(S.data[4][1] .. "," .. labels(4), "Roads,Open,Tolled,Closed", "then Roads")
     eq(S.data[5][1], S.section("Resources"), "and a Resources section above the goods")
     eq(S.data[6].open ~= nil, true, "the goods follow it")

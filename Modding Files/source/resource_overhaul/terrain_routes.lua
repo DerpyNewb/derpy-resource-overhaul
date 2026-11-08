@@ -94,6 +94,9 @@ function R.advance(j, budget)
     local g, open, costs, prev, seen = j.g, j.open, j.costs, j.prev, j.seen
     local w, all_bridges = g.w, g.bridges
     local floor, abs, max = math.floor, math.abs, math.max
+    -- LOCALS AND R.index INLINED (2026-11-08: 10 us a hex, 3.6 s of a computer round at turn 17); the same hexes
+    -- in the same order, so the same road
+    local h, data, byte, masks, bits, dirs = g.h, g.data, string.byte, R.masks, R.bits, R.dirs
     local neighbours = {}   -- this call's scratch: entries past `near` are stale
     local avoid, wall, corridor, shared, limit, target = j.avoid, j.wall, j.corridor, j.shared, j.max, j.target
     local model = avoid and cm:model()   -- this entry's: a queued job may be many ticks old
@@ -115,13 +118,18 @@ function R.advance(j, budget)
             -- game and was never freed; each garbage collection walked it (294 ms a full collection with it, 48 ms
             -- without). Measured offline on the IE grid, 150 searches: 8.0 us a hex this way, 8.2 for the kept table's
             -- first visit and 5.2 for a repeat visit; the same road in all 150.
-            local near, mask = 0, R.masks[string.byte(g.data, id)] or 0
-            for d, delta in ipairs(R.dirs[x % 2 + 1]) do
-                if floor(mask / R.bits[d]) % 2 == 1 then
-                    local other = R.index(g, x + delta[1], y + delta[2])
-                    if other and floor((R.masks[string.byte(g.data, other)] or 0) / R.bits[(d + 2) % 6 + 1]) % 2 == 1 then
-                        near = near + 1
-                        neighbours[near] = other
+            local near, mask = 0, masks[byte(data, id)] or 0
+            local ds = dirs[x % 2 + 1]
+            for d = 1, 6 do
+                if floor(mask / bits[d]) % 2 == 1 then
+                    local delta = ds[d]
+                    local nx, ny = x + delta[1], y + delta[2]
+                    if nx >= 0 and ny >= 0 and nx < w and ny < h then
+                        local other = ny * w + nx + 1
+                        if floor((masks[byte(data, other)] or 0) / bits[(d + 2) % 6 + 1]) % 2 == 1 then
+                            near = near + 1
+                            neighbours[near] = other
+                        end
                     end
                 end
             end
@@ -274,15 +282,30 @@ function R.reach(from, to, max)
 end
 
 -- Computed by the synchronized dispatch, then saved on the cargo; never use the UI's path cache here.
+-- KEPT AS R.reach KEEPS ITS ANSWERS (2026-11-08: one search a cart, 0.9 s of a computer round at turn 18): the road
+-- is given again while every region its search judged still judges the same, which is the road a new search finds.
+-- Each caller gets its own copy of the list, as a cargo keeps it.
+-- ponytail: kept for every pair ever sent; prune by last use if memory shows it, as R.reach_memo.
+R.journey_memo = {}
 function R.journey(from, to)
     local g = R.grids[cm:model():campaign_name_key()]
     if not g then return nil end
     local a, b = from:settlement(), to:settlement()
-    local j = R.start(g, {a:logical_position_x(), a:logical_position_y()},
-        {b:logical_position_x(), b:logical_position_y()}, R.avoider(from, to))
-    local done, path
-    repeat done, path = R.advance(j, 100000) until done
-    return path
+    local first, last = {a:logical_position_x(), a:logical_position_y()}, {b:logical_position_x(), b:logical_position_y()}
+    local key = first[1] .. ',' .. first[2] .. '>' .. last[1] .. ',' .. last[2]
+    local memo = R.journey_memo[key]
+    if not (memo and memo.data == g.data and R.unchanged(memo.regions, from, to)) then
+        local regions = {}
+        local j = R.start(g, first, last, R.avoider(from, to, regions))
+        local done, path
+        repeat done, path = R.advance(j, 100000) until done
+        memo = { data = g.data, regions = regions, path = path }
+        R.journey_memo[key] = memo
+    end
+    if not memo.path then return nil end
+    local copy = {}
+    for i, point in ipairs(memo.path) do copy[i] = point end
+    return copy
 end
 
 function R.pump()

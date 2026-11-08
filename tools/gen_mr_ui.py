@@ -17,6 +17,7 @@ Modding Files/source/resource_overhaul/flows.lua behind DERPY_MR_FLOWS_DEFAULTS 
 and runs tools/_resource_overhaul_flows_harness.lua beside the panel's harness.
 """
 import functools
+import hashlib
 import io
 import os
 import re
@@ -162,8 +163,23 @@ BANDIT_SWITCH = ("bandits", "Bandits on the roads",
                  "Bandits, highwaymen and washed-out roads can meet your cargo on the road. Dangerous lands meet "
                  "them more often. You choose what to do, and some choices lead to a battle. Guards on the Trade "
                  "tab make it less likely. Off: the roads are safe.", True)
+# OTHER FACTIONS' ARMY MEALS (author, 2026-11-08): the campaign AI knows nothing of provisions, so the script answers
+# for it. Fed at home and rations abroad on, half rations and more food off.
+AI_HOME_FED_SWITCH = ("ai_home_fed", "Other armies fed at home",
+    "An army of a faction no player controls never goes hungry while it stands in one of its own settlements that is "
+    "not under siege. Off: it goes hungry there when the stores run out.", True)
+AI_FIELD_SWITCH = ("ai_field_rations", "Other armies buy rations abroad",
+    "An army of a faction no player controls buys rations with gold when it is away from its own settlements, as any "
+    "army can at sea: up to two meals at 10 gold each, once a turn. Off: away from home it eats only what it carried.", True)
+AI_HALF_SWITCH = ("ai_half_rations", "Other armies eat half",
+    "Armies of factions no player controls eat half the provisions a player's army eats, rounded up. Off: they eat "
+    "the same.", False)
+AI_FOOD_SWITCH = ("ai_food", "Other factions make more food",
+    "Each settlement of a faction no player controls makes, every turn, the provisions it eats at Normal rations: 2 "
+    "for each settlement level. Off: it makes only what its buildings make.", False)
+AI_MEAL_SWITCHES = (AI_HOME_FED_SWITCH, AI_FIELD_SWITCH, AI_HALF_SWITCH, AI_FOOD_SWITCH)
 SWITCHES = (PROVISIONS_SWITCH, PROCESSING_SWITCH, SERVICES_SWITCH, AI_SWITCH, UPKEEP_SWITCH, ACTIONS_SWITCH, EVENTS_SWITCH, SUPPLY_SWITCH, RECRUIT_SWITCH, ESCORT_SWITCH,
-            RANDOM_SWITCH, SPOIL_SWITCH, EDICT_SWITCH, TOLL_SWITCH, BANDIT_SWITCH)
+            RANDOM_SWITCH, SPOIL_SWITCH, EDICT_SWITCH, TOLL_SWITCH, BANDIT_SWITCH) + AI_MEAL_SWITCHES
 # THE THREE EDICTS: (key, name, tip, default, options); an option is (key, label, tip, bundle or None,
 # the Chaos Dwarfs' tip or None). The tips are the player text that lists each option's exact effects,
 # one sentence a line. The middle option is the default and changes nothing.
@@ -176,7 +192,7 @@ EDICTS = (
         ("rationing", "Rationing", "Settlements eat 1 provision a turn for each level.\nControl -2 in every province.",
          "derpy_mr_edict_rationing", None))),
     ("workshops", "Workshops", "What your workshops and trade favour.", "balanced", (
-        ("war", "War economy", "Workshops that make blackpowder, tools or leather make half as much again.\n"
+        ("war", "Wartime", "Workshops that make blackpowder, tools or leather make half as much again.\n"
          "Trade income -10%.", "derpy_mr_edict_war", None),
         ("balanced", "Balanced", "Workshops make their usual amounts.", None, None),
         ("merchant", "Merchant", "Trade agreements send twice their usual share.\n"
@@ -1136,6 +1152,177 @@ def _lua(v):
     return str(v)
 
 
+# TRANSLATABLE TEXT (a translator's request, 2026-11-05): every sentence the Lua writes has a key in
+# text/db/derpy_mr_ui.loc. The runtimes name the English in S.T / F.T / F.EN calls, DERPY_MR_LOC_KEYS maps it
+# to its key, and a translation pack ships the same keys in its own loc. A key follows its English: change a
+# sentence and an old translation stops matching, so the new English shows until it is translated again.
+# MCT reads its own keys (mct_<mod>_<option>_text and _tooltip, sections, title) before the Lua's text.
+UI_LOC = "derpy_mr_ui"
+UI_LOC_REL = "Modding Files/source/resource_overhaul/loc__%s.tsv" % UI_LOC
+T_CALL = re.compile(r'\b(?:S\.T|F\.T|F\.EN)\(\s*"((?:[^"\\]|\\.)*)"')
+LUA_ESC = {"n": "\n", "t": "\t", '"': '"', "'": "'", "\\": "\\"}
+MCT_KEY = "mct_derpy_more_resources_"
+
+
+def _unlua(body):
+    """The string a Lua "..." body makes."""
+    return re.sub(r'\\(.)', lambda m: LUA_ESC[m.group(1)], body)
+
+
+def ui_texts(stores=None, flows=None):
+    """Every English string the runtimes translate, once each, in source order."""
+    out = []
+    for path, text in ((SRC, stores), (FLOWS_SRC, flows)):
+        if text is None:
+            with io.open(path, encoding="utf-8") as fh:
+                text = fh.read()
+        out += [_unlua(b) for b in T_CALL.findall(text)]
+    import gen_resource_overhaul as G
+    # the generated lists stores_panel.lua puts through S.localise, field for field
+    out += [x for _k, _u, _b, _i, t, w, _f in G.ORDERS for x in (t, w)]
+    out += [x for (_k, l, _u), w in zip(supply_buttons(), [s[5] for s in G.SUPPLY] + [""]) for x in (l, w)]
+    out += [w[f] for w in G.works() for f in ("name", "gives", "detail")]
+    out += [n for g in sorted(G.RARE) for n in G.RARE[g]["levels"]]
+    for _k, name, tip, _d, opts in EDICTS:
+        out += [name, tip] + [x for o in opts for x in (o[1], o[2], o[4]) if x]
+    seen = set()
+    return [t for t in out if t and not (t in seen or seen.add(t))]
+
+
+def ui_key(text):
+    return "derpy_mr_ui_" + hashlib.md5(text.encode("utf-8")).hexdigest()[:10]
+
+
+def loc_keys_lua():
+    texts = ui_texts()
+    keys = {ui_key(t) for t in texts}
+    assert len(keys) == len(texts), "two texts share a key"
+    return "DERPY_MR_LOC_KEYS = {\n%s\n}" % "\n".join('    [%s] = "%s",' % (_lstr(t), ui_key(t)) for t in texts)
+
+
+def mct_loc():
+    """(key, English) for every text MCT draws from the settings page, by MCT's own key rules."""
+    text = mct_lua()
+    var = dict(re.findall(r'local o_(\w+) = m:add_new_option\("(\w+)"', text))
+    rows = [(MCT_KEY + "title", MCT_TITLE), (MCT_KEY + "description", MCT_DESC)]
+    for line in text.split("\n"):
+        m = re.match(r'm:add_new_section\("(\w+)", "((?:[^"\\]|\\.)*)"\)', line)
+        if m:
+            rows.append((MCT_KEY + m.group(1) + "_section_text", _unlua(m.group(2))))
+        m = re.match(r'o_(\w+):set_(text|tooltip_text)\("((?:[^"\\]|\\.)*)"\)', line)
+        if m:
+            rows.append((MCT_KEY + var[m.group(1)] + ("_text" if m.group(2) == "text" else "_tooltip"), _unlua(m.group(3))))
+    for opt, val, label, tip in _dropdown_values():
+        rows += [(_dropdown_key(opt, val, "text"), label), (_dropdown_key(opt, val, "tooltip"), tip)]
+    return rows
+
+
+def _dropdown_key(opt, val, part):
+    return "%s%s_%s_%s" % (MCT_KEY, opt, val, part)
+
+
+def _dropdown_values():
+    """(option, value, label, tip) of every MCT dropdown value. MCT looks a value's text up as a loc key."""
+    import build_mr_terrain_routes as T
+    out = [(k, v[0], v[1], v[2]) for k, _l, _t, source, _d in ROUTE_OPTIONS for v in getattr(T, source)]
+    return out + [(SIZE_OPTION[0], v, t, d) for v, t, d in SIZE_VALUES]
+
+
+def ui_loc():
+    rows = [(ui_key(t), t) for t in ui_texts()] + mct_loc()
+    assert len({k for k, _v in rows}) == len(rows), "a loc key twice"
+    return rows
+
+
+def ui_loc_tsv():
+    """RPFM's loc TSV, the format gen_resource_overhaul writes; a line break or tab is escaped."""
+    esc = lambda v: v.replace("\\", "\\\\").replace("\t", "\\t").replace("\n", "\\n")
+    return ("key\ttext\ttooltip\n#Loc;1;text/db/%s.loc\n" % UI_LOC
+            + "".join("%s\t%s\tfalse\n" % (k, esc(v)) for k, v in ui_loc()))
+
+
+# NO PLAYER TEXT OUTSIDE S.T (2026-11-08): a literal that reads as words must be inside a T / EN call, a
+# comparison, a table key or a call whose text no player sees (the script log, a pattern, a component name).
+QUIET_CALLS = {"T", "EN", "say", "out", "print", "error", "assert", "script_error", "find", "match", "gmatch",
+               "gsub", "add_listener", "remove_listener", "callback", "repeat_real_callback", "real_callback",
+               "repeat_callback", "find_uicomponent", "CreateComponent", "get_localised_string", "loc",
+               "trigger_dilemma", "pcall"}
+
+
+def is_player_text(raw):
+    """raw: a literal's body as written. True when it reads as words a player would see."""
+    if '\\"' in raw or re.search(r'[A-Za-z]\.[A-Z]', raw) or re.match(r'^[a-z]+/', raw) \
+            or re.search(r'[A-Z][a-z]+[A-Z]\w*\(', raw):
+        return False      # a CCO expression, a path
+    body = re.sub(r'%[-+0-9.]*[a-z]', ' ', re.sub(r'\{\d+\}', ' ', re.sub(r'\[\[[^\]]*\]\]', ' ', raw.replace('\\n', ' '))))
+    if not re.search(r'[A-Za-z]', body) or re.search(r'\.(png|lua|xml|wem|dds)\b', body):
+        return False
+    if re.match(r'^[a-z0-9_.:/-]+$', body) or re.match(r'^[A-Z0-9_]+$', body) or re.match(r'^[A-Za-z]+[A-Z][A-Za-z]*$', body):
+        return False      # a key, a state word, an event, an interface
+    return not (re.search(r'[_/]', body) and ' ' not in body.strip())
+
+
+def bare_text(source):
+    """[(line, literal)] of player text outside S.T and the quiet calls."""
+    toks, i, n = [], 0, len(source)
+    while i < n:
+        c = source[i]
+        if source.startswith("--", i):
+            m = re.match(r'--\[(=*)\[', source[i:])
+            j = source.index("]" + m.group(1) + "]", i) + 2 + len(m.group(1)) if m else source.find("\n", i)
+            i = n if j < 0 else j
+        elif c in "\"'":
+            j = i + 1
+            while source[j] != c:
+                j += 2 if source[j] == "\\" else 1
+            toks.append(("str", source[i + 1:j], i))
+            i = j + 1
+        elif c.isalpha() or c == "_":
+            m = re.match(r'\w+', source[i:])
+            toks.append(("name", m.group(0), i))
+            i += len(m.group(0))
+        elif source.startswith("==", i) or source.startswith("~=", i):
+            toks.append(("op", source[i:i + 2], i))
+            i += 2
+        elif c.isspace():
+            i += 1
+        else:
+            toks.append(("op", c, i))
+            i += 1
+    out, stack = [], []
+    for k, (kind, v, at) in enumerate(toks):
+        if kind == "op" and v in "([{":
+            stack.append(toks[k - 1][1] if v == "(" and k and toks[k - 1][0] == "name" else v)
+        elif kind == "op" and v in ")]}":
+            stack.pop()
+        elif kind == "str" and is_player_text(v):
+            prev = toks[k - 1][1] if k else ""
+            nxt = toks[k + 1][1] if k + 1 < len(toks) else ""
+            if prev in ("==", "~=") or nxt in ("==", "~=") or (prev == "[" and nxt == "]"):
+                continue
+            if any(s in QUIET_CALLS for s in stack):
+                continue
+            out.append((source.count("\n", 0, at) + 1, v))
+    return out
+
+
+def check_player_text():
+    for path in (SRC, FLOWS_SRC):
+        with io.open(path, encoding="utf-8") as fh:
+            bad = bare_text(fh.read())
+        assert not bad, "%s: player text outside S.T: %s" % (os.path.basename(path), bad[:5])
+    # it reports a planted sentence, and passes the shapes that are allowed
+    assert bare_text('local x = "Nothing to see here."\n') == [(1, "Nothing to see here.")]
+    assert bare_text('x = "Too far" .. y\n') == [(1, "Too far")]
+    assert bare_text('x = S.T("Hello there.")\nF.say("could not read " .. y)\n'
+                     'if a == "Output store full" then end\nt = {["Province capital only"] = 1}\n') == []
+    texts = ui_texts()
+    assert "Nothing is stored here yet." in texts and "Wartime" in texts and "It cannot refill at sea." in texts, \
+        "a text the runtimes translate is missing from the loc"
+    keys = [k for k, _v in ui_loc()]
+    assert MCT_KEY + "raid_text" in keys and _dropdown_key("ui_size", "small", "text") in keys, "an MCT key is missing"
+
+
 def header():
     lines = ["-- GENERATED by tools/gen_mr_ui.py from Modding Files/source/resource_overhaul/"
              "stores_panel.lua.",
@@ -1201,6 +1388,7 @@ def header():
                                                 % (o[0], o[1], _lstr(o[2]), (", tip_chd = %s" % _lstr(o[4])) if o[4] else "")
                                                 for o in opts)))
     lines.append("}")
+    lines.append(loc_keys_lua())
     return "\n".join(lines) + "\n"
 
 
@@ -1362,6 +1550,7 @@ def flows_header():
     for pool, fs in sorted(G.pool_factions().items()):
         lines.append("    %s = {%s}," % (pool, ", ".join("%s = true" % f for f in fs)))
     lines.append("}")
+    lines.append(loc_keys_lua())
     return "\n".join(lines) + "\n"
 
 
@@ -1434,7 +1623,8 @@ def mct_lua():
                   'o_%s:set_assigned_section("stores")' % k,
                   "if IN_CAMPAIGN then o_%s:set_locked(true, LOCK_REASON) end" % k]
     for (k, label, tip, d), section in ((PROVISIONS_SWITCH, "using"), (PROCESSING_SWITCH, "using"), (SERVICES_SWITCH, "using"),
-                                        (AI_SWITCH, "stores"), (SPOIL_SWITCH, "stores"), (UPKEEP_SWITCH, "using"),
+                                        (AI_SWITCH, "stores")) + tuple((s, "stores") for s in AI_MEAL_SWITCHES) + (
+                                        (SPOIL_SWITCH, "stores"), (UPKEEP_SWITCH, "using"),
                                         (ACTIONS_SWITCH, "using"), (EVENTS_SWITCH, "using"),
                                         (RANDOM_SWITCH, "using"), (SUPPLY_SWITCH, "using"), (RECRUIT_SWITCH, "using"),
                                         (ESCORT_SWITCH, "using"), (EDICT_SWITCH, "using"), (TOLL_SWITCH, "stores"),
@@ -1464,7 +1654,8 @@ def mct_lua():
                   'o_%s:set_tooltip_text("%s")' % (k, tip),
                   'o_%s:set_assigned_section("routes")' % k]
         lines += ['o_%s:add_dropdown_value("%s", "%s", "%s", %s)'
-                  % (k, v[0], v[1], v[2], "true" if v[0] == default else "false") for v in values]
+                  % (k, v[0], _dropdown_key(k, v[0], "text"), _dropdown_key(k, v[0], "tooltip"),
+                     "true" if v[0] == default else "false") for v in values]
         lines.append('o_%s:set_default_value("%s")' % (k, default))
     k, label, tip = SIZE_OPTION
     assert [v[0] for v in SIZE_VALUES] == [SIZE_NAME[s] for s in ("_sm", "", "_lg")], SIZE_VALUES
@@ -1475,8 +1666,9 @@ def mct_lua():
               'local o_size = m:add_new_option("%s", "dropdown")' % k,
               'o_size:set_text("%s")' % label,
               'o_size:set_tooltip_text("%s")' % tip]
-    lines += ['o_size:add_dropdown_value("%s", "%s", "%s", %s)' % (v, t, d, "true" if v == "medium" else "false")
-              for v, t, d in SIZE_VALUES]
+    lines += ['o_size:add_dropdown_value("%s", "%s", "%s", %s)'
+              % (v, _dropdown_key(k, v, "text"), _dropdown_key(k, v, "tooltip"), "true" if v == "medium" else "false")
+              for v, _t, _d in SIZE_VALUES]
     lines += ['o_size:set_default_value("medium")', 'o_size:set_assigned_section("display")',
               "o_size:set_is_global(true)"]
     return "\n".join(lines) + "\n"
@@ -1498,7 +1690,7 @@ def files():
 
 
 def write_all(root=ROOT):
-    for rel, text in files().items():
+    for rel, text in list(files().items()) + [(UI_LOC_REL, ui_loc_tsv())]:
         path = os.path.join(root, rel)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with io.open(path, "w", encoding="utf-8", newline="\n") as fh:
@@ -1508,7 +1700,7 @@ def write_all(root=ROOT):
 def stale(root=ROOT):
     """[rel] - every shipped file that is missing or differs from what this builds."""
     out = []
-    for rel, text in files().items():
+    for rel, text in list(files().items()) + [(UI_LOC_REL, ui_loc_tsv())]:
         path = os.path.join(root, rel)
         if not os.path.isfile(path):
             out.append(rel)
@@ -1589,7 +1781,7 @@ def check_economy_mutations():
         ("input cart each turn", "    F.guard(F.economy_supply, faction)\n", ""),
         ("campaign switch", 'and F.rates()[kind] and F.economy_open(faction, region, d)',
          'and F.economy_open(faction, region, d)'),
-        ("capture cleanup", '    F.economy_clear(region)\n    local ups', '    local ups'),
+        ("capture cleanup", '    F.economy_clear(region)\n    F.drop_bundles(region)', '    F.drop_bundles(region)'),
         ("price swing", "math.floor(F.PRICE_SWING * imbalance / F.PCT) + F.PCT", "F.PCT"),
         ("price spread", "math.floor(c * (F.SPREAD + F.PCT) / F.PCT)", "c"),
         ("cover clamp", "imbalance = clamp_pct(math.floor((F.SHIP.ai_on - cover) * F.PCT / F.SHIP.ai_on))",
@@ -1639,16 +1831,17 @@ def check_provision_mutations():
         ("army reserve", "math.min(left, F.available_stock(view, g.stem))", "math.min(left, view.held[g.stem] or 0)"),
         ("army debit", 'unload and n or -n)', 'unload and n or 0)'),
         ("army transaction factor", 'F.PREFIX .. g.stem .. "_" .. KIND.move, unload', 'F.PREFIX .. g.stem .. "_move", unload'),
-        ("army sea refill", 'if ch:is_at_sea() then return nil, "It cannot refill at sea." end', ''),
+        ("army sea refill", 'if ch:is_at_sea() then return nil, F.T("It cannot refill at sea.") end', ''),
         ("undead army meals", 'or not F.eats(faction)\n        or not force:has_general()', 'or not F.uses_stores(faction)\n        or not force:has_general()'),
         ("field purchase stamp", 'b and b.field_turn == cm:model():turn_number()', 'false'),
         ("field payment confirmation", 'if paid ~= cost then', 'if false then'),
         ("human auto field spending", 'row.source or not faction:is_human()', 'true'),
         ("field ration cap", 'row.need * 2 - F.provision_total(b)', 'row.need * 10 - F.provision_total(b)'),
-        ("army siege", 'if r:garrison_residence():is_under_siege() then return nil, "This settlement is under siege." end', ''),
+        ("army siege", 'if r:garrison_residence():is_under_siege() then return nil, F.T("This settlement is under siege.") end', ''),
         ("army unit need", 'local need = math.max(1, math.ceil(force:unit_list():num_items() / 4))', 'local need = 1'),
         ("army meal cargo", 'b.goods[g.stem] = b.goods[g.stem] - n', 'b.goods[g.stem] = b.goods[g.stem]'),
-        ("army recovery", 'b.short = left == 0 and 0 or b.short + 1', 'b.short = b.short + 1'),
+        ("army recovery", 'b.short = (left == 0 or (other and row.source and rates.ai_home_fed)) and 0 or b.short + 1',
+         'b.short = b.short + 1'),
         ("army owner identity", 'force:faction():name() ~= b.f', 'false'),
         ("army unload pauses", 'if op == "unload" then b.auto = false end', 'do end'),
         ("army garrison exclusion", 'or force:is_armed_citizenry()', ''),
@@ -1698,7 +1891,7 @@ def check_route_mutations():
         ("whole gold settlement", "math.min(s.escrow, F.gold(delivered, s.price_c))",
          "math.min(s.escrow, delivered * s.price_c / F.PCT)"),
         ("unpriced origin", "if partner and not F.price_mult(source, stem) then return nil end", ""),
-        ("pool check at the source", 'if o.seller ~= faction:name() and not F.pool(from, o.stem) then return nil, "The seller cannot store it" end', ""),
+        ("pool check at the source", 'if o.seller ~= faction:name() and not F.pool(from, o.stem) then return nil, F.EN("The seller cannot store it") end', ""),
         ("pool check is partner only", 'if o.seller ~= faction:name() and not F.pool(from, o.stem) then',
          'if not F.pool(from, o.stem) then'),
         ("own order stays free", "local partner = order and seller:name() ~= fkey", "local partner = order ~= nil"),
@@ -1966,7 +2159,7 @@ def check_cargo_view_mutations():
         ("basket largest first", "return basket[a] > basket[b] end", "return basket[a] < basket[b] end"),
         ("basket equal amounts by name", "        return a < b\n    end)\n    local parts = {}\n    for _, stem in",
          "        return a > b\n    end)\n    local parts = {}\n    for _, stem in"),
-        ("tooltip names the arrival turn", '" by turn " .. tostring(c.due)', '" by turn " .. tostring(c.at)'),
+        ("tooltip names the arrival turn", 'S.place(c.to), tostring(c.due), S.basket_text', 'S.place(c.to), tostring(c.at), S.basket_text'),
         ("tooltip names every convoy", "for i = 1, math.min(#soon, S.CONVOY_LINES) do", "for i = 1, #soon do"),
         ("tooltip names the latest first", "if a.due ~= b.due then return a.due < b.due end",
          "if a.due ~= b.due then return a.due > b.due end"),
@@ -2035,11 +2228,13 @@ def check_reach_mutations():
     luac = LUA_EXE.replace("lua.exe", "luac.exe")
     with io.open(TERRAIN_SRC, encoding="utf-8", newline="") as fh:
         terrain = fh.read().replace("\r\n", "\n")
-    kept = "if not (memo and memo.data == g.data and R.unchanged(memo.regions, from, to)) then"
+    # R.journey keeps its roads the same way since 2026-11-08, so the anchor carries R.reach's own memo line
+    at = "local memo = R.reach_memo[key]\n    "
+    kept = at + "if not (memo and memo.data == g.data and R.unchanged(memo.regions, from, to)) then"
     mutations = (
-        ("kept answer never checked", kept, "if not (memo and memo.data == g.data) then"),
-        ("kept answer never given", kept, "if true then"),
-        ("kept answer outlives the map", kept, "if not (memo and R.unchanged(memo.regions, from, to)) then"),
+        ("kept answer never checked", kept, at + "if not (memo and memo.data == g.data) then"),
+        ("kept answer never given", kept, at + "if true then"),
+        ("kept answer outlives the map", kept, at + "if not (memo and R.unchanged(memo.regions, from, to)) then"),
         ("reach left out of the key", " .. '>' .. tostring(max)", ""),
         ("no shortcut for a pair with no road at all",
          "    if free and not free.open and free.finished then return false, 'far' end\n", ""),
@@ -2153,6 +2348,11 @@ def check_map_cost_mutations():
         ("convoy marker kept past a new road of the day", "if not (s and s[1] == road and", "if not (s and"),
         ("convoy marker kept past a turn start's new road", "s[2] == c.road and ", ""),
         ("convoy marker kept past a step", " and s[3] == c.x and s[4] == c.y)", ")"),
+        # a cart's road kept as R.reach keeps its answers (2026-11-08: one search a cart, 0.9 s of a computer round)
+        ("a kept journey never checked", "local memo = R.journey_memo[key]\n    if not (memo and memo.data == g.data and R.unchanged(memo.regions, from, to)) then",
+         "local memo = R.journey_memo[key]\n    if not (memo and memo.data == g.data) then"),
+        ("a journey never kept", "        R.journey_memo[key] = memo\n", ""),
+        ("a cart handed the kept list", "    return copy\nend", "    return memo.path\nend"),
     )
     for label, before, after in mutations:
         assert terrain.count(before) == 1, "stale map cost mutation: " + label
@@ -2199,13 +2399,13 @@ def check_production_mutations():
         ("the actions switch", "off = not actions or (not st.open and not st.on)", "off = not st.open and not st.on"),
         ("the grey row", "if #e.rows == 0 then v.rows[#v.rows + 1] = S.production_none(f, e.st) end", ""),
         ("folding", "        if not folded then\n            if #e.rows == 0", "        if true then\n            if #e.rows == 0"),
-        ("on but short", 'return st.short == "Output store full" and "Store full" or "Short"', 'return "Paused"'),
-        ("a closed recipe's reason", 'return S.ECON_CLOSED[st.reason] or (st.on and "Paused" or "Off")',
+        ("on but short", 'return st.short == "Output store full" and S.T("Store full") or S.T("Short")', 'return "Paused"'),
+        ("a closed recipe's reason", 'return S.ECON_CLOSED[st.reason] or (st.on and S.T("Paused") or S.T("Off"))',
          'return st.on and "Paused" or "Off"'),
         ("the tab's clicks", " or name == S.TAB.production", ""),
         ("Gives names the good", "gives = d.output and result or", 'gives = d.output and (S.num(d.output[2]) .. " made") or'),
         ("the view is asked for the recipe", 'S.ask("economy_view", f, r.region, d)', 'S.ask("economy_view", f, r.region, st)'),
-        ("a shortage said once", 'string.sub(c.reason, 1, 9) ~= "Short of "', "true"),
+        ("a shortage said once", '(body == "" or not c.shortage)', '(body == "" or true)'),
         ("Gives' icon", "price = {},\n                  lead = { [2] = c.gives_icon } }", "price = {} }"),
         ("Gives' icon after the inputs'", "local ld = leads[k - np]", "local ld = nil"),
         ("a greyed row's Gives icon", '(pk and pk.short or rc.dim) and "off"', 'pk and pk.short and "off"'),
@@ -2223,6 +2423,56 @@ def check_production_mutations():
     code, out = run_harness(HARNESS)
     assert code == 0, out
     print("production mutations: %d/%d caught; restored harness passes" % (len(mutations), len(mutations)))
+
+
+def check_keep_mutations():
+    """Kept bundles (2026-11-08: a settlement's upkeep and supply bundles were applied again every turn, about
+    19,000 region bundle calls a computer round on the Old World map): put on for good and left alone, an older
+    build's timed one made permanent once, and dropped when the settlement changes hands. The flows harness must
+    fail on each."""
+    subject = flows_lua().replace("\r\n", "\n")
+    keep = "            if b:duration() == 0 then return end\n"
+    mutations = (
+        ("renewed every turn again", keep, ""),
+        ("an older build's timed bundle left to lapse", "if b:duration() == 0 then return end", "return"),
+        ("put on for a short spell", "    cm:apply_effect_bundle_to_region(key, region:name(), 0)\n",
+         "    cm:apply_effect_bundle_to_region(key, region:name(), F.BUNDLE_TURNS)\n"),
+        ("kept past a change of owner", "    F.drop_bundles(region)\n", ""),
+    )
+    for label, before, after in mutations:
+        assert subject.count(before) == 1, "stale keep mutation: " + label
+        code, out = run_harness(FLOWS_HARNESS, flows_text=subject.replace(before, after, 1))
+        assert code != 0 and "harness ok" not in out and "syntax" not in out, "survived: %s\n%s" % (label, out)
+        print("  caught:", label)
+    print("keep mutations: %d/%d caught" % (len(mutations), len(mutations)))
+
+
+def check_ai_meal_mutations():
+    """Other factions' army meals (author, 2026-11-08: the campaign AI knows nothing of provisions): fed at home,
+    rations abroad, half rations and more food, each for computer factions only. The flows harness must fail on each."""
+    subject = flows_lua().replace("\r\n", "\n")
+    home = "(left == 0 or (other and row.source and rates.ai_home_fed))"
+    half = "(other and rates.ai_half_rations) and math.ceil(row.need / 2)"
+    field = "(rates.ai_field_rations and not faction:is_human())"
+    food = "if F.rates().ai_food and not region:owning_faction():is_human() then"
+    mutations = (
+        ("fed at home ignored", home, "(left == 0)"),
+        ("fed at home for players too", home, "(left == 0 or (row.source and rates.ai_home_fed))"),
+        ("fed at home under siege", home, "(left == 0 or (other and rates.ai_home_fed))"),
+        ("half rations ignored", half, "false and math.ceil(row.need / 2)"),
+        ("half rations for players", half, "(rates.ai_half_rations) and math.ceil(row.need / 2)"),
+        ("rations abroad ignored", field, "false"),
+        ("rations abroad for players", field, "(rates.ai_field_rations)"),
+        ("more food never made", food, "if false then"),
+        ("more food for players", food, "if F.rates().ai_food then"),
+        ("more food one race", 'return biscuit and "hardtack" or "salted_meat"', 'return "salted_meat"'),
+    )
+    for label, before, after in mutations:
+        assert subject.count(before) == 1, "stale AI meal mutation: " + label
+        code, out = run_harness(FLOWS_HARNESS, flows_text=subject.replace(before, after, 1))
+        assert code != 0 and "harness ok" not in out and "syntax" not in out, "survived: %s\n%s" % (label, out)
+        print("  caught:", label)
+    print("AI meal mutations: %d/%d caught" % (len(mutations), len(mutations)))
 
 
 def check_spoil_mutations():
@@ -2261,7 +2511,7 @@ def check_spoil_mutations():
         ("a busy line runs past the chart", HARNESS, "while #line * L.CHAR_W > L.chart_line[3] and #parts > 1 do",
          "while false do"),
         ("the forecast line leaves it out", FLOWS_HARNESS,
-         'if (fc.spoil or 0) > 0 then lines[#lines + 1] = "It loses " .. S.num(fc.spoil) .. " to spoiling each turn." end', ''),
+         'if (fc.spoil or 0) > 0 then lines[#lines + 1] = S.T("It loses {1} to spoiling each turn.", S.num(fc.spoil)) end', ''),
         ("the settlement row leaves it out", HARNESS,
          'if region then tip = add_line(tip, S.spoil_sentence(S.ask("spoil_info", model_faction, region, d.stem), d.name)) end',
          ""),
@@ -2314,12 +2564,16 @@ def check_race_mutations():
 
 
 def check_turn_end_mutations():
-    """Ending the turn closes the panel (author, 2026-11-01); the stores harness must fail on each."""
+    """Ending the turn closes the panel (author, 2026-11-01), and the follow loop places the opener; the
+    stores harness must fail on each."""
     subject = stores_lua().replace("\r\n", "\n")
     mutations = (
         ("never closes", "local done, e = pcall(S.show, false)", "local done, e = true, nil"),
         ("any faction's turn end closes it",
          "return context:faction():name() == cm:get_local_faction_name(true) and S.is_open()", "return S.is_open()"),
+        # THE OPENER (2026-11-04): the follow loop places a button the retries gave up on
+        ("the follow gives up with the retries", "if not S.placed then S.place_button(S.PLACE_TRIES) return end",
+         "if not S.placed then return end"),
     )
     for label, before, after in mutations:
         assert subject.count(before) == 1, "stale turn end mutation: " + label
@@ -2514,7 +2768,7 @@ def check_blockade_mutations():
         ("only the exporter's enemies counted", "for _, side in ipairs({ a, b }) do", "for _, side in ipairs({ a }) do"),
         ("duty paid when blockaded", " or F.blockaded(fkey, partner:name())) and 0", ") and 0"),
         ("the cut-off list without blockades", "        elseif by then out[#out + 1] = { key = p:name(), by = by } end\n", "        end\n"),
-        ("the contract status lost", ' or (why == "blockaded" and "Blockaded")', ""),
+        ("the contract status lost", ' or (why == "blockaded" and F.EN("Blockaded"))', ""),
         ("the preview ignoring blockades", "    if not (opts and opts.blockade_ok) then\n",
          "    if not preview and not (opts and opts.blockade_ok) then\n"),
         ("the blocker not recorded", "        if not preview then F.record_blockade(exporter:name(), partner:name(), by) end\n", ""),
@@ -2527,7 +2781,7 @@ def check_blockade_mutations():
         ("a damaged saved blockade kept", 'type(v.by) == "string" and type(v.turn) == "number"', "true"),
     )
     panel_m = (
-        ("a blockade naming no blocker", 'local why = c.why or ("Blockaded by " .. loc(', 'local why = c.why or ("Blockaded" or loc('),
+        ("a blockade naming no blocker", 'local why = S.T(c.why) or (S.T("Blockaded by {1}", loc(', 'local why = S.T(c.why) or (S.T("Blockaded", loc('),
         ("the toll rows hidden at 0", "if t[w[1]] > 0 or on then", "if t[w[1]] > 0 then"),
         ("a convoy's tolls left out",
          'if type(c.tolls) == "table" and next(c.tolls) then lines[#lines + 1] = S.tolls_text(c.tolls) end', ""),
@@ -2717,7 +2971,7 @@ def check_layout():
     for w in G.works():   # the Workshop's Gives cell: no comma to shorten it with since 2026-11-01
         assert CHAR_W * len(w["gives"]) <= L["VIEWS"]["workshop"][1][1], "%r overflows the Workshop's Gives" % w["gives"]
     gives = ["%d %s" % (d["output"][1], names[d["output"][0]]) for d in G.PROCESSING.values()]
-    gives += ["+2 control", "+5 growth", "-5% cost", "+3% replen."]
+    gives += ["+2 control", "+5 growth", "-5% cost", "+3% healing"]
     for t in gives:   # after its icon
         assert L["ICON_PITCH"] + CHAR_W * len(t) <= pc[1][1], "%r overflows the Production tab's Gives" % t
     for t in ("None of your settlements", "No workshop", "Capital only", "Switched off", "Store full", "Next turn"):
@@ -2805,7 +3059,9 @@ def check_layout():
         gc, ew, cw = lay["VIEWS"]["goods"], lay["EDICT_W"], lay["CHAR_W"]
         for _k, _n, _t, _d, options in EDICTS:
             for o in options:
-                assert cw * len(o[1]) + 8 <= ew, "edict option %r does not fit its button" % o[1]
+                # MEASURED, NOT CHAR_W (2026-11-04): "War economy" drew 125 wide at a 133 box (8.6 a letter
+                # at 100) and CA's button art draws its plate in the middle 83%, so 7 a letter passed it
+                assert cw * 8.6 / 7 * len(o[1]) <= 0.83 * ew, "edict option %r does not fit its button's plate" % o[1]
         for j in (2, 3, 4):
             assert ew <= gc[j][1], "an edict button is wider than goods column %d" % (j + 1)
         assert cw * len("Wait %d turns" % EDICT_COOLDOWN) <= gc[1][1], "an edict's wait does not fit column 2"
@@ -3011,6 +3267,7 @@ def selftest():
     import test_service_labels
     test_service_labels.check()
     check_layout()
+    check_player_text()
     check_text_fits()
     check_button_faces()
     check_map_frame()
@@ -3049,6 +3306,8 @@ def selftest():
     check_map_cost_mutations()
     check_production_mutations()
     check_spoil_mutations()
+    check_keep_mutations()
+    check_ai_meal_mutations()
     check_race_mutations()
     check_turn_end_mutations()
     check_size_mutations()
