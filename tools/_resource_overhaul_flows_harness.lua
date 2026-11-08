@@ -4180,6 +4180,7 @@ end)()
         a.iface = {is_null_interface=function() return false end, command_queue_index=function() return id end,
             faction=function() return a.owner.iface end, has_general=function() return true end,
             is_armed_citizenry=function() return a.garrison==true end, general_character=function() return ch end,
+            force_type=function() return {key=function() return a.type or "ARMY" end} end,
             unit_list=function() local t={} for i=1,a.n do t[i]={} end return list(t) end}
         forces[id]=a; f.armies[#f.armies+1]=a.iface
         return a
@@ -4261,9 +4262,14 @@ end)()
     eq(FORCE_BUNDLES[#FORCE_BUNDLES][1],"derpy_mr_army_starved","third shortage full penalty")
     eq(r.held.grain,95,"sea cannot load")
     a.sea=false; a.n=4
-    F.provision_action(f.iface,"801","load"); eq(F.provision_total(b),5,"manual load target")
+    -- LOAD FILLS TO WHAT IT CAN CARRY (Workshop report, 2026-11-05): 10 turns, not Auto's 5
+    F.provision_action(f.iface,"801","load"); eq(F.provision_total(b),10,"manual load fills to capacity")
+    F.provision_action(f.iface,"801","load"); eq(F.provision_total(b),10,"a second load at capacity takes nothing")
     TURN=305; F.provisions_turn(f.iface); eq(b.short,0,"full meal recovers")
-    eq(F.provision_total(b),4,"manual load does not enable auto")
+    eq(F.provision_total(b),9,"manual load does not enable auto")
+    b.auto=true; TURN=TURN+1; F.provisions_turn(f.iface)
+    eq(F.provision_total(b),8,"Auto above its 5 turns takes nothing back and adds nothing")
+    b.auto=false
     a.n=1; b.goods.grain=50
     F.provision_action(f.iface,"801","load"); eq(F.provision_total(b),50,"downsizing preserves excess")
     a.r=nil; F.provision_action(f.iface,"801","unload"); eq(F.provision_total(b),50,"no region no unload")
@@ -4325,6 +4331,25 @@ end)()
     d.garrison=false; F.state.fight={escort=803}
     eq(#F.provision_rows(f.iface),1,"temporary escort excluded")
     F.state.fight=nil
+    eq(#F.provision_rows(f.iface),2,"a field army eats")
+    local fed=F.provision_need(f.iface,r.iface)
+    -- CARAVANS AND CONVOYS CARRY NO RATIONS (Workshop report, 2026-11-06): they live on foreign roads
+    for _, kind in ipairs({"CARAVAN","CONVOY"}) do
+        d.type=kind
+        eq(#F.provision_rows(f.iface),1,kind.." excluded")
+        eq(F.provision_need(f.iface,r.iface),fed-1,kind.." asks its settlement for no meal")
+        F.provision_seed_force(d.iface); eq((F.state.armies or {})["803"],nil,kind.." is issued no rations")
+    end
+    -- a caravan already hungry in a save from before this: its record and its penalty go at its owner's turn
+    local removed=cm.remove_effect_bundle_from_force; local cleared={}
+    cm.remove_effect_bundle_from_force=function(_,key,id) if id==803 then cleared[#cleared+1]=key..":"..id end end
+    F.state.armies=F.state.armies or {}
+    F.state.armies["803"]={f=f.name,goods={},short=3,auto=true,done=TURN}
+    F.provisions_turn(f.iface)
+    cm.remove_effect_bundle_from_force=removed
+    eq(tostring(F.state.armies["803"])..","..table.concat(cleared,";"),
+        "nil,derpy_mr_army_hungry:803;derpy_mr_army_starved:803","a saved caravan's record and penalties are cleared")
+    d.type=nil
     F.state.rates.army_provisions=false; TURN=309
     F.provisions_turn(f.iface)
     eq(F.state.armies["802"],nil,"disabled mechanic clears records and penalties")
@@ -6111,6 +6136,13 @@ end)()
     local o = F.smuggle_offer(H.iface, F.stocks(H.iface))
     eq(o and table.concat({ o.key, o.region, o.use, o.stem, o.n, o.gold }, ","), "smugglers,e2s,provisions,grain,17," .. gold,
        "a store short of food is offered 5 turns of its cheapest food at half again its buying price")
+    -- NO SMUGGLERS IN THE FIRST EVENT_GAP TURNS (Workshop report, 2026-11-07): every store starts empty, so every
+    -- faction was short on turn 1
+    TURN = F.EVENT_GAP
+    eq(F.smuggle_offer(H.iface, F.stocks(H.iface)), nil, "no smugglers while the stores are still filling")
+    TURN = F.EVENT_GAP + 1
+    eq(F.smuggle_offer(H.iface, F.stocks(H.iface)) ~= nil, true, "the turn after the grace they come")
+    TURN = 380000
     F.events(H.iface)
     eq(#DILEMMAS .. "," .. (DILEMMAS[1] and DILEMMAS[1].key or ""), "1," .. EV.smugglers.dilemma, "the player is asked")
     answer(H, EV.smugglers.dilemma, "FIRST")

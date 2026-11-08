@@ -139,7 +139,11 @@ PROCESSING_SWITCH = ("processing", "Additional processing batches",
 SERVICES_SWITCH = ("services", "Sustained services",
     "Allow optional province services paid each turn with named goods. Enable them in the province capital's Stores view.", True)
 PROVISIONS_SWITCH = ("army_provisions", "Carried army provisions",
-    "Armies eat carried provisions once each turn and refill locally above settlement Keep. Five turns target, ten turns capacity. At sea or without settlements, Load can buy two meals at 10 gold per ration once per turn; human Auto never buys. Foreign land still prevents local refill. Consecutive shortages reduce movement and replenishment. On by default for new campaigns; existing campaign switches stay saved.", True)
+    "Armies eat the provisions they carry once a turn. In your own settlements they refill from the stores, "
+    "never below what a settlement keeps: Auto keeps 5 turns, and Load fills the army to 10. At sea, or with no "
+    "settlements, Load buys two meals at 10 gold each, once a turn. Armies cannot refill in foreign lands. Missed "
+    "meals slow an army and its recovery. Caravans and convoys carry none. This is fixed when a campaign starts: "
+    "changing it later does nothing to a campaign already under way. In multiplayer it is always on.", True)
 SPOIL_SWITCH = ("spoilage", "Spoilage",
                 "Each turn, grain loses 4% and beer and kvas 2% of what a store holds above a quarter of its "
                 "space. With the Great Granary, grain is safe up to half. Hardtack, salted meat, salted fish, "
@@ -1654,6 +1658,11 @@ def check_provision_mutations():
         ("army relief dispatch", 'local ship = F.ship(faction, source.region, dest.region, g.stem, fit.n)', 'local ship = nil'),
         ("army relief export hold", 'F.stopped(seller:name(), "export", stem)', 'false'),
         ("army relief import hold", 'F.stopped(fkey, "import", stem) then return nil end', 'false then return nil end'),
+        # Workshop reports, 2026-11-05 and 11-06
+        ("Load stops at Auto's 5 turns", 'local target = full and row.cap or 5 * row.need', 'local target = 5 * row.need'),
+        ("Load not told it is a Load", 'op == "unload", op == "load")', 'op == "unload", false)'),
+        ("caravans eat", '        or F.NO_RATIONS[force:force_type():key()]\n', ''),
+        ("convoys eat", 'CARAVAN = true, CONVOY = true', 'CARAVAN = true'),
     )
     for label, before, after in mutations:
         assert subject.count(before) == 1, "stale provision mutation: " + label
@@ -2108,8 +2117,18 @@ def check_map_cost_mutations():
         ("a search records no verdicts", "local avoid = R.avoider(a, b, regions)", "local avoid = R.avoider(a, b)"),
         ("every event bundles the network again", "if not cached or #cached.raw~=#links then same=false end",
          "same=false"),
-        ("the player's turn keeps the old network", "R.epoch, R.dirty, R.network_cache = R.epoch + 1, true, nil",
-         "R.epoch, R.dirty = R.epoch + 1, true"),
+        ("the player's turn keeps the old network", "R.epoch, R.dirty, R.network_cache, R.bundled = R.epoch + 1, true, nil, {}",
+         "R.epoch, R.dirty, R.bundled = R.epoch + 1, true, {}"),
+        # 2026-11-07, Workshop reports of a stuttering map: 85 bundles a refresh at 121 links
+        ("the player's turn keeps the old bundles", "R.epoch, R.dirty, R.network_cache, R.bundled = R.epoch + 1, true, nil, {}",
+         "R.epoch, R.dirty, R.network_cache = R.epoch + 1, true, nil"),
+        ("any change bundles every link",
+         "if was and was.raw == link.path and was.owner == link.owner and was.own == link.own then", "if false then"),
+        ("a kept bundle outlives its road", "was.raw == link.path and ", ""),
+        ("a kept bundle outlives its owner", "was.owner == link.owner and ", ""),
+        ("bundles never kept", "    R.bundled = kept\n", ""),
+        ("a search keeps its hexes on the grid", "                        neighbours[near] = other\n",
+         "                        neighbours[near] = other\n                        g.kept_hexes = g.kept_hexes or {}; g.kept_hexes[id] = true\n"),
         ("cart goods worked out every refresh", "local links, cargo, seen, owned, plans, used = {}, {}, {}, {}, R.plans, {}",
          "local links, cargo, seen, owned, plans, used = {}, {}, {}, {}, {}, {}"),
         ("cart goods never dropped",
@@ -2579,6 +2598,9 @@ def check_event_mutations():
         ("Smugglers below 2 turns turned to 3", "if per > 0 and held < per * 2 then", "if per > 0 and held < per * 3 then"),
         ("Smugglers' 100 limit removed", "local n = math.min(100, per * 5 - held)", "local n = per * 5 - held"),
         ("Smugglers at the local price", "math.ceil(n * buy * 150 / (F.PCT * F.PCT))", "math.ceil(n * buy * 100 / (F.PCT * F.PCT))"),
+        # Workshop report, 2026-11-07: every store starts empty, so Smugglers came on turn 1 everywhere
+        ("Smugglers' start grace removed", "    if cm:model():turn_number() <= F.EVENT_GAP then return nil end\n", ""),
+        ("Smugglers' start grace a turn short", "if cm:model():turn_number() <= F.EVENT_GAP then", "if cm:model():turn_number() < F.EVENT_GAP then"),
         ("the guild above 75% turned to 50", "h * 100 > c * 75", "h * 100 > c * 50"),
         # the live pass's cost (2026-11-02): F.stocks has read every store, and the offers read none again
         ("the guild reading every store again", "        for stem, c in pairs(s.capacity) do",
@@ -2980,8 +3002,6 @@ def check_smooth_mutations():
     print("smooth mutations: %d/%d caught; restored harnesses pass" % (n, n))
 
 
-def selftest():
-    import build_mr_terrain_routes
 def selftest():
     import build_mr_terrain_routes
     build_mr_terrain_routes.selftest()

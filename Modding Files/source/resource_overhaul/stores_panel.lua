@@ -363,7 +363,7 @@ S.GUARDS_TIP = "Guards ride with every cart and convoy you send.\nThey cost 5% o
     .. "They make trouble on the road half as likely."
 function S.cut_tip(cut, turns)
     local lines = { "Nothing moves between you and these partners.",
-        "The road takes more than " .. turns .. " turns, crosses hostile lands or has an enemy army on it." }
+        "The road takes more than " .. (turns == 1 and "1 turn" or turns .. " turns") .. ", crosses hostile lands or has an enemy army on it." }
     for _, c in ipairs(cut) do
         -- BLOCKADED (Part C): an enemy army on the road this turn, named
         local why = c.why or ("Blockaded by " .. loc("factions_screen_name_" .. tostring(c.by), tostring(c.by)))
@@ -1323,13 +1323,13 @@ function S.army_view(v)
     v.hint = "Unload before you merge this army or its provisions are lost."
     local here = row.source and S.place(row.source:name())
     local auto = S.ARMY_AUTO .. "\n" .. row.reason
-    local load = (row.mobile and S.ARMY_BUY or (here and ("Load provisions from " .. here .. " without touching its reserve.")
+    local load = (row.mobile and S.ARMY_BUY or (here and ("Fill the army to 10 turns of provisions from " .. here .. ".\nIts reserve is not touched.")
         or "This army cannot load here.")) .. "\n" .. row.reason
     local unload = here and ("Put the provisions back into " .. here .. " and pause Auto.")
         or "This army can only unload in one of your settlements."
     local source = row.source and "Local stores" or (row.mobile and "Rations" or "Unavailable")
     v.rows[#v.rows + 1] = { "Auto-refill", S.num(row.held) .. " / " .. S.num(row.cap),
-        S.num(row.need), S.num(math.floor(row.held / row.need)) .. " turns", provisions = "auto", army = id, tip = auto,
+        S.num(row.need), turns(math.floor(row.held / row.need)), provisions = "auto", army = id, tip = auto,
         icon = S.icon_of("grain"),
         send = { label = row.auto and "Pause" or "Enable", off = not S.actions_on(), tip = auto } }
     v.rows[#v.rows + 1] = { row.mobile and "Buy rations" or "Load here", source, row.mobile and (S.num(row.price) .. " gold") or "", "", provisions = "load", army = id, tip = load,
@@ -1415,9 +1415,9 @@ function S.spending(v)
     end
     for _, a in ipairs(armies) do
         v.rows[#v.rows + 1] = { S.army_name(a), S.num(a.held) .. " / " .. S.num(a.cap), S.num(a.need),
-            S.num(math.floor(a.held / a.need)) .. " turns", "", open = "army:" .. a.id,
+            turns(math.floor(a.held / a.need)), "", open = "army:" .. a.id,
             icon = S.icon_of("grain"),
-            tip = "This army eats " .. a.need .. " provisions a turn.\n" .. a.reason
+            tip = "This army eats " .. a.need .. (a.need == 1 and " provision" or " provisions") .. " a turn.\n" .. a.reason
                 .. (a.short > 0 and ("\nMissed meals: " .. a.short .. ".") or "") .. "\nClick to manage its provisions." }
     end
     end

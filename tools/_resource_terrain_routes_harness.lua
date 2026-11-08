@@ -238,14 +238,20 @@ assert(ok and lookups > 0, 'a region the game no longer knows was taken as uncha
 cm.get_region = get_region
 open_land.owning_faction = trader_land
 assert(R.reach(settled(1, 4), settled(3, 4), 9) == false, 'a kept answer ignored a shorter reach')
-local byte,decodes=string.byte,0
-string.byte=function(s,i) if s==g.data then decodes=decodes+1 end return byte(s,i) end
-R.reach(settled(1,0),settled(3,0),10)
-local first_decodes=decodes
-R.reach_memo, R.free_memo = {}, {}   -- the edges are what is under test here, not the kept answers
-R.reach(settled(1,0),settled(3,0),10)
-string.byte=byte
-assert(decodes==first_decodes,'static native edges must not be decoded again for each treaty')
+-- A SEARCH KEEPS NOTHING ON THE GRID (2026-11-07): a neighbour table kept per hex searched was 74 MB of the Lua heap
+-- by turn 16 of an IE game, never freed, and every garbage collection walked it
+-- (a fresh grid: every hex of this 5 x 5 one has been searched already, so a kept table would not grow on it)
+local fresh = { w = g.w, h = g.h, data = g.data, bridges = {} }
+local function grid_size()
+    local n = 0
+    for _, v in pairs(fresh) do n = n + 1; if type(v) == 'table' then for _ in pairs(v) do n = n + 1 end end end
+    return n
+end
+local before_size, grids_now = grid_size(), R.grids
+R.grids, R.reach_memo, R.free_memo = { test = fresh }, {}, {}   -- the grid is under test here, not the kept answers
+assert(R.reach(settled(1,0),settled(3,0),10), 'the road this check searches was not found')
+assert(grid_size()==before_size,'a search left '..(grid_size()-before_size)..' entries on the grid')
+R.grids = grids_now
 -- A SEARCH THAT GAVE UP proves nothing: past R.SEARCH_CAP the road through enemy land was not found, not
 -- shown absent, so it must not answer 'far' for a walled search that would find one.
 -- 8 x 6, a wall at x = 4 from y = 0 to 4: the only way east is the lane along y = 5.
@@ -468,18 +474,29 @@ do
         return { {key='n1', owner='viewer', own=true, path=first_road}, {key='n2', owner='viewer', own=true, path=second_road} }
     end
     R.network_cache = nil
-    R.network(net())
+    local first_net = R.network(net())
     assert(bundles == 2, 'the first network was not bundled')
     R.epoch = R.epoch + 1
-    R.network(net())
+    -- the same table back: a full refresh then reuses its shared stretches (R.drawn[1] == links)
+    assert(R.network(net()) == first_net, 'an unchanged network did not come back as the same table')
     assert(bundles == 2, 'a diplomatic event bundled the unchanged network again')
     second_road = { {3,2}, {3,1}, {2,2} }
     R.network(net())
-    assert(bundles == 4, 'a changed road did not bundle the network again')
+    assert(bundles == 3, 'a changed road did not bundle itself again, or bundled the unchanged one too')
+    -- ONLY A NEW OR CHANGED LINK (2026-11-07: 85 bundles a refresh at 121 links while reach answers came in)
+    local third_road = { {4,2}, {2,2} }
+    local function more() local n = net(); n[3] = {key='n3', owner='other', own=false, path=third_road}; return n end
+    R.network(more())
+    assert(bundles == 4, 'a new link bundled more than itself')
+    R.network(net())
+    assert(bundles == 4, 'a link going away bundled the ones that stayed')
+    local n = net(); n[1].owner = 'someone'
+    R.network(n)
+    assert(bundles == 5, 'a link whose owner changed was not bundled again')
     R.new_turn()
     assert(R.dirty and R.network_cache == nil, "the player's turn did not ask for a new network")
     R.network(net())
-    assert(bundles == 6, "the player's turn did not bundle the network again")
+    assert(bundles == 7, "the player's turn did not bundle the network again")
     R.bundle, R.network_cache, R.dirty = bundle, nil, false
 end
 -- THE CART GOODS' PREVIEWS are renewed one seller at a time, each in turn

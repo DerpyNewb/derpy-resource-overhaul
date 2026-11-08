@@ -118,7 +118,7 @@ if IN_CAMPAIGN then o_road_danger:set_locked(true, LOCK_REASON) end
 
 local o_army_provisions = m:add_new_option("army_provisions", "checkbox")
 o_army_provisions:set_text("Carried army provisions")
-o_army_provisions:set_tooltip_text("Armies eat carried provisions once each turn and refill locally above settlement Keep. Five turns target, ten turns capacity. At sea or without settlements, Load can buy two meals at 10 gold per ration once per turn; human Auto never buys. Foreign land still prevents local refill. Consecutive shortages reduce movement and replenishment. On by default for new campaigns; existing campaign switches stay saved.")
+o_army_provisions:set_tooltip_text("Armies eat the provisions they carry once a turn. In your own settlements they refill from the stores, never below what a settlement keeps: Auto keeps 5 turns, and Load fills the army to 10. At sea, or with no settlements, Load buys two meals at 10 gold each, once a turn. Armies cannot refill in foreign lands. Missed meals slow an army and its recovery. Caravans and convoys carry none. This is fixed when a campaign starts: changing it later does nothing to a campaign already under way. In multiplayer it is always on.")
 o_army_provisions:set_default_value(true)
 o_army_provisions:set_assigned_section("using")
 if IN_CAMPAIGN then o_army_provisions:set_locked(true, LOCK_REASON) end

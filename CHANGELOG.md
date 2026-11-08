@@ -16,6 +16,7 @@
 - Blockades kept after a reload.
 - Blockade Runner and Toll Dispute checked again when you answer.
 - The Merchant Guild names its good.
+- Settlement labels updated for game patch 9.0.5.
 
 ## 2026-11-02 (version 1.0)
 

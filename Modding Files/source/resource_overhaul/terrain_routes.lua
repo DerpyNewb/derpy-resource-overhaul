@@ -4,7 +4,7 @@ local R = DERPY_MR_TERRAIN_ROUTES
 R.grids = DERPY_MR_ROUTE_GRIDS or {}
 R.vehicles = DERPY_MR_VEHICLE_PROFILES or {}
 R.vehicle_profiles = {}
-R.cache, R.queue, R.scenes = {}, {}, {}
+R.cache, R.queue, R.scenes, R.bundled = {}, {}, {}, {}
 R.traffic, R.cart_scenes, R.icon_scenes, R.CART_LIMIT = {}, {}, {}, 16
 R.alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 R.masks = {}
@@ -84,7 +84,6 @@ function R.hostile(owner, parties)
 end
 
 function R.start(g, a, b, avoid)
-    if g.edge_data ~= g.data then g.edges, g.edge_data = {}, g.data end
     local first, target = R.index(g, a[1], a[2]), R.index(g, b[1], b[2])
     local j = { g = g, target = target, dest = b, open = R.heap(), costs = {}, prev = {}, count = 0, avoid = avoid, seen = {} }
     if first and target then j.costs[first] = 0; R.push(j.open, 0, first, 0) end
@@ -93,8 +92,9 @@ end
 
 function R.advance(j, budget)
     local g, open, costs, prev, seen = j.g, j.open, j.costs, j.prev, j.seen
-    local w, edges, all_bridges = g.w, g.edges, g.bridges
+    local w, all_bridges = g.w, g.bridges
     local floor, abs, max = math.floor, math.abs, math.max
+    local neighbours = {}   -- this call's scratch: entries past `near` are stale
     local avoid, wall, corridor, shared, limit, target = j.avoid, j.wall, j.corridor, j.shared, j.max, j.target
     local model = avoid and cm:model()   -- this entry's: a queued job may be many ticks old
     local tx, ty = j.dest[1], j.dest[2]
@@ -110,22 +110,22 @@ function R.advance(j, budget)
         if costs[id] == cost then
             j.count = j.count + 1
             local x, y = (id - 1) % w, floor((id - 1) / w)
-            -- Native reciprocal edges are immutable; diplomacy and bridge checks remain live.
-            local neighbours = edges[id]
-            if not neighbours then
-                neighbours = {}
-                local mask = R.masks[string.byte(g.data, id)] or 0
-                for d, delta in ipairs(R.dirs[x % 2 + 1]) do
+            -- WORKED OUT EACH TIME, NEVER KEPT (Workshop reports, 2026-11-04 to 11-07: stutter that grew the longer a
+            -- session ran). A table kept per hex ever searched held 74 MB of the Lua heap by turn 16 of a measured IE
+            -- game and was never freed; each garbage collection walked it (294 ms a full collection with it, 48 ms
+            -- without). Measured offline on the IE grid, 150 searches: 8.0 us a hex this way, 8.2 for the kept table's
+            -- first visit and 5.2 for a repeat visit; the same road in all 150.
+            local near, mask = 0, R.masks[string.byte(g.data, id)] or 0
+            for d, delta in ipairs(R.dirs[x % 2 + 1]) do
+                if floor(mask / R.bits[d]) % 2 == 1 then
                     local other = R.index(g, x + delta[1], y + delta[2])
-                    local back = R.bits[(d + 2) % 6 + 1]
-                    local m = other and R.masks[string.byte(g.data, other)] or 0
-                    if other and math.floor(mask / R.bits[d]) % 2 == 1 and math.floor(m / back) % 2 == 1 then
-                        neighbours[#neighbours + 1] = other
+                    if other and floor((R.masks[string.byte(g.data, other)] or 0) / R.bits[(d + 2) % 6 + 1]) % 2 == 1 then
+                        near = near + 1
+                        neighbours[near] = other
                     end
                 end
-                edges[id] = neighbours
             end
-            local bridges, near = all_bridges[id], #neighbours
+            local bridges = all_bridges[id]
             for n = 1, near + (bridges and #bridges or 0) do
                 local other = n <= near and neighbours[n] or bridges[n - near]
                 local qx, qy = (other - 1) % w, floor((other - 1) / w)
@@ -747,18 +747,29 @@ function R.network(links)
         for i,link in ipairs(links) do cached.links[i].goods=link.goods end
         return cached.links
     end
-    local shared, roads = {}, {}
+    -- ONLY A NEW OR CHANGED LINK IS BUNDLED (Workshop reports, 2026-11-04 to 11-07: 1 to 2 frames a second on a
+    -- crowded map). Bundling every link whenever one came or went was 85 bundles and 0.6 to 1.1 s a refresh at 121
+    -- links (IE turn 16, map revealed), and the set changes on most refreshes while reach answers come in one or two
+    -- at a time. A link keeps its bundled road while its own road, owner and side hold; R.new_turn still bundles all.
+    local shared, roads, kept = {}, {}, {}
     for _,link in ipairs(links) do
         local road={}
         for k,v in pairs(link) do road[k]=v end
         if link.path then
-            local avoid
-            if next(shared) then avoid=R.avoider(cm:get_region(link.from),cm:get_region(link.to)) end
-            road.path=R.bundle(link.path,shared,R.grid,avoid)
+            local was = R.bundled[link.key]
+            if was and was.raw == link.path and was.owner == link.owner and was.own == link.own then
+                road.path = was.path
+            else
+                local avoid
+                if next(shared) then avoid=R.avoider(cm:get_region(link.from),cm:get_region(link.to)) end
+                road.path=R.bundle(link.path,shared,R.grid,avoid)
+            end
+            kept[link.key] = { raw = link.path, owner = link.owner, own = link.own, path = road.path }
             for _,p in ipairs(road.path) do shared[R.index(R.grid,p[1],p[2])]=true end
         end
         roads[#roads+1]=road
     end
+    R.bundled = kept
     R.network_cache={raw=links,links=roads}
     return roads
 end
@@ -991,7 +1002,7 @@ end
 
 -- The player's turn: every shown road is checked again and the network bundled again.
 function R.new_turn()
-    R.epoch, R.dirty, R.network_cache = R.epoch + 1, true, nil
+    R.epoch, R.dirty, R.network_cache, R.bundled = R.epoch + 1, true, nil, {}
 end
 
 function R.init()

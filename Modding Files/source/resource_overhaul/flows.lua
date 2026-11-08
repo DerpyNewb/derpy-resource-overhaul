@@ -2642,9 +2642,14 @@ function F.provision_total(b)
     return n
 end
 
+-- CARAVANS AND CONVOYS CARRY NO RATIONS (Workshop report, 2026-11-06): Cathay's caravans and the Chaos Dwarfs'
+-- convoys spend their trips on foreign roads, where nothing can refill, so every trip ended hungry.
+F.NO_RATIONS = { CARAVAN = true, CONVOY = true }
+
 function F.provision_force(faction, force)
     if not force or force:is_null_interface() or not F.eats(faction)
         or not force:has_general() or force:is_armed_citizenry()
+        or F.NO_RATIONS[force:force_type():key()]
         or force:faction():name() ~= faction:name() then return false end
     local fight = F.state.fight
     return not (fight and fight.escort == force:command_queue_index())
@@ -2764,14 +2769,16 @@ function F.provision_buy(faction, row, b)
     F.log(faction:name(), stem, KIND.move .. "_in", n)
 end
 
-function F.provision_refill(faction, row, b, unload)
+-- full: the player's Load, which fills the army to what it can carry (Workshop report, 2026-11-05: Load stopped at
+-- 5 turns while the panel showed room for 10). Auto keeps 5 turns after this turn's meal.
+function F.provision_refill(faction, row, b, unload, full)
     local region = row.source
     if not region then
         if not unload then F.provision_buy(faction, row, b) end
         return
     end
     local view = F.provision_stock(faction, region)
-    local target = 5 * row.need
+    local target = full and row.cap or 5 * row.need
     if b.done ~= cm:model():turn_number() then target = target + row.need end
     local left = math.max(0, math.min(row.cap, target) - F.provision_total(b))
     for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
@@ -2839,7 +2846,7 @@ function F.provision_action(faction, id, op)
             if not b then b = F.provision_record(faction, row) end
             if op == "auto" then b.auto = not b.auto
             else
-                F.provision_refill(faction, row, b, op == "unload")
+                F.provision_refill(faction, row, b, op == "unload", op == "load")
                 if op == "unload" then b.auto = false end
             end
             return
@@ -3504,6 +3511,9 @@ local function smuggle_gold(n, buy) return math.ceil(n * buy * 150 / (F.PCT * F.
 -- buying price, when the treasury holds that. It works out each store's turns of use and nothing else of
 -- its view (a whole view per store was 190 ms a round), and quotes only a store that is short.
 function F.smuggle_offer(faction, stocks)
+    -- NOT IN THE FIRST EVENT_GAP TURNS (Workshop report, 2026-11-07): every store starts empty, so every faction was
+    -- "short" on turn 1 and a yes put -3 control on its first settlement by key (Altdorf for the Empire) for turns 1-5
+    if cm:model():turn_number() <= F.EVENT_GAP then return nil end
     local sorted, provinces, uses = {}, F.provinces(faction), {}
     for _, s in ipairs(stocks) do sorted[#sorted + 1] = s end
     table.sort(sorted, function(a, b) return a.region:name() < b.region:name() end)

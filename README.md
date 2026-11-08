@@ -105,7 +105,7 @@ the carts show only what the economy will really send. They are drawn in single 
   to the buildings it adds itself: the Kraka Ravnvake port, Mordheim's Wood Elf settlement and
   a Realm of Chaos outpost. Enable it only with the Old World; like the IEE pack, the game
   refuses it when that campaign is not loaded.
-- **Derpy's Grand Trade Exchange.** When both are installed, the Exchange trades all 37
+- **Derpy's Grand Trade Exchange.** When both are installed, the Exchange trades all 41
   goods. It detects this mod from the goods' own names and reads each settlement's real
   production off its buildings. That bridge lives in the Exchange, not here.
 - **One CA file is overridden.** `ui/campaign ui/city_info_bar.twui.xml` gains one icon per

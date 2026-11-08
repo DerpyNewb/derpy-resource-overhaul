@@ -2837,4 +2837,11 @@ do
     assert(#found == 0, "engine interfaces kept in the stores module: " .. table.concat(found, " "))
 end
 
+-- the Trade tab's cut-off tip at the lowest reach said "more than 1 turns" (Workshop report, 2026-11-07)
+do
+    local one, six = S.cut_tip({}, 1), S.cut_tip({}, 6)
+    eq(one:find("more than 1 turn,", 1, true) ~= nil, true, "a reach of one turn is singular")
+    eq(six:find("more than 6 turns,", 1, true) ~= nil, true, "a longer reach is plural")
+end
+
 print("harness ok")
