@@ -1,17 +1,20 @@
 # Changelog
 
-## 2026-11-09 (not uploaded yet)
+## 2026-11-09
 
-- Army supply lines replace the game's own supply lines.
-- Each army draws supplies along a road from your nearest settled settlement.
-- Road drawn on the map: pale supplied, amber stretched, magenta cut.
-- Longer road, higher upkeep; cut road, most upkeep.
-- Enemy armies on the road cut it.
-- Newly taken settlements feed no army for 5 turns.
-- Send supplies: a food cart rides the road to the army.
-- New MCT options: Vanilla supply lines (off), Army supply lines (on), Supply reach in turns (5), Turns to settle new land (5), Upkeep for each turn of road (5%), Most upkeep from a road (25%), Trade route lines: Army supply roads (on).
+- New: army supply lines, in place of the game's own.
+- Each army gets a supply road from your nearest settlement.
+- Armies in land you have held for 5 turns need no road.
+- Roads on the map: pale when supplied, amber when stretched, magenta when cut.
+- Longer road, more upkeep: +5% for each turn of road past the first, up to +25%.
+- An enemy army on the road cuts it: +25% upkeep until it is clear.
+- A newly taken settlement supplies no army for 5 turns.
+- Send supplies: a food cart rides the road out to the army.
 - Races without army provisions keep the game's own supply lines.
 - Chaos Dwarfs, Bretonnia and Warriors of Chaos now have supply lines too.
+- New MCT section, Army supply lines: Vanilla supply lines (off), Army supply lines (on), Supply reach in turns (5), Turns to settle new land (5), Upkeep for each turn of road (5%), Most upkeep from a road (25%).
+- New MCT option under Trade route lines: Army supply roads (on).
+- Neferata's Lahmia and the Glottkin's Oak of Ages now make and store goods.
 
 ## 2026-11-08 (second upload)
 
