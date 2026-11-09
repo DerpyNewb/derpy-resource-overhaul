@@ -12,7 +12,8 @@ A decal cannot be turned at runtime: the scene's facing argument leaves it as it
 
 The player's line size and colour set (MCT) are scenes too, one per size, colour and direction. The
 library holds only the white directions; each scene's small wrapper carries the tint and scale, the
-way CA tints quest_ring_decal (Gotrek's and the food merchant's markers) and scales its sea foam.
+way CA tints quest_ring_decal (Gotrek's and the food merchant's markers) and scales its sea foam. The army supply
+lines add three inks (SUPPLY_COLOURS) after the owners' sixteen, so 19 colours in all.
 """
 import json
 import copy
@@ -46,7 +47,19 @@ COLOUR_SETS = (
      'every common kind of colour blindness.',
      ((0.9, 0.1, 1.0), (0.3, 0.7, 0.7), (1.0, 0.2, 0.0), (1.0, 1.0, 0.7))),
 )
-COLOURS = tuple(rgb for *_text, rgb4 in COLOUR_SETS for rgb in rgb4)   # the palette, set after set
+OWNER_COLOURS = tuple(rgb for *_text, rgb4 in COLOUR_SETS for rgb in rgb4)   # the owners' palette, set after set
+# THE ARMY SUPPLY LINES' THREE INKS (Task 4, 2026-11-08): palette entries 16, 17 and 18, after the owners' sixteen and the
+# same in every colour set (terrain_routes.lua R.SUPPLY_INK). Supplied is a cool white, stretched an orange and cut a magenta.
+# The first design values (0.92 grey, 1.0/0.62/0.0 and 0.9/0.1/0.9) sat 6.7 to 8.2 delta E from an owner colour in some
+# colour-blind view: the grey from the Pale set's cream, the orange from the Default set's gold, the magenta from the
+# colour-blind set's own magenta. Each moved the least that clears SUPPLY_APART (0.05, 0.13 and 0.03 in RGB).
+SUPPLY_STATES = ('supplied', 'stretched', 'cut')
+SUPPLY_COLOURS = ((0.88, 0.92, 0.94), (0.87, 0.61, 0.0), (0.91, 0.10, 0.87))
+# Delta E (CIE76, the same four views as the sets) a supply ink keeps from every owner colour of every set, then the
+# three states from one another. 10 is as far as sixteen owner colours leave room for: the orange cannot reach 12
+# without turning yellow, and nothing within 0.2 of the grey or the magenta reaches 18. The states sit 37 apart.
+SUPPLY_APART, SUPPLY_STATES_APART = 10, 30
+COLOURS = OWNER_COLOURS + SUPPLY_COLOURS   # the palette: terrain_routes.lua R.ink hands out the first sixteen
 # key, label, tooltip, the wrapper's scale on the dash, then on the cargo marker. Small, the default, halved its
 # dashes to 0.35 (author, 2026-11-03) and kept the marker at 0.7.
 SIZES = (('small', 'Small', 'Thinner, shorter dashes.', 0.35, 0.7),
@@ -395,9 +408,10 @@ def runtime():
     return grid_header() + header + (OUT / 'terrain_routes.lua').read_text(encoding='utf-8')
 
 
-def separation(rgb4):
+def separation(rgb4, other=None):
     """The smallest CIE76 delta E between two of these colours, over normal vision and simulated deuteranopia,
-    protanopia and tritanopia (Machado, Oliveira and Fernandes 2009, severity 1, applied in linear RGB)."""
+    protanopia and tritanopia (Machado, Oliveira and Fernandes 2009, severity 1, applied in linear RGB). With `other`,
+    between one of these and one of those instead."""
     import itertools
     import math
     views = (((1, 0, 0), (0, 1, 0), (0, 0, 1)),
@@ -412,10 +426,35 @@ def separation(rgb4):
         x, y, z = ((0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047, 0.2126 * r + 0.7152 * g + 0.0722 * b,
                    (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883)
         return 116 * f(y) - 16, 500 * (f(x) - f(y)), 200 * (f(y) - f(z))
-    return min(math.dist(lab(a, m), lab(b, m)) for m in views for a, b in itertools.combinations(rgb4, 2))
+    pairs = list(itertools.combinations(rgb4, 2) if other is None else itertools.product(rgb4, other))
+    return min(math.dist(lab(a, m), lab(b, m)) for m in views for a, b in pairs)
 
 
 def selftest():
+    # THE ARMY SUPPLY INKS (Task 4): three palette entries after the owners' sixteen, the same in every colour set.
+    # Each is a scene for every size, direction and corner offset: 3 sizes x 3 inks x 12 angles x 5 = 540 more.
+    assert OWNER_COLOURS == COLOURS[:16] and COLOURS[16:] == SUPPLY_COLOURS and len(SUPPLY_COLOURS) == 3
+    assert len(scenes()) - len(SIZES) * (len(OWNER_COLOURS) * ANGLES * 5 + 1) == 540, 'the supply scenes are 540 more'
+    lua = (OUT / 'terrain_routes.lua').read_text(encoding='utf-8')
+    ink = re.search(r'^R\.SUPPLY_INK = \{([^}]*)\}$', lua, re.M)
+    assert ink and dict(re.findall(r'(\w+) = (\d+)', ink.group(1))) == {
+        state: str(len(OWNER_COLOURS) + i) for i, state in enumerate(SUPPLY_STATES)}, 'R.SUPPLY_INK is the palette index of each state'
+    # the three states must read apart from each other, and from every owner colour of every set, whoever is looking
+    among = separation(SUPPLY_COLOURS)
+    assert among >= SUPPLY_STATES_APART, ('the supply states run together', among)
+    near = {key: separation(SUPPLY_COLOURS, rgb4) for key, _l, _t, rgb4 in COLOUR_SETS}
+    assert min(near.values()) >= SUPPLY_APART, ('a supply ink sits on an owner colour', near)
+    # the map keeps each army's answer until R.epoch moves, and F.invalidate_reach is what moves it at a war or a capture
+    flows = (OUT / 'flows.lua').read_text(encoding='utf-8')
+    reach = re.search(r'^function F\.invalidate_reach\(\)\n(.*?)^end$', flows, re.M | re.S)
+    assert reach and 'R.epoch = (R.epoch or 0) + 1' in reach.group(1), 'F.invalidate_reach must move R.epoch (supply_links)'
+    # a loaded game sweeps supply ids up to R.SUPPLY_SWEEP: a road has at most the slider's longest reach at the pace in
+    # hexes, and the army's own, so a wider slider (or a faster pace) must not outgrow the sweep
+    import gen_mr_ui as G
+    reach_max = next(row[4] for row in G.SUPPLY_RATES if row[0] == 'supply_reach')
+    pace = int(re.search(r'^F\.ROAD_PER_TURN = (\d+)', flows, re.M).group(1))
+    sweep = int(re.search(r'^R\.SUPPLY_SWEEP = (\d+)$', lua, re.M).group(1))
+    assert sweep >= reach_max * pace + 1, ('R.SUPPLY_SWEEP is shorter than the longest supply road', sweep, reach_max, pace)
     files = assets()
     assert 'composite_scene/derpy_mr_route_cart.csc' in files, 'moving traffic needs its minecart scene'
     count = len(scenes())
@@ -441,7 +480,7 @@ def selftest():
             assert entry['model'].encode('ascii') in scene
             assert (b'\x04\x00free' in scene)==entry['sea']
             assert b'ANIMATION_ELEMENT' not in scene and b'SFX_ELEMENT' not in scene
-    assert len(COLOURS) == 4 * len(COLOUR_SETS), 'terrain_routes.lua R.colour hands out four colours a set'
+    assert len(OWNER_COLOURS) == 4 * len(COLOUR_SETS), 'terrain_routes.lua R.colour hands out four colours a set'
     # the label promises it: the colour-blind set keeps its colours furthest apart of all, whoever is looking
     spread = {key: separation(rgb4) for key, _l, _t, rgb4 in COLOUR_SETS}
     assert spread['colourblind'] >= 40 and spread['colourblind'] == max(spread.values()), spread
@@ -531,8 +570,9 @@ def selftest():
     assert len({r['id'] for r in rows}) == count + 17 + len(G.goods())*16 + len(manifest)*8
     assert {r['filename'] for r in rows} <= set(files)
     print('terrain assets: 58 land/sea resource icons on 8 native curves; %d decal scenes plus 9 cart and 8 boat scenes (%d sizes x (%d colours x %d directions x 5 corner offsets + cargo)), a %d-emitter library; '
-          'worst-case colour separation %s' % (count, len(SIZES), len(COLOURS), ANGLES, 2 * (ANGLES + 1),
-                                               ', '.join('%s %.1f' % kv for kv in spread.items())))
+          'worst-case colour separation %s; supply inks %.1f apart, %s from the sets' % (
+              count, len(SIZES), len(COLOURS), ANGLES, 2 * (ANGLES + 1), ', '.join('%s %.1f' % kv for kv in spread.items()),
+              among, ', '.join('%s %.1f' % kv for kv in near.items())))
 
 
 def probe_pack():

@@ -92,12 +92,13 @@ derpy_mr_order_great_works	Paid for from your stores: construction cost -20% for
 derpy_mr_edict_plenty	Settlements eat 3 provisions a turn for each level. Growth +10 in every province.	Plenty	faction	1	growth.png	true	false	true
 derpy_mr_edict_plenty_chd	Settlements eat 3 provisions a turn for each level. Control +2 in every province.	Plenty	faction	1	public_order_happy.png	true	false	true
 derpy_mr_edict_rationing	Settlements eat 1 provision a turn for each level. Control -2 in every province.	Rationing	faction	1	public_order_unhappy.png	true	false	true
-derpy_mr_edict_war	Workshops that make blackpowder, tools or leather make half as much again. Trade income -10%.	War economy	faction	1	weapon_damage.png	true	false	true
+derpy_mr_edict_war	Workshops that make blackpowder, tools or leather make half as much again. Trade income -10%.	Wartime	faction	1	weapon_damage.png	true	false	true
 derpy_mr_edict_merchant	Trade agreements send twice their usual share. Recruits take a quarter more from your stores.	Merchant	faction	1	trade_agreement.png	true	false	true
 derpy_mr_edict_open	Trade crossing your lands pays no tolls. Trade income +5%.	Open roads	faction	1	convoy_icon.png	true	false	true
 derpy_mr_edict_closed	Other factions' trade cannot cross your lands. Control +1 in every province.	Closed roads	faction	1	barrier.png	true	false	true
 derpy_mr_army_hungry	Two missed meals. Refill locally or buy field rations where available.	Short rations	force	1	growth.png	false	false	true
 derpy_mr_army_starved	Three or more missed meals. A full meal clears these penalties.	Empty provision wagons	force	1	growth.png	false	false	true
+derpy_mr_supply_distance	The further this army is from the settlement that feeds it, the more it costs.	Supply road	force	1	growth.png	false	false	true
 derpy_mr_rc_army_ammo	Paid for from your stores: ammunition +20% (5 turns).	Ammunition Train	force	1	ammo.png	false	false	true
 derpy_mr_rc_army_forge	Paid for from your stores: armour +15 (5 turns).	Field Forge	force	1	armour.png	false	false	true
 derpy_mr_rc_army_remounts	Paid for from your stores: replenishment +10% (5 turns).	Remounts	force	1	replenishment.png	false	false	true

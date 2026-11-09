@@ -248,6 +248,18 @@ assert(ok and lookups > 0, 'a region the game no longer knows was taken as uncha
 cm.get_region = get_region
 open_land.owning_faction = trader_land
 assert(R.reach(settled(1, 4), settled(3, 4), 9) == false, 'a kept answer ignored a shorter reach')
+-- ONE PARTY (supply lines, design 2026-11-08 section 4): an army's road home is judged for its own faction alone,
+-- by key; the two-region avoider is the same judge with the parties taken from the two owners
+do
+    local filed = {}
+    local one = R.avoider_for({ 'trader' }, filed)
+    assert(one(2, 2) == true and one(0, 0) == false, 'a one-party avoider must wall land at war with its party')
+    assert(filed.enemy_land == true and filed.open_land == false, 'a one-party avoider files its verdicts by region')
+    local two = R.avoider(settled(1, 4), settled(3, 4), {})
+    for _, q in ipairs({ { 2, 2 }, { 0, 0 }, { 2, 4 }, { 4, 4 } }) do
+        assert(two(q[1], q[2]) == one(q[1], q[2]), 'the two-region avoider judged a hex differently at ' .. q[1] .. ',' .. q[2])
+    end
+end
 -- A SEARCH KEEPS NOTHING ON THE GRID (2026-11-07): a neighbour table kept per hex searched was 74 MB of the Lua heap
 -- by turn 16 of an IE game, never freed, and every garbage collection walked it
 -- (a fresh grid: every hex of this 5 x 5 one has been searched already, so a kept table would not grow on it)
@@ -993,10 +1005,249 @@ do
     for _,k in ipairs(drawn()) do if k=='5000,5000=derpy_mr_route_cargo_0' then far_ship=true end end
     ships=kept
     assert(far_ship,'a shipment far from the camera still gets its marker')
+    -- THE VIEWER'S SUPPLY CARTS (Task 5): a convoy's marker at the cart, near the camera only; nobody else's
+    local carts={}
+    DERPY_MR_FLOWS.supply_cargo=function() return carts end
+    carts={{id='derpy_mr_supply_1',f='viewer',army='8801',from='viewer_home',x=2,y=2,due=4,basket={grain=15},supply=true}}
+    assert(table.concat(drawn(),' ')==table.concat(with,' '),'a supply cart is one cargo scene at its spot, as a convoy\'s')
+    for id in pairs(R.scenes) do assert(string.sub(id,1,14)=='derpy_mr_road_','a cart marker in the swept range: '..id) end
+    carts[1].f='ally'
+    assert(#select(2,R.links(faction))==0,'another faction\'s supply cart is not drawn')
+    carts={}
+    local bare=drawn()
+    carts={{id='derpy_mr_supply_2',f='viewer',army='8801',from='viewer_home',x=5000,y=5000,due=4,basket={grain=15},supply=true}}
+    assert(table.concat(drawn(),' ')==table.concat(bare,' '),'a supply cart far from the camera places no marker')
+    DERPY_MR_FLOWS.supply_cargo=nil
     DERPY_MR_FLOWS.convoy_cargo=nil
     R.clear()
     assert(next(live_scenes)==nil,'cleanup left a convoy marker in the engine')
 end
+-- ARMY SUPPLY LINES (Task 4): each army of the local faction draws its supply road in the colour of its line's state,
+-- and F.supply_line (flows.lua) is asked again only for an army that has moved, or once the answers were dropped
+do
+    local saved_links, saved_camera, saved_flows = R.links, cm.get_camera_position, DERPY_MR_FLOWS
+    local saved_forces, saved_human = faction.military_force_list, faction.is_human
+    local switch, at, lines, calls, armies, listed = {}, {}, {}, 0, {}, 0
+    -- THE MAP ASKS AS THE UI (Task 8, multiplayer): drawing runs on one machine only, so it must not fill the enemy
+    -- list the model keeps for the turn (flows.lua F.enemy_armies)
+    local function ask(_, mf, ui)
+        assert(ui == true, 'the map asked F.supply_line not as the UI: it would fill the model\'s enemy list')
+        calls = calls + 1; return lines[mf:command_queue_index()]
+    end
+    DERPY_MR_FLOWS = { mct = function(k) return switch[k] end, supply_line = ask }
+    R.links = function() return {}, {} end
+    cm.get_camera_position = function() return 0, 0, 20 end
+    local function army(cqi)
+        return { command_queue_index = function() return cqi end, has_general = function() return true end,
+                 general_character = function() return { logical_position_x = function() return at[cqi][1] end,
+                                                          logical_position_y = function() return at[cqi][2] end } end }
+    end
+    faction.military_force_list = function() listed = listed + 1; return list(armies) end
+    faction.is_human = function() return true end
+    local function row(x0, y0, dx, dy, n)
+        local p = {}
+        for k = 0, n - 1 do p[#p + 1] = { x0 + k * dx, y0 + k * dy } end
+        return p
+    end
+    local east, north, south = row(0, 0, 1, 0, 9), row(0, 0, 0, 1, 9), row(0, 0, 0, -1, 9)
+    local function live()   -- the supply scenes standing in the engine
+        local out = {}
+        for id in pairs(live_scenes) do if id:match('^derpy_mr_supply_') then out[#out + 1] = id end end
+        table.sort(out)
+        return out
+    end
+    local function tally(list_of)   -- of the stub's adds or removes: how many were supply scenes
+        local n = 0
+        for _, v in ipairs(list_of) do if (v.id or v):match('^derpy_mr_supply_') then n = n + 1 end end
+        return n
+    end
+    assert(R.SUPPLY_INK.supplied == 16 and R.SUPPLY_INK.stretched == 17 and R.SUPPLY_INK.cut == 18,
+           'the three supply inks follow the sixteen owner colours')
+    -- two armies, one stretched and one at home: one line, in the stretched ink
+    armies = { army(9), army(4) }
+    at = { [9] = { 0, 0 }, [4] = { 3, 3 } }
+    lines = { [9] = { state = 'stretched', source = 'a', path = east, turns = 4 }, [4] = { state = 'home', source = 'b', turns = 0 } }
+    local got = R.supply_links(faction)
+    assert(#got == 1 and got[1].cqi == 9 and got[1].ink == 17 and got[1].path == east,
+           'one stretched army and one at home must give one line in ink 17')
+    -- every state with a road, in army-number order; a cut line with no road, and an army with no line, draw nothing
+    armies = { army(9), army(6), army(4), army(2), army(1) }
+    at[6], at[2], at[1] = { 0, 0 }, { 5, 5 }, { 6, 6 }
+    lines = { [9] = { state = 'stretched', path = east, turns = 4 }, [6] = { state = 'cut', path = south, turns = 0 },
+              [4] = { state = 'supplied', path = north, turns = 2 }, [2] = { state = 'cut', turns = 0 },
+              [1] = { state = 'none', turns = 0 } }
+    R.epoch = R.epoch + 1
+    got = R.supply_links(faction)
+    assert(#got == 3 and got[1].cqi == 4 and got[1].ink == 16 and got[2].cqi == 6 and got[2].ink == 18
+        and got[3].cqi == 9 and got[3].ink == 17, 'supplied, cut and stretched lines with a road, in army-number order')
+    -- the switch off: no lines, and nobody asked
+    switch.route_supply = false
+    R.epoch = R.epoch + 1
+    local asked = calls
+    assert(#R.supply_links(faction) == 0 and calls == asked, 'with the supply lines switched off none are drawn or asked')
+    switch.route_supply = nil
+    faction.is_human = function() return false end
+    assert(#R.supply_links(faction) == 0, 'a faction nobody plays has no supply lines')
+    faction.is_human = function() return true end
+    -- on the map: a dash on every second hex of each road, under an id of its slot (army-number order: army 4 is slot 0,
+    -- army 9 slot 1, whatever order the game lists them in) and hex
+    armies = { army(9), army(4) }
+    lines = { [9] = { state = 'stretched', path = east, turns = 4 }, [4] = { state = 'supplied', path = north, turns = 2 } }
+    R.clear(); R.epoch = R.epoch + 1
+    adds, removes = {}, {}
+    R.refresh()
+    local placed = {}
+    for _, a in ipairs(adds) do if a.id:match('^derpy_mr_supply_') then placed[a.id] = a end end
+    for _, i in ipairs({ 1, 3, 5, 7, 9 }) do
+        local e, n = placed['derpy_mr_supply_1_' .. i], placed['derpy_mr_supply_0_' .. i]
+        assert(e and e.x == east[i][1] and e.y == east[i][2] and e.kind == 'derpy_mr_route_dash_0_17_0', 'the stretched road: ' .. i)
+        assert(n and n.x == north[i][1] and n.y == north[i][2] and n.kind == 'derpy_mr_route_dash_0_16_6', 'the supplied road: ' .. i)
+    end
+    assert(tally(adds) == 10 and #live() == 10, 'a dash on every second hex and no more: ' .. tally(adds))
+    switch.route_size = 'large'
+    R.refresh()
+    assert(live_scenes['derpy_mr_supply_1_1'] and R.scenes['derpy_mr_supply_1_1'].scene == 'derpy_mr_route_dash_2_17_0',
+           'the line size picks the supply scene too')
+    switch.route_size = nil
+    R.refresh()
+    -- cleared: not one supply scene is left standing, and every one that was placed was taken down
+    R.clear()
+    adds, removes = {}, {}
+    R.refresh()
+    local put_up = tally(adds)
+    R.clear()
+    assert(put_up > 0 and tally(removes) == put_up and #live() == 0, 'R.clear left a supply scene up')
+    -- KEPT ANSWERS: an army is asked about when it has moved or the answers were dropped, and not otherwise
+    R.epoch = R.epoch + 1
+    calls = 0
+    R.refresh()
+    assert(calls == 2, 'the first refresh asks once for each army: ' .. calls)
+    R.refresh(); R.refresh(); R.refresh(true)
+    assert(calls == 2, 'refreshes with no army moved asked F.supply_line again: ' .. calls)
+    at[9] = { 0, 1 }
+    R.refresh()
+    assert(calls == 3, 'one army moved, so one question: ' .. calls)
+    local steady, read = calls, listed
+    cm.get_camera_position = function() return 500, 0, 20 end
+    R.refresh(true)
+    assert(#live() == 0 and calls == steady, 'a camera move out of sight must take the dashes down without a question')
+    cm.get_camera_position = function() return 0, 0, 20 end
+    R.refresh(true)
+    assert(#live() == 10 and calls == steady, 'a camera move back must place the dashes from the kept answers')
+    assert(listed == read, 'a camera move read the army list again, where the last refresh\'s lines still hold')
+    R.new_turn()   -- enemy armies moved in between: every answer dropped
+    R.refresh()
+    assert(calls == steady + 2, 'a turn start must ask each army again: ' .. calls)
+    R.epoch = R.epoch + 1   -- F.invalidate_reach moves it too
+    R.refresh()
+    assert(calls == steady + 4, 'a war or a capture must ask each army again: ' .. calls)
+    -- an army that is gone loses its kept answer, and its slot passes to the next army: its dashes are taken down and the
+    -- survivor's stand in the slot it has now (army 4 was slot 0, so army 9 takes it over from slot 1)
+    assert(#live() == 10 and live_scenes['derpy_mr_supply_1_1'], 'two armies, two slots')
+    armies = { army(9) }
+    R.refresh()
+    assert(R.supply_kept[4] == nil and R.supply_kept[9], 'a dead army\'s answer outlived it')
+    local ids = live()
+    assert(#ids == 5, 'a dead army\'s dashes outlived it: ' .. table.concat(ids, ' '))
+    for _, id in ipairs(ids) do assert(id:match('^derpy_mr_supply_0_%d+$'), 'the survivor kept its old slot: ' .. id) end
+    local third = R.scenes['derpy_mr_supply_0_3']
+    assert(third.x == east[3][1] and third.y == east[3][2] and third.scene == 'derpy_mr_route_dash_0_17_0',
+           'the survivor\'s road was not put where the dead army\'s was')
+    -- slots follow the order of the army numbers alive, whatever order the game lists them in, and never the numbers
+    -- themselves: an army numbered past the slots still has one, inside the range a loaded game sweeps
+    armies = { army(1200), army(9) }
+    at[1200] = { 0, 0 }
+    lines[1200] = { state = 'supplied', path = north, turns = 2 }
+    R.refresh()
+    got = R.supply_links(faction)
+    assert(#got == 2 and got[1].cqi == 9 and got[1].slot == 0 and got[2].cqi == 1200 and got[2].slot == 1,
+           'slots are given in army-number order')
+    R.refresh()
+    assert(#live() == 10 and R.scenes['derpy_mr_supply_1_3'].y == north[3][2] and R.scenes['derpy_mr_supply_0_3'].y == east[3][2],
+           'the lower army number must take slot 0')
+    for _, id in ipairs(live()) do
+        assert(tonumber(id:match('^derpy_mr_supply_(%d+)_')) < R.SUPPLY_SLOTS, 'an id outside the swept range: ' .. id)
+    end
+    -- armies past the slots are not drawn: the lowest numbers keep them
+    local slots = R.SUPPLY_SLOTS
+    R.SUPPLY_SLOTS = 1
+    R.epoch = R.epoch + 1
+    got = R.supply_links(faction)
+    assert(#got == 1 and got[1].cqi == 9 and got[1].slot == 0, 'an army past the last slot was drawn')
+    R.SUPPLY_SLOTS = slots
+    -- a long road is rationed, from the army outwards
+    armies = { army(9) }
+    lines = { [9] = { state = 'cut', path = row(0, 0, 1, 0, 1000), turns = 0 } }
+    cm.get_camera_position = function() return 0, 0, 1000 end
+    R.clear(); R.epoch = R.epoch + 1
+    R.refresh()
+    assert(#live() == R.SUPPLY_CAP and live_scenes['derpy_mr_supply_0_1'] and live_scenes['derpy_mr_supply_0_511']
+        and not live_scenes['derpy_mr_supply_0_513'], 'a long road must keep the dashes nearest its army, to the cap')
+    -- a supply line that throws must not stop the trade roads from being drawn
+    cm.get_camera_position = function() return 0, 0, 20 end
+    DERPY_MR_FLOWS.supply_line = function() error('boom') end
+    R.links = function() return { { key = 'trade', owner = 'viewer', own = true, path = east } }, {} end
+    R.clear(); R.epoch = R.epoch + 1
+    assert(pcall(R.refresh), 'a supply line that threw stopped the map')
+    assert(next(R.scenes) ~= nil and #live() == 0 and R.supply_failed, 'the trade road was not drawn, or the throw not noted')
+    R.supply_failed = nil
+    -- A LOADED GAME (through R.init, as the game starts it): the engine keeps the scenes of a save, the script keeps
+    -- nothing, and the army that drew some may have died before the save. The whole fixed range of ids is cleared, slot by
+    -- slot and hex by hex up to the longest road a reach can make, whoever is alive.
+    DERPY_MR_FLOWS.supply_line = ask
+    R.links = function() return {}, {} end
+    armies = { army(9), army(1200) }
+    lines = { [9] = { state = 'stretched', path = east, turns = 4 }, [1200] = { state = 'supplied', path = north, turns = 2 } }
+    R.clear(); R.epoch = R.epoch + 1
+    R.refresh()
+    assert(#live() == 10, 'two armies must have put their dashes up before the save')
+    R.scenes, R.drawn, R.supply_kept, R.supply_epoch, R.traffic = {}, nil, {}, nil, {}   -- a fresh Lua state; live_scenes stays
+    armies = {}                                                                       -- both armies died before the save
+    local saved_add, saved_mp, saved_model, saved_grids, saved_repeat = core.add_listener, cm.is_multiplayer, cm.model, R.grids, cm.repeat_real_callback
+    local listeners = {}
+    core.add_listener = function(_, name, event, cond, action) listeners[name] = { event = event, cond = cond, action = action } end
+    cm.is_multiplayer = function() return false end
+    cm.model = function() return { campaign_name_key = function() return 'test' end } end
+    cm.repeat_real_callback = function() end
+    R.grids = { test = g }
+    removes = {}
+    R.started = nil
+    R.init()
+    assert(#live() == 0, 'a loaded game left a dead army\'s dashes standing: ' .. table.concat(live(), ' '))
+    local per = {}
+    for _, id in ipairs(removes) do
+        local s, i = id:match('^derpy_mr_supply_(%d+)_(%d+)$')
+        if s then
+            per[tonumber(s)] = (per[tonumber(s)] or 0) + 1
+            assert(tonumber(i) % 2 == 1 and tonumber(i) <= 401 and tonumber(s) < R.SUPPLY_SLOTS, 'swept an id no road can have: ' .. id)
+        end
+    end
+    for slot = 0, R.SUPPLY_SLOTS - 1 do assert(per[slot] == 201, 'slot ' .. slot .. ' was swept ' .. tostring(per[slot]) .. ' times, not for each of its 201 hexes') end
+    -- a multiplayer game draws nothing, but its saves can hold these scenes as well: swept all the same, and no listener
+    local sp_listeners = listeners
+    listeners, removes, R.started = {}, {}, nil
+    cm.is_multiplayer = function() return true end
+    R.init()
+    assert(tally(removes) == R.SUPPLY_SLOTS * 201 and next(listeners) == nil, 'a multiplayer start must sweep the supply ids and listen to nothing')
+    -- an army that has moved asks for the map to be drawn again at the next tick, and only the player's does
+    local moved = sp_listeners['derpy_mr_terrain_routes_moved']
+    assert(moved and moved.event == 'CharacterFinishedMovingEvent', 'no listener for an army finishing its move')
+    local function mover(fkey)
+        return { character = function() return { faction = function() return { name = function() return fkey end } end } end }
+    end
+    assert(moved.cond(mover('viewer')) == true and moved.cond(mover('other')) == false, 'only the local faction\'s armies count')
+    R.dirty = false
+    moved.action(mover('viewer'))
+    assert(R.dirty == true, 'a move left the map to the timed refresh')
+    core.add_listener, cm.is_multiplayer, cm.model, R.grids, cm.repeat_real_callback = saved_add, saved_mp, saved_model, saved_grids, saved_repeat
+    R.started = nil
+    R.clear()
+    R.links, cm.get_camera_position, DERPY_MR_FLOWS = saved_links, saved_camera, saved_flows
+    faction.military_force_list, faction.is_human = saved_forces, saved_human
+    R.drawn, R.camera, R.dirty, R.supply_kept = nil, nil, false, {}
+end
+assert(next(live_scenes) == nil, 'cleanup left a supply scene in the engine')
+
 -- NOTHING KEPT, the whole module (the 1.0 live pass, 2026-11-02): once every test above has run, no engine interface
 -- is reachable from R through its tables or its functions' upvalues. A stub interface stands in for the engine's
 -- userdata: a table with its own is_null_interface.

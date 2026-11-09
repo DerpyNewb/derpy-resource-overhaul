@@ -262,6 +262,16 @@ derpy_mr_ui_50dac4a4c9	An army eats 1 provision a turn for every 4 units and ref
 derpy_mr_ui_a4be6e93f1	On Auto the army refills to 5 turns of provisions after eating.\nIt carries at most 10 turns and never buys rations.	false
 derpy_mr_ui_505892cc96	Buy up to two meals of rations once a turn at 10 gold each.	false
 derpy_mr_ui_695657aa45	After two missed meals the army moves 5% slower.\nAfter three it moves and recovers 10% slower.\nOne full meal ends this.	false
+derpy_mr_ui_b744007f56	At home	false
+derpy_mr_ui_d5622d0a6c	Supplied	false
+derpy_mr_ui_7e96ac5725	Stretched	false
+derpy_mr_ui_2ddc5070e1	Cut off	false
+derpy_mr_ui_c305618ccb	In your own lands.	false
+derpy_mr_ui_c34a43fb13	Supplied from {1}, 1 turn away. Upkeep +{2}%.	false
+derpy_mr_ui_da4c31da07	Supplied from {1}, {2} turns away. Upkeep +{3}%.	false
+derpy_mr_ui_79473e2189	Stretched: {1} turns from {2}. Upkeep +{3}%.	false
+derpy_mr_ui_8b4a5ca29b	Cut off. Upkeep +{1}%.	false
+derpy_mr_ui_8d6eb77b24	An enemy army blocks the road.	false
 derpy_mr_ui_d195aa1ad9	Army {1}	false
 derpy_mr_ui_4bf42dd83a	{1}: provisions	false
 derpy_mr_ui_004bf6c9a4	Action	false
@@ -279,10 +289,23 @@ derpy_mr_ui_0fae14a215	Buy rations	false
 derpy_mr_ui_f494484f18	Load here	false
 derpy_mr_ui_831a28f1e8	Buy	false
 derpy_mr_ui_f19dbf2edb	Load	false
+derpy_mr_ui_c7e1a0c528	A cart is already on its way.\nIt arrives on turn {1}.	false
+derpy_mr_ui_df10c96fa9	Cut off. Supplies cannot reach this army.	false
+derpy_mr_ui_b4b35cdb8d	This army is in your own lands.\nLoad it here instead.	false
+derpy_mr_ui_189e87167f	This army has no supply road.	false
+derpy_mr_ui_47b497f846	This army already carries 5 turns of provisions.	false
+derpy_mr_ui_9d02111ded	{1} has no food to spare.	false
+derpy_mr_ui_705b55867a	Send a cart of provisions from {1}.\nIt arrives in {2}.\nAn army at war with you can seize it.	false
+derpy_mr_ui_b89a0adb92	Supply cart	false
+derpy_mr_ui_0712b67f47	Send supplies	false
 derpy_mr_ui_42d6fc179d	Unload here	false
 derpy_mr_ui_2bcdc93724	Pauses refill	false
 derpy_mr_ui_ae11d3ee07	Unload	false
 derpy_mr_ui_19ac7bf0e6	Missed meals	false
+derpy_mr_ui_aecfaed05d	Supply road	false
+derpy_mr_ui_0aa6f4210b	Distance	false
+derpy_mr_ui_83102a4b10	Upkeep	false
+derpy_mr_ui_d6d3ab917b	+{1}%	false
 derpy_mr_ui_bf7236074d	What your stores pay for	false
 derpy_mr_ui_fb230f0265	Province capital	false
 derpy_mr_ui_23ce0eb7d1	Materials	false
@@ -409,6 +432,7 @@ derpy_mr_ui_59145d6e87	It cannot refill at sea.	false
 derpy_mr_ui_48d5922f68	There is no settlement here to refill from.	false
 derpy_mr_ui_ac6aae4aee	This settlement is not yours.	false
 derpy_mr_ui_c869fd27de	This settlement is under siege.	false
+derpy_mr_ui_7260e1e2e7	This settlement was taken too recently to feed an army.	false
 derpy_mr_ui_53d78dcc3a	It refills from this settlement.	false
 derpy_mr_ui_f8ea19175a	This settlement has {1} provisions to spare.	false
 derpy_mr_ui_13ae2fc7bf	This settlement has no provisions to spare.	false
@@ -646,7 +670,7 @@ derpy_mr_ui_852a45c04f	Trade crossing your lands pays you tolls.	false
 derpy_mr_ui_03f4a47830	Closed	false
 derpy_mr_ui_3f6e486e32	Other factions' trade cannot cross your lands.\nControl +1 in every province.	false
 mct_derpy_more_resources_title	Derpy Resource Overhaul	false
-mct_derpy_more_resources_description	How goods move between settlement stores. These are fixed for the life of a campaign: change them from the main menu before starting a new one. In a multiplayer campaign they are ignored and every value is the default on every machine. The trade route lines can be changed at any time.	false
+mct_derpy_more_resources_description	How goods move between settlement stores. These are fixed for the life of a campaign: change them from the main menu before starting a new one. In a multiplayer campaign they are ignored and every value is the default on every machine. The trade route lines and the Vanilla supply lines box can be changed at any time.	false
 mct_derpy_more_resources_stores_section_text	Stores	false
 mct_derpy_more_resources_raid_text	Raid share per turn	false
 mct_derpy_more_resources_raid_tooltip	Each turn an army raids a settlement, it carries off this share of every resource the settlement keeps, into its own nearest settlement as far as that has room. 0 turns this off.	false
@@ -707,6 +731,19 @@ mct_derpy_more_resources_tolls_text	Tolls and blockades	false
 mct_derpy_more_resources_tolls_tooltip	Trade agreements and partner contracts pay tolls to the factions whose lands their roads cross. An army at war with either side standing within 3 hexes of the road stops that agreement's trade for the turn. Off: no tolls and no blockades.	false
 mct_derpy_more_resources_bandits_text	Bandits on the roads	false
 mct_derpy_more_resources_bandits_tooltip	Bandits, highwaymen and washed-out roads can meet your cargo on the road. Dangerous lands meet them more often. You choose what to do, and some choices lead to a battle. Guards on the Trade tab make it less likely. Off: the roads are safe.	false
+mct_derpy_more_resources_army_supply_section_text	Army supply lines	false
+mct_derpy_more_resources_vanilla_supply_lines_text	Vanilla supply lines	false
+mct_derpy_more_resources_vanilla_supply_lines_tooltip	Ticked: the game's own supply lines stay. Each army after your first makes every army cost more upkeep. This mod's roads still carry food to your armies but add no upkeep. Unticked: this mod's supply lines replace them. Races whose armies carry no food keep the game's own rule. So does every race when Army provisions or Army supply lines is off. You can change this during a campaign. In multiplayer it is always unticked.	false
+mct_derpy_more_resources_supply_lines_text	Army supply lines	false
+mct_derpy_more_resources_supply_lines_tooltip	Each of your armies draws supplies from one of your settlements along a road. The further the road, the more the army costs. A cut road feeds nothing and costs the most. Armies in your own settled land need no road. Land you took in the last few turns feeds no army yet. Turns to settle new land sets how many. With Army provisions off or Vanilla supply lines ticked, the roads add no upkeep.	false
+mct_derpy_more_resources_supply_reach_text	Supply reach in turns	false
+mct_derpy_more_resources_supply_reach_tooltip	How far an army can be from one of your settlements and still be supplied, in turns of travel. Past half of that the road is stretched. Further away the road is cut.	false
+mct_derpy_more_resources_settle_turns_text	Turns to settle new land	false
+mct_derpy_more_resources_settle_turns_tooltip	Turns before a settlement you take can supply your armies. 0: at once.	false
+mct_derpy_more_resources_supply_step_text	Upkeep for each turn of road	false
+mct_derpy_more_resources_supply_step_tooltip	Each turn of road after the first adds this much to an army's upkeep.	false
+mct_derpy_more_resources_supply_max_text	Most upkeep from a road	false
+mct_derpy_more_resources_supply_max_tooltip	The most a supply road can add to an army's upkeep. An army whose road is cut pays this.	false
 mct_derpy_more_resources_routes_section_text	Trade route lines	false
 mct_derpy_more_resources_route_agreements_text	Trade agreements	false
 mct_derpy_more_resources_route_agreements_tooltip	Show agreement roads permitted by the resource import and export switches.	false
@@ -718,6 +755,8 @@ mct_derpy_more_resources_route_carts_text	Moving carts and boats	false
 mct_derpy_more_resources_route_carts_tooltip	Show decorative minecarts on land and transport boats at sea. This does not change deliveries.	false
 mct_derpy_more_resources_route_icons_text	Resource icons above traffic	false
 mct_derpy_more_resources_route_icons_tooltip	Show an available resource permitted by the trade switches. Shipment and contract vehicles show their assigned resource. Empty returns have no icon.	false
+mct_derpy_more_resources_route_supply_text	Army supply roads	false
+mct_derpy_more_resources_route_supply_tooltip	Show the supply road from each of your armies to the settlement that feeds it.	false
 mct_derpy_more_resources_route_size_text	Line size	false
 mct_derpy_more_resources_route_size_tooltip	How big the dashes of the trade route lines on the campaign map are. A change shows within a few seconds, in a campaign too.	false
 mct_derpy_more_resources_route_colours_text	Line colours	false

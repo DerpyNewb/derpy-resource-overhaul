@@ -2576,8 +2576,78 @@ do
     eq(S.data[2][3],"100 gold","field price is visible")
     eq(S.data[2].send.label,"Buy","field action names its payment")
     eq(S.data[2].send.off,false,"mobile army may buy without local store")
-    eq(S.data[3].send.off,true,"mobile army cannot unload remotely")
+    eq(S.data[3][1],"Supply cart","Send supplies sits beside Load")
+    eq(S.data[4].send.off,true,"mobile army cannot unload remotely")
     dump("army_mobile")
+    -- THE SUPPLY LINE (Task 3): a section of its own under the meals, one row of state, source, turns and upkeep
+    ;(function()   -- a function of its own: the main chunk is at Lua's 200-local limit
+    local NOTE, ASKED
+    DERPY_MR_FLOWS.supply_note=function(f,id) ASKED=f:name().."|"..id; return NOTE end
+    DERPY_MR_FLOWS.provision_rows=function()
+        return {{id="801",held=25,cap=50,need=5,short=0,auto=true,reason="It refills from this settlement."}}
+    end
+    local function road_rows()
+        for i,r in ipairs(S.data) do
+            if string.find(r[1],"Supply road",1,true) then return r,S.data[i+1] end
+        end
+    end
+    NOTE=nil; S.refresh(); eq(road_rows(),nil,"no note, no supply road section")
+    NOTE={state="none"}; S.refresh(); eq(road_rows(),nil,"an army with no line has no section")
+    NOTE={state="stretched",source="reg_a",turns=5,upkeep=20}; S.refresh()
+    local head,row=road_rows()
+    eq(head.section,true,"the supply road has its own section row")
+    eq(ASKED,LOCAL.."|801","the panel asks for the local faction's army by its number")
+    eq(row[1].."/"..row[2].."/"..row[3].."/"..row[4],"Stretched/Alpha/5 turns/+20%","state, source, turns and upkeep")
+    eq(row.tip,"Stretched: 5 turns from Alpha. Upkeep +20%.","and the row's tooltip says it in a sentence")
+    NOTE={state="home",source="reg_a",turns=0,upkeep=0}; S.refresh()
+    head,row=road_rows(); eq(row[1].."/"..row[2].."/"..row[3].."/"..row[4],"At home/Alpha/-/+0%","an army at home")
+    eq(row.tip,"In your own lands.","says so")
+    NOTE={state="cut",upkeep=25}; S.refresh()
+    head,row=road_rows(); eq(row[1].."/"..row[2].."/"..row[3].."/"..row[4],"Cut off/-/-/+25%","a cut army has no source and no length")
+    eq(row.tip,"Cut off. Upkeep +25%.","and its sentence")
+    NOTE={state="cut",upkeep=25,by="fac_x"}; S.refresh()
+    head,row=road_rows(); eq(row.tip,"Cut off. Upkeep +25%.\nAn enemy army blocks the road.","an enemy on the road is named on a line of its own")
+    -- SEND SUPPLIES (Task 5): Auto's supply cart by hand, beside Load, refused with the reason and sent through the door
+    local function cart_row()
+        for i,r in ipairs(S.data) do if r.provisions=="send" then return r,i end end
+    end
+    local CART
+    DERPY_MR_FLOWS.supply_cart_of=function(id) return CART end
+    NOTE={state="cut",upkeep=25}; S.refresh()
+    local cr,ci=cart_row()
+    eq(cr.send.label,"Send supplies","the button says what it does")
+    eq(cr.send.off,true,"a cut army cannot be sent supplies")
+    eq(cr.send.tip,"Cut off. Supplies cannot reach this army.","and says why")
+    NOTE={state="home",source="reg_a",turns=0,upkeep=0}; S.refresh(); cr=cart_row()
+    eq(cr.send.off,true,"an army at home loads instead"); eq(cr.send.tip,"This army is in your own lands.\nLoad it here instead.","and says so")
+    NOTE={state="none"}; S.refresh(); cr=cart_row()
+    eq(cr.send.off,true,"no line, no cart"); eq(cr.send.tip,"This army has no supply road.","and says so")
+    NOTE={state="stretched",source="reg_a",turns=5,upkeep=20}; CART={due=14}; S.refresh(); cr=cart_row()
+    eq(cr.send.off,true,"one cart at a time"); eq(cr.send.tip,"A cart is already on its way.\nIt arrives on turn 14.","and says when it lands")
+    CART=nil; S.refresh(); cr=cart_row()
+    eq(cr.send.off,true,"an army with five turns aboard"); eq(cr.send.tip,"This army already carries 5 turns of provisions.","says so")
+    DERPY_MR_FLOWS.provision_rows=function()
+        return {{id="801",held=10,cap=50,need=5,short=0,auto=true,reason="It refills from this settlement."}}
+    end
+    local SPARE,SPARE_ASKED=5
+    DERPY_MR_FLOWS.provision_spare=function(f,k) SPARE_ASKED=f:name().."|"..k; return SPARE end
+    S.refresh(); cr,ci=cart_row()
+    eq(cr.send.off,false,"a stretched army can be sent supplies")
+    eq(cr.send.tip,"Send a cart of provisions from Alpha.\nIt arrives in 5 turns.\nAn army at war with you can seize it.","and is told where from and how long")
+    local n=#REQ
+    press(sendb(ci))
+    eq(REQ[#REQ],LOCAL.."|provisions|801|send","Send supplies goes through the synchronized door")
+    eq(#REQ,n+1,"one request"); table.remove(REQ)
+    -- A SOURCE WITH NOTHING TO SPARE (review 2026-11-09): refused with the reason, not enabled and silent
+    SPARE=0; S.refresh(); cr=cart_row()
+    eq(cr.send.off,true,"a source with no food to spare sends no cart")
+    eq(cr.send.tip,"Alpha has no food to spare.","and says so")
+    eq(SPARE_ASKED,LOCAL.."|reg_a","the line's own source is asked, for the local faction")
+    SPARE=3; S.refresh(); cr=cart_row()
+    eq(cr.send.off,false,"a source with food to spare sends one")
+    DERPY_MR_FLOWS.provision_spare=nil
+    NOTE=nil
+    end)()
     DERPY_MR_FLOWS,S.view,S.focus=fl,view,focus
     S.refresh()
 end
@@ -2659,8 +2729,10 @@ do
     local fl, selected, old7 = DERPY_MR_FLOWS, cm.get_campaign_ui_manager, CHARS[7]
     local f = FACTIONS[LOCAL]
     local pick, allowed, enabled = 7, true, true
-    local force = { command_queue_index=function() return 801 end,
-        general_character=function() return {command_queue_index=function() return 7 end} end }
+    ARMY_AT = { x = 0, y = 0 }     -- where the selected army stands, and its number when a test changes it
+    local force = { command_queue_index=function() return ARMY_AT.id or 801 end,
+        general_character=function() return {command_queue_index=function() return 7 end,
+            logical_position_x=function() return ARMY_AT.x end, logical_position_y=function() return ARMY_AT.y end} end }
     CHARS[7] = {is_null_interface=function() return false end, faction=function() return f end,
         has_military_force=function() return true end, military_force=function() return force end}
     cm.get_campaign_ui_manager=function() return {get_char_selected_cqi=function() return pick end} end
@@ -2676,6 +2748,47 @@ do
     eq(widget.text,"5","icon badge shows food needed per turn")
     eq(widget.parent,army,"provisions belongs to native army bar")
     eq(string.find(widget.tip,"carries 25 of 50")~=nil,true,"tooltip shows carried provisions")
+    -- THE SUPPLY LINE (Task 3): its sentence in the same tooltip, asked of the local faction's army by its number, and
+    -- only of an army that stood on the same hex at the previous poll
+    ;(function()   -- a function of its own: the main chunk is at Lua's 200-local limit
+    local NOTE,ASKED,CALLS=nil,nil,0
+    DERPY_MR_FLOWS.supply_note=function(f,id) CALLS=CALLS+1; ASKED=f:name().."|"..id; return NOTE end
+    local function tip_has(text) return string.find(widget.tip,text,1,true)~=nil end
+    local function settle() S.army_button_poll(); S.army_button_poll() end   -- two polls on one hex: the second asks
+    S.supply_poll={}; ARMY_AT.x=1
+    settle(); eq(tip_has("Upkeep"),false,"no note: no sentence")
+    NOTE={state="none"}; settle(); eq(tip_has("Upkeep"),false,"an army with no line: no sentence")
+    NOTE={state="stretched",source="reg_a",turns=5,upkeep=20}; settle()
+    eq(tip_has("Stretched: 5 turns from Alpha. Upkeep +20%."),true,"a stretched army's tooltip reads the line")
+    eq(ASKED,LOCAL.."|801","asked of the local faction, for this army")
+    eq(tip_has("carries 25 of 50"),true,"beside the meals")
+    NOTE={state="supplied",source="reg_a",turns=3,upkeep=10}; settle()
+    eq(tip_has("Supplied from Alpha, 3 turns away. Upkeep +10%."),true,"a supplied army")
+    NOTE={state="supplied",source="reg_a",turns=1,upkeep=0}; settle()
+    eq(tip_has("Supplied from Alpha, 1 turn away. Upkeep +0%."),true,"one turn away is singular")
+    NOTE={state="cut",upkeep=25}; settle()
+    eq(tip_has("Cut off. Upkeep +25%."),true,"a cut army"); eq(tip_has("blocks the road"),false,"with nobody on the road")
+    NOTE={state="cut",upkeep=25,by="fac_x"}; settle()
+    eq(tip_has("Cut off. Upkeep +25%.\nAn enemy army blocks the road."),true,"and with an enemy on it")
+    NOTE={state="home",source="reg_a",turns=0,upkeep=0}; settle()
+    eq(tip_has("In your own lands."),true,"an army at home")
+    -- WALKING: an army that moves every poll is never asked (a search a poll), and its last sentence stays
+    NOTE={state="stretched",source="reg_a",turns=5,upkeep=20}; settle(); CALLS=0
+    NOTE={state="cut",upkeep=25}
+    for _=1,3 do ARMY_AT.x=ARMY_AT.x+1; S.army_button_poll() end
+    eq(CALLS,0,"an army that moves every poll is not asked")
+    eq(tip_has("Cut off"),false,"and still shows its last sentence"); eq(tip_has("Stretched: 5 turns from Alpha. Upkeep +20%."),true,"as it was")
+    S.army_button_poll()
+    eq(CALLS,1,"standing still, it is asked"); eq(tip_has("Cut off. Upkeep +25%."),true,"and the new sentence shows")
+    -- ANOTHER ARMY never shows this one's sentence, and with provisions switched off the sentence still shows
+    ARMY_AT.id=802; enabled=false; CALLS=0
+    S.army_button_poll()
+    eq(CALLS,0,"the first poll of another army asks nothing"); eq(tip_has("Cut off"),false,"and it does not show the other army's sentence")
+    S.army_button_poll()
+    eq(CALLS,1,"the next one asks"); eq(ASKED,LOCAL.."|802","for that army")
+    eq(tip_has("switched off in this campaign"),true,"provisions are switched off"); eq(tip_has("Cut off. Upkeep +25%."),true,"and its supply sentence still shows")
+    ARMY_AT.id=nil; enabled=true; NOTE=nil; S.supply_poll={}
+    end)()
     local n=#REQ
     click("derpy_mr_army_open")
     eq(S.focus,"army:801","button opens selected force")

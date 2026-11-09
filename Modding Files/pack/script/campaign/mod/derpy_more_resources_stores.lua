@@ -1348,6 +1348,16 @@ DERPY_MR_LOC_KEYS = {
     ["On Auto the army refills to 5 turns of provisions after eating.\nIt carries at most 10 turns and never buys rations."] = "derpy_mr_ui_a4be6e93f1",
     ["Buy up to two meals of rations once a turn at 10 gold each."] = "derpy_mr_ui_505892cc96",
     ["After two missed meals the army moves 5% slower.\nAfter three it moves and recovers 10% slower.\nOne full meal ends this."] = "derpy_mr_ui_695657aa45",
+    ["At home"] = "derpy_mr_ui_b744007f56",
+    ["Supplied"] = "derpy_mr_ui_d5622d0a6c",
+    ["Stretched"] = "derpy_mr_ui_7e96ac5725",
+    ["Cut off"] = "derpy_mr_ui_2ddc5070e1",
+    ["In your own lands."] = "derpy_mr_ui_c305618ccb",
+    ["Supplied from {1}, 1 turn away. Upkeep +{2}%."] = "derpy_mr_ui_c34a43fb13",
+    ["Supplied from {1}, {2} turns away. Upkeep +{3}%."] = "derpy_mr_ui_da4c31da07",
+    ["Stretched: {1} turns from {2}. Upkeep +{3}%."] = "derpy_mr_ui_79473e2189",
+    ["Cut off. Upkeep +{1}%."] = "derpy_mr_ui_8b4a5ca29b",
+    ["An enemy army blocks the road."] = "derpy_mr_ui_8d6eb77b24",
     ["Army {1}"] = "derpy_mr_ui_d195aa1ad9",
     ["{1}: provisions"] = "derpy_mr_ui_4bf42dd83a",
     ["Action"] = "derpy_mr_ui_004bf6c9a4",
@@ -1365,10 +1375,23 @@ DERPY_MR_LOC_KEYS = {
     ["Load here"] = "derpy_mr_ui_f494484f18",
     ["Buy"] = "derpy_mr_ui_831a28f1e8",
     ["Load"] = "derpy_mr_ui_f19dbf2edb",
+    ["A cart is already on its way.\nIt arrives on turn {1}."] = "derpy_mr_ui_c7e1a0c528",
+    ["Cut off. Supplies cannot reach this army."] = "derpy_mr_ui_df10c96fa9",
+    ["This army is in your own lands.\nLoad it here instead."] = "derpy_mr_ui_b4b35cdb8d",
+    ["This army has no supply road."] = "derpy_mr_ui_189e87167f",
+    ["This army already carries 5 turns of provisions."] = "derpy_mr_ui_47b497f846",
+    ["{1} has no food to spare."] = "derpy_mr_ui_9d02111ded",
+    ["Send a cart of provisions from {1}.\nIt arrives in {2}.\nAn army at war with you can seize it."] = "derpy_mr_ui_705b55867a",
+    ["Supply cart"] = "derpy_mr_ui_b89a0adb92",
+    ["Send supplies"] = "derpy_mr_ui_0712b67f47",
     ["Unload here"] = "derpy_mr_ui_42d6fc179d",
     ["Pauses refill"] = "derpy_mr_ui_2bcdc93724",
     ["Unload"] = "derpy_mr_ui_ae11d3ee07",
     ["Missed meals"] = "derpy_mr_ui_19ac7bf0e6",
+    ["Supply road"] = "derpy_mr_ui_aecfaed05d",
+    ["Distance"] = "derpy_mr_ui_0aa6f4210b",
+    ["Upkeep"] = "derpy_mr_ui_83102a4b10",
+    ["+{1}%"] = "derpy_mr_ui_d6d3ab917b",
     ["What your stores pay for"] = "derpy_mr_ui_bf7236074d",
     ["Province capital"] = "derpy_mr_ui_fb230f0265",
     ["Materials"] = "derpy_mr_ui_23ce0eb7d1",
@@ -1495,6 +1518,7 @@ DERPY_MR_LOC_KEYS = {
     ["There is no settlement here to refill from."] = "derpy_mr_ui_48d5922f68",
     ["This settlement is not yours."] = "derpy_mr_ui_ac6aae4aee",
     ["This settlement is under siege."] = "derpy_mr_ui_c869fd27de",
+    ["This settlement was taken too recently to feed an army."] = "derpy_mr_ui_7260e1e2e7",
     ["It refills from this settlement."] = "derpy_mr_ui_53d78dcc3a",
     ["This settlement has {1} provisions to spare."] = "derpy_mr_ui_f8ea19175a",
     ["This settlement has no provisions to spare."] = "derpy_mr_ui_13ae2fc7bf",
@@ -3071,6 +3095,27 @@ S.ARMY_AUTO = S.T("On Auto the army refills to 5 turns of provisions after eatin
 S.ARMY_BUY = S.T("Buy up to two meals of rations once a turn at 10 gold each.")
 S.ARMY_HUNGER = S.T("After two missed meals the army moves 5% slower.\nAfter three it moves and recovers 10% slower.\nOne full meal ends this.")
 
+-- THE SUPPLY LINE (design 2026-11-08, section 4), as flows.lua F.supply_note gives it: state, source (a region key),
+-- turns, upkeep (a percentage) and by (the faction of an enemy army on the road). The sentence goes in the army-bar
+-- tooltip and on the Vault row; nothing for an army with no line.
+S.SUPPLY_STATE = { home = S.T("At home"), supplied = S.T("Supplied"), stretched = S.T("Stretched"), cut = S.T("Cut off") }
+
+function S.supply_text(note)
+    local state, source, pct = note.state, note.source and S.place(note.source) or "", S.num(note.upkeep or 0)
+    if state == "home" then return S.T("In your own lands.") end
+    if state == "supplied" then
+        if note.turns == 1 then return S.T("Supplied from {1}, 1 turn away. Upkeep +{2}%.", source, pct) end
+        return S.T("Supplied from {1}, {2} turns away. Upkeep +{3}%.", source, note.turns, pct)
+    end
+    if state == "stretched" then return S.T("Stretched: {1} turns from {2}. Upkeep +{3}%.", note.turns, source, pct) end
+    if state == "cut" then
+        local text = S.T("Cut off. Upkeep +{1}%.", pct)
+        if note.by then text = text .. "\n" .. S.T("An enemy army blocks the road.") end
+        return text
+    end
+    return nil
+end
+
 function S.army_name(row)
     if row.force then
         return S.char_name(row.force:general_character():command_queue_index()) or (S.T("Army {1}", row.id))
@@ -3100,9 +3145,32 @@ function S.army_view(v)
         send = { label = row.auto and S.T("Pause") or S.T("Enable"), off = not S.actions_on(), tip = auto } }
     v.rows[#v.rows + 1] = { row.mobile and S.T("Buy rations") or S.T("Load here"), source, row.mobile and (S.T("{1} gold", S.num(row.price))) or "", "", provisions = "load", army = id, tip = load,
         send = { label = row.mobile and S.T("Buy") or S.T("Load"), off = (not row.source and (row.buy or 0) == 0) or not S.actions_on(), tip = load } }
+    -- SEND SUPPLIES (design 2026-11-08, section 5c): Auto's supply cart by hand, as flows.lua F.supply_send refuses it
+    local note = S.ask("supply_note", f, id)
+    local cart, state = S.ask("supply_cart_of", id), note and note.state
+    local why
+    if cart then why = S.T("A cart is already on its way.\nIt arrives on turn {1}.", tostring(cart.due))
+    elseif state == "cut" then why = S.T("Cut off. Supplies cannot reach this army.")
+    elseif state == "home" then why = S.T("This army is in your own lands.\nLoad it here instead.")
+    elseif state ~= "supplied" and state ~= "stretched" then why = S.T("This army has no supply road.")
+    elseif row.held >= row.need * 5 then why = S.T("This army already carries 5 turns of provisions.")
+    elseif (S.ask("provision_spare", f, note.source) or 0) <= 0 then why = S.T("{1} has no food to spare.", S.place(note.source)) end
+    local supply = why or S.T("Send a cart of provisions from {1}.\nIt arrives in {2}.\nAn army at war with you can seize it.",
+        S.place(note.source), turns(note.turns))
+    v.rows[#v.rows + 1] = { S.T("Supply cart"), note and note.source and S.place(note.source) or "-", "", "", provisions = "send",
+        army = id, tip = supply, send = { label = S.T("Send supplies"), off = why ~= nil or not S.actions_on(), tip = supply } }
     v.rows[#v.rows + 1] = { S.T("Unload here"), S.T("Pauses refill"), "", "", provisions = "unload", army = id, tip = unload,
         send = { label = S.T("Unload"), off = not row.source or row.held == 0 or not S.actions_on(), tip = unload } }
     v.rows[#v.rows + 1] = { S.T("Missed meals"), S.num(row.short), "", "", "", tip = S.ARMY_HUNGER }
+    -- THE SUPPLY LINE under the meals: a section row with its own headings (as the road's has, S.spending), then one
+    -- row of state, source, turns and upkeep; its tooltip says it in a sentence
+    if note and S.SUPPLY_STATE[note.state] then
+        v.rows[#v.rows + 1] = { S.section(S.T("Supply road")), S.section(S.T("From")), S.section(S.T("Distance")),
+                                S.section(S.T("Upkeep")), "", section = true }
+        v.rows[#v.rows + 1] = { S.SUPPLY_STATE[note.state], note.source and S.place(note.source) or "-",
+                                (note.turns or 0) > 0 and turns(note.turns) or "-", S.T("+{1}%", S.num(note.upkeep or 0)), "",
+                                tip = S.supply_text(note) }
+    end
 end
 
 function S.spending(v)
@@ -4837,16 +4905,34 @@ function S.selected_army()
     local force = ch:military_force()
     if not S.ask("provision_force", f, force) or force:general_character():command_queue_index() ~= cqi then return nil end
     local id = tostring(force:command_queue_index())
-    if not (S.ask("rates") or {}).army_provisions then return {id=id,off=true} end
-    for _, row in ipairs(S.ask("provision_rows", f) or {}) do if row.id == id then return row end end
+    if not (S.ask("rates") or {}).army_provisions then return {id=id,off=true}, force end
+    for _, row in ipairs(S.ask("provision_rows", f) or {}) do if row.id == id then return row, force end end
+end
+
+-- THE SUPPLY SENTENCE is asked only of an army that stood on the same hex at the previous poll: F.supply_line keeps
+-- its searches for a hex, so a standing army costs a rescan of the regions and a walking one would cost a search a
+-- poll. While it walks, its last sentence stays; another army's is never shown (S.supply_poll = {id, x, y, text}).
+S.supply_poll = {}
+function S.supply_sentence(f, id, x, y)
+    local p = S.supply_poll
+    if p.id == id and p.x == x and p.y == y then
+        local note = S.ask("supply_note", f, id)
+        p.text = note and S.supply_text(note) or nil
+    elseif p.id ~= id then
+        p.text = nil
+    end
+    p.id, p.x, p.y = id, x, y
+    return p.text
 end
 
 function S.army_button_poll()
     local root = S.root()
     local button = find_uicomponent(root, S.ARMY_BUTTON)
-    local row = not S.is_open() and S.selected_army()
+    local row, force
+    if not S.is_open() then row, force = S.selected_army() end
     local group = find_uicomponent(root, "button_group_army")
     if not row or not is_uicomponent(group) or not group:Visible(true) then
+        if S.supply_poll.id then S.supply_poll = {} end       -- a sentence from before is not shown again
         if is_uicomponent(button) and button:Visible() then
             button:SetVisible(false)
             if is_uicomponent(group) then group:Layout() end
@@ -4862,8 +4948,12 @@ function S.army_button_poll()
     end
     button:SetVisible(true)
     S.set_off(button,row.off==true)
-    local tip = row.off and S.T("Provisions\nArmy provisions are switched off in this campaign.")
-        or (S.T("Provisions\nThis army eats {1} a turn and carries {2} of {3}.\n{4}{5}\n{6}", row.need, row.held, row.cap, row.reason, (row.short > 0 and (S.T("\nMissed meals: {1}.", row.short)) or ""), S.ARMY_TIP))
+    -- THE SUPPLY LINE, in the tooltip of its own right: it shows with provisions switched off too (the upkeep is not
+    -- theirs)
+    local f, gen = S.local_faction(), force:general_character()
+    local line = f and S.supply_sentence(f, row.id, gen:logical_position_x(), gen:logical_position_y())
+    local tip = row.off and add_line(S.T("Provisions\nArmy provisions are switched off in this campaign."), line)
+        or (S.T("Provisions\nThis army eats {1} a turn and carries {2} of {3}.\n{4}{5}\n{6}", row.need, row.held, row.cap, row.reason, (row.short > 0 and (S.T("\nMissed meals: {1}.", row.short)) or ""), (line and (line .. "\n") or "") .. S.ARMY_TIP))
     local count = row.off and "-" or S.num(row.need)
     if button:GetStateText() ~= count then
         local state = button:CurrentState()

@@ -38,7 +38,28 @@ FLOWS_SRC = os.path.join(ROOT, "Modding Files", "source", "resource_overhaul", "
 FLOWS_REL = "Modding Files/pack/script/campaign/mod/derpy_more_resources_flows.lua"
 FLOWS_HARNESS = os.path.join(ROOT, "tools", "_resource_overhaul_flows_harness.lua")
 MCT_REL = "Modding Files/pack/script/mct/settings/derpy_more_resources.lua"
+# Art the script swaps in at runtime that this generator does not write and CA does not ship: packed by
+# gen_resource_overhaul.pack() from Modding Files/pack/. Missing from the 2026-11-09 --pack build until listed here.
+STATIC_ART = ("ui/skins/default/derpy_mr_provisions.png",)
 
+# ARMY SUPPLY LINES (design 2026-11-08, sections 4 and 5b): frozen like the rest, but drawn in the "army_supply"
+# section of the MCT page beside the vanilla box. 40 hexes a turn (flows.lua F.ROAD_PER_TURN).
+SUPPLY_RATES = (
+    ("supply_reach", "Supply reach in turns",
+     "How far an army can be from one of your settlements and still be supplied, in turns of travel. Past half of "
+     "that the road is stretched. Further away the road is cut.", 1, 10, 5),
+    ("settle_turns", "Turns to settle new land",
+     "Turns before a settlement you take can supply your armies. 0: at once.", 0, 10, 5),
+    ("supply_step", "Upkeep for each turn of road",
+     "Each turn of road after the first adds this much to an army's upkeep.", 0, 15, 5),
+    ("supply_max", "Most upkeep from a road",
+     "The most a supply road can add to an army's upkeep. An army whose road is cut pays this.", 0, 50, 25),
+)
+SUPPLY_LINES_SWITCH = ("supply_lines", "Army supply lines",
+    "Each of your armies draws supplies from one of your settlements along a road. The further the road, the more the "
+    "army costs. A cut road feeds nothing and costs the most. Armies in your own settled land need no road. Land you "
+    "took in the last few turns feeds no army yet. Turns to settle new land sets how many. "
+    "With Army provisions off or Vanilla supply lines ticked, the roads add no upkeep.", True)
 # THE RATES (flows spec section 6): key, label, tooltip, min, max, default. One source for the
 # flows script's defaults and the MCT sliders, so the two cannot disagree. Plain words: no "AI".
 RATES = (
@@ -85,7 +106,7 @@ RATES = (
     ("road_danger", "Road danger",
      "How likely trouble on the road is on the most dangerous land, each turn. Half as dangerous land is half as "
      "likely. 0 turns road encounters off.", 0, 50, 20),
-)
+) + SUPPLY_RATES
 TOLL_MAX_PCT = 15   # all the tolls on one cargo together (spec 6.1)
 # BANDITS ON THE ROADS (Part D 7.1-7.2). The chance of trouble in a turn is threat x road_danger in 10000;
 # guards halve it. A battle's bandit army has ROAD_SIZES units: under 50 threat 5, under 70 8, else 10.
@@ -179,7 +200,7 @@ AI_FOOD_SWITCH = ("ai_food", "Other factions make more food",
     "for each settlement level. Off: it makes only what its buildings make.", False)
 AI_MEAL_SWITCHES = (AI_HOME_FED_SWITCH, AI_FIELD_SWITCH, AI_HALF_SWITCH, AI_FOOD_SWITCH)
 SWITCHES = (PROVISIONS_SWITCH, PROCESSING_SWITCH, SERVICES_SWITCH, AI_SWITCH, UPKEEP_SWITCH, ACTIONS_SWITCH, EVENTS_SWITCH, SUPPLY_SWITCH, RECRUIT_SWITCH, ESCORT_SWITCH,
-            RANDOM_SWITCH, SPOIL_SWITCH, EDICT_SWITCH, TOLL_SWITCH, BANDIT_SWITCH) + AI_MEAL_SWITCHES
+            RANDOM_SWITCH, SPOIL_SWITCH, EDICT_SWITCH, TOLL_SWITCH, BANDIT_SWITCH, SUPPLY_LINES_SWITCH) + AI_MEAL_SWITCHES
 # THE THREE EDICTS: (key, name, tip, default, options); an option is (key, label, tip, bundle or None,
 # the Chaos Dwarfs' tip or None). The tips are the player text that lists each option's exact effects,
 # one sentence a line. The middle option is the default and changes nothing.
@@ -894,8 +915,9 @@ def build_mappath(n):
     # R.ink hands out set * 4 + R.colour (`% 4`): one template per palette colour, or one draws nothing, silently
     src = (T.OUT / "terrain_routes.lua").read_text(encoding="utf-8")
     assert re.search(r"function R\.colour.*?% (\d+)", src, re.S).group(1) == str(len(T.COLOUR_SETS[0][3])) == "4"
-    assert len(T.COLOURS) == L["MAP_PATH_COLOURS"] <= 16, T.COLOURS   # 16: one hex digit of the GUID prefix
-    ink = "#%02X%02X%02XCC" % tuple(round(255 * v) for v in T.COLOURS[n])
+    # the owners' sixteen only: the army supply inks after them (T.SUPPLY_COLOURS) are drawn on the 3D map alone
+    assert len(T.OWNER_COLOURS) == L["MAP_PATH_COLOURS"] <= 16, T.OWNER_COLOURS   # 16: one hex digit of the GUID prefix
+    ink = "#%02X%02X%02XCC" % tuple(round(255 * v) for v in T.OWNER_COLOURS[n])
     s = L["MAP_PATH"]
     root = E.C("root", s, s)
     root.add(E.C("derpy_mr_stores_mappath_%d" % n, s, s, layers=[
@@ -1568,7 +1590,7 @@ MCT_TITLE = "Derpy Resource Overhaul"
 MCT_DESC = ("How goods move between settlement stores. These are fixed for the life of a campaign: "
             "change them from the main menu before starting a new one. In a multiplayer campaign "
             "they are ignored and every value is the default on every machine. The trade route lines "
-            "can be changed at any time.")
+            "and the Vanilla supply lines box can be changed at any time.")
 
 
 # Shown on a greyed setting in a campaign: the values are frozen into the save (flows.lua).
@@ -1590,7 +1612,19 @@ ROUTE_SWITCHES = (
     ('shipments', 'Travelling shipments', 'Show roads and markers for cargo already dispatched. Stopping future trade does not recall it.'),
     ('carts', 'Moving carts and boats', 'Show decorative minecarts on land and transport boats at sea. This does not change deliveries.'),
     ('icons', 'Resource icons above traffic', 'Show an available resource permitted by the trade switches. Shipment and contract vehicles show their assigned resource. Empty returns have no icon.'),
+    ('supply', 'Army supply roads', 'Show the supply road from each of your armies to the settlement that feeds it.'),
 )
+
+# VANILLA SUPPLY LINES (design 2026-11-08, section 2): the game's army-count upkeep. Like the route lines it is neither locked
+# nor frozen: flows.lua F.vanilla_supply reads it on every call in single player, and multiplayer always takes the default.
+VANILLA_SUPPLY_OPTION = ("vanilla_supply_lines", "Vanilla supply lines",
+    "Ticked: the game's own supply lines stay. Each army after your first makes every army cost more upkeep. "
+    "This mod's roads still carry food to your armies but add no upkeep. "
+    "Unticked: this mod's supply lines replace them. "
+    "Races whose armies carry no food keep the game's own rule. "
+    "So does every race when Army provisions or Army supply lines is off. "
+    "You can change this during a campaign. "
+    "In multiplayer it is always unticked.", False)
 
 
 def mct_lua():
@@ -1611,17 +1645,21 @@ def mct_lua():
              'm:set_author("_D3rpyN3wb_")',
              'm:set_description("%s")' % MCT_DESC,
              'm:add_new_section("stores", "Stores")']
-    for k, label, tip, lo, hi, d in RATES:
-        lines += ["",
-                  'local o_%s = m:add_new_option("%s", "slider")' % (k, k),
-                  'o_%s:set_text("%s")' % (k, label),
-                  'o_%s:set_tooltip_text("%s")' % (k, tip),
-                  "o_%s:slider_set_precision(0)" % k,
-                  "o_%s:slider_set_min_max(%d, %d)" % (k, lo, hi),
-                  "o_%s:slider_set_step_size(1, 0)" % k,
-                  "o_%s:set_default_value(%d)" % (k, d),
-                  'o_%s:set_assigned_section("stores")' % k,
-                  "if IN_CAMPAIGN then o_%s:set_locked(true, LOCK_REASON) end" % k]
+    def slider(row, section):
+        k, label, tip, lo, hi, d = row
+        return ["",
+                'local o_%s = m:add_new_option("%s", "slider")' % (k, k),
+                'o_%s:set_text("%s")' % (k, label),
+                'o_%s:set_tooltip_text("%s")' % (k, tip),
+                "o_%s:slider_set_precision(0)" % k,
+                "o_%s:slider_set_min_max(%d, %d)" % (k, lo, hi),
+                "o_%s:slider_set_step_size(1, 0)" % k,
+                "o_%s:set_default_value(%d)" % (k, d),
+                'o_%s:set_assigned_section("%s")' % (k, section),
+                "if IN_CAMPAIGN then o_%s:set_locked(true, LOCK_REASON) end" % k]
+    for row in RATES:
+        if row not in SUPPLY_RATES:
+            lines += slider(row, "stores")
     for (k, label, tip, d), section in ((PROVISIONS_SWITCH, "using"), (PROCESSING_SWITCH, "using"), (SERVICES_SWITCH, "using"),
                                         (AI_SWITCH, "stores")) + tuple((s, "stores") for s in AI_MEAL_SWITCHES) + (
                                         (SPOIL_SWITCH, "stores"), (UPKEEP_SWITCH, "using"),
@@ -1638,6 +1676,26 @@ def mct_lua():
                   "o_%s:set_default_value(%s)" % (k, "true" if d else "false"),
                   'o_%s:set_assigned_section("%s")' % (k, section),
                   "if IN_CAMPAIGN then o_%s:set_locked(true, LOCK_REASON) end" % k]
+    k, label, tip, d = VANILLA_SUPPLY_OPTION
+    lines += ["",
+              "-- NEVER LOCKED, NEVER FROZEN: flows.lua F.vanilla_supply reads it on every call (single player only).",
+              'm:add_new_section("army_supply", "Army supply lines")',
+              'local o_%s = m:add_new_option("%s", "checkbox")' % (k, k),
+              'o_%s:set_text("%s")' % (k, label),
+              'o_%s:set_tooltip_text("%s")' % (k, tip),
+              "o_%s:set_default_value(%s)" % (k, "true" if d else "false"),
+              'o_%s:set_assigned_section("army_supply")' % k]
+    # the mod's own supply lines: frozen into the save, so locked in a campaign as the rest are
+    k, label, tip, d = SUPPLY_LINES_SWITCH
+    lines += ["",
+              'local o_%s = m:add_new_option("%s", "checkbox")' % (k, k),
+              'o_%s:set_text("%s")' % (k, label),
+              'o_%s:set_tooltip_text("%s")' % (k, tip),
+              "o_%s:set_default_value(%s)" % (k, "true" if d else "false"),
+              'o_%s:set_assigned_section("army_supply")' % k,
+              "if IN_CAMPAIGN then o_%s:set_locked(true, LOCK_REASON) end" % k]
+    for row in SUPPLY_RATES:
+        lines += slider(row, "army_supply")
     import build_mr_terrain_routes as T
     lines += ["", 'm:add_new_section("routes", "Trade route lines")']
     for kind, label, tip in ROUTE_SWITCHES:
@@ -1823,7 +1881,7 @@ def check_provision_mutations():
     subject = flows_lua().replace("\r\n", "\n")
     mutations = (
         ("army AI switch", 'or not (rates.ai or faction:is_human()) then return rows end', 'then return rows end'),
-        ("starter half capacity", 'row.need * 5', 'row.need * 10'),
+        ("starter half capacity", '] = row.need * 5', '] = row.need * 10'),
         ("starter issue registry", 'if not F.state.army_issued[row.id] then', 'if true then'),
         ("starter first meal", 'b.done = cm:model():turn_number()', 'b.done = -1'),
         ("starter food culture", 'biscuit and "hardtack" or "salted_meat"', '"grain"'),
@@ -1937,7 +1995,7 @@ def check_convoy_mutations():
     """Agreement cargo (spec 2026-10-23, 5.1): each rule of the convoy that leaves, broken once."""
     subject = flows_lua().replace("\r\n", "\n")
     mutations = (
-        ("duration clamp", "math.max(1, math.min(F.rates().reach, math.ceil(F.road_steps(path) / F.ROAD_PER_TURN)))", "1"),
+        ("duration clamp", "math.max(1, math.min(F.rates().reach, F.road_turns(path)))", "1"),
         # a road is its hexes: a bridge is one point and as many hexes as the reach search charged it (F.road_steps)
         ("convoy road counts points", "math.max(1, math.abs(path[i][1] - path[i - 1][1]), math.abs(path[i][2] - path[i - 1][2]))", "1"),
         ("convoy turns count points less one", "math.ceil(F.road_steps(path) / F.ROAD_PER_TURN)", "math.ceil((#path - 1) / F.ROAD_PER_TURN)"),
@@ -1983,7 +2041,8 @@ def check_convoy_mutations():
         ("war returns convoy", "then F.convoy_return(c)", "then F.convoy_drop(c)"),
         ("enemy cache per turn", "if hit and hit.turn == turn then return hit.list end", "if false then return hit.list end"),
         ("convoys at turn start", "F.guard(F.convoys_turn, faction)\n    F.guard(F.ships_turn, faction)", "F.guard(F.ships_turn, faction)"),
-        ("convoys of this exporter", "if c.f == fkey then mine[#mine + 1] = c end", "mine[#mine + 1] = c"),
+        ("convoys of this exporter", "for _, c in ipairs(F.convoys()) do\n        if c.f == fkey then mine[#mine + 1] = c end",
+         "for _, c in ipairs(F.convoys()) do\n        mine[#mine + 1] = c"),
         ("convoy arrival day", "elseif turn >= c.due then F.convoy_arrive(c)", "elseif turn > c.due then F.convoy_arrive(c)"),
         ("convoys in id order", "for _, c in ipairs(mine) do\n        local buyer", "for _, c in ipairs(F.reverse(mine)) do\n        local buyer"),
         ("convoy step index", "math.floor((#road - 1) * elapsed / duration) + 1", "math.floor((#road - 1) * elapsed / duration) + 2"),
@@ -2205,7 +2264,7 @@ def check_cargo_view_mutations():
         ("convoy marker", "            cargo[#cargo + 1] = c\n", "            do end\n"),
         # the decal budget: a convoy's marker only near the camera, a shipment's as before
         ("convoy marker without the camera test", "if near and count < 512 then", "if count < 512 then"),
-        ("shipment marker with the camera test", "        if s.convoy then\n            near = R.in_view(",
+        ("shipment marker with the camera test", "        if s.convoy or s.supply then\n            near = R.in_view(",
          "        if true then\n            near = R.in_view("),
     )
     for label, before, after in markers:
@@ -2289,6 +2348,66 @@ def check_drag_mutations():
     code, out = run_terrain_harness()
     assert code == 0, out
     print("drag mutations: %d/%d caught; restored harness passes" % (len(mutations), len(mutations)))
+
+
+def check_supply_map_mutations():
+    """The armies' supply roads on the 3D map (Task 4, 2026-11-08): F.supply_line is asked only for an army that has
+    moved or once the answers were dropped (a turn start, a war, a capture), a camera move places the dashes from the
+    last refresh, the roads sit under ids of their slot (army-number order) and hex and are rationed, a throw there
+    leaves the trade roads drawn, a loaded game clears the whole fixed range of ids, and an army finishing its move asks
+    for the map to be drawn again. Each rule broken once; the terrain harness must fail."""
+    luac = LUA_EXE.replace("lua.exe", "luac.exe")
+    with io.open(TERRAIN_SRC, encoding="utf-8", newline="") as fh:
+        terrain = fh.read().replace("\r\n", "\n")
+    asks = "if not (kept and kept.x == x and kept.y == y) then"
+    inks = "R.SUPPLY_INK = { supplied = 16, stretched = 17, cut = 18 }"
+    mutations = (
+        ("every refresh asks again", asks, "if true then"),
+        ("a moved army not asked again", asks, "if not kept then"),
+        ("only one axis of the hex compared", asks, "if not (kept and kept.x == x) then"),
+        ("the answers outlive a turn start", "    if R.supply_epoch ~= R.epoch then R.supply_kept, R.supply_epoch = {}, R.epoch end\n", ""),
+        ("a dead army keeps its answer", "    R.supply_kept = now   -- an army that is gone loses its answer\n", ""),
+        ("a camera move asks again", "links, cargo, unshared, supply = R.drawn[1], R.drawn[2], R.drawn[3], R.drawn[4]",
+         "links, cargo, unshared = R.drawn[1], R.drawn[2], R.drawn[3]; supply = R.supply_links(faction)"),
+        ("lines in no army order", "    table.sort(out, function(a, b) return a.cqi < b.cqi end)\n", ""),
+        ("the switch ignored", "R.shown('supply') and faction:is_human()", "faction:is_human()"),
+        ("a computer faction's armies drawn", "R.shown('supply') and faction:is_human()", "R.shown('supply')"),
+        ("a cut line with no road", "if ink and kept.line.path then", "if ink then"),
+        ("the inks swapped", inks, inks.replace("supplied = 16, stretched = 17", "supplied = 17, stretched = 16")),
+        ("no ration", "            if supply_placed >= R.SUPPLY_CAP then break end\n", ""),
+        ("a dash on every hex", "for i = 1, #path, 2 do\n            if supply_placed", "for i = 1, #path, 1 do\n            if supply_placed"),
+        ("dashes out of the camera's view", "            if R.in_view(shown[i][1], shown[i][2]) then\n                supply_placed",
+         "            if true then\n                supply_placed"),
+        ("one army's dashes under another's ids", "wanted['derpy_mr_supply_' .. line.slot .. '_' .. i]", "wanted['derpy_mr_supply_' .. i]"),
+        ("the slot is the army number", "line.slot = k - 1 end", "line.slot = line.cqi end"),
+        ("slots handed out past the last", "    for k = #out, R.SUPPLY_SLOTS + 1, -1 do out[k] = nil end\n", ""),
+        ("the line size ignored", "scene = R.dash(path, i, line.ink, size) }", "scene = R.dash(path, i, line.ink, 0) }"),
+        ("a throw stops the trade roads", "local ok, found = pcall(R.supply_links, faction)", "local ok, found = true, R.supply_links(faction)"),
+        ("the saved game's every second hex", "for k = 1, R.SUPPLY_SWEEP, 2 do", "for k = 1, R.SUPPLY_SWEEP, 1 do"),
+        ("the saved game's far hexes", "R.SUPPLY_SWEEP = 401\n", "R.SUPPLY_SWEEP = 199\n"),
+        ("the load sweep walks only live armies' slots", "for slot = 0, R.SUPPLY_SLOTS - 1 do",
+         "for slot = 0, #(R.drawn and R.drawn[4] or {}) - 1 do"),
+        ("the load sweep stops at the first slot", "for slot = 0, R.SUPPLY_SLOTS - 1 do", "for slot = 0, 0 do"),
+        ("the load sweep never started", "    R.hide_supply()\n", ""),
+        ("no listener for an army finishing its move", "'derpy_mr_terrain_routes_moved', 'CharacterFinishedMovingEvent',",
+         "'derpy_mr_terrain_routes_moved', 'CharacterFinishedMovingEventUnused',"),
+        ("any faction's move redraws the map", "function(context) return context:character():faction():name() == cm:get_local_faction_name(true) end,",
+         "function(context) return true end,"),
+        ("a move sets nothing", "        function() R.dirty = true end, true)\nend", "        function() end, true)\nend"),
+        ("a turn start keeps the answers", "R.epoch, R.dirty, R.network_cache, R.bundled = R.epoch + 1, true, nil, {}",
+         "R.dirty, R.network_cache, R.bundled = true, nil, {}"),
+    )
+    for label, before, after in mutations:
+        assert terrain.count(before) == 1, "stale supply map mutation: " + label
+        changed = terrain.replace(before, after, 1)
+        syntax = subprocess.run([luac, "-p", "-"], input=changed, capture_output=True, text=True)
+        assert syntax.returncode == 0, (label, syntax.stderr)
+        code, out = run_terrain_harness(changed)
+        assert code != 0 and "harness ok" not in out, "survived: %s\n%s" % (label, out)
+        print("  caught:", label, "-", _why(out))
+    code, out = run_terrain_harness()
+    assert code == 0, out
+    print("supply map mutations: %d/%d caught; restored harness passes" % (len(mutations), len(mutations)))
 
 
 def check_map_cost_mutations():
@@ -2758,6 +2877,40 @@ def check_toll_mutations():
     print("toll mutations: %d/%d caught" % (len(mutations), len(mutations)))
 
 
+def check_vanilla_supply_mutations():
+    """Vanilla supply lines (design 2026-11-08, section 2): each rule broken the way somebody would, in the shipped
+    flows script; the flows harness must fail on every one."""
+    subject = flows_lua().replace("\r\n", "\n")
+    mutations = (
+        ("multiplayer reads the box", 'return not mp and F.mct("vanilla_supply_lines") == true',
+         'return F.mct("vanilla_supply_lines") == true'),
+        ("the strip skipped", "        else\n            F.supply_lines_strip(faction)\n        end\n", "        else\n        end\n"),
+        ("the first-tick pass skipped", "    for _, fkey in ipairs(cm:get_human_factions()) do\n",
+         "    for _, fkey in ipairs({}) do\n"),
+        ("a double wrap", "or F.vanilla_apply then return end", "then return end"),
+        # Task 8 (author + ruling 2026-11-09): what this mod's lines cannot cover keeps the game's rule
+        ("a race with no provisions stripped", "not (r.supply_lines and r.army_provisions and F.eats(faction))\n",
+         "not (r.supply_lines and r.army_provisions)\n"),
+        ("supply lines off still stripping", "not (r.supply_lines and r.army_provisions and F.eats(faction))\n",
+         "not (r.army_provisions and F.eats(faction))\n"),
+        ("provisions off still stripping", "not (r.supply_lines and r.army_provisions and F.eats(faction))\n",
+         "not (r.supply_lines and F.eats(faction))\n"),
+        # the follow-up ruling: one predicate for the wrapper and the road's upkeep
+        ("the wrapper asking the box alone", "        if F.vanilla_charges(faction) then\n",
+         "        if F.vanilla_supply() then\n"),
+    )
+    for label, before, after in mutations:
+        assert subject.count(before) == 1, "stale vanilla supply mutation: " + label
+        changed = subject.replace(before, after, 1)
+        syntax = subprocess.run([LUA_EXE.replace("lua.exe", "luac.exe"), "-p", "-"],
+            input=changed, capture_output=True, text=True, encoding="utf-8")
+        assert syntax.returncode == 0, (label, syntax.stderr)
+        code, out = run_harness(FLOWS_HARNESS, flows_text=changed)
+        assert code != 0 and "in function" in out and "syntax" not in out, "survived: %s\n%s" % (label, out)
+        print("  caught:", label)
+    print("vanilla supply mutations: %d/%d caught" % (len(mutations), len(mutations)))
+
+
 def check_blockade_mutations():
     """Blockades and the toll rows (design 2026-11-01, Part C 6.2-6.3): each rule broken the way somebody would,
     in the shipped flows, stores and terrain scripts; the harness that owns the rule must fail on every one."""
@@ -2779,6 +2932,11 @@ def check_blockade_mutations():
         ("the blockades not saved", "        F.state.blockades = F.blockades_kept()\n", ""),
         ("the blockades not loaded", "    F.sanitize_blockades()\n", ""),
         ("a damaged saved blockade kept", 'type(v.by) == "string" and type(v.turn) == "number"', "true"),
+        # Task 8: the map's preview fills no shared enemy list
+        ("the map's preview filling the enemy cache", "F.blockade(exporter, partner, path, preview)",
+         "F.blockade(exporter, partner, path)"),
+        ("a blockade not passing ui on", "F.near_road(F.enemy_armies(side, ui), path)",
+         "F.near_road(F.enemy_armies(side), path)"),
     )
     panel_m = (
         ("a blockade naming no blocker", 'local why = S.T(c.why) or (S.T("Blockaded by {1}", loc(', 'local why = S.T(c.why) or (S.T("Blockaded", loc('),
@@ -2792,6 +2950,214 @@ def check_blockade_mutations():
     )
     _run_mutants("blockade", flows_lua().replace("\r\n", "\n"), flows_m, stores_lua().replace("\r\n", "\n"), panel_m,
                  terrain, terrain_m)
+
+
+def check_supply_line_mutations():
+    """Army supply lines (design 2026-11-08, section 4): settled land and the road to it, each rule broken the way
+    somebody would, in the shipped flows script; the flows harness must fail on every one."""
+    record = ("    F.state.taken = F.state.taken or {}\n"
+              "    F.state.taken[rk] = not (region:is_abandoned() or taker:is_null_interface())\n"
+              "        and { f = taker:name(), at = cm:model():turn_number() } or nil\n")
+    early = ("    F.economy_clear(region)\n    F.drop_bundles(region)\n"
+             "    local ups = F.state.upgrades and F.state.upgrades[rk]\n    if not ups then return end\n")
+    BLOCK = "if faction:is_human() and not F.settled(r, faction:name()) and F.lines_apply(faction, force) then"
+    flows_m = (
+        ("an unsettled region accepted", "not r:garrison_residence():is_under_siege() and F.settled(r, fkey) then",
+         "not r:garrison_residence():is_under_siege() then"),
+        ("an allied source accepted",
+         "if r:is_null_interface() or r:is_abandoned() or r:owning_faction():name() ~= faction:name() then",
+         "if r:is_null_interface() or r:is_abandoned() then"),
+        ("stretched at half rather than past half", "turns > math.ceil(reach / 2)", "turns >= math.ceil(reach / 2)"),
+        ("the enemy radius one hex wider", "if dx * dx + dy * dy <= near * near then",
+         "if dx * dx + dy * dy <= (near + 1) * (near + 1) then"),
+        ("the memo ignoring a move", "if not (kept and kept.x == x and kept.y == y) then", "if not kept then"),
+        ("the capture recorded after the early return", record + early, early + record),
+        ("the farthest source first", "        if p.d ~= q.d then return p.d < q.d end\n",
+         "        if p.d ~= q.d then return p.d > q.d end\n"),
+        ("a tie decided by the list, not the key", "        return p.key < q.key\n", "        return false\n"),
+        ("no fallback past the nearest source", "for i = 1, math.min(F.SUPPLY_TRIES, #found) do",
+         "for i = 1, math.min(1, #found) do"),
+        ("every source searched", "for i = 1, math.min(F.SUPPLY_TRIES, #found) do", "for i = 1, #found do"),
+        ("the army's own ground a wall", "    if stand then filed[stand] = false end\n", ""),
+        ("a kept road outliving a change of verdict",
+         "if not r or r:is_null_interface() or judge(r) ~= was then memo = nil; break end",
+         "if not r or r:is_null_interface() then memo = nil; break end"),
+        ("the switch ignored",
+         "return F.rates().supply_lines and F.provision_force(faction, force) and not F.upkeep_exempt(faction, force)",
+         "return F.provision_force(faction, force) and not F.upkeep_exempt(faction, force)"),
+        ("fresh land refilling an army in it", BLOCK, "if false then"),
+        ("fresh land starving a computer army", BLOCK,
+         "if not F.settled(r, faction:name()) and F.lines_apply(faction, force) then"),
+        ("fresh land refusing with the switch off", BLOCK,
+         "if faction:is_human() and not F.settled(r, faction:name()) and F.provision_force(faction, force)"
+         " and not F.upkeep_exempt(faction, force) then"),
+        # the fix wave (2026-11-09): the block asks F.supply_line's own gate, so an army with no line still refills
+        ("fresh land refusing an army with no line", BLOCK,
+         "if faction:is_human() and not F.settled(r, faction:name()) and F.rates().supply_lines"
+         " and F.provision_force(faction, force) then"),
+        # Task 8 (author 2026-11-09): an enemy near the army itself does not cut its line
+        ("an enemy beside the army cutting its line", "if dx * dx + dy * dy > near * near then far[#far + 1] = p end",
+         "far[#far + 1] = p"),
+        # Task 8: UI reads (the panel's note, the map) fill no shared enemy list
+        ("a panel read filling the enemy cache", "    local line = F.supply_line(faction, mf, true)\n",
+         "    local line = F.supply_line(faction, mf)\n"),
+        ("the line not passing ui on", "F.near_road(F.enemy_armies(faction, ui), far)",
+         "F.near_road(F.enemy_armies(faction), far)"),
+        # the follow-up ruling: the UI keeps its own list, which the model never reads
+        ("the UI path writing the model cache", "    local cache = ui and F.enemy_cache_ui or F.enemy_cache\n",
+         "    local cache = F.enemy_cache\n"),
+        ("the model reading the UI's list", "    local cache = ui and F.enemy_cache_ui or F.enemy_cache\n",
+         "    local cache = F.enemy_cache_ui\n"),
+        ("the UI's list kept past a war", "    F.reach_known, F.line_kept, F.enemy_cache_ui = {}, {}, {}\n",
+         "    F.reach_known, F.line_kept = {}, {}\n"),
+        ("a turn start keeping the UI's list", "they stood then\n    F.enemy_cache, F.enemy_cache_ui = {}, {}\n",
+         "they stood then\n    F.enemy_cache = {}\n"),
+        # Task 9: a battle moves the enemy, so the UI's list goes and the map is drawn again
+        ("a battle leaving the UI's list", "function() F.guard(F.on_battle_done); F.guard(F.on_armies_changed) end",
+         "function() F.guard(F.on_battle_done) end"),
+        ("a destroyed army leaving the UI's list", "            F.guard(F.on_armies_changed)\n        end, true)",
+         "        end, true)"),
+        ("a battle emptying the model's list", "    F.enemy_cache_ui = {}\n    local R = DERPY_MR_TERRAIN_ROUTES\n",
+         "    F.enemy_cache, F.enemy_cache_ui = {}, {}\n    local R = DERPY_MR_TERRAIN_ROUTES\n"),
+        ("the map not drawn again after a battle", "    if R then R.epoch, R.dirty = (R.epoch or 0) + 1, true end\n", ""),
+    )
+    with io.open(TERRAIN_SRC, encoding="utf-8") as fh:
+        terrain = fh.read().replace("\r\n", "\n")
+    terrain_m = (
+        ("the map's line filling the enemy cache", "line = F.supply_line(faction, mf, true) }",
+         "line = F.supply_line(faction, mf) }"),
+    )
+    _run_mutants("supply line", flows_lua().replace("\r\n", "\n"), flows_m, stores_lua(), (), terrain, terrain_m)
+
+
+def check_supply_upkeep_mutations():
+    """Upkeep by the line's length (design 2026-11-08, section 4): each rule broken the way somebody would, in the
+    shipped flows script; the flows harness must fail on every one. The second group is the rules of fix round 1:
+    only what vanilla charged (CA's exemptions) and every army on its own. The third breaks the wiring that would
+    otherwise do nothing in silence: the turn start's call, the turn end's listener and the panel's sentences and poll."""
+    flows = flows_lua().replace("\r\n", "\n")
+    flows_m = (
+        ("the first turn charged", "rates.supply_step * (line.turns - 1)", "rates.supply_step * line.turns"),
+        ("a cut road paying the step and not the maximum", 'if state == "cut" then return rates.supply_max end',
+         'if state == "cut" then return rates.supply_step end'),
+        ("the maximum ignored", "return math.min(rates.supply_max, math.max(0, rates.supply_step * (line.turns - 1)))",
+         "return math.max(0, rates.supply_step * (line.turns - 1))"),
+        ("the computer charged", "    if not faction:is_human() then return end\n    -- THE GAME'S BUNDLE OFF",
+         "    -- THE GAME'S BUNDLE OFF"),
+        ("the bundle stacked",
+         "    if mf:has_effect_bundle(F.SUPPLY_BUNDLE) then\n"
+         "        cm:remove_effect_bundle_from_force(F.SUPPLY_BUNDLE, mf:command_queue_index())\n"
+         "    end\n", ""),
+        # the fix wave (2026-11-09): Keep charges vanilla's penalty only
+        ("the road charged with the vanilla box ticked", "    if F.vanilla_charges(faction) then return 0 end\n", ""),
+        # the follow-up ruling: one penalty, never two
+        ("the road charged where the game's penalty applies", "    if F.vanilla_charges(faction) then return 0 end\n",
+         "    if F.vanilla_supply() then return 0 end\n"),
+        ("the army's note priced with no faction", "upkeep = F.supply_upkeep(line, faction) }",
+         "upkeep = F.supply_upkeep(line, nil) }"),
+    )
+    _run_mutants("supply upkeep", flows, flows_m, "", (), "", ())
+    # fix round 1: only what vanilla charged (CA's exemptions), and every army on its own
+    rules_m = (
+        ("the exemptions never asked", " and not F.upkeep_exempt(faction, force)\n", "\n"),
+        ("an exempt force type charged", "    if F.UPKEEP_FORCE_EXEMPT[force:force_type():key()] then return true end\n", ""),
+        ("an exempt leader charged",
+         "    if F.UPKEEP_SUBTYPE_EXEMPT[force:general_character():character_subtype_key()] then return true end\n", ""),
+        ("a set-piece army charged", "    return force:is_set_piece_battle_army()\n", "    return false\n"),
+        # Task 8 (author 2026-11-09): every race that eats gets lines, the ones CA never charged too
+        ("the campaign-feature clause put back", "    return force:is_set_piece_battle_army()\n",
+         "    return force:is_set_piece_battle_army()"
+         ' or not cm:faction_has_campaign_feature(faction:name(), "additional_army_upkeep")\n'),
+        ("a vanilla exempt force type dropped", "SUPPORT_ARMY = true, BLOOD_HOST_ARMY = true }", "SUPPORT_ARMY = true }"),
+        ("a vanilla exempt leader dropped", "wh2_main_def_black_ark = true, wh2_pro08_neu_gotrek = true,",
+         "wh2_main_def_black_ark = true,"),
+        ("an army no longer eligible keeping its bundle", "    if mf:has_effect_bundle(F.SUPPLY_BUNDLE) then\n",
+         "    if eligible and mf:has_effect_bundle(F.SUPPLY_BUNDLE) then\n"),
+        ("one army's throw stopping the rest",
+         "        local ok, e = pcall(F.supply_force, faction, forces:item_at(i))\n        if not ok then F.say(e) end\n",
+         "        F.supply_force(faction, forces:item_at(i))\n"),
+        ("a throw not logged", "forces:item_at(i))\n        if not ok then F.say(e) end\n", "forces:item_at(i))\n"),
+    )
+    _run_mutants("supply upkeep rules", flows, rules_m, "", (), "", ())
+    wiring_m = (
+        ("the turn start leaving it out",
+         "    F.guard(F.supply_turn, faction)               -- the army's upkeep by its line, after the meals; again at the turn end (F.init)\n",
+         ""),
+        ("the turn end not heard", '"derpy_mr_flows_supply_end", "FactionTurnEnd"', '"derpy_mr_flows_supply_end", "FactionTurnBegin"'),
+        ("the turn end reading the turn start's enemies", "function(context) F.enemy_cache, F.enemy_cache_ui = {}, {}; F.guard(F.supply_turn, context:faction()) end",
+         "function(context) F.guard(F.supply_turn, context:faction()) end"),
+        # Task 9: the turn's pass strips the game's bundle where the road charges instead
+        ("the turn's pass leaving the game's bundle",
+         "    if not F.vanilla_charges(faction) then F.supply_lines_strip(faction) end\n", ""),
+        ("the turn's pass stripping where the game charges",
+         "    if not F.vanilla_charges(faction) then F.supply_lines_strip(faction) end\n", "    F.supply_lines_strip(faction)\n"),
+    )
+    panel_m = (
+        ("the army-bar tooltip without the line",
+         "    local line = f and S.supply_sentence(f, row.id, gen:logical_position_x(), gen:logical_position_y())\n",
+         "    local line = nil\n"),
+        ("the switched-off tooltip without the line",
+         'add_line(S.T("Provisions\\nArmy provisions are switched off in this campaign."), line)',
+         'S.T("Provisions\\nArmy provisions are switched off in this campaign.")'),
+        ("the poll asking a walking army", "    if p.id == id and p.x == x and p.y == y then\n", "    if p.id == id then\n"),
+        ("another army shown this one's sentence", "    elseif p.id ~= id then\n        p.text = nil\n", ""),
+        ("the Vault view without the supply road", "    if note and S.SUPPLY_STATE[note.state] then\n", "    if false then\n"),
+    )
+    _run_mutants("supply upkeep wiring", flows, wiring_m, stores_lua().replace("\r\n", "\n"), panel_m, "", ())
+
+
+def check_supply_cart_mutations():
+    """Supply carts (design 2026-11-08, section 5c): each rule broken the way somebody would, in the shipped flows
+    script; the flows harness must fail on every one."""
+    flows = flows_lua().replace("\r\n", "\n")
+    flows_m = (
+        ("two carts per army",
+         "faction:is_human()) or F.supply_cart_of(row.id) then return nil end", "faction:is_human()) then return nil end"),
+        ("delivery on a cut line", 'if state == "cut" or state == "none" or', 'if state == "none" or'),
+        ("overflow kept, not returned", "local room = math.max(0, cap - F.provision_total(b))", "local room = 1000000"),
+        ("return to a lost source", "    local to = f and F.owned(f, c.from)\n", "    local to = cm:get_region(c.from)\n"),
+        ("no drop before moving goods",
+         "function F.supply_cart_arrive(c, b, cap)\n    if not F.supply_cart_drop(c) then return end\n",
+         "function F.supply_cart_arrive(c, b, cap)\n"),
+        ("a seized cart delivered", "if captor then F.supply_cart_seize(c, captor)",
+         "if captor then F.supply_cart_arrive(c, F.state.armies[c.army], 1000000)"),
+        ("the cart step skipped", '                F.convoy_step(c, turn)\n                F.road_event(faction, "supply"',
+         '                F.road_event(faction, "supply"'),
+        # fix round 1: an army at sea on the day, bandits without dilemmas or the cooldown, Guards, and no throw after the debit
+        ("the cart delivered to an army at sea", 'if state == "cut" or state == "none" or', 'if state == "cut" or'),
+        ("a supply cart's encounter offered as a dilemma", 'and not cm:is_multiplayer() and kind ~= "supply" and',
+         "and not cm:is_multiplayer() and"),
+        ("a supply cart's encounter on the faction's cooldown", 'true, kind == "supply")', "true, false)"),
+        ("a supply cart's encounter checking the cooldown", "if fits and (uncounted or turn -", "if fits and (turn -"),
+        ("a supply cart without Guards", "    F.guard_fee(faction, c)", "    do end"),
+        ("a supply cart's Guards charged twice", "    F.guard_fee(faction, c)", "    F.guard_fee(faction, c); F.guard_fee(faction, c)"),
+        # fix round 2: convoys and shipments keep their cooldown through F.road_event
+        ("every cargo's encounter off the cooldown", 'true, kind == "supply")', "true, true)"),
+        ("a shipment's encounter off the cooldown", 'true, kind == "supply")', 'true, kind ~= "convoy")'),
+        ("a convoy's encounter off the cooldown", 'true, kind == "supply")', 'true, kind ~= "ship")'),
+        ("goods taken before the road is packed",
+         "    local packed, due = F.pack_road(road), turn + math.max(1, F.road_turns(road))\n"
+         "    local load = { goods = {}, done = turn }\n"
+         "    F.provision_refill(faction, { source = source, need = row.need, cap = gap }, load, false, false)\n",
+         "    local load = { goods = {}, done = turn }\n"
+         "    F.provision_refill(faction, { source = source, need = row.need, cap = gap }, load, false, false)\n"
+         "    local packed, due = F.pack_road(road), turn + math.max(1, F.road_turns(road))\n"),
+        # the fix wave (2026-11-09): a player's action reads the enemy armies as they stand
+        ("an action reading the turn's old enemy list", "    F.enemy_cache, F.enemy_cache_ui = {}, {}\n    -- the map's cart goods",
+         "    -- the map's cart goods"),
+        ("a region not the faction's sparing food", "    if not region then return 0 end\n", ""),
+        # Task 9 (ruling 2026-11-09): Auto sends no cart with an enemy beside the army; Send supplies still goes
+        ("Auto sending beside an enemy", "    if auto and F.enemy_beside(faction, row.force) then return nil end\n", ""),
+        ("Auto not told it is Auto", "pcall(F.supply_send, faction, row, b, true)", "pcall(F.supply_send, faction, row, b)"),
+        ("Send supplies refused beside an enemy", "    if auto and F.enemy_beside(faction, row.force) then return nil end\n",
+         "    if F.enemy_beside(faction, row.force) then return nil end\n"),
+    )
+    panel_m = (
+        ("Send supplies enabled with nothing to spare",
+         '\n    elseif (S.ask("provision_spare", f, note.source) or 0) <= 0 then why = S.T("{1} has no food to spare.", S.place(note.source)) end',
+         " end"),
+    )
+    _run_mutants("supply cart", flows, flows_m, stores_lua().replace("\r\n", "\n"), panel_m, "", ())
 
 
 def check_road_mutations():
@@ -2907,7 +3273,7 @@ def check_kept_mutations():
         # the final review (2026-11-02): kept positions are as stale as kept interfaces are dead
         ("a turn start reading a list made earlier in the round",
          "    -- the armies where they stand now: a list made earlier in the round has them where they stood then\n"
-         "    F.enemy_cache = {}\n", ""),
+         "    F.enemy_cache, F.enemy_cache_ui = {}, {}\n", ""),
     )
     panel_m = (
         ("the panel remembering the player's faction", "if ok and f and not f:is_null_interface() then return f end",
@@ -3123,7 +3489,8 @@ def check_button_faces():
                (L["tab_workshop"], ("Workshop",)), (L["tab_production"], ("Production",)),
                (L["back"], ("Back",)),
                (L["bulk"], ["Allow all exports", "Stop all imports", "Sell surplus"] + [o[4] for o in G.ORDERS]),
-               ((0, 0) + L["send"], ("Send here", "Show", "Buy", "Buy here", "Forged", "Built", "Choose", "Enable", "Pause"))]
+               ((0, 0) + L["send"], ("Send here", "Show", "Buy", "Buy here", "Forged", "Built", "Choose", "Enable", "Pause",
+                                     "Send supplies"))]
     for (_x, _y, w, h), labels in buttons:
         fw, fh = face(w, h)
         for t in labels:
@@ -3173,7 +3540,7 @@ def check_xml():
             assert s in cats, "%s: a sound CA never uses: %s" % (rel, s)
     with io.open(SRC, encoding="utf-8") as fh:       # art the script swaps in at runtime
         for p in re.findall(r'"(ui/[^"]+\.png)"', fh.read()):
-            assert p in have or (p == "ui/skins/default/derpy_mr_provisions.png" and os.path.isfile(os.path.join(ROOT, PACK_REL, *p.split("/")))), "missing runtime art: %s" % p
+            assert p in have or (p in STATIC_ART and os.path.isfile(os.path.join(ROOT, PACK_REL, *p.split("/")))), "missing runtime art: %s" % p
     for stem, _res, icon in goods():
         assert icon in have or os.path.isfile(os.path.join(ROOT, PACK_REL, *icon.split("/"))), \
             "no icon for %s: %s" % (stem, icon)
@@ -3303,6 +3670,7 @@ def selftest():
     check_cargo_view_mutations()
     check_reach_mutations()
     check_drag_mutations()
+    check_supply_map_mutations()
     check_map_cost_mutations()
     check_production_mutations()
     check_spoil_mutations()
@@ -3313,7 +3681,11 @@ def selftest():
     check_size_mutations()
     check_edict_mutations()
     check_toll_mutations()
+    check_vanilla_supply_mutations()
     check_blockade_mutations()
+    check_supply_line_mutations()
+    check_supply_upkeep_mutations()
+    check_supply_cart_mutations()
     check_road_mutations()
     check_event_mutations()
     check_kept_mutations()

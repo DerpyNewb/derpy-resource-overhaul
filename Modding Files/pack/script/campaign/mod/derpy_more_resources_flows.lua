@@ -11,6 +11,10 @@ DERPY_MR_FLOWS_DEFAULTS = {
     recruit_per = 1,
     toll = 3,
     road_danger = 20,
+    supply_reach = 5,
+    settle_turns = 5,
+    supply_step = 5,
+    supply_max = 25,
     army_provisions = true,
     processing = true,
     services = true,
@@ -26,6 +30,7 @@ DERPY_MR_FLOWS_DEFAULTS = {
     edicts = true,
     tolls = true,
     bandits = true,
+    supply_lines = true,
     ai_home_fed = true,
     ai_field_rations = true,
     ai_half_rations = false,
@@ -653,6 +658,16 @@ DERPY_MR_LOC_KEYS = {
     ["On Auto the army refills to 5 turns of provisions after eating.\nIt carries at most 10 turns and never buys rations."] = "derpy_mr_ui_a4be6e93f1",
     ["Buy up to two meals of rations once a turn at 10 gold each."] = "derpy_mr_ui_505892cc96",
     ["After two missed meals the army moves 5% slower.\nAfter three it moves and recovers 10% slower.\nOne full meal ends this."] = "derpy_mr_ui_695657aa45",
+    ["At home"] = "derpy_mr_ui_b744007f56",
+    ["Supplied"] = "derpy_mr_ui_d5622d0a6c",
+    ["Stretched"] = "derpy_mr_ui_7e96ac5725",
+    ["Cut off"] = "derpy_mr_ui_2ddc5070e1",
+    ["In your own lands."] = "derpy_mr_ui_c305618ccb",
+    ["Supplied from {1}, 1 turn away. Upkeep +{2}%."] = "derpy_mr_ui_c34a43fb13",
+    ["Supplied from {1}, {2} turns away. Upkeep +{3}%."] = "derpy_mr_ui_da4c31da07",
+    ["Stretched: {1} turns from {2}. Upkeep +{3}%."] = "derpy_mr_ui_79473e2189",
+    ["Cut off. Upkeep +{1}%."] = "derpy_mr_ui_8b4a5ca29b",
+    ["An enemy army blocks the road."] = "derpy_mr_ui_8d6eb77b24",
     ["Army {1}"] = "derpy_mr_ui_d195aa1ad9",
     ["{1}: provisions"] = "derpy_mr_ui_4bf42dd83a",
     ["Action"] = "derpy_mr_ui_004bf6c9a4",
@@ -670,10 +685,23 @@ DERPY_MR_LOC_KEYS = {
     ["Load here"] = "derpy_mr_ui_f494484f18",
     ["Buy"] = "derpy_mr_ui_831a28f1e8",
     ["Load"] = "derpy_mr_ui_f19dbf2edb",
+    ["A cart is already on its way.\nIt arrives on turn {1}."] = "derpy_mr_ui_c7e1a0c528",
+    ["Cut off. Supplies cannot reach this army."] = "derpy_mr_ui_df10c96fa9",
+    ["This army is in your own lands.\nLoad it here instead."] = "derpy_mr_ui_b4b35cdb8d",
+    ["This army has no supply road."] = "derpy_mr_ui_189e87167f",
+    ["This army already carries 5 turns of provisions."] = "derpy_mr_ui_47b497f846",
+    ["{1} has no food to spare."] = "derpy_mr_ui_9d02111ded",
+    ["Send a cart of provisions from {1}.\nIt arrives in {2}.\nAn army at war with you can seize it."] = "derpy_mr_ui_705b55867a",
+    ["Supply cart"] = "derpy_mr_ui_b89a0adb92",
+    ["Send supplies"] = "derpy_mr_ui_0712b67f47",
     ["Unload here"] = "derpy_mr_ui_42d6fc179d",
     ["Pauses refill"] = "derpy_mr_ui_2bcdc93724",
     ["Unload"] = "derpy_mr_ui_ae11d3ee07",
     ["Missed meals"] = "derpy_mr_ui_19ac7bf0e6",
+    ["Supply road"] = "derpy_mr_ui_aecfaed05d",
+    ["Distance"] = "derpy_mr_ui_0aa6f4210b",
+    ["Upkeep"] = "derpy_mr_ui_83102a4b10",
+    ["+{1}%"] = "derpy_mr_ui_d6d3ab917b",
     ["What your stores pay for"] = "derpy_mr_ui_bf7236074d",
     ["Province capital"] = "derpy_mr_ui_fb230f0265",
     ["Materials"] = "derpy_mr_ui_23ce0eb7d1",
@@ -800,6 +828,7 @@ DERPY_MR_LOC_KEYS = {
     ["There is no settlement here to refill from."] = "derpy_mr_ui_48d5922f68",
     ["This settlement is not yours."] = "derpy_mr_ui_ac6aae4aee",
     ["This settlement is under siege."] = "derpy_mr_ui_c869fd27de",
+    ["This settlement was taken too recently to feed an army."] = "derpy_mr_ui_7260e1e2e7",
     ["It refills from this settlement."] = "derpy_mr_ui_53d78dcc3a",
     ["This settlement has {1} provisions to spare."] = "derpy_mr_ui_f8ea19175a",
     ["This settlement has no provisions to spare."] = "derpy_mr_ui_13ae2fc7bf",
@@ -1186,6 +1215,66 @@ function F.quiet_dilemmas()
     if F.rates().random_off then cm:toggle_dilemma_generation(false) end
 end
 
+-- ---- vanilla supply lines (design 2026-11-08, section 2) ----------------------------------------
+-- CA charges every army after a player's first one more upkeep: apply_upkeep_penalty (wh_campaign_setup.lua)
+-- lays the bundle below, and every CA listener calls that global by name. Unticked, this mod's supply lines
+-- replace it: the global is wrapped, and the wrapper strips the bundle where CA would lay it, for a faction this
+-- mod's lines cover (F.supply_lines_install).
+-- NEVER FROZEN: read on every call, so a running campaign takes a change at the next call.
+F.VANILLA_SUPPLY_BUNDLE = "wh3_main_bundle_force_additional_army_upkeep"
+
+-- MULTIPLAYER TAKES THE DEFAULT (unticked): two machines' boxes can differ and a move must not.
+function F.vanilla_supply()
+    local mp = false
+    pcall(function() mp = cm:is_multiplayer() end)
+    return not mp and F.mct("vanilla_supply_lines") == true
+end
+
+-- ONE PENALTY, NEVER TWO (author + ruling 2026-11-09): true where the game's army-count penalty applies to `faction`.
+-- The box ticked, or what this mod's lines cannot cover: a race whose armies carry no provisions (F.eats: not Vampire
+-- Counts or Vampire Coast, and F.uses_stores leaves out the daemons and the other races that keep no stores), and
+-- every race with Army supply lines or Army provisions off. The wrapper (F.supply_lines_install) lets CA's function
+-- run there, and the road's upkeep (F.supply_upkeep) is 0 there.
+function F.vanilla_charges(faction)
+    local r = F.rates()
+    return F.vanilla_supply() or not (r.supply_lines and r.army_provisions and F.eats(faction))
+end
+
+-- The bundle off every force of the faction that has it, and the figure CA's panel reads back to 0.
+function F.supply_lines_strip(faction)
+    local forces = faction:military_force_list()
+    for i = 0, forces:num_items() - 1 do
+        local mf = forces:item_at(i)
+        if mf:has_effect_bundle(F.VANILLA_SUPPLY_BUNDLE) then
+            cm:remove_effect_bundle_from_force(F.VANILLA_SUPPLY_BUNDLE, mf:command_queue_index())
+        end
+    end
+    common.set_context_value("supply_lines_upkeep_value", 0)
+end
+
+-- Once, at the first tick. F.vanilla_apply is the guard: set means the global is already ours, and a
+-- wrapped wrapper would call itself for ever once the box is ticked.
+function F.supply_lines_install()
+    if type(apply_upkeep_penalty) ~= "function" or F.vanilla_apply then return end
+    F.vanilla_apply = apply_upkeep_penalty
+    -- NOT `return F.vanilla_apply(faction)`: a tail call would turn that loop into a hang, not an error
+    -- WHAT THIS MOD'S LINES CANNOT COVER KEEPS THE GAME'S RULE (F.vanilla_charges)
+    apply_upkeep_penalty = function(faction)
+        if F.vanilla_charges(faction) then
+            F.vanilla_apply(faction)
+        else
+            F.supply_lines_strip(faction)
+        end
+    end
+    -- CA's load-time loop again, through the wrapper: an old save's bundles go now, not at the next turn start
+    for _, fkey in ipairs(cm:get_human_factions()) do
+        local faction = cm:get_faction(fkey)
+        if faction and (type(upkeep_penalty_condition) ~= "function" or upkeep_penalty_condition(faction)) then
+            apply_upkeep_penalty(faction)
+        end
+    end
+end
+
 function F.is_human(fkey)
     if not fkey or fkey == "" then return false end
     local ok, h = pcall(function() return cm:get_faction(fkey):is_human() end)
@@ -1412,7 +1501,8 @@ F.ROAD_PER_TURN = 40   -- hexes a turn, F.route_turns' pace
 F.REACH_WHY = { far = F.EN("Too far for trade"), enemy = F.EN("Cut off by enemy lands") }
 F.reach_known = F.reach_known or {}
 function F.invalidate_reach()
-    F.reach_known = {}
+    -- the UI's enemy list too (F.enemy_armies): the panel and the map show a war or a capture at once
+    F.reach_known, F.line_kept, F.enemy_cache_ui = {}, {}, {}
     local R = DERPY_MR_TERRAIN_ROUTES
     if R then
         -- the map checks its roads again (R.path gives back those whose land still judges the same) and keeps
@@ -1536,7 +1626,7 @@ function F.trade_pair(exporter, partner, sources, preview, opts)
     if not open then return nil, sources end
     -- A BLOCKADE stops this pair's trade for the turn; the real trade records it for the panel, the map and the duty
     if not (opts and opts.blockade_ok) then
-        local by = F.blockade(exporter, partner, path)
+        local by = F.blockade(exporter, partner, path, preview)
         if not preview then F.record_blockade(exporter:name(), partner:name(), by) end
         if by then return nil, sources end
     end
@@ -2320,22 +2410,32 @@ end
 
 -- A BLOCKADE (spec 6.2): an army at war with either side standing within F.SHIP.near hexes of any point of
 -- their road stops that pair's trade, duty and contract carts for the turn; cargo already on the road goes on.
--- Never a reroute, and the reach answers never see armies. The blocker's faction key, or nil.
-function F.blockade(a, b, path)
+-- Never a reroute, and the reach answers never see armies. The blocker's faction key, or nil. `ui` as
+-- F.enemy_armies: the map's preview asks with it.
+function F.blockade(a, b, path, ui)
     if not F.rates().tolls or type(path) ~= "table" or #path == 0 then return nil end
+    for _, side in ipairs({ a, b }) do
+        local by = F.near_road(F.enemy_armies(side, ui), path)
+        if by then return by end
+    end
+    return nil
+end
+
+-- The faction key of the first army of `list` ({fkey, x, y}, as F.enemy_armies gives them) standing within
+-- F.SHIP.near hexes of any point of `path`, or nil. A blockade's test and an army supply line's (F.supply_line).
+function F.near_road(list, path)
+    if type(path) ~= "table" or #path == 0 then return nil end
     local near = F.SHIP.near
     local x0, y0, x1, y1 = path[1][1], path[1][2], path[1][1], path[1][2]
     for _, p in ipairs(path) do
         x0, y0, x1, y1 = math.min(x0, p[1]), math.min(y0, p[2]), math.max(x1, p[1]), math.max(y1, p[2])
     end
-    for _, side in ipairs({ a, b }) do
-        for _, e in ipairs(F.enemy_armies(side)) do
-            -- the box widened by `near` first: most armies are nowhere near the road
-            if e.x >= x0 - near and e.x <= x1 + near and e.y >= y0 - near and e.y <= y1 + near then
-                for _, p in ipairs(path) do
-                    local dx, dy = e.x - p[1], e.y - p[2]
-                    if dx * dx + dy * dy <= near * near then return e.fkey end
-                end
+    for _, e in ipairs(list) do
+        -- the box widened by `near` first: most armies are nowhere near the road
+        if e.x >= x0 - near and e.x <= x1 + near and e.y >= y0 - near and e.y <= y1 + near then
+            for _, p in ipairs(path) do
+                local dx, dy = e.x - p[1], e.y - p[2]
+                if dx * dx + dy * dy <= near * near then return e.fkey end
             end
         end
     end
@@ -2452,8 +2552,9 @@ end
 
 -- THE ROLL: trouble when cm:random_number(10000, 1) is at most threat x danger, half that with guards. Then one of
 -- the encounters this cargo can meet, each as likely, that its faction has not met in F.ROAD.cooldown turns; that
--- turn is kept. The encounter's key, or nil.
-function F.road_roll(fkey, threat, guarded, land)
+-- turn is kept. The encounter's key, or nil. `uncounted` (a supply cart, on the road most turns): no cooldown is read
+-- or kept, so its encounters never crowd out a convoy's.
+function F.road_roll(fkey, threat, guarded, land, uncounted)
     local danger = F.rates().road_danger or 0
     if threat <= 0 or danger <= 0 then return nil end
     if cm:random_number(10000, 1) > threat * danger * (guarded and 50 or 100) / 100 then return nil end
@@ -2462,10 +2563,11 @@ function F.road_roll(fkey, threat, guarded, land)
     local cool, open = F.state.road_cool[fkey] or {}, {}
     for _, e in ipairs(F.ROAD.encounters) do
         local fits = (e ~= "ambush" or threat >= F.ROAD.ambush_min) and (e ~= "washout" or land)
-        if fits and turn - (cool[e] or -1000000) > F.ROAD.cooldown then open[#open + 1] = e end
+        if fits and (uncounted or turn - (cool[e] or -1000000) > F.ROAD.cooldown) then open[#open + 1] = e end
     end
     if #open == 0 then return nil end
     local e = open[cm:random_number(#open, 1)]
+    if uncounted then return e end
     cool[e] = turn
     F.state.road_cool[fkey] = cool
     return e
@@ -2484,14 +2586,14 @@ end
 -- empty leaves the road (F.drop refunds a contract's escrow). The units lost.
 function F.cargo_lose(kind, rec, pct)
     local lost = 0
-    if kind == "convoy" then
+    if rec.basket then   -- a convoy or a supply cart
         for stem, n in pairs(rec.basket) do
             local cut = math.floor(n * pct / 100)
             lost = lost + cut
             -- a 0 never stays in a basket: a saved one fails F.convoy_sound
             rec.basket[stem] = n - cut > 0 and n - cut or nil
         end
-        if next(rec.basket) == nil then F.convoy_drop(rec) end
+        if next(rec.basket) == nil then F.convoy_drop(rec); F.supply_cart_drop(rec) end
     else
         local cut = math.floor(rec.n * pct / 100)
         lost, rec.n = cut, rec.n - cut
@@ -2501,7 +2603,7 @@ function F.cargo_lose(kind, rec, pct)
 end
 
 function F.cargo_wait(kind, rec)
-    if kind == "convoy" then rec.due = rec.due + 1 else rec.due = F.ship_due(rec) + 1 end
+    if rec.basket then rec.due = rec.due + 1 else rec.due = F.ship_due(rec) + 1 end
 end
 
 -- THE OTHER CHOICE, which every encounter takes that no dilemma or battle settles: bandits take half, highwaymen
@@ -2530,7 +2632,7 @@ function F.road_event(faction, kind, rec, from_xy)
     local r = F.rates()
     if not r.bandits or (r.road_danger or 0) <= 0 or not (rec.x and rec.y) then return end
     local fkey, turn, to_xy = faction:name(), cm:model():turn_number(), { rec.x, rec.y }
-    local road = kind == "convoy" and F.unpack_road(rec.road) or rec.road
+    local road = type(rec.road) == "string" and F.unpack_road(rec.road) or rec.road
     local keys = F.stretch(road, from_xy or to_xy, to_xy)
     rec.threat = F.threat(keys)
     if rec.threat >= F.ROAD.ai_guard then
@@ -2542,10 +2644,11 @@ function F.road_event(faction, kind, rec, from_xy)
     -- all three encounters are land ones: cargo standing at sea meets none, whatever land its stretch crossed
     local here = cm:model():get_region_at_logical_position(rec.x, rec.y)
     if not here or here:is_null_interface() then return end
-    local key = F.road_roll(fkey, rec.threat, rec.guarded == true, true)
+    local key = F.road_roll(fkey, rec.threat, rec.guarded == true, true, kind == "supply")
     if not key then return end
-    -- a player in single player is asked, as CA's caravans ask; everyone else takes the other choice
-    if faction:is_human() and not cm:is_multiplayer() and (F.ROAD_BATTLES or not F.ROAD_FIGHT[key])
+    -- a player in single player is asked, as CA's caravans ask; everyone else takes the other choice, and so does a
+    -- supply cart, whose encounters would otherwise be a dilemma most turns
+    if faction:is_human() and not cm:is_multiplayer() and kind ~= "supply" and (F.ROAD_BATTLES or not F.ROAD_FIGHT[key])
         and F.road_offer(faction, kind, rec, key, F.road_region(faction, keys)) then return end
     F.road_settle(faction, kind, rec, key)
 end
@@ -3627,6 +3730,12 @@ end
 
 function F.on_region_change(region)
     local rk = region:name()
+    -- THE CAPTURE TURN, for F.settled: first, so neither a throw below nor the return a region with no upgrades
+    -- takes can skip it (a missing record reads as settled)
+    local taker = region:owning_faction()
+    F.state.taken = F.state.taken or {}
+    F.state.taken[rk] = not (region:is_abandoned() or taker:is_null_interface())
+        and { f = taker:name(), at = cm:model():turn_number() } or nil
     F.economy_clear(region)
     F.drop_bundles(region)
     local ups = F.state.upgrades and F.state.upgrades[rk]
@@ -3784,6 +3893,13 @@ function F.provision_source(faction, force)
         return nil, F.T("This settlement is not yours.")
     end
     if r:garrison_residence():is_under_siege() then return nil, F.T("This settlement is under siege.") end
+    -- FRESH LAND FEEDS NO ARMY (author, 2026-11-08: no snowball), as it is no source for a supply line. A player's
+    -- only, and only an army supply lines apply to (F.lines_apply): a computer army still refills where it stands
+    -- (live test 2026-11-09 found a just-taken settlement filling an army from 4 meals to 10), and so does an army
+    -- with no line, which has no cart either.
+    if faction:is_human() and not F.settled(r, faction:name()) and F.lines_apply(faction, force) then
+        return nil, F.T("This settlement was taken too recently to feed an army.")
+    end
     return r, F.T("It refills from this settlement.")
 end
 
@@ -3823,6 +3939,22 @@ function F.provision_quote(faction, row, b)
         math.floor(faction:treasury() / F.FIELD_RATION_PRICE)))
 end
 
+-- The provisions a settlement of the faction can spare an army (Auto's reserve kept, F.provision_stock), as Load and a
+-- supply cart take them; 0 for a region that is not the faction's. The panel's Send supplies asks it of the line's source.
+function F.provision_spare(faction, rkey)
+    local region = F.owned(faction, rkey)
+    if not region then return 0 end
+    local view, available = F.provision_stock(faction, region), 0
+    for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+        if F.bulk("provisions")(g) then
+            local n = F.available_stock(view, g.stem)
+            available = available + n
+            F.stock_adjust(view, g.stem, -n)
+        end
+    end
+    return available
+end
+
 function F.provision_rows(faction)
     local rows = {}
     local rates = F.rates()
@@ -3837,14 +3969,7 @@ function F.provision_rows(faction)
             local need = math.max(1, math.ceil(force:unit_list():num_items() / 4))
             local source, reason = F.provision_source(faction, force)
             if source then
-                local view, available = F.provision_stock(faction, source), 0
-                for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
-                    if F.bulk("provisions")(g) then
-                        local n = F.available_stock(view, g.stem)
-                        available = available + n
-                        F.stock_adjust(view, g.stem, -n)
-                    end
-                end
+                local available = F.provision_spare(faction, source:name())
                 reason = available > 0 and F.T("This settlement has {1} provisions to spare.", available)
                     or F.T("This settlement has no provisions to spare.")
             end
@@ -3957,13 +4082,14 @@ function F.provision_seed_all()
 end
 
 function F.provision_action(faction, id, op)
-    if not F.rates().army_provisions or (op ~= "auto" and op ~= "load" and op ~= "unload") then return end
+    if not F.rates().army_provisions or (op ~= "auto" and op ~= "load" and op ~= "unload" and op ~= "send") then return end
     local b = F.state.armies and F.state.armies[id]
     if b and b.f ~= faction:name() then return end
     for _, row in ipairs(F.provision_rows(faction)) do
         if row.id == id then
             if not b then b = F.provision_record(faction, row) end
             if op == "auto" then b.auto = not b.auto
+            elseif op == "send" then F.supply_send(faction, row, b)
             else
                 F.provision_refill(faction, row, b, op == "unload", op == "load")
                 if op == "unload" then b.auto = false end
@@ -4014,6 +4140,12 @@ function F.provisions_turn(faction)
             for _, key in ipairs(F.PROVISION_BUNDLES) do cm:remove_effect_bundle_from_force(key, tonumber(row.id)) end
             local key = b.short >= 3 and F.PROVISION_BUNDLES[2] or b.short == 2 and F.PROVISION_BUNDLES[1]
             if key then cm:apply_effect_bundle_to_force(key, tonumber(row.id), 0) end
+            -- A SUPPLY CART for the gap the meal left (F.supply_send): its own guard, so a throw for one army leaves the
+            -- armies after it fed. `auto`: none while an enemy army stands beside the army (F.supply_send)
+            if b.auto then
+                local ok, e = pcall(F.supply_send, faction, row, b, true)
+                if not ok then F.say(e) end
+            end
         end
     end
     if warn and faction:is_human() then
@@ -4053,6 +4185,209 @@ function F.provision_supply(faction)
             end
         end
     end
+end
+
+-- ---- supply lines (design 2026-11-08, section 4) ---------------------------------------------
+-- An army is fed from its own settled land along a road. Model code, run at turn starts on every machine:
+-- nothing here reads the local faction, and the sources are tried in an order every machine shares.
+
+-- SETTLED: no record of the region's taking, a record of another taker (a save from before the record, or
+-- land taken back since), or taken settle_turns ago or more. F.on_region_change keeps the records.
+function F.settled(region, fkey)
+    local rec = F.state.taken and F.state.taken[region:name()]
+    return not rec or rec.f ~= fkey or cm:model():turn_number() - rec.at >= F.rates().settle_turns
+end
+
+-- On load: region key -> { f = faction key, at = turn }, anything else dropped.
+function F.sanitize_taken()
+    local clean = {}
+    for k, v in pairs(type(F.state.taken) == "table" and F.state.taken or {}) do
+        if type(k) == "string" and type(v) == "table" and type(v.f) == "string" and type(v.at) == "number" then
+            clean[k] = { f = v.f, at = v.at }
+        end
+    end
+    F.state.taken = clean
+end
+
+-- THE SEARCHES ARE KEPT, NOT THE LINES: cqi -> { x, y, roads = { source key -> { path or false, regions } } },
+-- never saved. Settling, sieges and enemy armies are read again on every call; only the costly search is kept,
+-- across turn starts, while the army stands on the same hex. A kept road is given again only while every region
+-- its search judged still judges the same (as R.reach's kept answers), so it is the road a new search would find
+-- and every machine agrees whatever each one has kept. F.invalidate_reach (a war, a diplomatic event, a capture)
+-- empties it. A caller must not change a path it gets.
+-- ponytail: a dead army's entry stays until the next F.invalidate_reach; drop it on MilitaryForceDestroyed if
+-- memory shows it
+F.line_kept = F.line_kept or {}
+
+-- The road from (x, y) to source `s` within `max` hexes, or nil: kept[s.key] when it still holds, else searched.
+-- The army's own ground (`stand`, a region key) is never a wall to its own line: filed as open before the search.
+function F.supply_road(R, g, kept, stand, fkey, x, y, s, max)
+    local memo = kept.roads[s.key]
+    if memo then
+        local _, judge = R.avoider_for({ fkey }, {})
+        for key, was in pairs(memo.regions) do
+            if key ~= stand then
+                local r = cm:get_region(key)   -- false, not a null interface, for no such region
+                if not r or r:is_null_interface() or judge(r) ~= was then memo = nil; break end
+            end
+        end
+    end
+    if memo then return memo.path or nil end
+    local filed = {}
+    if stand then filed[stand] = false end
+    local j = R.start(g, { x, y }, { s.x, s.y }, R.avoider_for({ fkey }, filed))
+    j.wall, j.max = true, max
+    local done, path
+    repeat done, path = R.advance(j, 100000) until done
+    kept.roads[s.key] = { path = path or false, regions = filed }
+    return path
+end
+-- ponytail: only the three nearest sources by straight line are searched; raise it if a live test shows a
+-- reachable settlement missed behind nearer blocked ones
+F.SUPPLY_TRIES = 3
+
+-- THE ARMIES CA NEVER CHARGES, WHATEVER THE RACE: CA's own force exemptions, copied from apply_upkeep_penalty's file
+-- (wh_campaign_setup.lua, 9.0: forcetype_upkeep_exclusions and leader_subtype_upkeep_exclusions, lines 1218-1232),
+-- and a set-piece battle army. CA's campaign feature is NOT asked (author, 2026-11-09): every race that eats gets
+-- this mod's lines, the eight CA never charged (Chaos Dwarfs, Tomb Kings, Khorne, ...) too. Which races eat is
+-- F.provision_force's question.
+F.UPKEEP_FORCE_EXEMPT = { SEA_LOCKED_HORDE = true, DISCIPLE_ARMY = true, OGRE_CAMP = true, CARAVAN = true,
+                          CONVOY = true, SUPPORT_ARMY = true, BLOOD_HOST_ARMY = true }
+F.UPKEEP_SUBTYPE_EXEMPT = { wh2_main_def_black_ark = true, wh2_pro08_neu_gotrek = true,
+                            wh2_main_def_black_ark_blessed_dread = true }
+-- A force that has passed F.provision_force (so it has a general).
+function F.upkeep_exempt(faction, force)
+    if F.UPKEEP_FORCE_EXEMPT[force:force_type():key()] then return true end
+    if F.UPKEEP_SUBTYPE_EXEMPT[force:general_character():character_subtype_key()] then return true end
+    return force:is_set_piece_battle_army()
+end
+
+-- WHERE SUPPLY LINES APPLY: the frozen switch on, a force that eats (F.provision_force) and not one CA exempts
+-- (F.upkeep_exempt). F.supply_line's gate and F.provision_source's fresh-land block both ask this, so an army with no
+-- line is never refused a refill a line would have replaced.
+function F.lines_apply(faction, force)
+    return F.rates().supply_lines and F.provision_force(faction, force) and not F.upkeep_exempt(faction, force)
+end
+
+-- { state, source = region key, path = {{x, y}} from the army to the source, turns, by = blocker's faction key }.
+-- state: none (no line: at sea, no settlements, a force F.provision_force excludes or one CA exempts,
+-- F.upkeep_exempt), home (in its own settled land), supplied (a road of at most half the reach, rounded up),
+-- stretched (a longer road within the reach) or cut (no road within the reach, or an enemy army within F.SHIP.near
+-- of the road; the latter keeps its road).
+-- The frozen supply_lines switch off: none for every army. This is the one gate (Tasks 3-5 read the state).
+-- `ui` as F.enemy_armies: the UI (F.supply_note, the map) asks with it.
+function F.supply_line(faction, force, ui)
+    if not F.lines_apply(faction, force) then return { state = "none", turns = 0 } end
+    local ch = force:general_character()
+    if ch:is_at_sea() or faction:region_list():num_items() == 0 then return { state = "none", turns = 0 } end
+    local fkey = faction:name()
+    local here = F.provision_source(faction, force)
+    if here and F.settled(here, fkey) then return { state = "home", source = here:name(), turns = 0 } end
+    local R = DERPY_MR_TERRAIN_ROUTES
+    local g = R and R.grids and R.grids[cm:model():campaign_name_key()]
+    if not g then return { state = "cut", turns = 0 } end
+    local x, y, cqi = ch:logical_position_x(), ch:logical_position_y(), force:command_queue_index()
+    local kept = F.line_kept[cqi]
+    if not (kept and kept.x == x and kept.y == y) then
+        kept = { x = x, y = y, roads = {} }
+        F.line_kept[cqi] = kept
+    end
+    local stand = nil
+    if ch:has_region() and not ch:region():is_null_interface() then stand = ch:region():name() end
+    local found, rl = {}, faction:region_list()
+    for i = 0, rl:num_items() - 1 do
+        local r = rl:item_at(i)
+        local st = r:settlement()
+        if not st:is_null_interface() and not r:garrison_residence():is_under_siege() and F.settled(r, fkey) then
+            local sx, sy = st:logical_position_x(), st:logical_position_y()
+            found[#found + 1] = { key = r:name(), x = sx, y = sy, d = math.max(math.abs(sx - x), math.abs(sy - y)) }
+        end
+    end
+    table.sort(found, function(p, q)
+        if p.d ~= q.d then return p.d < q.d end
+        return p.key < q.key
+    end)
+    local reach = F.rates().supply_reach
+    for i = 1, math.min(F.SUPPLY_TRIES, #found) do
+        local s = found[i]
+        local path = F.supply_road(R, g, kept, stand, fkey, x, y, s, reach * F.ROAD_PER_TURN)
+        if path then
+            local turns = math.max(1, F.road_turns(path))
+            -- AN ENEMY NEAR THE ARMY ITSELF DOES NOT CUT ITS LINE (author, 2026-11-09): only road points farther than
+            -- F.SHIP.near from the army's hex count, by F.near_road's own rule. A new table: the path is shared.
+            local far, near = {}, F.SHIP.near
+            for _, p in ipairs(path) do
+                local dx, dy = p[1] - path[1][1], p[2] - path[1][2]
+                if dx * dx + dy * dy > near * near then far[#far + 1] = p end
+            end
+            local by = F.near_road(F.enemy_armies(faction, ui), far)
+            return { state = by and "cut" or (turns > math.ceil(reach / 2) and "stretched" or "supplied"),
+                     source = s.key, path = path, turns = turns, by = by }
+        end
+    end
+    return { state = "cut", turns = 0 }
+end
+
+-- ---- upkeep by the line's length (design 2026-11-08, section 4) ----------------------------------
+-- The game's upkeep effect on an army, in place of its army-count penalty (F.supply_lines_install). The figure differs
+-- per army, so each pays through a custom bundle of its own, laid as CA's apply_upkeep_penalty lays its bundle.
+F.SUPPLY_BUNDLE = "derpy_mr_supply_distance"
+F.SUPPLY_UPKEEP_EFFECT, F.SUPPLY_UPKEEP_SCOPE = "wh_main_effect_force_all_campaign_upkeep", "force_to_force_own"
+
+-- The percentage a line (F.supply_line) adds to its army's upkeep: nothing at home, with no line or on a road of one
+-- turn; the step for each turn after the first, up to the maximum; the maximum on a cut road. The army count is
+-- never read, so the first army pays too. Nothing where the game's own penalty applies to the faction
+-- (F.vanilla_charges): one penalty, never two. The line is still worked out, drawn and fed by carts.
+function F.supply_upkeep(line, faction)
+    if F.vanilla_charges(faction) then return 0 end
+    local rates, state = F.rates(), line.state
+    if state == "cut" then return rates.supply_max end
+    if state ~= "supplied" and state ~= "stretched" then return 0 end
+    return math.min(rates.supply_max, math.max(0, rates.supply_step * (line.turns - 1)))
+end
+
+-- One army: the bundle off if it carries it (an army that is no longer eligible too), and back on at the figure now
+-- if it is eligible. The figure is read before anything comes off, so a throw there leaves the army as it was.
+function F.supply_force(faction, mf)
+    local eligible = F.provision_force(faction, mf)
+    local pct = eligible and F.supply_upkeep(F.supply_line(faction, mf), faction) or 0
+    if mf:has_effect_bundle(F.SUPPLY_BUNDLE) then
+        cm:remove_effect_bundle_from_force(F.SUPPLY_BUNDLE, mf:command_queue_index())
+    end
+    if pct > 0 then
+        local bundle = cm:create_new_custom_effect_bundle(F.SUPPLY_BUNDLE)
+        bundle:add_effect(F.SUPPLY_UPKEEP_EFFECT, F.SUPPLY_UPKEEP_SCOPE, pct)
+        bundle:set_duration(0)
+        cm:apply_custom_effect_bundle_to_force(bundle, mf)
+    end
+end
+
+-- At each turn start and turn end, every army of a player's faction. A player's armies only (vanilla never charged a
+-- computer, and F.supply_line does not ask who plays). The frozen switch off makes every line "none", so every figure
+-- 0 and the pass only takes bundles off.
+function F.supply_turn(faction)
+    if not faction:is_human() then return end
+    -- THE GAME'S BUNDLE OFF where the road charges instead (F.vanilla_charges): the box unticked mid-campaign must not
+    -- leave CA's bundle beside this mod's until CA's own listener next calls the wrapper
+    if not F.vanilla_charges(faction) then F.supply_lines_strip(faction) end
+    local forces = faction:military_force_list()
+    for i = 0, forces:num_items() - 1 do
+        -- EACH ARMY ON ITS OWN: a throw for one must not leave the armies after it as they were
+        local ok, e = pcall(F.supply_force, faction, forces:item_at(i))
+        if not ok then F.say(e) end
+    end
+end
+
+-- What the army's tooltip and Vault row say: the line and its upkeep, for the faction's own army by its number. UI
+-- only: F.supply_line rescans the faction's regions each time, so ask at the panel's pace and never per frame.
+-- The road itself stays here (it is a shared table that must not be changed). Its enemy list is the UI's own
+-- (F.enemy_armies), as the panel runs on one machine only.
+function F.supply_note(faction, id)
+    if not faction:is_human() then return nil end
+    local mf = cm:get_military_force_by_cqi(tonumber(id))
+    if not mf or mf:is_null_interface() or not F.provision_force(faction, mf) then return nil end
+    local line = F.supply_line(faction, mf, true)
+    return { state = line.state, source = line.source, turns = line.turns, by = line.by, upkeep = F.supply_upkeep(line, faction) }
 end
 
 -- ---- recurring routes and paid partner contracts ----------------------------------------
@@ -4280,6 +4615,9 @@ F.ACTIONS = { send = 3, order = 2, sell = 2, supply = 3, work = 2, upgrade = 3, 
 F.ACTION_SWITCH = { supply = "supply", edict = "edicts", guards = "bandits" }
 function F.dispatch(fkey, parts)
     if not F.is_human(fkey) then return end
+    -- THE ENEMY ARMIES AS THEY STAND NOW (F.enemy_armies): the list is kept for the turn, and a panel can make it on one
+    -- machine and not the other, so an action (one UITrigger, run on every machine) reads it again
+    F.enemy_cache, F.enemy_cache_ui = {}, {}
     -- the map's cart goods come from kept trade previews (terrain_routes.lua R.plans): an action shows on its
     -- next tick, not once that seller's renewal comes round (2026-10-30: a re-allowed export took 6.3 s)
     local R = DERPY_MR_TERRAIN_ROUTES
@@ -5367,6 +5705,18 @@ function F.convoy_by_id(id)
     return nil
 end
 
+-- A road encounter's cargo by its kind: "convoy", "supply" (a supply cart) or "ship".
+function F.cargo_by_id(kind, id)
+    if kind == "convoy" then return F.convoy_by_id(id) end
+    if kind == "supply" then
+        for _, c in ipairs(F.supply_carts()) do
+            if c.id == id then return c end
+        end
+        return nil
+    end
+    return F.ship_by_id(id)
+end
+
 -- A PLAYER'S ENCOUNTER: the bandits first for one that can come to a fight, then the dilemma naming them and the
 -- region. One road encounter waits per faction; while it does, the next is settled at once. False when nothing was
 -- offered, and the caller settles it.
@@ -5394,7 +5744,7 @@ end
 -- THE ANSWER: the fighting choice fights; anything else, or a fight that cannot start, is settled and the bandits
 -- go. Push on is the one choice no computer takes: it loses a tenth. The cargo gone, only the bandits go.
 function F.road_answer(faction, p, choice)
-    local rec = p.kind == "convoy" and F.convoy_by_id(p.id) or F.ship_by_id(p.id)
+    local rec = F.cargo_by_id(p.kind, p.id)
     if rec and F.ROAD_FIGHT[p.enc] == choice and F.road_fight(faction, p, rec) then return end
     F.bandit_kill(p.bandit)
     if not rec then return end
@@ -5426,7 +5776,7 @@ end
 
 -- A BANDIT FIGHT FOUGHT: the bandits won, the whole cargo is lost; either way they are removed and the retreat unlocked.
 function F.bandit_done(f)
-    local rec = f.cargo == "convoy" and F.convoy_by_id(f.id) or F.ship_by_id(f.id)
+    local rec = F.cargo_by_id(f.cargo, f.id)
     if rec and cm:model():pending_battle():has_been_fought() and cm:pending_battle_cache_attacker_victory() then
         F.cargo_lose(f.cargo, rec, 100)
     end
@@ -5526,14 +5876,21 @@ function F.seize(s, captor)
 end
 
 -- Every army in the field (no garrison) of a faction at war with `owner`: { fkey, cqi = force, x, y },
--- worked out ONCE PER OWNER PER TURN START (each faction's turn start empties it). F.captor reads it for shipments
--- and convoys alike, so a few hundred convoys do not each rescan every enemy army. Not saved.
+-- worked out once per owner and kept for the turn. F.captor reads it for shipments and convoys alike, so a few hundred
+-- convoys do not each rescan every enemy army. Not saved.
+-- WHEN THE LISTS ARE EMPTIED: both at every faction's turn start (F.turn_start), at a player's turn end (the
+-- FactionTurnEnd listener in F.init) and at a player's action (F.dispatch). The UI's alone also at a war, a capture
+-- or a diplomatic event (F.invalidate_reach), and after a battle or a destroyed army (F.on_armies_changed).
 -- KEYS AND NUMBERS ONLY (the 1.0 live pass, 2026-11-02): the list outlives the script entry that made it, and an
 -- interface kept past its entry is freed memory. Calling is_null_interface() on one crashed the game.
-F.enemy_cache = F.enemy_cache or {}
-function F.enemy_armies(owner)
+-- `ui`: A READ FOR THE UI (the Stores panel, the map) keeps its list in F.enemy_cache_ui, which the model never
+-- reads. The UI runs on one machine only, so a list it kept in F.enemy_cache would be read by that machine's model
+-- and not the other's (multiplayer).
+F.enemy_cache, F.enemy_cache_ui = F.enemy_cache or {}, F.enemy_cache_ui or {}
+function F.enemy_armies(owner, ui)
+    local cache = ui and F.enemy_cache_ui or F.enemy_cache
     local key, turn = owner:name(), cm:model():turn_number()
-    local hit = F.enemy_cache[key]
+    local hit = cache[key]
     if hit and hit.turn == turn then return hit.list end
     local list, wars = {}, owner:factions_at_war_with()
     if type(wars) == "table" or type(wars) == "userdata" then
@@ -5550,8 +5907,23 @@ function F.enemy_armies(owner)
             end
         end
     end
-    F.enemy_cache[key] = { turn = turn, list = list }
+    cache[key] = { turn = turn, list = list }
     return list
+end
+
+-- A BATTLE MOVES THE ENEMY (BattleCompleted, MilitaryForceDestroyed): the UI's list goes and the map is drawn again.
+-- UI ONLY: the model's list is left for its own moments, so every machine's model reads the same one.
+function F.on_armies_changed()
+    F.enemy_cache_ui = {}
+    local R = DERPY_MR_TERRAIN_ROUTES
+    if R then R.epoch, R.dirty = (R.epoch or 0) + 1, true end
+end
+
+-- AN ARMY AT WAR BESIDE `force` (the model's list, F.near_road's rule round the army's own hex): Auto sends no supply
+-- cart then (ruling 2026-11-09). Send supplies does not ask.
+function F.enemy_beside(faction, force)
+    local ch = force:general_character()
+    return F.near_road(F.enemy_armies(faction), { { ch:logical_position_x(), ch:logical_position_y() } }) ~= nil
 end
 
 -- An army in the field (no garrison) of a faction at war with the owner, within SHIP.near: the
@@ -5723,11 +6095,16 @@ function F.road_steps(path)
     return steps
 end
 
--- Turns on the road: its hexes at F.ROAD_PER_TURN, never under one and never past the trade reach (the
--- reach limit is in hexes too); no road, one turn.
+-- Turns on a road: its hexes at F.ROAD_PER_TURN, rounded up. Unclamped: each caller keeps its own floor and ceiling.
+function F.road_turns(path)
+    return math.ceil(F.road_steps(path) / F.ROAD_PER_TURN)
+end
+
+-- Turns on the road, never under one and never past the trade reach (the reach limit is in hexes too); no road,
+-- one turn.
 function F.convoy_turns(path)
     if not path then return 1 end
-    return math.max(1, math.min(F.rates().reach, math.ceil(F.road_steps(path) / F.ROAD_PER_TURN)))
+    return math.max(1, math.min(F.rates().reach, F.road_turns(path)))
 end
 
 -- The record, filed in F.state.convoys. `path` is as F.reach returned it, which F.reach sorted by region name:
@@ -5901,6 +6278,11 @@ function F.sweep()
     for i = #convoys, 1, -1 do
         if not F.live(convoys[i].f) then table.remove(convoys, i) end
     end
+    -- and so does a dead faction's supply cart
+    local carts = F.supply_carts()
+    for i = #carts, 1, -1 do
+        if not F.live(carts[i].f) then table.remove(carts, i) end
+    end
     -- the Workshop: a dead buyer's upgrades go with it
     for _, ups in pairs(F.state.upgrades or {}) do
         for key, buyer in pairs(ups) do
@@ -5913,6 +6295,176 @@ function F.sweep()
         for fkey in pairs(book) do
             local f = cm:get_faction(fkey)
             if not f or f:is_null_interface() or f:is_dead() then book[fkey] = nil end
+        end
+    end
+end
+
+-- ---- supply carts (design 2026-11-08, section 5c) ---------------------------------------------
+-- A player's army with a supplied or stretched line is sent food down it: a cart leaves the line's source with the
+-- gap below five meals, rides the road for its length in turns and lands at the army wherever it stands. The record:
+-- { id, f, army = cqi string, from = source region key, basket = { stem = n }, at, due, x, y, road = packed, source
+-- first }, in F.state.supply_carts in id order. A computer gets none (vanilla never fed one by road).
+F.SUPPLY_CART_PREFIX = "derpy_mr_supply_"
+
+-- A read, like F.convoys: only F.supply_send makes the list.
+function F.supply_carts()
+    return F.state.supply_carts or {}
+end
+
+-- The cart on the road to army `id` (a cqi string), or nil. At most one is.
+function F.supply_cart_of(id)
+    for _, c in ipairs(F.supply_carts()) do
+        if c.army == id then return c end
+    end
+    return nil
+end
+
+-- What the map reads (terrain_routes.lua R.links): every live faction's carts, each its own table.
+function F.supply_cargo()
+    local out = {}
+    for _, c in ipairs(F.supply_carts()) do
+        if F.live(c.f) then
+            out[#out + 1] = { id = c.id, f = c.f, army = c.army, from = c.from, x = c.x, y = c.y, due = c.due,
+                              basket = c.basket, supply = true }
+        end
+    end
+    return out
+end
+
+-- SENT: nil unless the switches are on, the faction is a player's, the army has no cart out, it is short of five
+-- meals and its line is supplied or stretched. The source pays as Auto loads (F.provision_refill, into the cart's
+-- load), so its holds and its ledger line are the same; a source with nothing to spare sends nothing. `auto` (the
+-- turn's Auto cart, not Send supplies): also nil while an enemy army stands beside the army (F.enemy_beside).
+function F.supply_send(faction, row, b, auto)
+    local rates = F.rates()
+    if not (rates.supply_lines and rates.army_provisions and faction:is_human()) or F.supply_cart_of(row.id) then return nil end
+    local gap = row.need * 5 - F.provision_total(b)
+    if gap <= 0 then return nil end
+    local line = F.supply_line(faction, row.force)
+    if line.state ~= "supplied" and line.state ~= "stretched" then return nil end
+    if auto and F.enemy_beside(faction, row.force) then return nil end
+    local source = F.owned(faction, line.source)
+    if not (source and line.path and #line.path > 0) then return nil end
+    -- the line's path runs army to source and is shared: a new table, source first
+    local road, turn = F.reverse(line.path), cm:model():turn_number()
+    -- worked out BEFORE the debit: a throw after it would lose the food
+    local packed, due = F.pack_road(road), turn + math.max(1, F.road_turns(road))
+    local load = { goods = {}, done = turn }
+    F.provision_refill(faction, { source = source, need = row.need, cap = gap }, load, false, false)
+    for stem, n in pairs(load.goods) do
+        if n <= 0 then load.goods[stem] = nil end   -- a 0 never stays in a basket: a saved one fails F.supply_cart_sound
+    end
+    if next(load.goods) == nil then return nil end
+    F.state.supply_seq = (F.state.supply_seq or 0) + 1
+    local c = { id = F.SUPPLY_CART_PREFIX .. F.state.supply_seq, f = faction:name(), army = row.id, from = source:name(),
+                basket = load.goods, at = turn, due = due, x = road[1][1], y = road[1][2], road = packed }
+    F.state.supply_carts = F.state.supply_carts or {}
+    F.state.supply_carts[#F.state.supply_carts + 1] = c
+    F.guard_fee(faction, c)   -- Guards ride with it as with a convoy, filed first as a convoy is
+    return c
+end
+
+-- A saved cart the code can read: the number in its id, or nil. An army number, a place and a road always; the rest
+-- is a convoy's shape, so F.convoy_sound reads it, the army as the buyer and the source as both ends.
+function F.supply_cart_sound(c)
+    if type(c) ~= "table" or type(c.army) ~= "string" or not string.match(c.army, "^%d+$") or c.x == nil or c.road == nil then
+        return nil
+    end
+    local n = type(c.id) == "string" and tonumber(string.match(c.id, "^" .. F.SUPPLY_CART_PREFIX .. "(%d+)$"))
+    if not n then return nil end
+    local as_convoy = { id = F.CONVOY_PREFIX .. n, f = c.f, buyer = c.army, from = c.from, to = c.from, basket = c.basket,
+                        at = c.at, due = c.due, x = c.x, y = c.y, road = c.road }
+    return F.convoy_sound(as_convoy) and n or nil
+end
+
+-- Run from the load callback, as F.sanitize_convoys.
+function F.sanitize_supply_carts()
+    local list, clean, max_id = F.state.supply_carts, {}, 0
+    for _, c in ipairs(type(list) == "table" and list or {}) do
+        local n = F.supply_cart_sound(c)
+        if n then max_id = math.max(max_id, n); clean[#clean + 1] = c end
+    end
+    F.state.supply_carts = type(list) == "table" and clean or nil
+    F.state.supply_seq = math.max(max_id, F.stock_number(F.state.supply_seq) and F.state.supply_seq or 0)
+end
+
+-- Off the list FIRST, as F.convoy_drop: true only when this call took it off.
+function F.supply_cart_drop(c)
+    local list = F.supply_carts()
+    for i, x in ipairs(list) do
+        if x == c then table.remove(list, i) return true end
+    end
+    return false
+end
+
+-- The cart's goods, in the goods' order, to `to` (nil: lost), booked to `to_key`.
+local function supply_unload(c, to, kind, to_key)
+    for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+        local n = c.basket[g.stem]
+        if n then F.move(nil, to, g.stem, n, kind, nil, to_key) end
+    end
+end
+
+-- Back to its source while the faction still holds it, else to the faction's settlement nearest the cart; a faction
+-- with none loses it. The cart is already off the list.
+local function supply_home(c)
+    local f = F.live(c.f)
+    local to = f and F.owned(f, c.from)
+    if f and not to then to = F.nearest(f, c.x, c.y) end
+    supply_unload(c, to, KIND.move, c.f)
+end
+
+-- RETURNED: the army dead or not its own, or the line cut or gone on the day.
+function F.supply_cart_return(c)
+    if not F.supply_cart_drop(c) then return end
+    supply_home(c)
+end
+
+-- SEIZED: as a convoy, to the captor's settlement nearest the cart.
+function F.supply_cart_seize(c, captor)
+    if not F.supply_cart_drop(c) then return end
+    supply_unload(c, F.nearest(captor, c.x, c.y), KIND.raid, captor:name())
+end
+
+-- ARRIVED: into the army's cargo `b` up to `cap`, in the goods' order; what does not fit goes home.
+function F.supply_cart_arrive(c, b, cap)
+    if not F.supply_cart_drop(c) then return end
+    local room = math.max(0, cap - F.provision_total(b))
+    for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+        local n = c.basket[g.stem]
+        if n and room > 0 then
+            local k = math.min(n, room)
+            b.goods[g.stem] = (b.goods[g.stem] or 0) + k
+            room = room - k
+            c.basket[g.stem] = n - k > 0 and n - k or nil
+        end
+    end
+    supply_home(c)
+end
+
+-- At its owner's turn start, before the meals: each cart in id order is returned, seized, lands or moves on. A copy of
+-- the list is walked, as F.convoys_turn walks one.
+function F.supply_carts_turn(faction)
+    local fkey, turn, mine = faction:name(), cm:model():turn_number(), {}
+    for _, c in ipairs(F.supply_carts()) do
+        if c.f == fkey then mine[#mine + 1] = c end
+    end
+    for _, c in ipairs(mine) do
+        local force = cm:get_military_force_by_cqi(tonumber(c.army))
+        if not force or force:is_null_interface() or force:faction():name() ~= fkey then F.supply_cart_return(c)
+        else
+            local captor = F.captor(faction, c)
+            if captor then F.supply_cart_seize(c, captor)
+            elseif turn >= c.due then
+                -- at sea (none) the army has no line either, and the cart turns back as it does on a cut one
+                local state, b = F.supply_line(faction, force).state, F.state.armies and F.state.armies[c.army]
+                if state == "cut" or state == "none" or not (b and b.f == fkey) then F.supply_cart_return(c)
+                else F.supply_cart_arrive(c, b, math.max(1, math.ceil(force:unit_list():num_items() / 4)) * 10) end
+            else
+                local from = { c.x, c.y }
+                F.convoy_step(c, turn)
+                F.road_event(faction, "supply", c, from)
+            end
         end
     end
 end
@@ -6156,7 +6708,7 @@ end
 function F.turn_start(faction)
     F.freeze_rates()                              -- frozen at the first turn start
     -- the armies where they stand now: a list made earlier in the round has them where they stood then
-    F.enemy_cache = {}
+    F.enemy_cache, F.enemy_cache_ui = {}, {}
     if faction:is_human() then
         -- ITS OWN GUARD: the snapshot reads through the UI-side CCO and loc, and a throw there must
         -- not skip the trade below, which is model state every machine has to run alike
@@ -6166,6 +6718,8 @@ function F.turn_start(faction)
         F.guard(F.hold_exports, faction:name())   -- a save from before the bundle existed catches up
         F.guard(F.fight_stale, cm:model():turn_number())
     end
+    -- Supply carts land, are seized or move on before the meals they feed (design 2026-11-08, section 5c).
+    F.guard(F.supply_carts_turn, faction)
     -- This turn's meals eat this turn's rations, so the edicts come first.
     F.guard(F.edict_turn, faction)
     -- Arrivals fund this turn; essentials and elective local orders precede exports.
@@ -6174,6 +6728,7 @@ function F.turn_start(faction)
     F.guard(F.upkeep, faction)
     F.guard(F.provisions_turn, faction)
     F.guard(F.spoil, faction)                     -- after the meals, before processing and trade
+    F.guard(F.supply_turn, faction)               -- the army's upkeep by its line, after the meals; again at the turn end (F.init)
     F.guard(F.provision_supply, faction)
     F.guard(F.supply, faction)
     F.guard(F.economy_turn, faction)
@@ -6202,6 +6757,7 @@ function F.init()
     -- FROZEN AT FIRST TICK: a new campaign fires no FactionTurnStart until turn 1 ends, and MCT
     -- has read the player's settings by now (its LoadingGame callback). A loaded save is frozen.
     F.guard(F.freeze_rates)
+    F.guard(F.supply_lines_install)         -- the game's army-count upkeep, off unless the box is ticked
     F.guard(F.quiet_dilemmas)
     F.guard(F.name_pending_goods)
     for _,event in ipairs({'FactionLeaderDeclaresWar','PositiveDiplomaticEvent','NegativeDiplomaticEvent','RegionFactionChangeEvent'}) do
@@ -6223,7 +6779,7 @@ function F.init()
         function(context) return string.sub(context:area_key(), 1, #F.SHIP_PREFIX) == F.SHIP_PREFIX end,
         function(context) F.guard(F.on_area, context) end, true)
     core:add_listener("derpy_mr_flows_escort", "BattleCompleted", true,
-        function() F.guard(F.on_battle_done) end, true)
+        function() F.guard(F.on_battle_done); F.guard(F.on_armies_changed) end, true)
     core:add_listener("derpy_mr_flows_escort_pending", "PendingBattle", true,
         function() F.guard(F.on_pending_battle) end, true)
     core:add_listener("derpy_mr_flows_region", "RegionFactionChangeEvent", true,
@@ -6234,11 +6790,19 @@ function F.init()
             cm:callback(function() F.guard(F.provision_seed_force,cm:get_military_force_by_cqi(id)) end,0.1)
         end,true)
     core:add_listener("derpy_mr_flows_force_destroyed", "MilitaryForceDestroyed", true,
-        function(context) F.guard(function() F.provision_clear(tostring(context:military_force():command_queue_index())) end) end, true)
+        function(context)
+            F.guard(function() F.provision_clear(tostring(context:military_force():command_queue_index())) end)
+            F.guard(F.on_armies_changed)
+        end, true)
     core:add_listener("derpy_mr_flows_recruit", "UnitTrained", true,
         function(context) F.guard(F.on_unit_trained, context, "recruit") end, true)
     core:add_listener("derpy_mr_flows_turn", "FactionTurnStart", true,
         function(context) F.guard(F.on_faction_turn_start, context:faction(), "turn") end, true)
+    -- THE UPKEEP AGAIN AT A PLAYER'S TURN END: the armies have moved since the turn start, and an enemy may have come
+    -- onto a road, so what the game charges is the road as it stands. The enemy list is read again for that (F.turn_start).
+    core:add_listener("derpy_mr_flows_supply_end", "FactionTurnEnd",
+        function(context) return context:faction():is_human() end,
+        function(context) F.enemy_cache, F.enemy_cache_ui = {}, {}; F.guard(F.supply_turn, context:faction()) end, true)
     F.guard(F.provision_seed_all)
 end
 
@@ -6277,6 +6841,8 @@ first("loading", function(context)
     F.sanitize_road()
     F.sanitize_sales()
     F.sanitize_blockades()
+    F.sanitize_taken()
+    F.sanitize_supply_carts()
 end)
 
 first("saving", function(context)

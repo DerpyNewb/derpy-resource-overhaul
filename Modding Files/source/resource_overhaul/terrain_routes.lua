@@ -201,6 +201,12 @@ function R.avoider(a, b, regions)
         local owner = region:owning_faction()
         if not owner:is_null_interface() then parties[#parties + 1] = owner:name() end
     end
+    return R.avoider_for(parties, regions)
+end
+
+-- The same judge for parties named by key: an army's supply road is judged for its own faction alone (flows.lua
+-- F.supply_line, design 2026-11-08 section 4).
+function R.avoider_for(parties, regions)
     local verdicts = {}
     regions = regions or {}
     local function judge(region)
@@ -659,6 +665,12 @@ function R.links(faction)
             cargo[#cargo + 1] = c
         end
     end
+    -- THE VIEWER'S SUPPLY CARTS (design 2026-11-08, section 5c): a convoy's marker at the cart, with the shipments, and
+    -- only its own (its supply roads are its own too). Placed under derpy_mr_road_N with the rest of the cargo, so the
+    -- load's sweep of that range takes them down.
+    for _, c in ipairs(R.shown('shipments') and F.supply_cargo and F.supply_cargo() or {}) do
+        if c.f == faction:name() then cargo[#cargo + 1] = c end
+    end
     for _, o in ipairs(R.shown('contracts') and F.routes(faction) or {}) do
         if o.enabled and F.route_status(faction, o, 'show') then add(faction:name(), o.from, o.to,nil,{{o.stem},{}}) end
     end
@@ -857,6 +869,62 @@ function R.in_view(x, y)
     return z > 0 and math.abs(up) <= z * v.tv + R.VIEW_MARGIN and math.abs(s) <= z * v.th + R.VIEW_MARGIN
 end
 
+-- THE ARMIES' SUPPLY ROADS (design 2026-11-08, section 4): each army of the player's draws the road F.supply_line finds
+-- from it to the settlement that feeds it, in the ink of its line's state. The three inks are palette entries after the
+-- owners' sixteen (build_mr_terrain_routes.SUPPLY_COLOURS), the same in every colour set.
+R.SUPPLY_INK = { supplied = 16, stretched = 17, cut = 18 }
+-- ponytail: at most R.SUPPLY_CAP supply dashes in view, the lowest army number first and each from its army outwards;
+-- raise it if a live test shows a long road cut short.
+R.SUPPLY_CAP = 256
+-- A scene's id is derpy_mr_supply_<slot>_<i>: a slot is an army's place in army-number order at the last full refresh
+-- (0 to R.SUPPLY_SLOTS - 1) and i the hex of its road, every second one. The ids are a fixed range, so a loaded game
+-- clears all of them whoever is alive, as it clears derpy_mr_road_N (R.hide_supply). ponytail: armies past the
+-- slots are not drawn; raise R.SUPPLY_SLOTS if a faction can field more (it costs R.SUPPLY_SWEEP / 2 removals a slot at load).
+-- R.SUPPLY_SWEEP is the most hexes a road can have: supply_reach's 10 turns of 40 hexes, and the army's own
+-- (build_mr_terrain_routes.selftest holds it to the slider).
+R.SUPPLY_SLOTS = 40
+R.SUPPLY_SWEEP = 401
+R.supply_kept, R.supply_epoch = {}, nil   -- army number -> { x, y, line }: the last answer and the hex it was for
+
+-- -> { { cqi, path, ink, slot } } by army number: the faction's armies whose line is supplied, stretched or cut and has a
+-- road (a cut line with none, an army at home and an army with no line draw nothing), the first R.SUPPLY_SLOTS of them,
+-- each in the slot of its place in that order. F.supply_line rescans the faction's
+-- regions and may search the map, so an army is asked about only once its hex has changed since the last answer, or once
+-- the answers were dropped: R.epoch moves at the player's turn (enemy armies moved) and at every war, diplomatic event
+-- and capture (F.invalidate_reach), and the kept answers go with it. A road is F's shared table, read here and never changed.
+-- Asked as the UI (F.enemy_armies' `ui`): this machine's drawing must not fill the enemy list its model keeps.
+function R.supply_links(faction)
+    local F, out = DERPY_MR_FLOWS, {}
+    if not (F and F.supply_line and R.shown('supply') and faction:is_human()) then return out end
+    if R.supply_epoch ~= R.epoch then R.supply_kept, R.supply_epoch = {}, R.epoch end
+    local forces, was, now = faction:military_force_list(), R.supply_kept, {}
+    for i = 0, forces:num_items() - 1 do
+        local mf = forces:item_at(i)
+        if mf:has_general() then
+            local cqi, ch = mf:command_queue_index(), mf:general_character()
+            local x, y = ch:logical_position_x(), ch:logical_position_y()
+            local kept = was[cqi]
+            if not (kept and kept.x == x and kept.y == y) then kept = { x = x, y = y, line = F.supply_line(faction, mf, true) } end
+            now[cqi] = kept
+            local ink = R.SUPPLY_INK[kept.line.state]
+            if ink and kept.line.path then out[#out + 1] = { cqi = cqi, path = kept.line.path, ink = ink } end
+        end
+    end
+    R.supply_kept = now   -- an army that is gone loses its answer
+    table.sort(out, function(a, b) return a.cqi < b.cqi end)
+    for k = #out, R.SUPPLY_SLOTS + 1, -1 do out[k] = nil end
+    for k, line in ipairs(out) do line.slot = k - 1 end
+    return out
+end
+
+-- Scenes survive saves, so a loaded game clears the whole fixed range of supply ids, slot by slot and hex by hex (every
+-- second one, as they are placed) up to the longest road there is: an army that died before the save is swept too.
+function R.hide_supply()
+    for slot = 0, R.SUPPLY_SLOTS - 1 do
+        for k = 1, R.SUPPLY_SWEEP, 2 do cm:remove_scripted_composite_scene('derpy_mr_supply_' .. slot .. '_' .. k) end
+    end
+end
+
 -- moved: the camera alone moved, so the links and goods of the last refresh still hold and only what is
 -- near the camera is placed again (author, 2026-10-29: a full refresh per tick skipped frames while dragging)
 function R.refresh(moved)
@@ -868,21 +936,25 @@ function R.refresh(moved)
     local cx, cy = R.camera[1], R.camera[2]
     R.shows, R.show_until = 0, os.clock() + R.SHOW_BUDGET
     local size, set = R.style()
-    local links, cargo, unshared
+    local links, cargo, unshared, supply
     if moved and R.drawn then
-        links, cargo, unshared = R.drawn[1], R.drawn[2], R.drawn[3]
+        links, cargo, unshared, supply = R.drawn[1], R.drawn[2], R.drawn[3], R.drawn[4]
     else
         links, cargo = R.links(faction)
         -- the same bundled network (R.network gives back its cached table) has the same shared stretches
         unshared = R.drawn and R.drawn[1] == links and R.drawn[3] or {}
-        R.drawn = { links, cargo, unshared }
+        -- the armies' roads fail on their own: a throw there must not stop the trade roads from being drawn
+        local ok, found = pcall(R.supply_links, faction)
+        supply = ok and found or {}
+        if not ok and not R.supply_failed then R.supply_failed = true; pcall(out, '[derpy_mr_routes] ' .. tostring(found)) end
+        R.drawn = { links, cargo, unshared, supply }
     end
     local old_traffic, traffic, shared, routes = {}, {}, {}, {}
     for _, t in ipairs(R.traffic) do old_traffic[t.key] = t end
     for _, s in ipairs(cargo) do
         -- a convoy's marker takes a decal only near the camera, as the road dashes do: there can be hundreds
         local near = true
-        if s.convoy then
+        if s.convoy or s.supply then
             near = R.in_view(cm:log_to_dis(s.x, s.y))
         end
         if near and count < 512 then
@@ -974,6 +1046,20 @@ function R.refresh(moved)
         aligned[id], used[id] = p, true
     end
     wanted = aligned
+    -- THE ARMIES' SUPPLY ROADS, after the trade links, a dash on every second hex in view. Their ids are fixed by slot and
+    -- hex, so no scene is matched to another's point above: a hex a road leaves is taken down under its own id.
+    local supply_placed = 0
+    for _, line in ipairs(supply) do
+        local path, shown = line.path, R.display(line.path)
+        for i = 1, #path, 2 do
+            if supply_placed >= R.SUPPLY_CAP then break end
+            if R.in_view(shown[i][1], shown[i][2]) then
+                supply_placed = supply_placed + 1
+                wanted['derpy_mr_supply_' .. line.slot .. '_' .. i] = { x = path[i][1], y = path[i][2],
+                                                                      scene = R.dash(path, i, line.ink, size) }
+            end
+        end
+    end
     for id, old in pairs(R.scenes) do
         local new = wanted[id]
         if not new or new.x ~= old.x or new.y ~= old.y or new.scene ~= old.scene then
@@ -1038,6 +1124,7 @@ function R.init()
         cm:remove_scripted_composite_scene('derpy_mr_traffic_' .. i..'_icon')
         R.hide_icon('derpy_mr_traffic_'..i..'_icon')
     end
+    R.hide_supply()
     if cm:is_multiplayer() then return end
     R.grid = R.grids[cm:model():campaign_name_key()]
     if not R.grid then return end
@@ -1047,6 +1134,11 @@ function R.init()
     core:add_listener('derpy_mr_terrain_routes_turn', 'FactionTurnStart',
         function(context) return context:faction():name() == cm:get_local_faction_name(true) end,
         function() R.new_turn() end, true)
+    -- An army that has moved has a new supply road: the map is drawn again at the next tick, not at the timed refresh.
+    -- A flag and nothing else (CA's own conditions read context:character():faction() the same way).
+    core:add_listener('derpy_mr_terrain_routes_moved', 'CharacterFinishedMovingEvent',
+        function(context) return context:character():faction():name() == cm:get_local_faction_name(true) end,
+        function() R.dirty = true end, true)
 end
 
 core:add_listener('derpy_mr_terrain_routes_init', 'ScriptEventFirstTickAfterWorldCreated', true,

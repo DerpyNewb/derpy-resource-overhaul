@@ -549,6 +549,14 @@ def provision_bundles():
               ("wh_main_effect_force_all_campaign_replenishment_rate", "force_to_force_own", -10)])]
 
 
+def supply_bundles():
+    """The army supply road's upkeep (design 2026-11-08, section 4): a force bundle with NO effect rows. flows.lua
+    F.supply_turn builds a custom bundle on this record and adds the upkeep effect at each army's own figure, so the
+    record carries only the key, the icon and the words the army's effects list shows."""
+    return [("derpy_mr_supply_distance", "growth.png", "Supply road",
+             "The further this army is from the settlement that feeds it, the more it costs.", [])]
+
+
 def service_bundles():
     return [("service_" + key, "derpy_mr_service_" + key, d["icon"], d["label"],
              "Paid each turn from this province capital's stores. " + d["benefit"] + ".",
@@ -1707,7 +1715,7 @@ def n_loc():
             + 2 * len(SUPPLY) + 2 + len(MINT_FX) + 2 + 2 * len(store_stems())   # Exports held; the hidden markers
             + 2 * len(WORK_UPGRADES) + 2 * sum(1 for w in WORK_ITEMS if not w[3])
             + 2   # Recruits
-            + 2 * len(provision_bundles()) + 3 + 3 + 2 * len(recipe_bundles()) + 3 * sum(1 for w in works() if w["kind"] == "trait") + 2)   # recipes; 3 + 3: the army food and road loss messages
+            + 2 * (len(provision_bundles()) + len(supply_bundles())) + 3 + 3 + 2 * len(recipe_bundles()) + 3 * sum(1 for w in works() if w["kind"] == "trait") + 2)   # recipes; 3 + 3: the army food and road loss messages
 
 # Owners with no living people to make or eat a good: daemons, the dead, and beasts with no towns
 # to sell in. Matched on the CHAIN key, so a special variant for one of them goes too.
@@ -2512,7 +2520,7 @@ def _bundles(add, loc):
     # THE NAMED RECIPES' BUNDLES (workshop expansion spec section 4): an army work's force bundle on
     # CA's force donor, a lasting work's faction bundle on the order donor
     force, = [r for r in db("effect_bundles_tables")[1] if r["key"] == FORCE_DONOR]
-    for key, icon_, title, desc, fx in provision_bundles():
+    for key, icon_, title, desc, fx in provision_bundles() + supply_bundles():
         add("effect_bundles_tables", dict(force, key=key, localised_title=title,
             localised_description=desc, ui_icon=icon_))
         for e, scope, v in fx:
@@ -2562,7 +2570,7 @@ def all_bundles():
            [("faction", k, i, fx) for _o, _u, k, i, _t, _w, fx in ORDERS] + \
            [("faction", HOLD[0], HOLD[1], [])] + \
            [("faction", k, i, fx) for k, i, _t, _d, fx in edict_bundles()] + \
-           [("force", k, i, fx) for k, i, _t, _d, fx in provision_bundles()] + \
+           [("force", k, i, fx) for k, i, _t, _d, fx in provision_bundles() + supply_bundles()] + \
            recipe_bundles()   # its effects are the script's (HOLD)
 
 
@@ -4142,7 +4150,7 @@ def pack(t, frag=FRAG):
         drift = gen_mr_ui.stale() + sync_derpy_hub.check()
         assert not drift, "stale - run py tools/gen_resource_overhaul.py and py tools/sync_derpy_hub.py: %s" % drift
         gen_mr_ui.selftest()
-        icons += gen_mr_ui.pack_paths() + [d for _s, d in sync_derpy_hub.pack_files("mr")]
+        icons += gen_mr_ui.pack_paths() + [d for _s, d in sync_derpy_hub.pack_files("mr")] + list(gen_mr_ui.STATIC_ART)
         import build_mr_terrain_routes
         icons += list(build_mr_terrain_routes.assets())
         for rel, data in build_mr_terrain_routes.assets().items():

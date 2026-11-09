@@ -13,7 +13,7 @@ local LOCK_REASON = "Fixed when a campaign starts. Change it from the main menu 
 local m = mct:register_mod("derpy_more_resources")
 m:set_title("Derpy Resource Overhaul")
 m:set_author("_D3rpyN3wb_")
-m:set_description("How goods move between settlement stores. These are fixed for the life of a campaign: change them from the main menu before starting a new one. In a multiplayer campaign they are ignored and every value is the default on every machine. The trade route lines can be changed at any time.")
+m:set_description("How goods move between settlement stores. These are fixed for the life of a campaign: change them from the main menu before starting a new one. In a multiplayer campaign they are ignored and every value is the default on every machine. The trade route lines and the Vanilla supply lines box can be changed at any time.")
 m:add_new_section("stores", "Stores")
 
 local o_raid = m:add_new_option("raid", "slider")
@@ -251,6 +251,61 @@ o_bandits:set_default_value(true)
 o_bandits:set_assigned_section("using")
 if IN_CAMPAIGN then o_bandits:set_locked(true, LOCK_REASON) end
 
+-- NEVER LOCKED, NEVER FROZEN: flows.lua F.vanilla_supply reads it on every call (single player only).
+m:add_new_section("army_supply", "Army supply lines")
+local o_vanilla_supply_lines = m:add_new_option("vanilla_supply_lines", "checkbox")
+o_vanilla_supply_lines:set_text("Vanilla supply lines")
+o_vanilla_supply_lines:set_tooltip_text("Ticked: the game's own supply lines stay. Each army after your first makes every army cost more upkeep. This mod's roads still carry food to your armies but add no upkeep. Unticked: this mod's supply lines replace them. Races whose armies carry no food keep the game's own rule. So does every race when Army provisions or Army supply lines is off. You can change this during a campaign. In multiplayer it is always unticked.")
+o_vanilla_supply_lines:set_default_value(false)
+o_vanilla_supply_lines:set_assigned_section("army_supply")
+
+local o_supply_lines = m:add_new_option("supply_lines", "checkbox")
+o_supply_lines:set_text("Army supply lines")
+o_supply_lines:set_tooltip_text("Each of your armies draws supplies from one of your settlements along a road. The further the road, the more the army costs. A cut road feeds nothing and costs the most. Armies in your own settled land need no road. Land you took in the last few turns feeds no army yet. Turns to settle new land sets how many. With Army provisions off or Vanilla supply lines ticked, the roads add no upkeep.")
+o_supply_lines:set_default_value(true)
+o_supply_lines:set_assigned_section("army_supply")
+if IN_CAMPAIGN then o_supply_lines:set_locked(true, LOCK_REASON) end
+
+local o_supply_reach = m:add_new_option("supply_reach", "slider")
+o_supply_reach:set_text("Supply reach in turns")
+o_supply_reach:set_tooltip_text("How far an army can be from one of your settlements and still be supplied, in turns of travel. Past half of that the road is stretched. Further away the road is cut.")
+o_supply_reach:slider_set_precision(0)
+o_supply_reach:slider_set_min_max(1, 10)
+o_supply_reach:slider_set_step_size(1, 0)
+o_supply_reach:set_default_value(5)
+o_supply_reach:set_assigned_section("army_supply")
+if IN_CAMPAIGN then o_supply_reach:set_locked(true, LOCK_REASON) end
+
+local o_settle_turns = m:add_new_option("settle_turns", "slider")
+o_settle_turns:set_text("Turns to settle new land")
+o_settle_turns:set_tooltip_text("Turns before a settlement you take can supply your armies. 0: at once.")
+o_settle_turns:slider_set_precision(0)
+o_settle_turns:slider_set_min_max(0, 10)
+o_settle_turns:slider_set_step_size(1, 0)
+o_settle_turns:set_default_value(5)
+o_settle_turns:set_assigned_section("army_supply")
+if IN_CAMPAIGN then o_settle_turns:set_locked(true, LOCK_REASON) end
+
+local o_supply_step = m:add_new_option("supply_step", "slider")
+o_supply_step:set_text("Upkeep for each turn of road")
+o_supply_step:set_tooltip_text("Each turn of road after the first adds this much to an army's upkeep.")
+o_supply_step:slider_set_precision(0)
+o_supply_step:slider_set_min_max(0, 15)
+o_supply_step:slider_set_step_size(1, 0)
+o_supply_step:set_default_value(5)
+o_supply_step:set_assigned_section("army_supply")
+if IN_CAMPAIGN then o_supply_step:set_locked(true, LOCK_REASON) end
+
+local o_supply_max = m:add_new_option("supply_max", "slider")
+o_supply_max:set_text("Most upkeep from a road")
+o_supply_max:set_tooltip_text("The most a supply road can add to an army's upkeep. An army whose road is cut pays this.")
+o_supply_max:slider_set_precision(0)
+o_supply_max:slider_set_min_max(0, 50)
+o_supply_max:slider_set_step_size(1, 0)
+o_supply_max:set_default_value(25)
+o_supply_max:set_assigned_section("army_supply")
+if IN_CAMPAIGN then o_supply_max:set_locked(true, LOCK_REASON) end
+
 m:add_new_section("routes", "Trade route lines")
 
 local o_route_agreements = m:add_new_option("route_agreements", "checkbox")
@@ -282,6 +337,12 @@ o_route_icons:set_text("Resource icons above traffic")
 o_route_icons:set_tooltip_text("Show an available resource permitted by the trade switches. Shipment and contract vehicles show their assigned resource. Empty returns have no icon.")
 o_route_icons:set_default_value(true)
 o_route_icons:set_assigned_section("routes")
+
+local o_route_supply = m:add_new_option("route_supply", "checkbox")
+o_route_supply:set_text("Army supply roads")
+o_route_supply:set_tooltip_text("Show the supply road from each of your armies to the settlement that feeds it.")
+o_route_supply:set_default_value(true)
+o_route_supply:set_assigned_section("routes")
 
 local o_route_size = m:add_new_option("route_size", "dropdown")
 o_route_size:set_text("Line size")

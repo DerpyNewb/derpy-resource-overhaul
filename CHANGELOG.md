@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-09 (not uploaded yet)
+
+- Army supply lines replace the game's own supply lines.
+- Each army draws supplies along a road from your nearest settled settlement.
+- Road drawn on the map: pale supplied, amber stretched, magenta cut.
+- Longer road, higher upkeep; cut road, most upkeep.
+- Enemy armies on the road cut it.
+- Newly taken settlements feed no army for 5 turns.
+- Send supplies: a food cart rides the road to the army.
+- New MCT options: Vanilla supply lines (off), Army supply lines (on), Supply reach in turns (5), Turns to settle new land (5), Upkeep for each turn of road (5%), Most upkeep from a road (25%), Trade route lines: Army supply roads (on).
+- Races without army provisions keep the game's own supply lines.
+- Chaos Dwarfs, Bretonnia and Warriors of Chaos now have supply lines too.
+
 ## 2026-11-08 (second upload)
 
 - Computer armies now handle their provisions. Four new MCT options: Other armies fed at home (on), Other armies buy rations abroad (on), Other armies eat half (off), Other factions make more food (off).

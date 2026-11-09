@@ -490,13 +490,13 @@ Services, province supplies and stock-holding bonuses can coexist. They have dis
 
 Army provisions are **on by default for new campaigns** and frozen into campaign settings. Existing saved switches stay unchanged; older saved settings missing the army switch retain its former off default. When enabled, each eligible field army has a saved cargo ledger tied to its military force. The display combines food into rations, while the ledger retains the original goods for unloading.
 
-An army's meal is `max(1, ceil(unit count / 4))` provisions per owner turn. Normal automatic loading aims to leave **five meals after eating**, with a **ten-meal capacity**. Loading before the meal therefore aims for six meals. Manual loading after a meal aims for five.
+An army's meal is `max(1, ceil(unit count / 4))` provisions per owner turn. Normal automatic loading aims to leave **five meals after eating**, with a **ten-meal capacity**. Loading before the meal therefore aims for six meals. Manual Load fills to the ten-meal capacity, as far as the settlement has food to spare (fixed 2026-11-08; before that it stopped at five).
 
 Each newly tracked eligible army receives **five meals once**, exactly half its initial capacity. Empire, Bretonnia, Dwarf, High Elf, Dark Elf, Kislev and Cathay armies receive Hardtack; other eligible cultures receive Salted Meat. The first meal is due on the next owner turn. A new twenty-unit army therefore starts with 25 goods out of 50, without debiting stores or gold. Existing cargo is preserved without a top-up. A saved force-ID registry prevents another grant after reload, duplicate creation events or ledger retirement; changing the lord does not create a new force ID. Undead and excluded forces receive none.
 
 For a 20-unit army, a meal is five goods. Auto-loading before the meal aims for 30 carried goods, then consumption leaves 25; capacity is 50. This depends on the source settlement having enough removable food.
 
-Loading requires the army's current region to be owned by its faction, on land and not besieged. It takes common provisions from that region, retaining settlement/named demand reserves and explicit Keep. The army can spend the automatic reserve allocated for army loading. It cannot pull from the whole realm, an ally, foreign territory or a sea region. Garrison forces, scripted shipment escorts, stores-ineligible cultures, Vampire Counts and Vampire Coast are excluded.
+Loading requires the army's current region to be owned by its faction, on land and not besieged. With Army supply lines on, a player's army that has a supply line cannot load in a settlement its faction took fewer than "Turns to settle new land" turns ago (default 5); computer armies and armies the lines do not cover still can. It takes common provisions from that region, retaining settlement/named demand reserves and explicit Keep. The army can spend the automatic reserve allocated for army loading. It cannot pull from the whole realm, an ally, foreign territory or a sea region. Garrison forces, scripted shipment escorts, stores-ineligible cultures, Vampire Counts and Vampire Coast are excluded.
 
 The army view offers automatic loading, manual loading and unloading. Unloading returns original goods only as far as local capacity allows, retains the rest on the army, and pauses automatic loading. Local loading and unloading require an eligible local destination.
 
@@ -519,6 +519,19 @@ Human purchases are manual: Auto-refill never spends gold on field rations. Elig
 Partial food is consumed, but an incomplete meal still advances the shortage count. One full meal resets the count and removes the shortage penalties. The mechanic does not script direct hit-point damage.
 
 At sea an army retains cargo and eats it; it can buy limited field rations but cannot load or unload settlement stores. A shrinking force retains existing cargo even if it exceeds its newly reduced capacity; army composition changes do not mint food. Changing the general preserves the force's inventory. Destruction/retirement loses cargo, and ownership changes discard the old owner's cargo. Nearby armies do not automatically inherit it.
+
+### Army supply lines (2026-11-09)
+
+Replaces the game's own supply lines (each army after a player's first making every army cost more upkeep) with a road per army. Design: `docs/superpowers/specs/2026-11-08-resource-overhaul-supply-lines-design.md`; code: `flows.lua` (`F.supply_line`, `F.supply_force`, `F.supply_carts_turn`), `terrain_routes.lua` (`R.supply_links`).
+
+- **Which armies.** A player's field armies whose race carries provisions. Garrisons, caravans, convoys, Black Arks, Gotrek, set-piece armies and CA's other exempt force types have no line. Races without provisions (Vampire Counts, Vampire Coast, the daemon and no-stores races: Khorne, Tomb Kings, Beastmen among them) keep the game's own rule. Chaos Dwarfs, Bretonnia and Warriors of Chaos, whom CA never charged, do get lines (author, 2026-11-09).
+- **Source.** The nearest of the faction's own settlements by straight line (three tried), on land, not besieged and **settled**: owned for at least "Turns to settle new land" turns (default 5). Captures are recorded when a region changes hands; land held when the mod first sees a save, and CA's start-of-campaign transfers, count as settled. Never an ally's or vassal's.
+- **Road.** A search from the army's hex to the source within the reach (turns x 40 hexes), walled by land hostile to the army's faction (at war, or "very unfriendly" or worse). The army's own region is never a wall.
+- **States.** Home (in its own settled land, no road), Supplied (road of at most half the reach), Stretched (longer, within reach), Cut (no road within reach, or an enemy army within 3 hexes of a road point more than 3 hexes from the army).
+- **Upkeep.** A custom force bundle at the player's turn start and turn end: 0 at home or on a one-turn road, then "Upkeep for each turn of road" (5%) per extra turn, up to "Most upkeep from a road" (25%); a cut road pays the most. One penalty, never two: wherever the game's own rule applies (the Vanilla box ticked, Army provisions or Army supply lines off, or a race without provisions), this mod's upkeep is 0.
+- **Carts.** "Send supplies" (and Auto-refill) sends the army's gap below five meals from the source down the road; it lands after the road's turns, capped at the army's capacity, the rest going home. It turns back on a cut road, is seized by an enemy army within 3 hexes, and settles road encounters without a choice. Auto-refill sends none while an enemy army stands within 3 hexes of the army (Send supplies by hand still goes); a cart refused for lack of food says which settlement has none to spare. Carts survive save and reload.
+- **Map.** One dashed road per army, pale (supplied), amber (stretched) or magenta (cut), up to 40 armies; "Army supply roads" under Trade route lines turns them off.
+- **Live checks (2026-11-09).** Upkeep x1.25 exactly on a cut road; cart sent, arrived, survived a reload and was seized; the game's turn-start listener runs through the replacement; the 8,040-call scene sweep on load costs 32 ms.
 
 In an existing save, armies that already have a cargo ledger keep it unchanged; other eligible armies receive the one-time five-meal cargo on the first tick after loading (`F.provision_seed_all`). Previewing does not seed or refill them, and a saved turn guard prevents duplicate meals from repeated callbacks.
 
@@ -560,11 +573,17 @@ The Vault is reached through the mod's HUD opener/hub and closes when the player
 | Tolls and blockades | On | Tolls on agreement trade and contract carts, and blockades by enemy armies near a road; off, neither. Filled as on into an older save |
 | Road danger | 20 | 0–50: the chance in a hundred that a cargo meets trouble in a turn on the most dangerous land; half as dangerous land, half as likely; 0 turns road encounters off |
 | Bandits on the roads | On | Bandits, highwaymen and washed-out roads, and the Road guards row on the Trade tab; off, the roads are safe. Filled as on into an older save |
+| Vanilla supply lines | Off (Replace) | Ticked: the game's own army-count penalty stays and this mod's roads add no upkeep. Never frozen; multiplayer always unticked |
+| Army supply lines | On | A supply road per player army (see Army supply lines); off, no roads, no road upkeep, no carts |
+| Supply reach in turns | 5 | 1–10, at 40 hexes a turn; past half of it a road is stretched |
+| Turns to settle new land | 5 | 0–10; a settlement taken more recently feeds no army |
+| Upkeep for each turn of road | 5% | 0–15%, for each turn of road after the first |
+| Most upkeep from a road | 25% | 0–50%; a cut road pays it |
 | Disable natural random dilemmas | Off | Suppresses CA's natural random dilemmas, not all scripted/story dilemmas |
 | Line size (trade route lines) | Small | Small (dashes 0.35x, cargo marker 0.7x), Normal, Large (1.5x): the dashes and the cargo marker on the campaign map |
 | Line colours (trade route lines) | Default | Default (gold, blue, green, red), Bright, Pale, Colour-blind friendly: the four owner colours on the campaign map and the Vault Map |
 
-Settings are frozen into saved campaign state when first initialized, except the two trade route line settings: they move no goods, stay open in a campaign and show at the next redraw. Added keys are filled once for an older save without replacing its existing settings; pre-provisions saved settings retain the former off default for that one key. Frontend changes are not a reliable way to reconfigure a campaign whose settings are already saved. Multiplayer uses defaults to avoid disagreement between client MCT values; new campaigns now include army provisions.
+Settings are frozen into saved campaign state when first initialized, except the Vanilla supply lines box and the two trade route line settings: they move no goods, stay open in a campaign and show at the next redraw. Added keys are filled once for an older save without replacing its existing settings; pre-provisions saved settings retain the former off default for that one key. Frontend changes are not a reliable way to reconfigure a campaign whose settings are already saved. Multiplayer uses defaults to avoid disagreement between client MCT values; new campaigns now include army provisions.
 
 ### AI participation
 
