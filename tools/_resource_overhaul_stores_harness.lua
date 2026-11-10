@@ -1041,6 +1041,25 @@ eq(switch(2, "export").images[0], S.CHECK[false][1], "the second too")
 eq(switch(1, "import").images[0], S.CHECK[true][1], "the imports untouched")
 press(bulk("export", "allow")); eq(SENT[2], "fac_a|export|all_allow", "allow all exports")
 eq(switch(1, "export").images[0], S.CHECK[true][1], "ticked again")
+-- WHAT A SWITCH DOES, in its tooltip (Workshop, 2026-11-10: "how does the mod choose what to import? do these imports
+-- cost me something?"): how a partner picks the good, that it is free, and that a switch stops your own carts too
+do
+    local function has(c, text) return string.find(c.tip or "", text, 1, true) ~= nil end
+    eq(has(switch(1, "import"), "from the partner's cheapest store"), true, "an import box says how a partner picks it: " .. tostring(switch(1, "import").tip))
+    eq(has(switch(1, "import"), "until your capital holds the wanted amount"), true, "and how much it sends")
+    eq(has(switch(1, "import"), "The goods cost you nothing."), true, "and that it is free")
+    eq(has(switch(1, "import"), "Your own carts stop carrying it at once."), true, "and what refusing it stops, at once")
+    eq(has(switch(1, "export"), "Your own carts stop carrying it at once."), true, "an export box warns the same")
+    eq(has(bulk("import", "stop"), "You and your partners still pay import duty."), true, "Stop all imports: duty is still paid, by both")
+    eq(has(bulk("import", "stop"), "still come in"), false, "and no longer says imports still come in")
+    eq(has(bulk("export", "stop"), "Your own carts stop carrying them at once."), true, "Stop all exports warns about your carts")
+    press(switch(1, "import"))
+    eq(has(switch(1, "import"), "You and your partners still pay import duty."), true, "a refused import: duty is still paid")
+    eq(has(switch(1, "import"), "your own carts do not carry it"), true, "and your carts stop")
+    eq(has(switch(1, "import"), "still come in"), false, "and no word of imports still coming in")
+    press(switch(1, "import"))
+    eq(switch(1, "import").images[0], S.CHECK[true][1], "the import box ticked again")
+end
 -- EVERY HEADER FITS ITS COLUMN, on every tab: a header that did not was shrunk by the engine
 -- (seen in game 2026-10-02: "Space per good" in 100px). HEAD_CHAR_W is calibrated from that.
 local saved_view, saved_focus = S.view, S.focus
@@ -1227,6 +1246,71 @@ do
        "the row says it: " .. coal.tip)
     eq(string.find(other.tip, "spoils", 1, true), nil, "a good that keeps says nothing")
     fl.spoil_info, fl.owned = nil, owned_before
+    S.refresh()
+end
+-- A TRADE SWITCH GREYS SEND HERE AND SAYS WHY (2026-11-10): flows.lua F.send_plan has no plan, and the tooltip names
+-- the switch rather than blaming the stores
+do
+    local fl, plan = DERPY_MR_FLOWS, PLAN.coal
+    local function coal_send()
+        for _, row in ipairs(S.data) do if row.stem == "coal" then return row.send end end
+    end
+    PLAN.coal = nil; S.refresh()
+    eq(string.find(coal_send().tip, "trade switches", 1, true), nil, "no switch: another reason")
+    fl.stopped = function(fk, dir, stem) eq(fk, LOCAL, "the local faction's switch"); return dir == "import" and stem == "coal" end
+    S.refresh()
+    eq(coal_send().off, true, "a switched-off good cannot be sent")
+    eq(string.find(coal_send().tip, "Your trade switches stop carts carrying Coal.", 1, true) ~= nil, true,
+       "and the button says it is the switch: " .. coal_send().tip)
+    fl.stopped = function(_fk, dir, stem) return dir == "export" and stem == "coal" end
+    S.refresh()
+    eq(string.find(coal_send().tip, "Your trade switches stop carts carrying Coal.", 1, true) ~= nil, true, "the export switch too")
+    fl.stopped, PLAN.coal = nil, plan
+    S.refresh()
+end
+-- WHAT USES A STORE (Workshop, 2026-11-10: "what exactly consumes my food?"): the forecast tooltip names each part of
+-- the "uses" figure, and they add up to it (4 + 5 + 2 + 1 = 12). Iron's production is war materials, not food.
+do
+    local fl = DERPY_MR_FLOWS
+    local saved = { fl.stock_view, fl.stock_forecast, fl.need }
+    local rec = { provisions = 12, meals = 4, army_need = 5, supplied = { provisions = 2 }, named = { grain = 1, iron = 3 } }
+    local fc = { held = 100, use_per_turn = 12, spoil = 0, mode = "stored", cover = 8 }
+    fl.stock_view = function(_f, region) eq(region:name(), "reg_a", "the settlement asked about"); return { recurring = rec, due = {} } end
+    fl.stock_forecast = function() return { provisions = fc } end
+    fl.need = function(fk) eq(fk, LOCAL, "the local faction's rations"); return 2 end
+    local function has(tip, text) return string.find(tip, text, 1, true) ~= nil end
+    local tip = S.forecast_tip(S.local_faction(), A, nil, "provisions")
+    eq(has(tip, "The settlement itself eats 4 of that each turn, 2 for each settlement level."), true, "its own meals: " .. tip)
+    eq(has(tip, "Armies refilling here take 5 of that each turn."), true, "the armies")
+    eq(has(tip, "Province supplies take 2 of that each turn."), true, "the province supplies")
+    eq(has(tip, "Production here takes 1 of that each turn."), true, "this category's production only")
+    fc.use_per_turn = 0
+    tip = S.forecast_tip(S.local_faction(), A, nil, "provisions")
+    eq(has(tip, "of that each turn"), false, "nothing used: no parts")
+    fl.stock_view, fl.stock_forecast, fl.need = saved[1], saved[2], saved[3]
+end
+-- WHAT A SETTLEMENT EATS (Workshop, 2026-11-10: "does every settlement consume something, and how much?"): the
+-- Settlements list's tooltip, from flows.lua F.settlement_meals; Alpha is level 2, so the stub's 2 a level makes 4
+do
+    local fl = DERPY_MR_FLOWS
+    local view, focus = S.view, S.focus
+    fl.settlement_meals = function(f, level) eq(f:name(), LOCAL, "the local faction's meals"); return 2 * level end
+    fl.need = function() return 2 end
+    S.view, S.focus = "settlements", nil
+    local function alpha_tip()
+        for _, row in ipairs(S.view_model(S.read_realm(FACTIONS.fac_a)).rows) do
+            if row.open == "reg_a" then return row.tip end
+        end
+    end
+    eq(string.find(alpha_tip(), "It eats 4 provisions a turn, 2 for each settlement level.", 1, true) ~= nil, true,
+       "Alpha's row says what it eats: " .. alpha_tip())
+    fl.settlement_meals, fl.need = function() return 1 end, function() return 1 end
+    eq(string.find(alpha_tip(), "It eats 1 provision a turn, 1 for each settlement level.", 1, true) ~= nil, true,
+       "one meal is singular: " .. alpha_tip())
+    fl.settlement_meals = function() return 0 end
+    eq(string.find(alpha_tip(), "It eats", 1, true), nil, "a settlement that eats nothing says nothing")
+    fl.settlement_meals, fl.need = nil, nil
+    S.view, S.focus = view, focus
     S.refresh()
 end
 -- A RECIPE'S STATE, the word both views show: the economy's own verdict, never a guess
@@ -2604,9 +2688,9 @@ do
     eq(row.tip,"In your own lands.","says so")
     NOTE={state="cut",upkeep=25}; S.refresh()
     head,row=road_rows(); eq(row[1].."/"..row[2].."/"..row[3].."/"..row[4],"Cut off/-/-/+25%","a cut army has no source and no length")
-    eq(row.tip,"Cut off. Upkeep +25%.","and its sentence")
+    eq(row.tip,"Cut off. Upkeep +25%.\nForaging and buying from the locals costs the most.","and its sentence says why it costs the most")
     NOTE={state="cut",upkeep=25,by="fac_x"}; S.refresh()
-    head,row=road_rows(); eq(row.tip,"Cut off. Upkeep +25%.\nAn enemy army blocks the road.","an enemy on the road is named on a line of its own")
+    head,row=road_rows(); eq(row.tip,"Cut off. Upkeep +25%.\nForaging and buying from the locals costs the most.\nAn enemy army blocks the road.","an enemy on the road is named on a line of its own")
     -- SEND SUPPLIES (Task 5): Auto's supply cart by hand, beside Load, refused with the reason and sent through the door
     local function cart_row()
         for i,r in ipairs(S.data) do if r.provisions=="send" then return r,i end end
@@ -2767,9 +2851,10 @@ do
     NOTE={state="supplied",source="reg_a",turns=1,upkeep=0}; settle()
     eq(tip_has("Supplied from Alpha, 1 turn away. Upkeep +0%."),true,"one turn away is singular")
     NOTE={state="cut",upkeep=25}; settle()
-    eq(tip_has("Cut off. Upkeep +25%."),true,"a cut army"); eq(tip_has("blocks the road"),false,"with nobody on the road")
+    eq(tip_has("Cut off. Upkeep +25%.\nForaging and buying from the locals costs the most."),true,"a cut army, and why it costs the most")
+    eq(tip_has("blocks the road"),false,"with nobody on the road")
     NOTE={state="cut",upkeep=25,by="fac_x"}; settle()
-    eq(tip_has("Cut off. Upkeep +25%.\nAn enemy army blocks the road."),true,"and with an enemy on it")
+    eq(tip_has("Cut off. Upkeep +25%.\nForaging and buying from the locals costs the most.\nAn enemy army blocks the road."),true,"and with an enemy on it")
     NOTE={state="home",source="reg_a",turns=0,upkeep=0}; settle()
     eq(tip_has("In your own lands."),true,"an army at home")
     -- WALKING: an army that moves every poll is never asked (a search a poll), and its last sentence stays

@@ -553,8 +553,12 @@ def supply_bundles():
     """The army supply road's upkeep (design 2026-11-08, section 4): a force bundle with NO effect rows. flows.lua
     F.supply_turn builds a custom bundle on this record and adds the upkeep effect at each army's own figure, so the
     record carries only the key, the icon and the words the army's effects list shows."""
-    return [("derpy_mr_supply_distance", "growth.png", "Supply road",
-             "The further this army is from the settlement that feeds it, the more it costs.", [])]
+    # CA's bundle voice (author, 2026-11-09): "This army is being prioritized for supplies, allowing it to operate
+    # more independently of friendly territory." One paragraph: the engine reads this loc as it is, so no line break.
+    return [("derpy_mr_supply_distance", "growth.png", "Supply Road",
+             "This army draws its supplies along a road from one of your settlements. The longer the road, the more it "
+             "costs to keep the carts moving. If the road is cut, no supplies reach the army, and foraging and buying "
+             "from the locals costs the most of all.", [])]
 
 
 def service_bundles():

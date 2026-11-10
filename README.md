@@ -19,10 +19,14 @@ Until 2026-10-02 this mod was called Derpy More Resources. Its packs are now
 `derpy_resource_overhaul_oldworld.pack`. Every in-game key is
 unchanged, and so are the DB table file names inside the packs.
 
-**Status:** not on the Steam Workshop yet. Tested in Immortal Empires and Immortal Empires
-Expanded campaigns through a live connection to the running game, most recently on
-2026-11-03 (version 1.0, see CHANGELOG.md). Not yet tested: the Old World and Realm of Chaos
-campaigns with the trade roads, and multiplayer on two machines.
+**Status:** on the Steam Workshop as
+[Derpy's Resource Overhaul](https://steamcommunity.com/sharedfiles/filedetails/?id=3833299348),
+with its [IEE](https://steamcommunity.com/sharedfiles/filedetails/?id=3833299507) and
+[Old World](https://steamcommunity.com/sharedfiles/filedetails/?id=3833299575) submods. Last
+updated 2026-11-09 with army supply lines (see CHANGELOG.md). Tested in Immortal Empires and
+Immortal Empires Expanded campaigns through a live connection to the running game. Not yet
+tested: the Old World and Realm of Chaos campaigns with the trade roads, and multiplayer on
+two machines.
 
 ## The goods
 
@@ -95,6 +99,31 @@ Low-detail carts and boats drive the roads, in the supplier's own style, each wi
 the good it carries. They are decoration: the goods move on the turn, not with the carts, and
 the carts show only what the economy will really send. They are drawn in single player only.
 
+## Army supply lines
+
+Since 2026-11-09 the mod replaces the game's own supply lines, where every army after the
+first raises the upkeep of all of them. Instead each army draws on a road to the nearest
+settlement its faction has held for 5 turns. An army in such land needs no road.
+
+- **Upkeep by road length.** A one-turn road costs nothing extra. Each further turn adds 5%, up
+  to 25%, the cost of keeping the carts moving. A road longer than the reach (5 turns) or cut by
+  an enemy army pays the full 25%: no supplies get through, and foraging and buying from the
+  locals costs the most.
+- **Fresh conquests feed nobody.** A settlement taken in the last 5 turns cannot be a source,
+  and a player army standing in it cannot refill there.
+- **Food carts.** Send supplies puts a cart of food on the road, and Auto refill sends them on
+  its own. A cart takes the road's turns to arrive, and an enemy army can seize it.
+- **Blocked roads.** An enemy army on the road sends the army to the road of another of the three
+  nearest settlements. Only when none of them is clear is the line cut.
+- **On the map.** Each army's road is drawn pale when supplied, amber when stretched and magenta
+  when cut.
+- **One penalty, never two.** Races that carry no provisions (Vampire Counts, Vampire Coast, the
+  daemons, and the races with no stores) keep the game's rule. So does everyone when the MCT's
+  Vanilla supply lines box is ticked, or provisions or supply lines are off. Chaos Dwarfs,
+  Bretonnia and Warriors of Chaos, whom the game never charged, get lines.
+
+Every figure is an MCT setting. `docs/RESOURCE_OVERHAUL_MECHANICS.md` has the full rules.
+
 ## Other mods
 
 - **Immortal Empires Expanded.** `derpy_resource_overhaul_iee.pack` extends the conditions to
@@ -112,6 +141,10 @@ the carts show only what the economy will really send. They are drawn in single 
   good on the settlement label, because the engine only shows map deposits there. Another mod
   that overrides the same file will conflict. The generator rebuilds the patch from the
   installed game's own copy, so re-run it after a game patch.
+- **One CA function is wrapped.** The supply lines wrap CA's global `apply_upkeep_penalty`
+  (from `wh_campaign_setup.lua`) at the first tick rather than overriding its file. Another
+  mod that replaces or wraps the same function may conflict: CA's listeners call whichever
+  version is the global at the time.
 
 ## Building it
 
@@ -177,8 +210,9 @@ checks every build before writing it:
   of ten or more regions that CA's maps lack (IEE's Ind, Khuresh, Nippon). Every chain a map
   mod's own port, settlement or mine slots permit must be CA's or have rows in its pack.
 - **Lua harnesses.** `gen_mr_ui.py --selftest` runs the shipped Vault, flows and road scripts
-  under Lua 5.1 against stubbed game objects, then 60 mutants, each a plausible mistake in the
-  economy, the provisions, the contracts or the map, and fails if any one survives.
+  under Lua 5.1 against stubbed game objects, then the mutation suites, each mutant a plausible
+  mistake in the economy, the provisions, the supply lines, the contracts or the map, and fails
+  if any one survives.
 - **Selftest cases.** The selftest breaks each of these on purpose (an ungated row, a second
   building set, a foreign bonus, a blanket condition) and confirms the check catches it.
 

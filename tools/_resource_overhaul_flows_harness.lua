@@ -1326,6 +1326,13 @@ local s5 = region("s5", 6400, 0, 200, { iron = 1 }); own(sP, s5)
 eq(F.send_plan(sP.iface, "s4", "iron"), nil, "one unit would all be lost: no send")
 eq(F.send_plan(sP.iface, "s4", "salt"), nil, "nobody holds it: no send")
 eq(F.send_plan(sP.iface, "h1", "coal"), nil, "a settlement that is not yours: no send")
+-- A TRADE SWITCH STOPS SEND HERE as it stops F.ship (2026-11-10): no plan, so the button greys out instead of doing nothing
+F.book("sP").stop = { import = { brass = true } }
+eq(F.send_plan(sP.iface, "s4", "brass"), nil, "an import switch: no send")
+F.book("sP").stop = { export = { brass = true } }
+eq(F.send_plan(sP.iface, "s4", "brass"), nil, "an export switch: no send")
+F.book("sP").stop = nil
+eq(F.send_plan(sP.iface, "s4", "brass").n, 38, "both switches back on: it sends again")
 local s1_before = s1.held.coal
 F.request("sP", "send", "coal", "h1"); eq(s1.held.coal, s1_before, "and the request moves nothing")
 -- two equally full sources: the one whose key comes first, so every machine picks alike
@@ -3813,6 +3820,8 @@ end)()
     a.level = 3; b.level = 1
     local v = F.stock_view(f.iface, a.iface)
     eq(v.recurring.provisions, 6, "settlement level drives recurring food")
+    eq(v.recurring.meals, 6, "and the settlement's own meals are kept apart for the tooltip")
+    eq(F.settlement_meals(f.iface, 3), 6, "the Settlements list's figure: 2 a level")
     eq(v.auto_keep.provisions, 30, "five turns kept")
     eq(v.auto_target.provisions, 60, "ten turns requested")
     eq(v.totals.war, 390, "rare stock excluded from totals")
@@ -3822,11 +3831,14 @@ end)()
     eq(F.state.ships, nil, "view creates no shipment list")
     local supply = F.supply_book(f.name, a.prov, true); supply.materials = true
     eq(F.stock_view(f.iface, a.iface).recurring.building, 4, "owned province supply cost")
+    eq(F.stock_view(f.iface, a.iface).recurring.supplied.building, 4, "and the supply's share kept apart for the tooltip")
+    eq(F.stock_view(f.iface, b.iface).recurring.supplied, nil, "nothing supplied from a settlement that is not the capital")
     eq(F.stock_view(f.iface, b.iface).recurring.building, nil, "only capital pays supply")
     b.missing_pools = true
     eq(F.stock_view(f.iface, b.iface).recurring.provisions, nil, "missing pools have no demand")
     b.missing_pools = false
     F.state.rates.upkeep, F.state.rates.supply = false, false
+    eq(F.settlement_meals(f.iface, 3), 0, "settlement upkeep off: the list says it eats nothing")
     v = F.stock_view(f.iface, a.iface)
     eq(v.auto_keep.war, 0, "disabled bonuses have no holding floor")
     eq(next(v.recurring), nil, "disabled phases create no recurring demand")
@@ -5250,6 +5262,7 @@ end)()
     F.upkeep(p.iface)
     eq(r.held.grain, 94, "Plenty eats 3 a level")
     eq(F.recurring_use(p.iface, r.iface).provisions, 6, "and the forecast knows it")
+    eq(F.settlement_meals(p.iface, 2), 6, "and so does the Settlements list")
     set("rations", "rationing")
     r.held.grain = 100; F.upkeep(p.iface)
     eq(r.held.grain, 98, "Rationing eats 1 a level")
@@ -6875,6 +6888,24 @@ end)()
     TURN = 11; F.turn_start(T.iface); l = line(new, 60); TURN = 10
     eq(l.state .. tostring(l.by) .. (starts - s0), "cutslX0", "an enemy army arriving on a later turn cuts the kept road")
     X.armies = {}; F.enemy_cache = {}
+    -- A BLOCKED ROAD FALLS BACK TO THE NEXT SOURCE (author, 2026-11-10): s_side, 100 hexes north of s_new, is the
+    -- nearest source of an army half way up; an enemy on its road sends the army to s_old, both blocked cut it
+    local side = region("s_side", 60, Y + 100, 1000, {})
+    own(P, side); LAND[#LAND + 1] = side
+    F.invalidate_reach()
+    l = line(new, 60, Y + 50)
+    eq(l.state .. tostring(l.source), "supplieds_side", "the nearest source, with nobody on its road")
+    X.armies = { field(X, 60, Y + 80, 7101) }
+    F.enemy_cache = {}; F.invalidate_reach()
+    l = line(new, 60, Y + 50)
+    eq(l.state .. tostring(l.source) .. tostring(l.by), "supplieds_oldnil", "an enemy on the nearest road: the next source feeds it")
+    eq(l.path[#l.path][1] .. "," .. (l.path[#l.path][2] - Y), "0,0", "along its own road")
+    X.armies = { field(X, 60, Y + 80, 7101), field(X, 30, Y + 25, 7102) }
+    F.enemy_cache = {}; F.invalidate_reach()
+    l = line(new, 60, Y + 50)
+    eq(l.state .. tostring(l.source) .. tostring(l.by), "cuts_sideslX", "both roads blocked: cut, shown on the nearest road")
+    X.armies = {}; F.enemy_cache = {}; F.invalidate_reach()
+    table.remove(LAND); lose(P, side)
 
     -- no line at all
     F.state.rates.supply_lines = false

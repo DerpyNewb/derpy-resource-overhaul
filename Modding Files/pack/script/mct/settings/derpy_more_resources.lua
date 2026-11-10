@@ -261,7 +261,7 @@ o_vanilla_supply_lines:set_assigned_section("army_supply")
 
 local o_supply_lines = m:add_new_option("supply_lines", "checkbox")
 o_supply_lines:set_text("Army supply lines")
-o_supply_lines:set_tooltip_text("Each of your armies draws supplies from one of your settlements along a road. The further the road, the more the army costs. A cut road feeds nothing and costs the most. Armies in your own settled land need no road. Land you took in the last few turns feeds no army yet. Turns to settle new land sets how many. With Army provisions off or Vanilla supply lines ticked, the roads add no upkeep.")
+o_supply_lines:set_tooltip_text("Each of your armies draws supplies from one of your settlements along a road. The further the road, the more it costs to keep the carts moving. A cut road brings no supplies, and foraging and buying from the locals costs the most. Armies in your own settled land need no road. Land you took in the last few turns feeds no army yet. Turns to settle new land sets how many. With Army provisions off or Vanilla supply lines ticked, the roads add no upkeep.")
 o_supply_lines:set_default_value(true)
 o_supply_lines:set_assigned_section("army_supply")
 if IN_CAMPAIGN then o_supply_lines:set_locked(true, LOCK_REASON) end
@@ -298,7 +298,7 @@ if IN_CAMPAIGN then o_supply_step:set_locked(true, LOCK_REASON) end
 
 local o_supply_max = m:add_new_option("supply_max", "slider")
 o_supply_max:set_text("Most upkeep from a road")
-o_supply_max:set_tooltip_text("The most a supply road can add to an army's upkeep. An army whose road is cut pays this.")
+o_supply_max:set_tooltip_text("The most a supply road can add to an army's upkeep. An army whose road is cut pays this: foraging and buying from the locals costs the most.")
 o_supply_max:slider_set_precision(0)
 o_supply_max:slider_set_min_max(0, 50)
 o_supply_max:slider_set_step_size(1, 0)

@@ -53,11 +53,13 @@ SUPPLY_RATES = (
     ("supply_step", "Upkeep for each turn of road",
      "Each turn of road after the first adds this much to an army's upkeep.", 0, 15, 5),
     ("supply_max", "Most upkeep from a road",
-     "The most a supply road can add to an army's upkeep. An army whose road is cut pays this.", 0, 50, 25),
+     "The most a supply road can add to an army's upkeep. An army whose road is cut pays this: foraging and "
+     "buying from the locals costs the most.", 0, 50, 25),
 )
 SUPPLY_LINES_SWITCH = ("supply_lines", "Army supply lines",
-    "Each of your armies draws supplies from one of your settlements along a road. The further the road, the more the "
-    "army costs. A cut road feeds nothing and costs the most. Armies in your own settled land need no road. Land you "
+    "Each of your armies draws supplies from one of your settlements along a road. The further the road, the more it "
+    "costs to keep the carts moving. A cut road brings no supplies, and foraging and buying from the locals costs the "
+    "most. Armies in your own settled land need no road. Land you "
     "took in the last few turns feeds no army yet. Turns to settle new land sets how many. "
     "With Army provisions off or Vanilla supply lines ticked, the roads add no upkeep.", True)
 # THE RATES (flows spec section 6): key, label, tooltip, min, max, default. One source for the
@@ -3042,8 +3044,8 @@ def check_supply_upkeep_mutations():
          'if state == "cut" then return rates.supply_step end'),
         ("the maximum ignored", "return math.min(rates.supply_max, math.max(0, rates.supply_step * (line.turns - 1)))",
          "return math.max(0, rates.supply_step * (line.turns - 1))"),
-        ("the computer charged", "    if not faction:is_human() then return end\n    -- THE GAME'S BUNDLE OFF",
-         "    -- THE GAME'S BUNDLE OFF"),
+        ("the computer charged", "    if not faction:is_human() then return end\n    -- Strip CA's bundle now",
+         "    -- Strip CA's bundle now"),
         ("the bundle stacked",
          "    if mf:has_effect_bundle(F.SUPPLY_BUNDLE) then\n"
          "        cm:remove_effect_bundle_from_force(F.SUPPLY_BUNDLE, mf:command_queue_index())\n"

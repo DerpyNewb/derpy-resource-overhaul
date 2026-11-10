@@ -98,7 +98,7 @@ derpy_mr_edict_open	Trade crossing your lands pays no tolls. Trade income +5%.	O
 derpy_mr_edict_closed	Other factions' trade cannot cross your lands. Control +1 in every province.	Closed roads	faction	1	barrier.png	true	false	true
 derpy_mr_army_hungry	Two missed meals. Refill locally or buy field rations where available.	Short rations	force	1	growth.png	false	false	true
 derpy_mr_army_starved	Three or more missed meals. A full meal clears these penalties.	Empty provision wagons	force	1	growth.png	false	false	true
-derpy_mr_supply_distance	The further this army is from the settlement that feeds it, the more it costs.	Supply road	force	1	growth.png	false	false	true
+derpy_mr_supply_distance	This army draws its supplies along a road from one of your settlements. The longer the road, the more it costs to keep the carts moving. If the road is cut, no supplies reach the army, and foraging and buying from the locals costs the most of all.	Supply Road	force	1	growth.png	false	false	true
 derpy_mr_rc_army_ammo	Paid for from your stores: ammunition +20% (5 turns).	Ammunition Train	force	1	ammo.png	false	false	true
 derpy_mr_rc_army_forge	Paid for from your stores: armour +15 (5 turns).	Field Forge	force	1	armour.png	false	false	true
 derpy_mr_rc_army_remounts	Paid for from your stores: replenishment +10% (5 turns).	Remounts	force	1	replenishment.png	false	false	true

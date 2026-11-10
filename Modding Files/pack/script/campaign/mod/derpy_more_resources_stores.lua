@@ -1106,9 +1106,9 @@ DERPY_MR_LOC_KEYS = {
     ["Allow all "] = "derpy_mr_ui_278c53a96e",
     ["Stop all "] = "derpy_mr_ui_d153ba9e62",
     ["From next turn every resource can be traded again and earn trade income."] = "derpy_mr_ui_cfbb700901",
-    ["From next turn no resource can be traded or earn trade income."] = "derpy_mr_ui_d0618a5640",
+    ["From next turn no resource can be traded or earn trade income.\nYour own carts stop carrying them at once."] = "derpy_mr_ui_a6266a69a4",
     ["Take every resource your trade partners send to your stores."] = "derpy_mr_ui_f85fe8117a",
-    ["Refuse every resource your trade partners send.\nTrade agreement imports still come in with import duty."] = "derpy_mr_ui_a1092e68ce",
+    ["Refuse every resource your trade partners send.\nYour own carts stop carrying them at once.\nYou and your partners still pay import duty."] = "derpy_mr_ui_d1119e4d98",
     ["sent {1} and received {2}"] = "derpy_mr_ui_84871287aa",
     ["Recruits last turn"] = "derpy_mr_ui_4c58cb4a29",
     ["Guards ride with every cart and convoy you send.\nThey cost 5% of the cargo's value when it leaves.\nThey make trouble on the road half as likely."] = "derpy_mr_ui_3e18f60438",
@@ -1131,16 +1131,17 @@ DERPY_MR_LOC_KEYS = {
     ["Last turn:"] = "derpy_mr_ui_b6f366013c",
     ["{1}: paid {2} and received {3}"] = "derpy_mr_ui_62ae77d784",
     ["Nothing paid or received."] = "derpy_mr_ui_cc0fbd3d31",
-    ["{1} is kept out of trade and earns no trade income.\nClick to trade it again from next turn."] = "derpy_mr_ui_19362ce827",
-    ["{1} can be traded and earns trade income.\nClick to keep it out of trade from next turn."] = "derpy_mr_ui_1ffaef82e2",
-    ["Your trade partners send you no {1}.\nTrade agreement imports still come in.\nClick to take it again."] = "derpy_mr_ui_b91ae092cc",
-    ["Your trade partners can send you {1}.\nClick to refuse it."] = "derpy_mr_ui_e9b4d71631",
+    ["{1} is kept out of trade and earns no trade income.\nYour own carts do not carry it either.\nClick to trade it again from next turn."] = "derpy_mr_ui_2cb7e49022",
+    ["{1} can be traded and earns trade income.\nClick to keep it out of trade from next turn. Your own carts stop carrying it at once."] = "derpy_mr_ui_97d43e9742",
+    ["Your trade partners send you no {1}, and your own carts do not carry it.\nYou and your partners still pay import duty.\nClick to take it again."] = "derpy_mr_ui_710ffeba95",
+    ["Your trade partners can send {1} to your capital.\nA partner sends it until your capital holds the wanted amount. It comes from the partner's cheapest store, and only while it sells for at least 10% more in your capital.\nThe goods cost you nothing. You and your partners pay import duty whether they come or not.\nClick to refuse it. Your own carts stop carrying it at once."] = "derpy_mr_ui_c2f47eaf72",
     ["Use Send here in a settlement to put goods on the road."] = "derpy_mr_ui_8c04f3a4b1",
     ["provisions"] = "derpy_mr_ui_9e72f24a14",
     ["building materials"] = "derpy_mr_ui_4c5bbca164",
     ["war materials"] = "derpy_mr_ui_182362c2e6",
     ["You already have {1} shipments on the road and cannot send more."] = "derpy_mr_ui_806a22b926",
     ["Send {1} {2} from {3}.\n{4} are lost on the way and the rest arrive in {5} or more.\nAn army at war with you can seize it."] = "derpy_mr_ui_24b3e77ceb",
+    ["Your trade switches stop carts carrying {1}.\nTick its boxes on the Trade tab again to send it."] = "derpy_mr_ui_862a95d6ed",
     ["This store of {1} is full."] = "derpy_mr_ui_5818cdebf6",
     ["What is already on the road will fill this store of {1}."] = "derpy_mr_ui_c1f18f3880",
     ["No other settlement of yours can send {1}."] = "derpy_mr_ui_2c84ddaf55",
@@ -1257,7 +1258,10 @@ DERPY_MR_LOC_KEYS = {
     ["It loses {1} to spoiling each turn."] = "derpy_mr_ui_c40868994e",
     ["At this rate it runs out in {1}."] = "derpy_mr_ui_13df2c2216",
     ["That is enough for {1}."] = "derpy_mr_ui_baf0e4e40c",
+    ["The settlement itself eats {1} of that each turn, {2} for each settlement level."] = "derpy_mr_ui_05523eb80c",
     ["Armies refilling here take {1} of that each turn."] = "derpy_mr_ui_7df8b2bb1c",
+    ["Province supplies take {1} of that each turn."] = "derpy_mr_ui_e632cd8414",
+    ["Production here takes {1} of that each turn."] = "derpy_mr_ui_c49f844cb2",
     ["Your production here uses {1} {2} a turn."] = "derpy_mr_ui_f01298d8cf",
     ["{1} {2} arrive on turn {3}."] = "derpy_mr_ui_bf7e65182d",
     ["Where {1} is kept"] = "derpy_mr_ui_35f2f71322",
@@ -1303,6 +1307,9 @@ DERPY_MR_LOC_KEYS = {
     ["Fullest store"] = "derpy_mr_ui_48e74aa3fb",
     ["Click a settlement to see its stores."] = "derpy_mr_ui_2297eadc63",
     ["Using: {1}"] = "derpy_mr_ui_c1144d49ac",
+    ["It eats {1}{2} a turn, {3} for each settlement level."] = "derpy_mr_ui_687ed8c8c3",
+    [" provision"] = "derpy_mr_ui_5778290e8e",
+    [" provisions"] = "derpy_mr_ui_618357a20a",
     [" control"] = "derpy_mr_ui_1b770fb1d6",
     [" growth"] = "derpy_mr_ui_88dd130532",
     ["% cost"] = "derpy_mr_ui_10e4f7333e",
@@ -1356,7 +1363,7 @@ DERPY_MR_LOC_KEYS = {
     ["Supplied from {1}, 1 turn away. Upkeep +{2}%."] = "derpy_mr_ui_c34a43fb13",
     ["Supplied from {1}, {2} turns away. Upkeep +{3}%."] = "derpy_mr_ui_da4c31da07",
     ["Stretched: {1} turns from {2}. Upkeep +{3}%."] = "derpy_mr_ui_79473e2189",
-    ["Cut off. Upkeep +{1}%."] = "derpy_mr_ui_8b4a5ca29b",
+    ["Cut off. Upkeep +{1}%.\nForaging and buying from the locals costs the most."] = "derpy_mr_ui_9db8605104",
     ["An enemy army blocks the road."] = "derpy_mr_ui_8d6eb77b24",
     ["Army {1}"] = "derpy_mr_ui_d195aa1ad9",
     ["{1}: provisions"] = "derpy_mr_ui_4bf42dd83a",
@@ -1416,8 +1423,6 @@ DERPY_MR_LOC_KEYS = {
     ["Army provisions"] = "derpy_mr_ui_c05d45b406",
     ["No armies carry provisions"] = "derpy_mr_ui_2fa3647b2f",
     ["This army eats {1}{2} a turn.\n{3}{4}\nClick to manage its provisions."] = "derpy_mr_ui_8fd91afb64",
-    [" provision"] = "derpy_mr_ui_5778290e8e",
-    [" provisions"] = "derpy_mr_ui_618357a20a",
     ["\nMissed meals: {1}."] = "derpy_mr_ui_778df9cd96",
     ["{1} resources"] = "derpy_mr_ui_a5da103f78",
     ["Each recruit takes resources from your stores by its type and cost.\nAnything missing is paid {1}in gold.{2}"] = "derpy_mr_ui_0959b5c477",
@@ -2123,9 +2128,9 @@ S.BULK_ORDER = { { "export", "allow" }, { "export", "stop" }, { "import", "allow
 S.BULK_LABEL = { allow = S.T("Allow all "), stop = S.T("Stop all ") }
 S.BULK_TIP = {
     export = { allow = S.T("From next turn every resource can be traded again and earn trade income."),
-               stop = S.T("From next turn no resource can be traded or earn trade income.") },
+               stop = S.T("From next turn no resource can be traded or earn trade income.\nYour own carts stop carrying them at once.") },
     import = { allow = S.T("Take every resource your trade partners send to your stores."),
-               stop = S.T("Refuse every resource your trade partners send.\nTrade agreement imports still come in with import duty.") },
+               stop = S.T("Refuse every resource your trade partners send.\nYour own carts stop carrying them at once.\nYou and your partners still pay import duty.") },
 }
 
 -- The flows script's function `name`, or nil without it: the panel must not need it to open.
@@ -2261,17 +2266,18 @@ function S.duty_tip(d, pct)
     return table.concat(lines, "\n")
 end
 
+-- Says how partners pick a good, that it is free, and that a switch also stops your own carts (F.ship checks both).
 function S.switch_tip(dir, stopped, name)
     if dir == "export" then
         if stopped then
-            return S.T("{1} is kept out of trade and earns no trade income.\nClick to trade it again from next turn.", name)
+            return S.T("{1} is kept out of trade and earns no trade income.\nYour own carts do not carry it either.\nClick to trade it again from next turn.", name)
         end
-        return S.T("{1} can be traded and earns trade income.\nClick to keep it out of trade from next turn.", name)
+        return S.T("{1} can be traded and earns trade income.\nClick to keep it out of trade from next turn. Your own carts stop carrying it at once.", name)
     end
     if stopped then
-        return S.T("Your trade partners send you no {1}.\nTrade agreement imports still come in.\nClick to take it again.", name)
+        return S.T("Your trade partners send you no {1}, and your own carts do not carry it.\nYou and your partners still pay import duty.\nClick to take it again.", name)
     end
-    return S.T("Your trade partners can send you {1}.\nClick to refuse it.", name)
+    return S.T("Your trade partners can send {1} to your capital.\nA partner sends it until your capital holds the wanted amount. It comes from the partner's cheapest store, and only while it sells for at least 10% more in your capital.\nThe goods cost you nothing. You and your partners pay import duty whether they come or not.\nClick to refuse it. Your own carts stop carrying it at once.", name)
 end
 
 -- which of DERPY_MR_STORES_L.VIEWS the panel shows: both drill-downs share "focus"; the
@@ -2334,6 +2340,14 @@ end
 
 -- A SHIPMENT since phase 5: it says how long, what is lost and the risk, and lists what is
 -- already on the road to this store (`coming`, the flows script's ships_to).
+-- Either trade switch of the local faction stops `stem`'s carts (flows.lua F.ship and F.send_plan).
+function S.switched_off(stem)
+    local stopped = S.flows("stopped")
+    if not (stopped and stem) then return false end
+    local fk = cm:get_local_faction_name(true)
+    return stopped(fk, "export", stem) == true or stopped(fk, "import", stem) == true
+end
+
 function S.send_tip(plan, d, coming)
     local out
     if plan and plan.busy then
@@ -2343,6 +2357,8 @@ function S.send_tip(plan, d, coming)
         local from = loc("regions_onscreen_" .. plan.from:name(), plan.from:name())
         local sh = S.flows("SHIP")
         out = S.T("Send {1} {2} from {3}.\n{4} are lost on the way and the rest arrive in {5} or more.\nAn army at war with you can seize it.", S.num(plan.n), d.name, from, S.num(plan.n - plan.got), turns(plan.turns or (sh and sh.turns) or 2))
+    elseif S.switched_off(d.stem) then
+        out = S.T("Your trade switches stop carts carrying {1}.\nTick its boxes on the Trade tab again to send it.", d.name)
     elseif d.full then
         out = S.T("This store of {1} is full.", d.name)
     elseif d.cap > 0 and d.held + S.coming_total(coming) >= d.cap then
@@ -2659,10 +2675,21 @@ function S.forecast_tip(f, region, settlement, use, stem)
     if (fc.spoil or 0) > 0 then lines[#lines + 1] = S.T("It loses {1} to spoiling each turn.", S.num(fc.spoil)) end
     if fc.mode == "declining" then lines[#lines + 1] = S.T("At this rate it runs out in {1}.", turns(fc.cover))
     elseif fc.mode == "stored" then lines[#lines + 1] = S.T("That is enough for {1}.", turns(fc.cover)) end
-    if use == "provisions" and (v.recurring.army_need or 0) > 0 then
-        lines[#lines + 1] = S.T("Armies refilling here take {1} of that each turn.", S.num(v.recurring.army_need))
+    -- The parts of the "uses" figure above, from F.recurring_use; they add up to it.
+    local rec = v.recurring or {}
+    local named, production = rec.named or {}, 0
+    for s, n in pairs(named) do if S.use_of(s) == use then production = production + n end end
+    if fc.use_per_turn > 0 then
+        if use == "provisions" and (rec.meals or 0) > 0 then
+            lines[#lines + 1] = S.T("The settlement itself eats {1} of that each turn, {2} for each settlement level.", S.num(rec.meals), S.num(S.ask("need", f:name()) or 0))
+        end
+        if use == "provisions" and (rec.army_need or 0) > 0 then
+            lines[#lines + 1] = S.T("Armies refilling here take {1} of that each turn.", S.num(rec.army_need))
+        end
+        local supplied = (rec.supplied or {})[use] or 0
+        if supplied > 0 then lines[#lines + 1] = S.T("Province supplies take {1} of that each turn.", S.num(supplied)) end
+        if production > 0 then lines[#lines + 1] = S.T("Production here takes {1} of that each turn.", S.num(production)) end
     end
-    local named = (v.recurring or {}).named or {}
     if stem and named[stem] then
         lines[#lines + 1] = S.T("Your production here uses {1} {2} a turn.", S.num(named[stem]), S.name(stem))
     end
@@ -2838,6 +2865,7 @@ function S.view_model(realm)
         v.title = S.T("Every settlement you hold")
         v.heads = { S.T("Settlement"), S.T("Level"), S.T("Using"), S.T("Resources"), S.T("Fullest store") }
         v.hint = S.T("Click a settlement to see its stores.")
+        local f = S.local_faction()
         for _, r in ipairs(S.settlement_rows(realm)) do
             local fullest = "-"
             if r.fullest then fullest = S.name(r.fullest) .. " " .. r.pct .. "%" end
@@ -2848,6 +2876,12 @@ function S.view_model(realm)
             end
             local tip = ""
             if #names > 0 then tip = S.T("Using: {1}", table.concat(names, ", ")) end
+            -- The settlement's own meals; armies and supplies show in its stores' tooltips.
+            local meals = f and S.ask("settlement_meals", f, r.level) or 0
+            if meals > 0 then
+                tip = add_line(tip, S.T("It eats {1}{2} a turn, {3} for each settlement level.", S.num(meals),
+                    (meals == 1 and S.T(" provision") or S.T(" provisions")), S.num(S.ask("need", f:name()) or 0)))
+            end
             v.rows[#v.rows + 1] = { r.name, tostring(r.level), #icons > 0 and "" or "-", tostring(r.goods),
                                     fullest, open = r.key, icons = r.icons, using = icons, tip = tip }
         end
@@ -3095,9 +3129,7 @@ S.ARMY_AUTO = S.T("On Auto the army refills to 5 turns of provisions after eatin
 S.ARMY_BUY = S.T("Buy up to two meals of rations once a turn at 10 gold each.")
 S.ARMY_HUNGER = S.T("After two missed meals the army moves 5% slower.\nAfter three it moves and recovers 10% slower.\nOne full meal ends this.")
 
--- THE SUPPLY LINE (design 2026-11-08, section 4), as flows.lua F.supply_note gives it: state, source (a region key),
--- turns, upkeep (a percentage) and by (the faction of an enemy army on the road). The sentence goes in the army-bar
--- tooltip and on the Vault row; nothing for an army with no line.
+-- Shared wording for the army-bar tooltip and Vault row; omit armies with no line.
 S.SUPPLY_STATE = { home = S.T("At home"), supplied = S.T("Supplied"), stretched = S.T("Stretched"), cut = S.T("Cut off") }
 
 function S.supply_text(note)
@@ -3109,7 +3141,7 @@ function S.supply_text(note)
     end
     if state == "stretched" then return S.T("Stretched: {1} turns from {2}. Upkeep +{3}%.", note.turns, source, pct) end
     if state == "cut" then
-        local text = S.T("Cut off. Upkeep +{1}%.", pct)
+        local text = S.T("Cut off. Upkeep +{1}%.\nForaging and buying from the locals costs the most.", pct)
         if note.by then text = text .. "\n" .. S.T("An enemy army blocks the road.") end
         return text
     end
@@ -3145,7 +3177,6 @@ function S.army_view(v)
         send = { label = row.auto and S.T("Pause") or S.T("Enable"), off = not S.actions_on(), tip = auto } }
     v.rows[#v.rows + 1] = { row.mobile and S.T("Buy rations") or S.T("Load here"), source, row.mobile and (S.T("{1} gold", S.num(row.price))) or "", "", provisions = "load", army = id, tip = load,
         send = { label = row.mobile and S.T("Buy") or S.T("Load"), off = (not row.source and (row.buy or 0) == 0) or not S.actions_on(), tip = load } }
-    -- SEND SUPPLIES (design 2026-11-08, section 5c): Auto's supply cart by hand, as flows.lua F.supply_send refuses it
     local note = S.ask("supply_note", f, id)
     local cart, state = S.ask("supply_cart_of", id), note and note.state
     local why
@@ -3162,8 +3193,6 @@ function S.army_view(v)
     v.rows[#v.rows + 1] = { S.T("Unload here"), S.T("Pauses refill"), "", "", provisions = "unload", army = id, tip = unload,
         send = { label = S.T("Unload"), off = not row.source or row.held == 0 or not S.actions_on(), tip = unload } }
     v.rows[#v.rows + 1] = { S.T("Missed meals"), S.num(row.short), "", "", "", tip = S.ARMY_HUNGER }
-    -- THE SUPPLY LINE under the meals: a section row with its own headings (as the road's has, S.spending), then one
-    -- row of state, source, turns and upkeep; its tooltip says it in a sentence
     if note and S.SUPPLY_STATE[note.state] then
         v.rows[#v.rows + 1] = { S.section(S.T("Supply road")), S.section(S.T("From")), S.section(S.T("Distance")),
                                 S.section(S.T("Upkeep")), "", section = true }
@@ -4909,9 +4938,8 @@ function S.selected_army()
     for _, row in ipairs(S.ask("provision_rows", f) or {}) do if row.id == id then return row, force end end
 end
 
--- THE SUPPLY SENTENCE is asked only of an army that stood on the same hex at the previous poll: F.supply_line keeps
--- its searches for a hex, so a standing army costs a rescan of the regions and a walking one would cost a search a
--- poll. While it walks, its last sentence stays; another army's is never shown (S.supply_poll = {id, x, y, text}).
+-- Wait for the army to stop before refreshing: each new hex can trigger a route search.
+-- Keep its last tooltip while moving, but discard it when the selected army changes.
 S.supply_poll = {}
 function S.supply_sentence(f, id, x, y)
     local p = S.supply_poll

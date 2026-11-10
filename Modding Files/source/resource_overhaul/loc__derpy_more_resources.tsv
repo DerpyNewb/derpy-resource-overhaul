@@ -874,8 +874,8 @@ effect_bundles_localised_title_derpy_mr_army_hungry	Short rations	false
 effect_bundles_localised_description_derpy_mr_army_hungry	Two missed meals. Refill locally or buy field rations where available.	false
 effect_bundles_localised_title_derpy_mr_army_starved	Empty provision wagons	false
 effect_bundles_localised_description_derpy_mr_army_starved	Three or more missed meals. A full meal clears these penalties.	false
-effect_bundles_localised_title_derpy_mr_supply_distance	Supply road	false
-effect_bundles_localised_description_derpy_mr_supply_distance	The further this army is from the settlement that feeds it, the more it costs.	false
+effect_bundles_localised_title_derpy_mr_supply_distance	Supply Road	false
+effect_bundles_localised_description_derpy_mr_supply_distance	This army draws its supplies along a road from one of your settlements. The longer the road, the more it costs to keep the carts moving. If the road is cut, no supplies reach the army, and foraging and buying from the locals costs the most of all.	false
 event_feed_strings_text_derpy_mr_army_food_title	Provision wagons running dry	false
 event_feed_strings_text_derpy_mr_army_food_primary	An army has missed its meal.	false
 event_feed_strings_text_derpy_mr_army_food_secondary	Open Resource Vault > Spending to check army provisions. Refill from your own unsieged local settlement above Keep. Repeated shortages reduce movement and replenishment.	false

@@ -869,30 +869,20 @@ function R.in_view(x, y)
     return z > 0 and math.abs(up) <= z * v.tv + R.VIEW_MARGIN and math.abs(s) <= z * v.th + R.VIEW_MARGIN
 end
 
--- THE ARMIES' SUPPLY ROADS (design 2026-11-08, section 4): each army of the player's draws the road F.supply_line finds
--- from it to the settlement that feeds it, in the ink of its line's state. The three inks are palette entries after the
--- owners' sixteen (build_mr_terrain_routes.SUPPLY_COLOURS), the same in every colour set.
+-- Supply colours follow the sixteen owner colours and stay the same across palettes.
 R.SUPPLY_INK = { supplied = 16, stretched = 17, cut = 18 }
--- ponytail: at most R.SUPPLY_CAP supply dashes in view, the lowest army number first and each from its army outwards;
--- raise it if a live test shows a long road cut short.
+-- ponytail: cap visible supply dashes, lowest CQI first; raise the cap if long roads are visibly truncated.
 R.SUPPLY_CAP = 256
--- A scene's id is derpy_mr_supply_<slot>_<i>: a slot is an army's place in army-number order at the last full refresh
--- (0 to R.SUPPLY_SLOTS - 1) and i the hex of its road, every second one. The ids are a fixed range, so a loaded game
--- clears all of them whoever is alive, as it clears derpy_mr_road_N (R.hide_supply). ponytail: armies past the
--- slots are not drawn; raise R.SUPPLY_SLOTS if a faction can field more (it costs R.SUPPLY_SWEEP / 2 removals a slot at load).
--- R.SUPPLY_SWEEP is the most hexes a road can have: supply_reach's 10 turns of 40 hexes, and the army's own
--- (build_mr_terrain_routes.selftest holds it to the slider).
+-- Scene ids are derpy_mr_supply_<slot>_<i>: zero-based army slot by CQI, then every second road hex.
+-- Fixed ids allow load cleanup even for dead armies; sweep covers ten turns at forty hexes plus the army hex.
+-- ponytail: armies beyond the slot limit draw nothing; raise it if needed, at ceil(SUPPLY_SWEEP / 2) load removals per slot.
 R.SUPPLY_SLOTS = 40
 R.SUPPLY_SWEEP = 401
 R.supply_kept, R.supply_epoch = {}, nil   -- army number -> { x, y, line }: the last answer and the hex it was for
 
--- -> { { cqi, path, ink, slot } } by army number: the faction's armies whose line is supplied, stretched or cut and has a
--- road (a cut line with none, an army at home and an army with no line draw nothing), the first R.SUPPLY_SLOTS of them,
--- each in the slot of its place in that order. F.supply_line rescans the faction's
--- regions and may search the map, so an army is asked about only once its hex has changed since the last answer, or once
--- the answers were dropped: R.epoch moves at the player's turn (enemy armies moved) and at every war, diplomatic event
--- and capture (F.invalidate_reach), and the kept answers go with it. A road is F's shared table, read here and never changed.
--- Asked as the UI (F.enemy_armies' `ui`): this machine's drawing must not fill the enemy list its model keeps.
+-- Return { cqi, path, ink, slot } in CQI order, capped at SUPPLY_SLOTS; paths are shared and must not be changed.
+-- Rescan only after a hex change or epoch invalidation (player turn start, war, diplomacy or capture).
+-- Use the UI enemy cache so drawing on one machine cannot affect multiplayer model results.
 function R.supply_links(faction)
     local F, out = DERPY_MR_FLOWS, {}
     if not (F and F.supply_line and R.shown('supply') and faction:is_human()) then return out end
@@ -917,8 +907,7 @@ function R.supply_links(faction)
     return out
 end
 
--- Scenes survive saves, so a loaded game clears the whole fixed range of supply ids, slot by slot and hex by hex (every
--- second one, as they are placed) up to the longest road there is: an army that died before the save is swept too.
+-- Scenes survive saves; sweep every possible id, including roads belonging to dead armies.
 function R.hide_supply()
     for slot = 0, R.SUPPLY_SLOTS - 1 do
         for k = 1, R.SUPPLY_SWEEP, 2 do cm:remove_scripted_composite_scene('derpy_mr_supply_' .. slot .. '_' .. k) end

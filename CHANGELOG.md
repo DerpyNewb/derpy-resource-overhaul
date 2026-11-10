@@ -1,5 +1,17 @@
 # Changelog
 
+## Not uploaded yet
+
+- Supply road text says why a cut road costs the most: foraging and buying from the locals.
+- Supply Road effect explains the road, the cart cost and the cut cost.
+- Import switch tooltips explain how partners pick a good, that imports are free and that duty is paid either way.
+- Fixed: Stop all imports said imports still came in.
+- Trade switch tooltips say a switch also stops your own carts of that good.
+- Fixed: Send here doing nothing when a trade switch stops the good.
+- A blocked supply road falls back to another nearby settlement's road.
+- Settlements list tooltip shows what each settlement eats a turn.
+- Resource tooltips split a store's use into the settlement's meals, armies, province supplies and production.
+
 ## 2026-11-09
 
 - New: army supply lines, in place of the game's own.

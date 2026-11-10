@@ -20,9 +20,9 @@ derpy_mr_ui_ac659b4bd6	Click to show the resources you do not have.	false
 derpy_mr_ui_278c53a96e	Allow all 	false
 derpy_mr_ui_d153ba9e62	Stop all 	false
 derpy_mr_ui_cfbb700901	From next turn every resource can be traded again and earn trade income.	false
-derpy_mr_ui_d0618a5640	From next turn no resource can be traded or earn trade income.	false
+derpy_mr_ui_a6266a69a4	From next turn no resource can be traded or earn trade income.\nYour own carts stop carrying them at once.	false
 derpy_mr_ui_f85fe8117a	Take every resource your trade partners send to your stores.	false
-derpy_mr_ui_a1092e68ce	Refuse every resource your trade partners send.\nTrade agreement imports still come in with import duty.	false
+derpy_mr_ui_d1119e4d98	Refuse every resource your trade partners send.\nYour own carts stop carrying them at once.\nYou and your partners still pay import duty.	false
 derpy_mr_ui_84871287aa	sent {1} and received {2}	false
 derpy_mr_ui_4c58cb4a29	Recruits last turn	false
 derpy_mr_ui_3e18f60438	Guards ride with every cart and convoy you send.\nThey cost 5% of the cargo's value when it leaves.\nThey make trouble on the road half as likely.	false
@@ -45,16 +45,17 @@ derpy_mr_ui_a615d19d86	Each turn you and each trade partner you can reach pay {1
 derpy_mr_ui_b6f366013c	Last turn:	false
 derpy_mr_ui_62ae77d784	{1}: paid {2} and received {3}	false
 derpy_mr_ui_cc0fbd3d31	Nothing paid or received.	false
-derpy_mr_ui_19362ce827	{1} is kept out of trade and earns no trade income.\nClick to trade it again from next turn.	false
-derpy_mr_ui_1ffaef82e2	{1} can be traded and earns trade income.\nClick to keep it out of trade from next turn.	false
-derpy_mr_ui_b91ae092cc	Your trade partners send you no {1}.\nTrade agreement imports still come in.\nClick to take it again.	false
-derpy_mr_ui_e9b4d71631	Your trade partners can send you {1}.\nClick to refuse it.	false
+derpy_mr_ui_2cb7e49022	{1} is kept out of trade and earns no trade income.\nYour own carts do not carry it either.\nClick to trade it again from next turn.	false
+derpy_mr_ui_97d43e9742	{1} can be traded and earns trade income.\nClick to keep it out of trade from next turn. Your own carts stop carrying it at once.	false
+derpy_mr_ui_710ffeba95	Your trade partners send you no {1}, and your own carts do not carry it.\nYou and your partners still pay import duty.\nClick to take it again.	false
+derpy_mr_ui_c2f47eaf72	Your trade partners can send {1} to your capital.\nA partner sends it until your capital holds the wanted amount. It comes from the partner's cheapest store, and only while it sells for at least 10% more in your capital.\nThe goods cost you nothing. You and your partners pay import duty whether they come or not.\nClick to refuse it. Your own carts stop carrying it at once.	false
 derpy_mr_ui_8c04f3a4b1	Use Send here in a settlement to put goods on the road.	false
 derpy_mr_ui_9e72f24a14	provisions	false
 derpy_mr_ui_4c5bbca164	building materials	false
 derpy_mr_ui_182362c2e6	war materials	false
 derpy_mr_ui_806a22b926	You already have {1} shipments on the road and cannot send more.	false
 derpy_mr_ui_24b3e77ceb	Send {1} {2} from {3}.\n{4} are lost on the way and the rest arrive in {5} or more.\nAn army at war with you can seize it.	false
+derpy_mr_ui_862a95d6ed	Your trade switches stop carts carrying {1}.\nTick its boxes on the Trade tab again to send it.	false
 derpy_mr_ui_5818cdebf6	This store of {1} is full.	false
 derpy_mr_ui_c1f18f3880	What is already on the road will fill this store of {1}.	false
 derpy_mr_ui_2c84ddaf55	No other settlement of yours can send {1}.	false
@@ -171,7 +172,10 @@ derpy_mr_ui_0060636b44	 and 	false
 derpy_mr_ui_c40868994e	It loses {1} to spoiling each turn.	false
 derpy_mr_ui_13df2c2216	At this rate it runs out in {1}.	false
 derpy_mr_ui_baf0e4e40c	That is enough for {1}.	false
+derpy_mr_ui_05523eb80c	The settlement itself eats {1} of that each turn, {2} for each settlement level.	false
 derpy_mr_ui_7df8b2bb1c	Armies refilling here take {1} of that each turn.	false
+derpy_mr_ui_e632cd8414	Province supplies take {1} of that each turn.	false
+derpy_mr_ui_c49f844cb2	Production here takes {1} of that each turn.	false
 derpy_mr_ui_f01298d8cf	Your production here uses {1} {2} a turn.	false
 derpy_mr_ui_bf7e65182d	{1} {2} arrive on turn {3}.	false
 derpy_mr_ui_35f2f71322	Where {1} is kept	false
@@ -217,6 +221,9 @@ derpy_mr_ui_ddcf50c292	Resources	false
 derpy_mr_ui_48e74aa3fb	Fullest store	false
 derpy_mr_ui_2297eadc63	Click a settlement to see its stores.	false
 derpy_mr_ui_c1144d49ac	Using: {1}	false
+derpy_mr_ui_687ed8c8c3	It eats {1}{2} a turn, {3} for each settlement level.	false
+derpy_mr_ui_5778290e8e	 provision	false
+derpy_mr_ui_618357a20a	 provisions	false
 derpy_mr_ui_1b770fb1d6	 control	false
 derpy_mr_ui_88dd130532	 growth	false
 derpy_mr_ui_10e4f7333e	% cost	false
@@ -270,7 +277,7 @@ derpy_mr_ui_c305618ccb	In your own lands.	false
 derpy_mr_ui_c34a43fb13	Supplied from {1}, 1 turn away. Upkeep +{2}%.	false
 derpy_mr_ui_da4c31da07	Supplied from {1}, {2} turns away. Upkeep +{3}%.	false
 derpy_mr_ui_79473e2189	Stretched: {1} turns from {2}. Upkeep +{3}%.	false
-derpy_mr_ui_8b4a5ca29b	Cut off. Upkeep +{1}%.	false
+derpy_mr_ui_9db8605104	Cut off. Upkeep +{1}%.\nForaging and buying from the locals costs the most.	false
 derpy_mr_ui_8d6eb77b24	An enemy army blocks the road.	false
 derpy_mr_ui_d195aa1ad9	Army {1}	false
 derpy_mr_ui_4bf42dd83a	{1}: provisions	false
@@ -330,8 +337,6 @@ derpy_mr_ui_e2bce56593	It is now beside {1}	false
 derpy_mr_ui_c05d45b406	Army provisions	false
 derpy_mr_ui_2fa3647b2f	No armies carry provisions	false
 derpy_mr_ui_8fd91afb64	This army eats {1}{2} a turn.\n{3}{4}\nClick to manage its provisions.	false
-derpy_mr_ui_5778290e8e	 provision	false
-derpy_mr_ui_618357a20a	 provisions	false
 derpy_mr_ui_778df9cd96	\nMissed meals: {1}.	false
 derpy_mr_ui_a5da103f78	{1} resources	false
 derpy_mr_ui_0959b5c477	Each recruit takes resources from your stores by its type and cost.\nAnything missing is paid {1}in gold.{2}	false
@@ -735,7 +740,7 @@ mct_derpy_more_resources_army_supply_section_text	Army supply lines	false
 mct_derpy_more_resources_vanilla_supply_lines_text	Vanilla supply lines	false
 mct_derpy_more_resources_vanilla_supply_lines_tooltip	Ticked: the game's own supply lines stay. Each army after your first makes every army cost more upkeep. This mod's roads still carry food to your armies but add no upkeep. Unticked: this mod's supply lines replace them. Races whose armies carry no food keep the game's own rule. So does every race when Army provisions or Army supply lines is off. You can change this during a campaign. In multiplayer it is always unticked.	false
 mct_derpy_more_resources_supply_lines_text	Army supply lines	false
-mct_derpy_more_resources_supply_lines_tooltip	Each of your armies draws supplies from one of your settlements along a road. The further the road, the more the army costs. A cut road feeds nothing and costs the most. Armies in your own settled land need no road. Land you took in the last few turns feeds no army yet. Turns to settle new land sets how many. With Army provisions off or Vanilla supply lines ticked, the roads add no upkeep.	false
+mct_derpy_more_resources_supply_lines_tooltip	Each of your armies draws supplies from one of your settlements along a road. The further the road, the more it costs to keep the carts moving. A cut road brings no supplies, and foraging and buying from the locals costs the most. Armies in your own settled land need no road. Land you took in the last few turns feeds no army yet. Turns to settle new land sets how many. With Army provisions off or Vanilla supply lines ticked, the roads add no upkeep.	false
 mct_derpy_more_resources_supply_reach_text	Supply reach in turns	false
 mct_derpy_more_resources_supply_reach_tooltip	How far an army can be from one of your settlements and still be supplied, in turns of travel. Past half of that the road is stretched. Further away the road is cut.	false
 mct_derpy_more_resources_settle_turns_text	Turns to settle new land	false
@@ -743,7 +748,7 @@ mct_derpy_more_resources_settle_turns_tooltip	Turns before a settlement you take
 mct_derpy_more_resources_supply_step_text	Upkeep for each turn of road	false
 mct_derpy_more_resources_supply_step_tooltip	Each turn of road after the first adds this much to an army's upkeep.	false
 mct_derpy_more_resources_supply_max_text	Most upkeep from a road	false
-mct_derpy_more_resources_supply_max_tooltip	The most a supply road can add to an army's upkeep. An army whose road is cut pays this.	false
+mct_derpy_more_resources_supply_max_tooltip	The most a supply road can add to an army's upkeep. An army whose road is cut pays this: foraging and buying from the locals costs the most.	false
 mct_derpy_more_resources_routes_section_text	Trade route lines	false
 mct_derpy_more_resources_route_agreements_text	Trade agreements	false
 mct_derpy_more_resources_route_agreements_tooltip	Show agreement roads permitted by the resource import and export switches.	false
