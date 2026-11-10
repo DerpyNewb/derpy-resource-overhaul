@@ -30,6 +30,9 @@ function F.T(text, ...)
             local ok, s = pcall(common.get_localised_string, key)
             -- the loc arrives through RPFM's TSV import, which cannot hold a line break: \n is kept as two characters
             if ok and type(s) == "string" and s ~= "" and s ~= key then out = (string.gsub(s, "\\n", "\n")) end
+            -- the game trims a loc string's leading spaces: " provisions" came back "provisions" (2026-11-10)
+            local lead = string.match(text, "^%s+")
+            if lead and not string.match(out, "^%s") then out = lead .. out end
         end
         F.T_CACHE[text] = out
     end

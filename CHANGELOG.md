@@ -1,6 +1,6 @@
 # Changelog
 
-## Not uploaded yet
+## 2026-11-10
 
 - Supply road text says why a cut road costs the most: foraging and buying from the locals.
 - Supply Road effect explains the road, the cart cost and the cut cost.
@@ -11,6 +11,7 @@
 - A blocked supply road falls back to another nearby settlement's road.
 - Settlements list tooltip shows what each settlement eats a turn.
 - Resource tooltips split a store's use into the settlement's meals, armies, province supplies and production.
+- Fixed: missing spaces in panel text, such as "4provisions".
 
 ## 2026-11-09
 

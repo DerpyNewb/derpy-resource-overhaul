@@ -189,6 +189,11 @@ do
     eq(S.view_model(realm).rows[1][5], "[3] <- 2", "a translation draws, its placeholders reordered")
     LOC[key] = nil; S.T_CACHE = {}
     eq(S.view_model(realm).rows[1][5], "2 of 3", "no loc row: the English")
+    -- the game trims a loc string's leading spaces (2026-11-10: "It eats 4provisions a turn")
+    local pk = DERPY_MR_LOC_KEYS[" provisions"]
+    LOC[pk] = "provisions"; S.T_CACHE = {}
+    eq(S.T(" provisions"), " provisions", "a loc string the game trimmed gets its leading space back")
+    LOC[pk] = nil; S.T_CACHE = {}
 end
 eq(v.rows[3][2], "0", "made, nothing held yet")
 S.focus = "coal"; v = S.view_model(realm)

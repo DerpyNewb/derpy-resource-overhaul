@@ -6315,6 +6315,11 @@ end)()
         F.T_CACHE["Line one\nline two"] = nil
         eq(F.T("Line one\nline two"), "Ligne un\nligne deux", "a loc line break is a real one on screen")
         F.T_CACHE["Line one\nline two"] = nil
+        DERPY_MR_LOC_KEYS = { [" a turn"] = "derpy_mr_ui_test" }
+        common.get_localised_string = function(k) return k == "derpy_mr_ui_test" and "a turn" or "" end
+        F.T_CACHE[" a turn"] = nil
+        eq(F.T(" a turn"), " a turn", "a loc string the game trimmed gets its leading space back")
+        F.T_CACHE[" a turn"] = nil
         DERPY_MR_LOC_KEYS = keys0
     end
     common.get_localised_string = loc0
