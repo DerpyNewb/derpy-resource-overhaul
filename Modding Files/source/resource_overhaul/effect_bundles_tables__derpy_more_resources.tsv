@@ -85,7 +85,7 @@ derpy_mr_up_sea_dragon_hide	Built from your stores: income +15% here.	Sea Dragon
 derpy_mr_up_black_lotus	Built from your stores: hero actions from here succeed more often (+10).	Black Lotus Gardens	region	1	agent.png	true	false	true
 derpy_mr_up_starwood	Built from your stores: growth +20 in the province.	Starwood Grove	region	1	growth.png	true	false	true
 derpy_mr_up_feathers	Built from your stores: recruitment cost -15% in the province.	Eyrie	region	1	mount.png	true	false	true
-derpy_mr_up_wyvern_scales	Built from your stores: upkeep -5% for your armies here.	Wyvern Roost	region	1	variable_upkeep.png	true	false	true
+derpy_mr_up_wyvern_scales	Built from your stores: upkeep -10% and melee attack +10 for your armies here.	Wyvern Roost	region	1	variable_upkeep.png	true	false	true
 derpy_mr_order_festival	Paid for from your stores: public order +4 in every province.	Festival	faction	1	public_order_jubilant.png	true	false	true
 derpy_mr_order_muster	Paid for from your stores: recruit rank +1 for every unit.	Muster	faction	1	experience.png	true	false	true
 derpy_mr_order_great_works	Paid for from your stores: construction cost -20% for every building.	Great Works	faction	1	construction.png	true	false	true

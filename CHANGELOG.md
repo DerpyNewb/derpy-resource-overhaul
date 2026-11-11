@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-11-11
+
+- Skaven Food recipe: 10 Grain + 10 Salted Fish for 4 Food.
+- Wyvern Roost: upkeep -10% and melee attack +10 for your armies there.
+- Thanquol's schemers and Ogre camps no longer need provisions.
+- Races from other mods: settlements whose buildings make no goods grow their own food, with spare for their armies.
+- Vampire variants from other mods no longer eat.
+- The Settlements tooltip says when a settlement's buildings make no goods.
+- Norsca's god altars now make goods like the undivided altar.
+- Much shorter end-turn freezes on big maps: trade prices looked up once per faction.
+- Computer factions' road searches spread over turns.
+- No more map stutter every few seconds with a big trade partner.
+- Translations: the history words, the Allow all and Stop all buttons and the MCT lock note can now be translated.
+- No food to spare: the message now says a settlement keeps 5 turns of its own food first.
+- For translators: `Modding Files/source/resource_overhaul/translation/` has every line as one TSV, a guide, and a
+  list of the lines each update changed.
+
 ## 2026-11-10
 
 - Supply road text says why a cut road costs the most: foraging and buying from the locals.

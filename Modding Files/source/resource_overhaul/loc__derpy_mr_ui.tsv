@@ -2,11 +2,20 @@ key	text	tooltip
 #Loc;1;text/db/derpy_mr_ui.loc
 derpy_mr_ui_9287bbc6af	Nothing is stored here yet.	false
 derpy_mr_ui_34a9352977	You hold no settlements and so have no stores.	false
+derpy_mr_ui_949cb9d51e	Its buildings make no goods yet. It grows its own food, and other goods come by trade.	false
 derpy_mr_ui_92f77f56ea	This store is full and anything more made here is lost.	false
 derpy_mr_ui_726c1d67bc	The history starts next turn.	false
 derpy_mr_ui_2f0091807b	{1} [[col:red]]Full[[/col]]	false
+derpy_mr_ui_4ab8710d78	made	false
+derpy_mr_ui_3d4117546c	raided	false
+derpy_mr_ui_02a25bdd3a	plundered	false
 derpy_mr_ui_d6e9e3b5b4	traded in	false
 derpy_mr_ui_9bb32a5d4c	traded out	false
+derpy_mr_ui_79ef87bc31	eaten	false
+derpy_mr_ui_8bd5fa0f94	spoiled	false
+derpy_mr_ui_11dfd868d9	moved	false
+derpy_mr_ui_167b8c8551	spent	false
+derpy_mr_ui_7391de3df0	sold	false
 derpy_mr_ui_9b92ea99d8	Last turn: no change	false
 derpy_mr_ui_802464f5a6	Last turn: {1}	false
 derpy_mr_ui_914ff4e104	Last turn: {1}, ...	false
@@ -17,8 +26,10 @@ derpy_mr_ui_f933e8567a	Start of turn {1}: {2} held	false
 derpy_mr_ui_a81debb8ff	[[col:{1}]]{2}[[/col]]	false
 derpy_mr_ui_8051ad5bf6	Click to hide the resources you do not have.	false
 derpy_mr_ui_ac659b4bd6	Click to show the resources you do not have.	false
-derpy_mr_ui_278c53a96e	Allow all 	false
-derpy_mr_ui_d153ba9e62	Stop all 	false
+derpy_mr_ui_c42976754a	Allow all exports	false
+derpy_mr_ui_2ea85607cf	Stop all exports	false
+derpy_mr_ui_477bcaac6f	Allow all imports	false
+derpy_mr_ui_3eafb0d51a	Stop all imports	false
 derpy_mr_ui_cfbb700901	From next turn every resource can be traded again and earn trade income.	false
 derpy_mr_ui_a6266a69a4	From next turn no resource can be traded or earn trade income.\nYour own carts stop carrying them at once.	false
 derpy_mr_ui_f85fe8117a	Take every resource your trade partners send to your stores.	false
@@ -86,12 +97,12 @@ derpy_mr_ui_a41eb7761c	{1}\nand {2} more {3}	false
 derpy_mr_ui_8cd892b7b9	store	false
 derpy_mr_ui_61af09f34b	stores	false
 derpy_mr_ui_b427b908bc	There is nothing worth selling.\nOnly what your stores of {1} hold over half full can be sold.	false
-derpy_mr_ui_355aa79dec	It needs %s gold.	false
-derpy_mr_ui_9c5c64e37f	It needs a level %d settlement.	false
-derpy_mr_ui_0879a569dc	It needs an empty building slot.	false
 derpy_mr_ui_0a6b5ab016	{1} gold	false
 derpy_mr_ui_925fb2cc83	Build {1} here at once for {2} even though no building slot here normally takes it.	false
 derpy_mr_ui_14fe83513b	Upgrade to {1} at once for {2}.	false
+derpy_mr_ui_8fd52e5ae5	It needs {1} gold.	false
+derpy_mr_ui_e4fd8eedbe	It needs a level {1} settlement.	false
+derpy_mr_ui_0879a569dc	It needs an empty building slot.	false
 derpy_mr_ui_12bc4d809b	Not built	false
 derpy_mr_ui_79a15cf527	Level {1} of 3	false
 derpy_mr_ui_5d695cc28c	Found	false
@@ -301,7 +312,7 @@ derpy_mr_ui_df10c96fa9	Cut off. Supplies cannot reach this army.	false
 derpy_mr_ui_b4b35cdb8d	This army is in your own lands.\nLoad it here instead.	false
 derpy_mr_ui_189e87167f	This army has no supply road.	false
 derpy_mr_ui_47b497f846	This army already carries 5 turns of provisions.	false
-derpy_mr_ui_9d02111ded	{1} has no food to spare.	false
+derpy_mr_ui_323b23ad5d	{1} has no food to spare.\nA settlement keeps {2} turns of the food it eats and uses before it feeds an army.	false
 derpy_mr_ui_705b55867a	Send a cart of provisions from {1}.\nIt arrives in {2}.\nAn army at war with you can seize it.	false
 derpy_mr_ui_b89a0adb92	Supply cart	false
 derpy_mr_ui_0712b67f47	Send supplies	false
@@ -440,7 +451,7 @@ derpy_mr_ui_c869fd27de	This settlement is under siege.	false
 derpy_mr_ui_7260e1e2e7	This settlement was taken too recently to feed an army.	false
 derpy_mr_ui_53d78dcc3a	It refills from this settlement.	false
 derpy_mr_ui_f8ea19175a	This settlement has {1} provisions to spare.	false
-derpy_mr_ui_13ae2fc7bf	This settlement has no provisions to spare.	false
+derpy_mr_ui_99d2999302	This settlement has no provisions to spare.\nA settlement keeps {1} turns of the food it eats and uses before it feeds an army.	false
 derpy_mr_ui_a8f16cf995	You can buy {1} rations for {2} gold.	false
 derpy_mr_ui_bf90d57f02	The army cannot buy more rations this turn.	false
 derpy_mr_ui_8e6f48ab81	The seller or buyer is gone	false
@@ -555,8 +566,8 @@ derpy_mr_ui_8d51a2966a	Eyrie	false
 derpy_mr_ui_856ed27284	Recruitment cost -15%	false
 derpy_mr_ui_7cb2164988	Recruitment cost -15% in the province. Permanent	false
 derpy_mr_ui_822f544c40	Wyvern Roost	false
-derpy_mr_ui_feef73ceba	Army upkeep -5%	false
-derpy_mr_ui_79d8832775	Upkeep -5% for your armies here. Permanent	false
+derpy_mr_ui_9fad66118d	Upkeep and melee attack	false
+derpy_mr_ui_c75766b869	Upkeep -10% and melee attack +10 for your armies here. Permanent	false
 derpy_mr_ui_0afc19dc3a	Armaments	false
 derpy_mr_ui_27b18c6fb2	30 Armaments	false
 derpy_mr_ui_f784dc3fa5	Makes 30 Armaments from your stores once a turn	false
@@ -676,6 +687,7 @@ derpy_mr_ui_03f4a47830	Closed	false
 derpy_mr_ui_3f6e486e32	Other factions' trade cannot cross your lands.\nControl +1 in every province.	false
 mct_derpy_more_resources_title	Derpy Resource Overhaul	false
 mct_derpy_more_resources_description	How goods move between settlement stores. These are fixed for the life of a campaign: change them from the main menu before starting a new one. In a multiplayer campaign they are ignored and every value is the default on every machine. The trade route lines and the Vanilla supply lines box can be changed at any time.	false
+mct_derpy_more_resources_lock_reason	Fixed when a campaign starts. Change it from the main menu before starting a new one.	false
 mct_derpy_more_resources_stores_section_text	Stores	false
 mct_derpy_more_resources_raid_text	Raid share per turn	false
 mct_derpy_more_resources_raid_tooltip	Each turn an army raids a settlement, it carries off this share of every resource the settlement keeps, into its own nearest settlement as far as that has room. 0 turns this off.	false

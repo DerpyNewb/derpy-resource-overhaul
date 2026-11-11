@@ -194,6 +194,19 @@ do
     LOC[pk] = "provisions"; S.T_CACHE = {}
     eq(S.T(" provisions"), " provisions", "a loc string the game trimmed gets its leading space back")
     LOC[pk] = nil; S.T_CACHE = {}
+    -- THE HISTORY LINE'S WORDS (a translator's report, 2026-11-10): "made", "spoiled" and the rest were bare English
+    for _, w in ipairs({ { "made", "made", "+1" }, { "raided", "raided_in", "+1" }, { "plundered", "plundered_in", "+1" },
+                         { "traded in", "traded_in", "+1" }, { "traded out", "traded_out", "-1" }, { "eaten", "eaten_out", "-1" },
+                         { "spoiled", "spoiled_out", "-1" }, { "moved", "moved_in", "+1" }, { "spent", "spent_out", "-1" },
+                         { "sold", "sold_out", "-1" } }) do
+        local wk = DERPY_MR_LOC_KEYS[w[1]]
+        eq(type(wk), "string", "the history word '" .. w[1] .. "' has a loc key")
+        if wk then
+            LOC[wk] = "<" .. w[1] .. ">"; S.T_CACHE = {}
+            eq(S.last_line({ [w[2]] = 1 }), "Last turn: <" .. w[1] .. "> " .. w[3], "'" .. w[1] .. "' draws translated")
+            LOC[wk] = nil; S.T_CACHE = {}
+        end
+    end
 end
 eq(v.rows[3][2], "0", "made, nothing held yet")
 S.focus = "coal"; v = S.view_model(realm)
@@ -1034,6 +1047,10 @@ for _, dm in ipairs({ { "export", "allow" }, { "export", "stop" }, { "import", "
     bt:SetState("hover"); eq(bt:GetStateText() ~= "", true, "labelled on hover"); bt:SetState("standard")
 end
 eq(bulk("export", "stop").text, "Stop all exports", "plain label")
+-- ONE SENTENCE A LABEL (a translator's report, 2026-11-10): "Stop all " .. "export" .. "s" could not be translated
+for _, t in ipairs({ "Allow all exports", "Stop all exports", "Allow all imports", "Stop all imports" }) do
+    eq(type(DERPY_MR_LOC_KEYS[t]), "string", "'" .. t .. "' has a loc key of its own")
+end
 eq(bulk("export", "stop").x < bulk("import", "allow").x, true, "exports left of imports")
 -- THE HINT SHARES THE SUB-TITLE'S LINE, at its right end, so the bottom line is the buttons' alone
 eq(find("hint_text").y, find("sub_title").y, "the hint is on the sub-title's line")
@@ -1314,6 +1331,15 @@ do
        "one meal is singular: " .. alpha_tip())
     fl.settlement_meals = function() return 0 end
     eq(string.find(alpha_tip(), "It eats", 1, true), nil, "a settlement that eats nothing says nothing")
+    -- AN UNCHARTED SETTLEMENT SAYS WHY IT MAKES NOTHING (faction flavour design 2026-11-11, section 7)
+    local line, charted0 = "Its buildings make no goods yet. It grows its own food, and other goods come by trade.", fl.charted
+    fl.charted = function(k) return k ~= "reg_a" end
+    eq(string.find(alpha_tip(), line, 1, true) ~= nil, true, "an uncharted settlement says why: " .. alpha_tip())
+    fl.charted = function() return true end
+    eq(string.find(alpha_tip(), line, 1, true), nil, "a charted settlement does not")
+    fl.charted = nil
+    eq(string.find(alpha_tip(), line, 1, true), nil, "nor with a flows script that cannot tell")
+    fl.charted = charted0
     fl.settlement_meals, fl.need = nil, nil
     S.view, S.focus = view, focus
     S.refresh()
@@ -2273,6 +2299,14 @@ press(act("derpy_mr_sell")); eq(#REQ, 2, "a greyed Sell asks for nothing")
     eq(cell(1, 1).text, names[1], "the building it has"); eq(cell(1, 2).text, "Level 1 of 3", "at its level")
     eq(sendb(1).text, "Upgrade", "Upgrade after"); eq(sendb(1).disabled, true, "greyed below the tier")
     eq(sendb(1).tip, "It needs a level 2 settlement.", "says why")
+    -- filled by {1}, not string.format: a "%" a translator writes stays text instead of an error (2026-11-11)
+    local tk = DERPY_MR_LOC_KEYS["It needs a level {1} settlement."]
+    eq(type(tk), "string", "the tier refusal has a {1} key")
+    if tk then
+        LOC[tk] = "Nivel {1} al 100%"; S.T_CACHE = {}
+        click("derpy_mr_back"); click("derpy_mr_row_1"); eq(sendb(1).tip, "Nivel 2 al 100%", "a % in a translation stays text")
+        LOC[tk] = nil; S.T_CACHE = {}
+    end
     local n = #REQ; press(sendb(1)); eq(#REQ, n, "a greyed row asks for nothing")
     FOUND_ST.reg_a = { good = "dragon_bone", level = 0, next = 1, cost = 1000, tier_need = 1, why = "gold" }
     click("derpy_mr_back"); click("derpy_mr_row_1"); eq(sendb(1).tip, "It needs 1000 gold.", "short of gold")
@@ -2730,7 +2764,11 @@ do
     -- A SOURCE WITH NOTHING TO SPARE (review 2026-11-09): refused with the reason, not enabled and silent
     SPARE=0; S.refresh(); cr=cart_row()
     eq(cr.send.off,true,"a source with no food to spare sends no cart")
-    eq(cr.send.tip,"Alpha has no food to spare.","and says so")
+    -- and why (Gidwelion, 2026-11-11: "has nothing to spare" while the settlement made spare grain)
+    eq(cr.send.tip,"Alpha has no food to spare.\nA settlement keeps 5 turns of the food it eats and uses before it feeds an army.","and says so, and why")
+    DERPY_MR_FLOWS.FED_TURNS=4; S.refresh(); cr=cart_row()
+    eq(cr.send.tip,"Alpha has no food to spare.\nA settlement keeps 4 turns of the food it eats and uses before it feeds an army.","the turns are the flows script's own")
+    DERPY_MR_FLOWS.FED_TURNS=nil; S.refresh(); cr=cart_row()
     eq(SPARE_ASKED,LOCAL.."|reg_a","the line's own source is asked, for the local faction")
     SPARE=3; S.refresh(); cr=cart_row()
     eq(cr.send.off,false,"a source with food to spare sends one")

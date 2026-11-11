@@ -68,6 +68,8 @@ S.PREFIX = "derpy_mr_store_"
 S.CCO = 'BuildingSlotList.JoinString(BuildingContext.EffectList.Filter(EffectKey.StartsWith("derpy_mr_store_")).JoinString(EffectKey + "=" + Value, ","), ",")'
 S.NOTHING = S.T("Nothing is stored here yet.")
 S.NO_REALM = S.T("You hold no settlements and so have no stores.")
+-- a settlement whose main building makes none of our goods (flows.lua F.charted, 2026-11-11)
+S.UNCHARTED = S.T("Its buildings make no goods yet. It grows its own food, and other goods come by trade.")
 S.FULL_TIP = S.T("This store is full and anything more made here is lost.")
 S.NO_HISTORY = S.T("The history starts next turn.")
 S.view, S.focus = "goods", nil
@@ -293,16 +295,16 @@ function S.last_line(l)
     local function add(label, n)
         if n ~= 0 then parts[#parts + 1] = label .. " " .. per_turn(n) end
     end
-    add("made", l.made or 0)
-    add("raided", (l.raided_in or 0) - (l.raided_out or 0))
-    add("plundered", (l.plundered_in or 0) - (l.plundered_out or 0))
+    add(S.T("made"), l.made or 0)
+    add(S.T("raided"), (l.raided_in or 0) - (l.raided_out or 0))
+    add(S.T("plundered"), (l.plundered_in or 0) - (l.plundered_out or 0))
     add(S.T("traded in"), l.traded_in or 0)
     add(S.T("traded out"), -(l.traded_out or 0))
-    add("eaten", -(l.eaten_out or 0))
-    add("spoiled", -(l.spoiled_out or 0))
-    add("moved", (l.moved_in or 0) - (l.moved_out or 0))      -- netted: what the road lost
-    add("spent", -(l.spent_out or 0))
-    add("sold", -(l.sold_out or 0))
+    add(S.T("eaten"), -(l.eaten_out or 0))
+    add(S.T("spoiled"), -(l.spoiled_out or 0))
+    add(S.T("moved"), (l.moved_in or 0) - (l.moved_out or 0))      -- netted: what the road lost
+    add(S.T("spent"), -(l.spent_out or 0))
+    add(S.T("sold"), -(l.sold_out or 0))
     if #parts == 0 then return S.T("Last turn: no change") end
     local line = S.T("Last turn: {1}", table.concat(parts, ", "))
     -- a busy turn drops its last parts rather than run past the chart line
@@ -365,7 +367,9 @@ S.FOLD_TIP = { [false] = S.T("Click to hide the resources you do not have."),
 -- ALL AT ONCE: one button per direction and mode, under the list on the Trade tab
 S.BULK = "derpy_mr_all_"
 S.BULK_ORDER = { { "export", "allow" }, { "export", "stop" }, { "import", "allow" }, { "import", "stop" } }
-S.BULK_LABEL = { allow = S.T("Allow all "), stop = S.T("Stop all ") }
+-- one whole sentence a label, so a translation can put the words in its own order
+S.BULK_LABEL = { export = { allow = S.T("Allow all exports"), stop = S.T("Stop all exports") },
+                 import = { allow = S.T("Allow all imports"), stop = S.T("Stop all imports") } }
 S.BULK_TIP = {
     export = { allow = S.T("From next turn every resource can be traded again and earn trade income."),
                stop = S.T("From next turn no resource can be traded or earn trade income.\nYour own carts stop carrying them at once.") },
@@ -722,7 +726,6 @@ end
 -- an icon, a tooltip, and what a click on it opens). Pure, so the harness reads it directly.
 -- FOUNDING A RARE BUILDING (spec 2026-10-09): a lore region no building slot offers it in gets one
 -- row above its goods. The flows script decides; this only words it.
-S.FOUND_WHY = { gold = S.T("It needs %s gold."), tier = S.T("It needs a level %d settlement."), slot = S.T("It needs an empty building slot.") }
 function S.found_row(fs, rkey)
     local names, price = DERPY_MR_STORES_FOUND[fs.good], S.T("{1} gold", S.num(fs.cost))
     local tip
@@ -731,9 +734,10 @@ function S.found_row(fs, rkey)
     else
         tip = S.T("Upgrade to {1} at once for {2}.", names[fs.next], price)
     end
-    if fs.why == "gold" then tip = string.format(S.FOUND_WHY.gold, S.num(fs.cost))
-    elseif fs.why == "tier" then tip = string.format(S.FOUND_WHY.tier, fs.tier_need)
-    elseif fs.why == "slot" then tip = S.FOUND_WHY.slot end
+    -- {1}, not string.format: a "%" in a translation would raise (2026-11-11)
+    if fs.why == "gold" then tip = S.T("It needs {1} gold.", S.num(fs.cost))
+    elseif fs.why == "tier" then tip = S.T("It needs a level {1} settlement.", fs.tier_need)
+    elseif fs.why == "slot" then tip = S.T("It needs an empty building slot.") end
     -- the price in the fourth column, beside its button: under "Per turn" it read as income
     return { fs.level == 0 and names[1] or names[fs.level],
              fs.level == 0 and S.T("Not built") or (S.T("Level {1} of 3", fs.level)), "", price, "",
@@ -1122,6 +1126,7 @@ function S.view_model(realm)
                 tip = add_line(tip, S.T("It eats {1}{2} a turn, {3} for each settlement level.", S.num(meals),
                     (meals == 1 and S.T(" provision") or S.T(" provisions")), S.num(S.ask("need", f:name()) or 0)))
             end
+            if S.ask("charted", r.key) == false then tip = add_line(tip, S.UNCHARTED) end
             v.rows[#v.rows + 1] = { r.name, tostring(r.level), #icons > 0 and "" or "-", tostring(r.goods),
                                     fullest, open = r.key, icons = r.icons, using = icons, tip = tip }
         end
@@ -1425,7 +1430,11 @@ function S.army_view(v)
     elseif state == "home" then why = S.T("This army is in your own lands.\nLoad it here instead.")
     elseif state ~= "supplied" and state ~= "stretched" then why = S.T("This army has no supply road.")
     elseif row.held >= row.need * 5 then why = S.T("This army already carries 5 turns of provisions.")
-    elseif (S.ask("provision_spare", f, note.source) or 0) <= 0 then why = S.T("{1} has no food to spare.", S.place(note.source)) end
+    elseif (S.ask("provision_spare", f, note.source) or 0) <= 0 then
+        -- and why: a store below its own reserve looks full to a player who sees it making grain (Gidwelion, 2026-11-11)
+        why = S.T("{1} has no food to spare.\nA settlement keeps {2} turns of the food it eats and uses before it feeds an army.",
+            S.place(note.source), (DERPY_MR_FLOWS and DERPY_MR_FLOWS.FED_TURNS) or 5)
+    end
     local supply = why or S.T("Send a cart of provisions from {1}.\nIt arrives in {2}.\nAn army at war with you can seize it.",
         S.place(note.source), turns(note.turns))
     v.rows[#v.rows + 1] = { S.T("Supply cart"), note and note.source and S.place(note.source) or "-", "", "", provisions = "send",
@@ -2120,7 +2129,7 @@ function S.build()
     label(find_uicomponent(p, S.TAB.goods), S.T("Resources"))
     for _, dm in ipairs(S.BULK_ORDER) do
         local bt = find_uicomponent(p, S.BULK .. dm[1] .. "_" .. dm[2])
-        label(bt, S.BULK_LABEL[dm[2]] .. dm[1] .. "s")
+        label(bt, S.BULK_LABEL[dm[1]][dm[2]])
         if is_uicomponent(bt) then bt:SetTooltipText(S.BULK_TIP[dm[1]][dm[2]], true) end
     end
     label(find_uicomponent(p, S.TAB.settlements), S.T("Settlements"))

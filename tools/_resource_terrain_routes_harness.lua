@@ -188,7 +188,8 @@ local enemy_land, open_land = { is_null_interface = function() return false end,
                               { is_null_interface = function() return false end, name = function() return 'open_land' end,
                                 owning_faction = function() return trader end }
 local lookups = 0   -- hexes asked about: zero means no walled search ran
-cm.model = function() return { campaign_name_key = function() return 'test' end,
+local ROAD_TURN = 1   -- the turn a kept answer is stamped with (the computers' terms, below)
+cm.model = function() return { campaign_name_key = function() return 'test' end, turn_number = function() return ROAD_TURN end,
     get_region_at_logical_position = function(_, x, y) lookups = lookups + 1; return enemy(x, y) and enemy_land or open_land end } end
 cm.get_region = function(_, key) return key == 'enemy_land' and enemy_land or open_land end
 local saved_grids = R.grids
@@ -284,7 +285,7 @@ for _, key in ipairs({ 'east', 'lane', 'pocket' }) do
     lands[key] = { is_null_interface = function() return false end, name = function() return key end,
                    owning_faction = function() return key == hostile and fac('x', true) or trader end }
 end
-cm.model = function() return { campaign_name_key = function() return 'test' end,
+cm.model = function() return { campaign_name_key = function() return 'test' end, turn_number = function() return ROAD_TURN end,
     get_region_at_logical_position = function(_, x, y) return lands[x >= 5 and 'east' or y == 5 and 'lane' or 'pocket'] end } end
 cm.get_region = function(_, key) return lands[key] end
 R.grids, R.SEARCH_CAP = { test = { w = 8, h = 6, data = table.concat(rows), bridges = {} } }, 20   -- open search 30, walled 16
@@ -296,6 +297,135 @@ R.grids = {}
 assert(R.reach(settled(1, 4), settled(3, 4), 1) == true, 'a map with no grid never stops trade')
 assert(R.journey(settled(1, 4), settled(3, 4)) == nil, 'unknown maps retain legacy shipment positions')
 R.grids, cm.model = saved_grids, NO_MAP
+
+-- THE COMPUTERS' TERMS (IEE, 2026-11-11: one computer turn start spent 4.4 s, and one round 54 s, in road searches):
+-- `terms` = { left = hexes still to search, keep = turns a kept answer is trusted }. A search stops when the hexes
+-- run out, answers nil, 'pending', and the next ask goes on from where it stopped; a computer's kept answer is given
+-- unchecked for `keep` turns while both ends keep their owners.
+do
+    local turn, all_war = 50, false
+    -- 12 x 12, mountains at x = 6 from y = 0 to 9: the one way east is the gap at x = 6, y >= 10
+    local rows = {}
+    for y = 0, 11 do local r = '' for x = 0, 11 do r = r .. ((x == 6 and y <= 9) and 'A' or '/') end rows[#rows + 1] = r end
+    local grid = { w = 12, h = 12, data = table.concat(rows), bridges = {} }
+    local grudge, hater = fac('grudge'), fac('hater')
+    grudge.at_war_with = function(_, p) return all_war or p:name() == 'hater' end   -- the gap's owner
+    local lands = {}
+    for _, key in ipairs({ 'home', 'gap' }) do
+        lands[key] = { is_null_interface = function() return false end, name = function() return key end,
+                       owning_faction = function() return key == 'gap' and grudge or trader end }
+    end
+    local judged, checks = 0, 0   -- hexes a search judged; regions a kept answer's check looked up
+    local saved_model, saved_region, saved_grids2, advance = cm.model, cm.get_region, R.grids, R.advance
+    cm.model = function() return { campaign_name_key = function() return 'test' end, turn_number = function() return turn end,
+        get_region_at_logical_position = function(_, x, y)
+            judged = judged + 1
+            return lands[(x == 6 and y >= 10) and 'gap' or 'home']
+        end } end
+    cm.get_region = function(_, key) checks = checks + 1; return lands[key] end
+    local a_owner = trader
+    local A = { owning_faction = function() return a_owner end, settlement = function()
+        return { logical_position_x = function() return 2 end, logical_position_y = function() return 2 end } end }
+    local B = settled(10, 2)
+    local function forget() R.reach_memo, R.free_memo, R.reach_jobs, R.journey_memo, R.journey_jobs = {}, {}, {}, {}, {} end
+    local function terms(n) return { left = n or 100000, keep = 5 } end
+    R.grids = { test = grid }
+    forget()
+    local whole = terms()
+    local ok, _, road = R.reach(A, B, 40, whole)
+    local size = 100000 - whole.left
+    assert(ok and road and size > 20, 'the detour round the mountains was not found: ' .. size .. ' hexes')
+    -- five hexes an ask: under way, then on from where it stopped until done
+    forget()
+    local most = 0
+    R.advance = function(j, budget) most = math.max(most, budget); return advance(j, budget) end
+    local first = terms(5)
+    local answer, why = R.reach(A, B, 40, first)
+    assert(answer == nil and why == 'pending' and first.left == 0, 'a search ran past its allowance: ' .. tostring(answer))
+    local asks, again = 1, nil
+    repeat
+        local t = terms(5)
+        answer, why, again = R.reach(A, B, 40, t)
+        asks = asks + 1
+        assert(answer ~= nil or (why == 'pending' and t.left == 0), 'a search under way said nothing or stopped short')
+    until answer ~= nil or asks > size
+    assert(answer and #again == #road, 'a search five hexes at a time never finished: it started over at each ask')
+    assert(most <= 5, 'an ask searched ' .. most .. ' hexes on an allowance of five')
+    assert(next(R.reach_jobs) == nil, 'a finished search was left waiting')
+    -- no safe road (the gap's owner is at war with the new owner of A): the road through enemy land within the
+    -- allowance too, and the answer the one an unlimited search gives
+    a_owner = hater
+    forget(); most = 0; asks = 0
+    repeat answer, why = R.reach(A, B, 40, terms(5)); asks = asks + 1 until answer ~= nil or asks > 10 * size
+    assert(answer == false and why == 'enemy', 'cut off by enemy land, five hexes at a time: ' .. tostring(why))
+    assert(most <= 5, 'the road through enemy land was searched ' .. most .. ' hexes on an allowance of five')
+    forget()
+    answer, why = R.reach(A, B, 40)
+    assert(answer == false and why == 'enemy', 'cut off by enemy land, unlimited: ' .. tostring(why))
+    R.advance = advance
+    -- a search under way starts again when an end changes hands: the new owner judges the land
+    a_owner = trader; forget()
+    assert(R.reach(A, B, 40, terms(5)) == nil, 'five hexes found the whole detour')
+    a_owner = hater
+    assert(R.reach(A, B, 40, terms()) == false, 'a search begun for the old owner was finished for the new one')
+    -- searches nobody asked about for over a turn are dropped as a new one starts: each holds a table a hex it saw
+    a_owner = trader; forget()
+    R.reach(A, B, 40, terms(5))
+    turn = 52
+    R.reach(A, settled(10, 4), 40, terms(5))
+    local waiting = 0
+    for _ in pairs(R.reach_jobs) do waiting = waiting + 1 end
+    assert(waiting == 1, 'a search left two turns ago was kept: ' .. waiting .. ' waiting')
+    -- a computer's kept road is trusted for its turns, then checked
+    turn = 60; forget()
+    assert(R.reach(A, B, 40, terms()), 'the road was not found')
+    all_war = true   -- the gap's owner goes to war with everyone: the kept road now crosses enemy land
+    turn = 64; judged, checks = 0, 0
+    assert(R.reach(A, B, 40, terms()) == true and judged == 0 and checks == 0,
+           "a computer's kept road was checked again before its turns were up")
+    turn = 65
+    assert(R.reach(A, B, 40, terms()) == false, "a computer's kept road was trusted past its turns")
+    -- a player's road (no terms) is checked every time
+    turn = 70; all_war = false; forget()
+    assert(R.reach(A, B, 40), 'the road was not found')
+    all_war = true
+    assert(R.reach(A, B, 40) == false, "a player's kept road was given unchecked")
+    -- an end changing hands ends the trust, even to an owner who judges the land the same
+    turn = 80; all_war = false; forget()
+    R.reach(A, B, 40, terms())
+    a_owner = fac('other'); turn = 81; checks = 0
+    R.reach(A, B, 40, terms())
+    assert(checks > 0, 'a kept road was trusted after an end changed hands')
+    a_owner = trader
+    -- a check that finds nothing changed starts its turns again
+    turn = 90; forget()
+    R.reach(A, B, 40, terms())
+    turn = 95; R.reach(A, B, 40, terms())
+    turn = 96; checks = 0
+    R.reach(A, B, 40, terms())
+    assert(checks == 0, 'a kept road found unchanged was checked again the next turn')
+    -- a cart's road the same way
+    turn = 100; all_war = false; forget()
+    local full = R.journey(A, B)
+    assert(full and #full > 0, 'the cart road was not found')
+    forget()
+    local t = terms(5)
+    local part
+    part, why = R.journey(A, B, t)
+    assert(part == nil and why == 'pending' and t.left == 0, "a cart's search ran past its allowance")
+    asks = 0
+    repeat part = R.journey(A, B, terms(5)); asks = asks + 1 until part or asks > size * 10
+    assert(part and #part == #full, "a cart's search five hexes at a time never finished")
+    assert(next(R.journey_jobs) == nil, 'a finished cart search was left waiting')
+    all_war = true; turn = 101; judged, checks = 0, 0
+    part = R.journey(A, B, terms())
+    assert(part and #part == #full and judged == 0 and checks == 0,
+           "a computer's kept cart road was checked again before its turns were up")
+    R.journey(A, B)
+    assert(judged > 0, "a player's cart road must be checked every time")
+    forget()
+    R.grids, cm.model, cm.get_region = saved_grids2, saved_model, saved_region
+end
 
 local empty = { num_items = function() return 0 end }
 local faction = { culture=function() return 'human' end, name = function() return 'viewer' end, is_null_interface = function() return false end,
@@ -521,7 +651,9 @@ do
     assert(bundles == 7, "the player's turn did not bundle the network again")
     R.bundle, R.network_cache, R.dirty = bundle, nil, false
 end
--- THE CART GOODS' PREVIEWS are renewed one seller at a time, each in turn
+-- THE CART GOODS' PREVIEWS (IEE, 2026-11-11: a partner's preview was 57-85 ms every few seconds, 346 ms at worst):
+-- a computer's stores move only at its own turn start, so each computer seller is worked out once a player's turn,
+-- in name order; after that only the viewer's own, which a recruit moves and nothing reports, comes round again
 do
     local flows, get_faction, made = DERPY_MR_FLOWS, cm.get_faction, {}
     DERPY_MR_FLOWS = { trade = function(f, preview)
@@ -530,13 +662,28 @@ do
         return { fresh = { 'grain' } }
     end }
     cm.get_faction = function(_, key) return fac(key) end
-    R.plans, R.plan_next = { s1 = {}, s2 = {} }, nil
+    R.plans, R.plan_fresh = { s1 = {}, s2 = {}, viewer = {} }, {}
     R.renew_plan(); R.renew_plan()
     assert(table.concat(made, ',') == 's1,s2' and R.plans.s1.fresh and R.plans.s2.fresh,
-           'each seller must be renewed in turn: ' .. table.concat(made, ','))
+           'each computer seller must be renewed in turn: ' .. table.concat(made, ','))
+    R.renew_plan(); R.renew_plan()
+    assert(table.concat(made, ',') == 's1,s2,viewer,viewer',
+           "a computer's preview was worked out twice in one turn: " .. table.concat(made, ','))
+    R.new_turn()
     R.renew_plan()
-    assert(made[3] == 's1', 'the renewals must come round again')
-    DERPY_MR_FLOWS, cm.get_faction, R.plans = flows, get_faction, {}
+    assert(made[5] == 's1', "a new turn must renew the computers' previews: " .. table.concat(made, ','))
+    -- a preview a refresh worked out (R.carried) is this turn's already
+    R.new_turn()
+    R.plans, made = { viewer = {} }, {}
+    R.carried({ 'grain' }, 's3', 'viewer', R.plans)
+    R.renew_plan()
+    assert(table.concat(made, ',') == 's3,viewer', "a refresh's preview was worked out again: " .. table.concat(made, ','))
+    R.new_turn()
+    R.plans, made = {}, {}
+    R.renew_plan()
+    assert(#made == 0, 'a renewal with nothing drawn worked something out')
+    DERPY_MR_FLOWS, cm.get_faction, R.plans, R.plan_fresh = flows, get_faction, {}, {}
+    R.dirty, R.network_cache = false, nil
 end
 local function list(items)
     return { num_items=function() return #items end, item_at=function(_, i) return items[i+1] end }
@@ -575,13 +722,17 @@ assert(#links == 0 and #cargo == 0, 'hidden foreign endpoints revealed')
 
 -- An agreement draws its line only while its trade runs, and along the trade's own road.
 ships = {}
-local road, verdict, modes = { {1,2}, {2,2}, {3,2} }, false, {}
+local road, verdict, modes, worked = { {1,2}, {2,2}, {3,2} }, false, {}, false
 faction.factions_trading_with = function() return list({ally}) end
 ally.factions_trading_with = function() return list({faction}) end
 DERPY_MR_FLOWS.capital = function(f) return { name = function() return f:name() .. '_home' end } end
+-- verdict nil: nothing known yet; 'show' then answers `worked` (false: cut off; nil: a search still under way)
 DERPY_MR_FLOWS.reach = function(_, _, mode)
     modes[#modes + 1] = mode
-    if mode == 'peek' and verdict == nil then return nil end
+    if verdict == nil then
+        if mode == 'peek' then return nil end
+        return worked, nil, worked and road or nil
+    end
     return verdict, nil, verdict and road or nil
 end
 links = R.links(faction)
@@ -646,6 +797,15 @@ assert(#links == 1 and links[1].path == road and R.dirty == true, 'an agreement 
 R.reach_shown = {}
 R.dirty = false
 assert(#R.links(faction) == 0 and R.dirty == true, 'a line with no answer yet was drawn')
+-- A SEARCH STILL UNDER WAY (the map's 'show' stops after F.SHOW_HEXES, 2026-11-11): its line stays up and the map
+-- comes back for the rest at the next tick
+verdict, R.shows, R.show_until = true, 0, os.clock() + 60
+R.links(faction)
+verdict, worked, modes, R.shows, R.show_until, R.dirty = nil, nil, {}, 0, os.clock() + 60, false
+links = R.links(faction)
+assert(table.concat(modes, ',') == 'peek,show,peek,show' and #links == 1 and links[1].path == road and R.dirty == true,
+       'a search under way dropped its line or was not come back for: ' .. table.concat(modes, ',') .. ' ' .. tostring(R.dirty))
+R.reach_shown, R.dirty, worked = {}, false, false
 local corner={{0,0},{1,0},{1,1}}
 local x,y=R.sample(corner,2)
 assert(x==0.875 and y==0.125,'rounded dash must sit on the quadratic cart curve')

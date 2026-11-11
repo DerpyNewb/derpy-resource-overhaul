@@ -1,0 +1,23 @@
+change	key	english	old_key	old_english
+edited	effect_bundles_localised_description_derpy_mr_up_wyvern_scales	Built from your stores: upkeep -10% and melee attack +10 for your armies here.	effect_bundles_localised_description_derpy_mr_up_wyvern_scales	Built from your stores: upkeep -5% for your armies here.
+new	derpy_mr_ui_949cb9d51e	Its buildings make no goods yet. It grows its own food, and other goods come by trade.		
+new	derpy_mr_ui_4ab8710d78	made		
+new	derpy_mr_ui_3d4117546c	raided		
+new	derpy_mr_ui_02a25bdd3a	plundered		
+new	derpy_mr_ui_79ef87bc31	eaten		
+new	derpy_mr_ui_8bd5fa0f94	spoiled		
+new	derpy_mr_ui_11dfd868d9	moved		
+new	derpy_mr_ui_167b8c8551	spent		
+new	derpy_mr_ui_7391de3df0	sold		
+reworded	derpy_mr_ui_c42976754a	Allow all exports	derpy_mr_ui_278c53a96e	Allow all 
+reworded	derpy_mr_ui_2ea85607cf	Stop all exports	derpy_mr_ui_d153ba9e62	Stop all 
+new	derpy_mr_ui_477bcaac6f	Allow all imports		
+new	derpy_mr_ui_3eafb0d51a	Stop all imports		
+reworded	derpy_mr_ui_8fd52e5ae5	It needs {1} gold.	derpy_mr_ui_355aa79dec	It needs %s gold.
+reworded	derpy_mr_ui_e4fd8eedbe	It needs a level {1} settlement.	derpy_mr_ui_9c5c64e37f	It needs a level %d settlement.
+reworded	derpy_mr_ui_323b23ad5d	{1} has no food to spare.\nA settlement keeps {2} turns of the food it eats and uses before it feeds an army.	derpy_mr_ui_9d02111ded	{1} has no food to spare.
+reworded	derpy_mr_ui_99d2999302	This settlement has no provisions to spare.\nA settlement keeps {1} turns of the food it eats and uses before it feeds an army.	derpy_mr_ui_13ae2fc7bf	This settlement has no provisions to spare.
+new	derpy_mr_ui_9fad66118d	Upkeep and melee attack		
+reworded	derpy_mr_ui_c75766b869	Upkeep -10% and melee attack +10 for your armies here. Permanent	derpy_mr_ui_79d8832775	Upkeep -5% for your armies here. Permanent
+new	mct_derpy_more_resources_lock_reason	Fixed when a campaign starts. Change it from the main menu before starting a new one.		
+removed			derpy_mr_ui_feef73ceba	Army upkeep -5%

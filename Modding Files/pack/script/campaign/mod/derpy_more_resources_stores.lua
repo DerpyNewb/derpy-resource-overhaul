@@ -624,9 +624,9 @@ DERPY_MR_STORES_WORKS = {
     {key = "up_black_lotus", kind = "upgrade", rare = "black_lotus", use = "luxuries", name = "Black Lotus Gardens", gives = "Hero actions succeed more", detail = "Hero actions from here succeed more often (+10). Permanent", icon = "ui/campaign ui/effect_bundles/resource_derpy_black_lotus.png", pool = "", goods = {}, target = ""},
     {key = "up_starwood", kind = "upgrade", rare = "starwood", use = "building", name = "Starwood Grove", gives = "Growth +20", detail = "Growth +20 in the province. Permanent", icon = "ui/campaign ui/effect_bundles/resource_derpy_starwood.png", pool = "", goods = {}, target = ""},
     {key = "up_feathers", kind = "upgrade", rare = "feathers", use = "mounts", name = "Eyrie", gives = "Recruitment cost -15%", detail = "Recruitment cost -15% in the province. Permanent", icon = "ui/campaign ui/effect_bundles/resource_derpy_feathers.png", pool = "", goods = {}, target = ""},
-    {key = "up_wyvern_scales", kind = "upgrade", rare = "wyvern_scales", use = "mounts", name = "Wyvern Roost", gives = "Army upkeep -5%", detail = "Upkeep -5% for your armies here. Permanent", icon = "ui/campaign ui/effect_bundles/resource_derpy_wyvern_scales.png", pool = "", goods = {}, target = ""},
+    {key = "up_wyvern_scales", kind = "upgrade", rare = "wyvern_scales", use = "mounts", name = "Wyvern Roost", gives = "Upkeep and melee attack", detail = "Upkeep -10% and melee attack +10 for your armies here. Permanent", icon = "ui/campaign ui/effect_bundles/resource_derpy_wyvern_scales.png", pool = "", goods = {}, target = ""},
     {key = "conv_armaments", kind = "convert", rare = "", use = "", name = "Armaments", gives = "30 Armaments", detail = "Makes 30 Armaments from your stores once a turn", icon = "ui/campaign ui/effect_bundles/resource_derpy_coal.png", pool = "wh3_dlc23_chd_armaments", goods = {{"coal", 20, "ui/campaign ui/effect_bundles/resource_derpy_coal.png"}, {"brimstone", 20, "ui/campaign ui/effect_bundles/resource_derpy_brimstone.png"}, {"iron", 20, "ui/campaign ui/effect_bundles/resource_iron.png"}}, target = ""},
-    {key = "conv_food", kind = "convert", rare = "", use = "", name = "Food", gives = "4 Food", detail = "Makes 4 Food from your stores once a turn", icon = "ui/campaign ui/effect_bundles/resource_derpy_grain.png", pool = "skaven_food", goods = {{"grain", 30, "ui/campaign ui/effect_bundles/resource_derpy_grain.png"}, {"salted_fish", 30, "ui/campaign ui/effect_bundles/resource_derpy_salted_fish.png"}}, target = ""},
+    {key = "conv_food", kind = "convert", rare = "", use = "", name = "Food", gives = "4 Food", detail = "Makes 4 Food from your stores once a turn", icon = "ui/campaign ui/effect_bundles/resource_derpy_grain.png", pool = "skaven_food", goods = {{"grain", 10, "ui/campaign ui/effect_bundles/resource_derpy_grain.png"}, {"salted_fish", 10, "ui/campaign ui/effect_bundles/resource_derpy_salted_fish.png"}}, target = ""},
     {key = "conv_oathgold", kind = "convert", rare = "", use = "", name = "Oathgold", gives = "30 Oathgold", detail = "Makes 30 Oathgold from your stores once a turn", icon = "ui/campaign ui/effect_bundles/resource_gold_idols.png", pool = "dwf_oathgold", goods = {{"gold_idols", 30, "ui/campaign ui/effect_bundles/resource_gold_idols.png"}, {"silver", 30, "ui/campaign ui/effect_bundles/resource_derpy_silver.png"}}, target = ""},
     {key = "conv_infamy", kind = "convert", rare = "", use = "", name = "Infamy", gives = "50 Infamy", detail = "Makes 50 Infamy from your stores once a turn", icon = "ui/campaign ui/effect_bundles/resource_derpy_rum.png", pool = "cst_infamy", goods = {{"rum", 30, "ui/campaign ui/effect_bundles/resource_derpy_rum.png"}, {"pearls", 30, "ui/campaign ui/effect_bundles/resource_derpy_pearls.png"}}, target = ""},
     {key = "army_rations", kind = "army", rare = "", use = "", name = "Rations and Drill", gives = "The army gains a rank", detail = "Every unit in the selected army gains a rank", icon = "ui/campaign ui/effect_bundles/resource_derpy_grain.png", pool = "", goods = {{"grain", 35, "ui/campaign ui/effect_bundles/resource_derpy_grain.png"}, {"salt", 35, "ui/campaign ui/effect_bundles/resource_salt.png"}, {"beer", 35, "ui/campaign ui/effect_bundles/resource_dwarf_beer.png"}}, target = "army"},
@@ -1088,11 +1088,20 @@ DERPY_MR_STORES_EDICTS = {
 DERPY_MR_LOC_KEYS = {
     ["Nothing is stored here yet."] = "derpy_mr_ui_9287bbc6af",
     ["You hold no settlements and so have no stores."] = "derpy_mr_ui_34a9352977",
+    ["Its buildings make no goods yet. It grows its own food, and other goods come by trade."] = "derpy_mr_ui_949cb9d51e",
     ["This store is full and anything more made here is lost."] = "derpy_mr_ui_92f77f56ea",
     ["The history starts next turn."] = "derpy_mr_ui_726c1d67bc",
     ["{1} [[col:red]]Full[[/col]]"] = "derpy_mr_ui_2f0091807b",
+    ["made"] = "derpy_mr_ui_4ab8710d78",
+    ["raided"] = "derpy_mr_ui_3d4117546c",
+    ["plundered"] = "derpy_mr_ui_02a25bdd3a",
     ["traded in"] = "derpy_mr_ui_d6e9e3b5b4",
     ["traded out"] = "derpy_mr_ui_9bb32a5d4c",
+    ["eaten"] = "derpy_mr_ui_79ef87bc31",
+    ["spoiled"] = "derpy_mr_ui_8bd5fa0f94",
+    ["moved"] = "derpy_mr_ui_11dfd868d9",
+    ["spent"] = "derpy_mr_ui_167b8c8551",
+    ["sold"] = "derpy_mr_ui_7391de3df0",
     ["Last turn: no change"] = "derpy_mr_ui_9b92ea99d8",
     ["Last turn: {1}"] = "derpy_mr_ui_802464f5a6",
     ["Last turn: {1}, ..."] = "derpy_mr_ui_914ff4e104",
@@ -1103,8 +1112,10 @@ DERPY_MR_LOC_KEYS = {
     ["[[col:{1}]]{2}[[/col]]"] = "derpy_mr_ui_a81debb8ff",
     ["Click to hide the resources you do not have."] = "derpy_mr_ui_8051ad5bf6",
     ["Click to show the resources you do not have."] = "derpy_mr_ui_ac659b4bd6",
-    ["Allow all "] = "derpy_mr_ui_278c53a96e",
-    ["Stop all "] = "derpy_mr_ui_d153ba9e62",
+    ["Allow all exports"] = "derpy_mr_ui_c42976754a",
+    ["Stop all exports"] = "derpy_mr_ui_2ea85607cf",
+    ["Allow all imports"] = "derpy_mr_ui_477bcaac6f",
+    ["Stop all imports"] = "derpy_mr_ui_3eafb0d51a",
     ["From next turn every resource can be traded again and earn trade income."] = "derpy_mr_ui_cfbb700901",
     ["From next turn no resource can be traded or earn trade income.\nYour own carts stop carrying them at once."] = "derpy_mr_ui_a6266a69a4",
     ["Take every resource your trade partners send to your stores."] = "derpy_mr_ui_f85fe8117a",
@@ -1172,12 +1183,12 @@ DERPY_MR_LOC_KEYS = {
     ["store"] = "derpy_mr_ui_8cd892b7b9",
     ["stores"] = "derpy_mr_ui_61af09f34b",
     ["There is nothing worth selling.\nOnly what your stores of {1} hold over half full can be sold."] = "derpy_mr_ui_b427b908bc",
-    ["It needs %s gold."] = "derpy_mr_ui_355aa79dec",
-    ["It needs a level %d settlement."] = "derpy_mr_ui_9c5c64e37f",
-    ["It needs an empty building slot."] = "derpy_mr_ui_0879a569dc",
     ["{1} gold"] = "derpy_mr_ui_0a6b5ab016",
     ["Build {1} here at once for {2} even though no building slot here normally takes it."] = "derpy_mr_ui_925fb2cc83",
     ["Upgrade to {1} at once for {2}."] = "derpy_mr_ui_14fe83513b",
+    ["It needs {1} gold."] = "derpy_mr_ui_8fd52e5ae5",
+    ["It needs a level {1} settlement."] = "derpy_mr_ui_e4fd8eedbe",
+    ["It needs an empty building slot."] = "derpy_mr_ui_0879a569dc",
     ["Not built"] = "derpy_mr_ui_12bc4d809b",
     ["Level {1} of 3"] = "derpy_mr_ui_79a15cf527",
     ["Found"] = "derpy_mr_ui_5d695cc28c",
@@ -1387,7 +1398,7 @@ DERPY_MR_LOC_KEYS = {
     ["This army is in your own lands.\nLoad it here instead."] = "derpy_mr_ui_b4b35cdb8d",
     ["This army has no supply road."] = "derpy_mr_ui_189e87167f",
     ["This army already carries 5 turns of provisions."] = "derpy_mr_ui_47b497f846",
-    ["{1} has no food to spare."] = "derpy_mr_ui_9d02111ded",
+    ["{1} has no food to spare.\nA settlement keeps {2} turns of the food it eats and uses before it feeds an army."] = "derpy_mr_ui_323b23ad5d",
     ["Send a cart of provisions from {1}.\nIt arrives in {2}.\nAn army at war with you can seize it."] = "derpy_mr_ui_705b55867a",
     ["Supply cart"] = "derpy_mr_ui_b89a0adb92",
     ["Send supplies"] = "derpy_mr_ui_0712b67f47",
@@ -1526,7 +1537,7 @@ DERPY_MR_LOC_KEYS = {
     ["This settlement was taken too recently to feed an army."] = "derpy_mr_ui_7260e1e2e7",
     ["It refills from this settlement."] = "derpy_mr_ui_53d78dcc3a",
     ["This settlement has {1} provisions to spare."] = "derpy_mr_ui_f8ea19175a",
-    ["This settlement has no provisions to spare."] = "derpy_mr_ui_13ae2fc7bf",
+    ["This settlement has no provisions to spare.\nA settlement keeps {1} turns of the food it eats and uses before it feeds an army."] = "derpy_mr_ui_99d2999302",
     ["You can buy {1} rations for {2} gold."] = "derpy_mr_ui_a8f16cf995",
     ["The army cannot buy more rations this turn."] = "derpy_mr_ui_bf90d57f02",
     ["The seller or buyer is gone"] = "derpy_mr_ui_8e6f48ab81",
@@ -1641,8 +1652,8 @@ DERPY_MR_LOC_KEYS = {
     ["Recruitment cost -15%"] = "derpy_mr_ui_856ed27284",
     ["Recruitment cost -15% in the province. Permanent"] = "derpy_mr_ui_7cb2164988",
     ["Wyvern Roost"] = "derpy_mr_ui_822f544c40",
-    ["Army upkeep -5%"] = "derpy_mr_ui_feef73ceba",
-    ["Upkeep -5% for your armies here. Permanent"] = "derpy_mr_ui_79d8832775",
+    ["Upkeep and melee attack"] = "derpy_mr_ui_9fad66118d",
+    ["Upkeep -10% and melee attack +10 for your armies here. Permanent"] = "derpy_mr_ui_c75766b869",
     ["Armaments"] = "derpy_mr_ui_0afc19dc3a",
     ["30 Armaments"] = "derpy_mr_ui_27b18c6fb2",
     ["Makes 30 Armaments from your stores once a turn"] = "derpy_mr_ui_f784dc3fa5",
@@ -1831,6 +1842,8 @@ S.PREFIX = "derpy_mr_store_"
 S.CCO = 'BuildingSlotList.JoinString(BuildingContext.EffectList.Filter(EffectKey.StartsWith("derpy_mr_store_")).JoinString(EffectKey + "=" + Value, ","), ",")'
 S.NOTHING = S.T("Nothing is stored here yet.")
 S.NO_REALM = S.T("You hold no settlements and so have no stores.")
+-- a settlement whose main building makes none of our goods (flows.lua F.charted, 2026-11-11)
+S.UNCHARTED = S.T("Its buildings make no goods yet. It grows its own food, and other goods come by trade.")
 S.FULL_TIP = S.T("This store is full and anything more made here is lost.")
 S.NO_HISTORY = S.T("The history starts next turn.")
 S.view, S.focus = "goods", nil
@@ -2056,16 +2069,16 @@ function S.last_line(l)
     local function add(label, n)
         if n ~= 0 then parts[#parts + 1] = label .. " " .. per_turn(n) end
     end
-    add("made", l.made or 0)
-    add("raided", (l.raided_in or 0) - (l.raided_out or 0))
-    add("plundered", (l.plundered_in or 0) - (l.plundered_out or 0))
+    add(S.T("made"), l.made or 0)
+    add(S.T("raided"), (l.raided_in or 0) - (l.raided_out or 0))
+    add(S.T("plundered"), (l.plundered_in or 0) - (l.plundered_out or 0))
     add(S.T("traded in"), l.traded_in or 0)
     add(S.T("traded out"), -(l.traded_out or 0))
-    add("eaten", -(l.eaten_out or 0))
-    add("spoiled", -(l.spoiled_out or 0))
-    add("moved", (l.moved_in or 0) - (l.moved_out or 0))      -- netted: what the road lost
-    add("spent", -(l.spent_out or 0))
-    add("sold", -(l.sold_out or 0))
+    add(S.T("eaten"), -(l.eaten_out or 0))
+    add(S.T("spoiled"), -(l.spoiled_out or 0))
+    add(S.T("moved"), (l.moved_in or 0) - (l.moved_out or 0))      -- netted: what the road lost
+    add(S.T("spent"), -(l.spent_out or 0))
+    add(S.T("sold"), -(l.sold_out or 0))
     if #parts == 0 then return S.T("Last turn: no change") end
     local line = S.T("Last turn: {1}", table.concat(parts, ", "))
     -- a busy turn drops its last parts rather than run past the chart line
@@ -2128,7 +2141,9 @@ S.FOLD_TIP = { [false] = S.T("Click to hide the resources you do not have."),
 -- ALL AT ONCE: one button per direction and mode, under the list on the Trade tab
 S.BULK = "derpy_mr_all_"
 S.BULK_ORDER = { { "export", "allow" }, { "export", "stop" }, { "import", "allow" }, { "import", "stop" } }
-S.BULK_LABEL = { allow = S.T("Allow all "), stop = S.T("Stop all ") }
+-- one whole sentence a label, so a translation can put the words in its own order
+S.BULK_LABEL = { export = { allow = S.T("Allow all exports"), stop = S.T("Stop all exports") },
+                 import = { allow = S.T("Allow all imports"), stop = S.T("Stop all imports") } }
 S.BULK_TIP = {
     export = { allow = S.T("From next turn every resource can be traded again and earn trade income."),
                stop = S.T("From next turn no resource can be traded or earn trade income.\nYour own carts stop carrying them at once.") },
@@ -2485,7 +2500,6 @@ end
 -- an icon, a tooltip, and what a click on it opens). Pure, so the harness reads it directly.
 -- FOUNDING A RARE BUILDING (spec 2026-10-09): a lore region no building slot offers it in gets one
 -- row above its goods. The flows script decides; this only words it.
-S.FOUND_WHY = { gold = S.T("It needs %s gold."), tier = S.T("It needs a level %d settlement."), slot = S.T("It needs an empty building slot.") }
 function S.found_row(fs, rkey)
     local names, price = DERPY_MR_STORES_FOUND[fs.good], S.T("{1} gold", S.num(fs.cost))
     local tip
@@ -2494,9 +2508,10 @@ function S.found_row(fs, rkey)
     else
         tip = S.T("Upgrade to {1} at once for {2}.", names[fs.next], price)
     end
-    if fs.why == "gold" then tip = string.format(S.FOUND_WHY.gold, S.num(fs.cost))
-    elseif fs.why == "tier" then tip = string.format(S.FOUND_WHY.tier, fs.tier_need)
-    elseif fs.why == "slot" then tip = S.FOUND_WHY.slot end
+    -- {1}, not string.format: a "%" in a translation would raise (2026-11-11)
+    if fs.why == "gold" then tip = S.T("It needs {1} gold.", S.num(fs.cost))
+    elseif fs.why == "tier" then tip = S.T("It needs a level {1} settlement.", fs.tier_need)
+    elseif fs.why == "slot" then tip = S.T("It needs an empty building slot.") end
     -- the price in the fourth column, beside its button: under "Per turn" it read as income
     return { fs.level == 0 and names[1] or names[fs.level],
              fs.level == 0 and S.T("Not built") or (S.T("Level {1} of 3", fs.level)), "", price, "",
@@ -2885,6 +2900,7 @@ function S.view_model(realm)
                 tip = add_line(tip, S.T("It eats {1}{2} a turn, {3} for each settlement level.", S.num(meals),
                     (meals == 1 and S.T(" provision") or S.T(" provisions")), S.num(S.ask("need", f:name()) or 0)))
             end
+            if S.ask("charted", r.key) == false then tip = add_line(tip, S.UNCHARTED) end
             v.rows[#v.rows + 1] = { r.name, tostring(r.level), #icons > 0 and "" or "-", tostring(r.goods),
                                     fullest, open = r.key, icons = r.icons, using = icons, tip = tip }
         end
@@ -3188,7 +3204,11 @@ function S.army_view(v)
     elseif state == "home" then why = S.T("This army is in your own lands.\nLoad it here instead.")
     elseif state ~= "supplied" and state ~= "stretched" then why = S.T("This army has no supply road.")
     elseif row.held >= row.need * 5 then why = S.T("This army already carries 5 turns of provisions.")
-    elseif (S.ask("provision_spare", f, note.source) or 0) <= 0 then why = S.T("{1} has no food to spare.", S.place(note.source)) end
+    elseif (S.ask("provision_spare", f, note.source) or 0) <= 0 then
+        -- and why: a store below its own reserve looks full to a player who sees it making grain (Gidwelion, 2026-11-11)
+        why = S.T("{1} has no food to spare.\nA settlement keeps {2} turns of the food it eats and uses before it feeds an army.",
+            S.place(note.source), (DERPY_MR_FLOWS and DERPY_MR_FLOWS.FED_TURNS) or 5)
+    end
     local supply = why or S.T("Send a cart of provisions from {1}.\nIt arrives in {2}.\nAn army at war with you can seize it.",
         S.place(note.source), turns(note.turns))
     v.rows[#v.rows + 1] = { S.T("Supply cart"), note and note.source and S.place(note.source) or "-", "", "", provisions = "send",
@@ -3883,7 +3903,7 @@ function S.build()
     label(find_uicomponent(p, S.TAB.goods), S.T("Resources"))
     for _, dm in ipairs(S.BULK_ORDER) do
         local bt = find_uicomponent(p, S.BULK .. dm[1] .. "_" .. dm[2])
-        label(bt, S.BULK_LABEL[dm[2]] .. dm[1] .. "s")
+        label(bt, S.BULK_LABEL[dm[1]][dm[2]])
         if is_uicomponent(bt) then bt:SetTooltipText(S.BULK_TIP[dm[1]][dm[2]], true) end
     end
     label(find_uicomponent(p, S.TAB.settlements), S.T("Settlements"))

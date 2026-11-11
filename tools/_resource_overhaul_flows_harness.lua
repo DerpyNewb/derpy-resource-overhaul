@@ -47,7 +47,7 @@ local function region(key, x, y, cap, held)
         logical_position_x = function() return r.x end,
         logical_position_y = function() return r.y end,
         primary_slot = function() return { building = function()
-            return { building_level = function() return r.level end } end } end,
+            return { building_level = function() return r.level end, chain = function() return r.chain end } end } end,
         slot_list = function() return list(r.slots or {}) end,
     }
     r.iface = {
@@ -1127,6 +1127,23 @@ for k, o in pairs(opt) do
     else
         eq(o.locked, true, "a campaign greys " .. k); eq(type(o.why) == "string" and #o.why > 0, true, "and says why")
     end
+end
+-- THE LOCK'S REASON IS TRANSLATED (a translator's report, 2026-11-10): MCT draws the text it is handed, so the file
+-- asks the loc first and keeps the English when there is no row
+do
+    local loc0, page0 = common.get_localised_string, MCT.derpy_more_resources   -- the tests below set values on this page
+    common.get_localised_string = function(k) return k == "mct_derpy_more_resources_lock_reason" and "Verrouille." or "" end
+    dofile("__MCT__")
+    eq(MCT.derpy_more_resources.options.raid.why, "Verrouille.", "a translated lock reason")
+    common.get_localised_string = function(k) return k end
+    dofile("__MCT__")
+    eq(MCT.derpy_more_resources.options.raid.why,
+       "Fixed when a campaign starts. Change it from the main menu before starting a new one.", "a missing row answering its key: the English")
+    common.get_localised_string = loc0
+    dofile("__MCT__")
+    eq(MCT.derpy_more_resources.options.raid.why,
+       "Fixed when a campaign starts. Change it from the main menu before starting a new one.", "no loc row: the English")
+    MCT.derpy_more_resources = page0
 end
 eq(opt.route_size ~= nil and opt.route_colours ~= nil, true, "both line options are on the page")
 eq(opt.ui_size ~= nil, true, "the panel size is on the page")
@@ -4284,6 +4301,14 @@ end)()
     a.sea=false
     eq(#F.provision_rows(f.iface),1,"army preview finds force")
     eq(F.state.armies,nil,"army preview does not migrate")
+    -- NOTHING TO SPARE SAYS WHY (Gidwelion, 2026-11-11): the settlement's own reserve, in turns
+    local held_before=r.held.grain
+    r.held.grain=10
+    eq(F.provision_rows(f.iface)[1].reason,"This settlement has no provisions to spare.\nA settlement keeps 5 turns of the food it eats and uses before it feeds an army.","an army told why it gets nothing")
+    F.FED_TURNS=4; r.held.grain=0
+    eq(F.provision_rows(f.iface)[1].reason,"This settlement has no provisions to spare.\nA settlement keeps 4 turns of the food it eats and uses before it feeds an army.","the turns are F.FED_TURNS")
+    F.FED_TURNS=5
+    r.held.grain=held_before
     r.held.grain=35
     F.provision_action(f.iface,"801","load")
     eq(F.provision_total(F.state.armies["801"]),25,"loading releases army reserve but retains essential ten")
@@ -4442,7 +4467,8 @@ end)()
     eq(#F.provision_rows(f.iface),2,"a field army eats")
     local fed=F.provision_need(f.iface,r.iface)
     -- CARAVANS AND CONVOYS CARRY NO RATIONS (Workshop report, 2026-11-06): they live on foreign roads
-    for _, kind in ipairs({"CARAVAN","CONVOY"}) do
+    -- and Thanquol's schemers and Ogre camps (2026-11-11): CA's own scripts count neither as an army
+    for _, kind in ipairs({"CARAVAN","CONVOY","CHAOTIC_PLAN_SCHEMERS","OGRE_CAMP"}) do
         d.type=kind
         eq(#F.provision_rows(f.iface),1,kind.." excluded")
         eq(F.provision_need(f.iface,r.iface),fed-1,kind.." asks its settlement for no meal")
@@ -7492,6 +7518,266 @@ end)()
     walk(F, "F")
     table.sort(found)
     eq(table.concat(found, " "), "", "engine interfaces kept in the flows module")
+end)()
+
+-- ---- RACE IDENTITY (faction flavour design 2026-11-11, section 7): the culture first, then the name ----
+;(function()
+    local n = 0
+    local function f(sc, culture) n = n + 1; return faction("ident" .. n, { sc = sc, culture = culture }).iface end
+    eq(F.race(f("wh_main_sc_emp_empire", "wh_main_emp_empire")), "emp", "a vanilla key keeps its token")
+    eq(F.race(f("mixer_cou_vampires", "wh_main_vmp_vampire_counts")), "vmp", "Mixu's vampires take their culture's token")
+    eq(F.race(f("abc_one", "abc_culture")) ~= F.race(f("abc_two", "abc_culture")), true, "two unknown races never share a token")
+    eq(F.family(f("mixer_cou_vampires", "wh_main_vmp_vampire_counts")), "undead", "Mixu's vampires eat nothing")
+    eq(F.family(f("mixer_nag_nagash", "wh_main_vmp_vampire_counts")), "excluded", "Mixu's Nagash keeps no stores")
+    eq(F.family(f("abc_kho_host", "abc_culture")), "excluded", "a Khorne name with no _sc_ keeps no stores")
+    eq(F.family(f("abc_vmp_court", "abc_culture")), "undead", "an undead name under a modded culture eats nothing")
+    eq(F.family(f("ovn_sc_arb_araby", "wh_main_emp_empire")), "living", "Araby eats")
+    eq(F.family(f("wh2_dlc09_sc_tmb_tomb_kings", "wh2_dlc09_tmb_tomb_kings")), "excluded", "Tomb Kings stay out (Phase 3)")
+    eq(F.eats(f("mixer_cou_vampires", "wh_main_vmp_vampire_counts")), false, "so they are never fed")
+    eq(F.uses_stores(f("mixer_cou_vampires", "wh_main_vmp_vampire_counts")), true, "but they keep stores")
+    local u = f("abc_three", "abc_culture")
+    local shared, own_works = 0, 0
+    for _, w in ipairs(DERPY_MR_FLOWS_WORKS) do
+        if F.work_open(u, w) then
+            if w.races[1] == "all" then shared = shared + 1 else own_works = own_works + 1 end
+        end
+    end
+    eq(shared > 0 and own_works == 0, true, "an unknown race keeps the shared works and gets no race's own")
+end)()
+
+-- ---- UNCHARTED SETTLEMENTS FEED THEMSELVES (design 2026-11-11, section 7) ----
+;(function()
+    local R0, tx, made = F.state.rates, cm.entity_add_pooled_resource_transaction, {}
+    cm.entity_add_pooled_resource_transaction = function(s, reg, key, n)
+        if string.find(key, "_processed", 1, true) then made[#made + 1] = key .. ":" .. n end
+        return tx(s, reg, key, n)
+    end
+    local food0 = R0.ai_food; R0.ai_food = false
+    local uf = faction("unch", { human = true, sc = "ovn_sc_arb_araby", culture = "wh_main_emp_empire" })
+    local ur = region("unch1", 47000, 0, 2000, {}); own(uf, ur, true)
+    -- its own meals and as many again, the stock its armies load and its carts carry (final review 2026-11-11)
+    local meal = "derpy_mr_store_salted_meat_processed:" .. (2 * F.NEED * 1)
+    F.upkeep_region(ur.iface, uf.name, true); eq(#made, 0, "an unreadable chain counts as charted")
+    ur.chain = "ovn_araby_settlement_major"; ur.held = {}; made = {}
+    F.upkeep_region(ur.iface, uf.name, true); eq(made[1], meal, "an uncharted settlement grows a level's meals")
+    uf.human = false; ur.held = {}; made = {}
+    F.upkeep_region(ur.iface, uf.name, true); eq(made[1], meal, "and for a computer faction too")
+    ur.held = { salted_meat = ur.cap }; made = {}
+    F.upkeep_region(ur.iface, uf.name, true); eq(#made, 0, "a full store grows nothing")
+    DERPY_MR_CHARTED = { ovn_araby_settlement_major = true }; ur.held = {}; made = {}
+    F.upkeep_region(ur.iface, uf.name, true); eq(#made, 0, "a submod's chain counts as charted")
+    DERPY_MR_CHARTED = {}
+    ur.chain = next(DERPY_MR_FLOWS_CHARTED); ur.held = {}; made = {}
+    F.upkeep_region(ur.iface, uf.name, true); eq(#made, 0, "a charted settlement is not fed by script")
+    eq(F.charted("unch1"), true, "the panel's question answers the same")
+    ur.chain = "ovn_araby_settlement_major"; eq(F.charted("unch1"), false, "and the other way")
+    cm.entity_add_pooled_resource_transaction = tx; R0.ai_food = food0
+end)()
+
+-- ---- FINAL REVIEW 2026-11-11: an uncharted race's armies, old saves' rations, Norsca's god altars ----
+;(function()
+    local gm, sm, rm = cm.get_military_force_by_cqi, cm.show_message_event, cm.remove_effect_bundle_from_force
+    -- a player's army in its own uncharted capital, Normal rations, past the turns its seed lasts
+    F.state = { factions = {}, rates = F.read_rates() }
+    F.state.rates.army_provisions, F.state.rates.supply_lines = true, false
+    local hf = faction("unch_h", { human = true, sc = "ovn_sc_arb_araby", culture = "wh_main_emp_empire" })
+    local hr = region("unch_h1", 52000, 0, 200, {}); own(hf, hr, true)
+    hr.chain, hr.level = "ovn_araby_settlement_major", 3
+    local ch = { is_at_sea = function() return false end, has_region = function() return true end,
+                 region = function() return hr.iface end }
+    local army = { is_null_interface = function() return false end, command_queue_index = function() return 9901 end,
+        faction = function() return hf.iface end, has_general = function() return true end,
+        is_armed_citizenry = function() return false end, general_character = function() return ch end,
+        force_type = function() return { key = function() return "ARMY" end } end,
+        unit_list = function() local t = {} for i = 1, 20 do t[i] = {} end return list(t) end }
+    hf.armies = { army }
+    cm.get_military_force_by_cqi = function(_, id) if id == 9901 then return army end return false end
+    local warned = 0
+    cm.show_message_event = function() warned = warned + 1 end
+    cm.remove_effect_bundle_from_force = function() end
+    TURN = 9000
+    F.provision_seed_force(army)
+    for t = 1, 8 do
+        TURN = 9000 + t
+        F.upkeep(hf.iface); F.provisions_turn(hf.iface)
+    end
+    eq(F.state.armies["9901"].short, 0, "an uncharted race's army at home never misses a meal")
+    eq(warned, 0, "and is never warned")
+    -- with no army to feed, the surplus stays in the store for the next one to load
+    hf.armies = {}; F.state.armies = nil; hr.held = {}
+    for t = 1, 3 do TURN = 9100 + t; F.upkeep(hf.iface) end
+    eq(F.use_total(hr.held, "provisions"), 3 * F.NEED * 3, "an uncharted store keeps a level's meals a turn over")
+    cm.get_military_force_by_cqi, cm.show_message_event, cm.remove_effect_bundle_from_force = gm, sm, rm
+
+    -- a Mixu vampire faction from an older save, on Rationing from when it still ate
+    F.state = { factions = {}, rates = F.read_rates() }
+    for _, human in ipairs({ true, false }) do
+        local v = faction(human and "mixv_h" or "mixv_ai",
+            { human = human, sc = "mixer_cou_vampires", culture = "wh_main_vmp_vampire_counts" })
+        F.state.edicts = F.state.edicts or {}
+        F.state.edicts[v.name] = { rations = { o = "rationing", at = 1 } }
+        cm.apply_effect_bundle(nil, "derpy_mr_edict_rationing", v.name, 0)
+        TURN = 8000
+        F.edict_turn(v.iface)
+        eq(v.iface:has_effect_bundle("derpy_mr_edict_rationing"), false,
+            (human and "a player's" or "a computer's") .. " old Rationing goes when it stops eating")
+    end
+    -- and a computer faction that still eats keeps the edict it chose
+    local e = faction("eat_ai", { human = false, sc = "wh_main_sc_emp_empire", culture = "wh_main_emp_empire" })
+    F.state.edicts[e.name] = { rations = { o = "rationing", at = TURN } }
+    cm.apply_effect_bundle(nil, "derpy_mr_edict_rationing", e.name, 0)
+    F.edict_turn(e.iface)
+    eq(e.iface:has_effect_bundle("derpy_mr_edict_rationing"), true, "an eating computer keeps its Rationing")
+
+    -- Norsca's god altars are Norsca's own main buildings, not a daemon's
+    local nf = faction("nor_alt", { human = true, sc = "wh_dlc08_sc_nor_norsca", culture = "wh_dlc08_nor_norsca" })
+    local nr = region("nor_alt1", 53000, 0, 200, {}); own(nf, nr, true)
+    nr.chain = "wh3_dlc27_settlement_nor_chaos_altar_kho"
+    eq(F.charted("nor_alt1"), true, "a Norscan god altar is charted")
+end)()
+
+-- ---- THE COMPUTERS' TERMS (IEE 2026-11-11: one computer turn start 4.4 s, one round 54 s, in road searches) ----
+-- A computer's turn start may search F.SEARCH_HEXES hexes of road in all (terrain_routes.lua R.reach / R.journey);
+-- a pair with a player in it is never limited; a search still under way answers nil and is not kept for the turn.
+;(function()
+    local saved_routes, saved_state, saved_ts, t0 = DERPY_MR_TERRAIN_ROUTES, F.state, F.turn_start, TURN
+    F.state = { factions = {}, rates = F.read_rates(), ship_seq = 9700000 }
+    F.state.rates.escort, F.state.rates.supply, F.state.rates.army_provisions = false, false, false
+    local got, answer = {}, true   -- the terms each search was asked with (false: none)
+    DERPY_MR_TERRAIN_ROUTES = {
+        reach = function(_, _, _, terms) got[#got + 1] = terms or false; return answer, nil, answer and { { 0, 0 } } or nil end,
+        journey = function(_, _, terms) got[#got + 1] = terms or false; if answer then return { { 0, 0 }, { 1, 0 } } end; return nil, "pending" end }
+    local c1 = faction("ct_a"); local c1r = region("ct_a1", 61000, 0, 600, { grain = 500 }); own(c1, c1r, true)
+    local c1b = region("ct_a2", 61010, 0, 600, {}); own(c1, c1b)
+    local c2 = faction("ct_b"); local c2r = region("ct_b1", 61100, 0, 600, {}); own(c2, c2r, true)
+    local c3 = faction("ct_c"); local c3r = region("ct_c1", 61200, 0, 600, {}); own(c3, c3r, true)
+    local h = faction("ct_h", { human = true }); local hr = region("ct_h1", 61300, 0, 600, {}); own(h, hr, true)
+    TURN = 61000
+    local inside
+    F.turn_start = function()
+        got, F.reach_known = {}, {}
+        F.trade_reach(c1.iface, c2.iface); F.trade_reach(c1.iface, c3.iface); F.trade_reach(c1.iface, h.iface)
+        inside = F.search_terms
+    end
+    F.on_faction_turn_start(c1.iface)
+    eq(type(got[1]) == "table" and got[1].left, F.SEARCH_HEXES, "a computer pair searches within the turn start's hexes")
+    eq(got[1].keep, F.REACH_KEEP, "and trusts a kept road for F.REACH_KEEP turns")
+    eq(got[2], got[1], "every search of one turn start draws on one allowance")
+    eq(got[3], false, "a pair with a player in it searches without limit, even in a computer's turn")
+    eq(F.search_terms, nil, "the allowance ends with the turn start")
+    F.on_faction_turn_start(h.iface)
+    eq(inside, nil, "a player's turn start has no allowance")
+    F.turn_start = function() error("thrown") end
+    pcall(F.on_faction_turn_start, c1.iface)
+    eq(F.search_terms, nil, "a thrown turn start still ends the allowance")
+    F.turn_start = saved_ts
+    -- a search under way answers nil, and the next ask goes on with it rather than reading nil back
+    F.search_terms = { left = 0, keep = F.REACH_KEEP }
+    answer, got, F.reach_known = nil, {}, {}
+    eq(F.trade_reach(c1.iface, c2.iface), nil, "a search under way answers nil")
+    eq(F.trade_reach(c1.iface, c2.iface), nil, "and nil again")
+    eq(#got, 2, "a search under way was kept as the turn's answer")
+    answer = true
+    eq(F.trade_reach(c1.iface, c2.iface), true, "and the finished search is the answer")
+    eq(F.trade_reach(c1.iface, c2.iface), true, "kept for the turn once known"); eq(#got, 3, "one search, not two")
+    F.search_terms = nil
+    -- the map's 'show' searches F.SHOW_HEXES a call whoever trades; it trusts a kept road only between computers
+    got, F.reach_known = {}, {}
+    F.trade_reach(c1.iface, c2.iface, "show"); F.trade_reach(c1.iface, h.iface, "show")
+    eq(type(got[1]) == "table" and got[1].left, F.SHOW_HEXES, "the map searches a few thousand hexes a call")
+    eq(got[1].keep, F.REACH_KEEP, "trusting a computer pair's kept road as their trade does")
+    eq(type(got[2]) == "table" and got[2].left, F.SHOW_HEXES, "a player's pair too")
+    eq(got[2].keep, 0, "but a player's road is always checked")
+    -- a computer's cart: its road within the allowance; one still under way leaves on the straight line, as before roads
+    F.search_terms = { left = 0, keep = F.REACH_KEEP }
+    answer, got = nil, {}
+    local s = F.ship(c1.iface, c1r.iface, c1b.iface, "grain", 50)
+    eq(got[1], F.search_terms, "a computer's cart searches within its turn start's hexes")
+    eq(s ~= nil, true, "a cart whose road is still under way still leaves")
+    eq(s.road, nil, "on the straight line")
+    F.drop(s); c1r.held.grain = 500
+    F.search_terms, answer, got = nil, true, {}
+    s = F.ship(c1.iface, c1r.iface, c1b.iface, "grain", 50)
+    eq(got[1], false, "a cart outside a computer's turn start searches without limit")
+    eq(s ~= nil and #s.road, 2, "and takes the road it found")
+    F.drop(s)
+    DERPY_MR_TERRAIN_ROUTES, F.state, TURN, F.reach_known = saved_routes, saved_state, t0, {}
+end)()
+
+-- ---- THE EXCHANGE'S PRICES, ONE PASS A FACTION (IEE 2026-11-11) ----
+-- EX.with_player clears the Exchange's guild hold, so a good priced alone walks every house's diplomacy: 8.5 ms a good
+-- on IEE's 138 houses, 0.5 s a faction's 58 goods, and 3.4 s of one computer's trade. The whole list under one hold
+-- (EX.hold_guild) is 14 ms with the same prices. A turn start, and a trade preview, keep each faction's list.
+;(function()
+    local ex_was, saved_state, saved_ts, saved_tp = EX, F.state, F.turn_start, F.trade_pair
+    F.state = { factions = {}, rates = F.read_rates() }
+    local binds, holds, asks, broken = 0, 0, 0, {}
+    local X = { subject = nil, guild_hold = nil }
+    function X.lot() return 10 end
+    function X.with_player(f, fn)
+        binds = binds + 1
+        local prev = X.subject; X.subject = f; X.guild_hold = nil   -- a bind drops the hold, as the Exchange's does
+        local ok = pcall(fn); X.subject = prev; X.guild_hold = nil
+        return ok
+    end
+    function X.hold_guild() holds = holds + 1; X.guild_hold = { who = X.subject } end
+    function X.free_guild() X.guild_hold = nil end
+    function X.sell_price(res)
+        asks = asks + 1
+        if broken[res] then error("the Exchange broke") end
+        return (X.subject == "px_a" and 500 or 700) + #res
+    end
+    EX = X
+    local goods = DERPY_MR_FLOWS_GOODS
+    local pa, pb = faction("px_a"), faction("px_b")
+    -- a good at a time, outside any pass: as before, and what every answer below must equal
+    local want = {}
+    for _, g in ipairs(goods) do want[g.stem] = F.price(g, "px_a") end
+    eq(binds, #goods, "outside a turn start a good is priced alone, as before")
+    eq(want[goods[1].stem], (500 + #goods[1].res) / 10, "a lot's price over the lot")
+    local got = {}
+    F.turn_start = function()
+        binds, holds, asks = 0, 0, 0
+        for _, g in ipairs(goods) do got[g.stem] = F.price(g, "px_a") end
+        for _, g in ipairs(goods) do F.price(g, "px_a") end
+        F.price(goods[1], "px_b")
+    end
+    F.on_faction_turn_start(pa.iface)
+    eq(binds, 2, "a turn start binds the Exchange once a faction it prices")
+    eq(holds, 2, "under one guild hold each")
+    eq(asks, 2 * #goods, "and asks for each good once a faction")
+    for _, g in ipairs(goods) do eq(got[g.stem], want[g.stem], "the turn start's price for " .. g.stem) end
+    eq(F.price_cache, nil, "the prices are dropped with the turn start")
+    F.turn_start = function() error("thrown") end
+    pcall(F.on_faction_turn_start, pa.iface)
+    eq(F.price_cache, nil, "and with a thrown one")
+    -- a good the Exchange cannot price takes its fixed rate; the faction's other goods keep the Exchange's
+    broken[goods[2].res] = true
+    F.turn_start = function() for _, g in ipairs(goods) do got[g.stem] = F.price(g, "px_a") end end
+    F.on_faction_turn_start(pa.iface)
+    eq(got[goods[2].stem], DERPY_MR_FLOWS_SELL_RATE[goods[2].use] or 0, "a good the Exchange cannot price takes its rate")
+    for i, g in ipairs(goods) do
+        if i ~= 2 then eq(got[g.stem], want[g.stem], "the rest keep the Exchange's price, " .. g.stem) end
+    end
+    broken = {}
+    -- an Exchange with no guild hold: the same prices, still one pass
+    X.hold_guild, X.free_guild = nil, nil
+    F.turn_start = function() binds = 0; for _, g in ipairs(goods) do got[g.stem] = F.price(g, "px_a") end end
+    F.on_faction_turn_start(pa.iface)
+    eq(binds, 1, "one pass without a hold too")
+    for _, g in ipairs(goods) do eq(got[g.stem], want[g.stem], "unheld, the price for " .. g.stem) end
+    -- a trade preview (the map's) prices each faction once and keeps nothing after
+    F.trade_pair = function(e, _, s)
+        F.price(goods[1], e:name()); F.price(goods[2], e:name())
+        return nil, s
+    end
+    pa.partners = { pb }
+    binds = 0
+    F.trade(pa.iface, true)
+    eq(binds, 1, "a preview prices a faction once")
+    eq(F.price_cache, nil, "and keeps nothing after")
+    pa.partners = {}
+    EX, F.state, F.turn_start, F.trade_pair = ex_was, saved_state, saved_ts, saved_tp
 end)()
 
 print("harness ok")

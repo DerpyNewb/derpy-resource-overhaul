@@ -925,8 +925,10 @@ WORK_UPGRADES = (
      [("wh_main_effect_province_growth_events", "region_to_province_own_unseen", 20)], "Growth +20"),
     ("feathers", "Eyrie", "recruitment cost -15% in the province", "mount.png",
      [("wh_main_effect_force_all_campaign_recruitment_cost_all", "region_to_province_own", -15)], "Recruitment cost -15%"),
-    ("wyvern_scales", "Wyvern Roost", "upkeep -5% for your armies here", "variable_upkeep.png",
-     [("wh_main_effect_force_all_campaign_upkeep", "region_to_force_own", -5)], "Army upkeep -5%"),
+    # two effects near 10, as Gromril Gate: -5% upkeep alone was the weakest upgrade (faction flavour design 2026-11-11)
+    ("wyvern_scales", "Wyvern Roost", "upkeep -10% and melee attack +10 for your armies here", "variable_upkeep.png",
+     [("wh_main_effect_force_all_campaign_upkeep", "region_to_force_own", -10),
+      ("wh_main_effect_force_stat_melee_attack", "region_to_force_own", 10)], "Upkeep and melee attack"),
 )
 WORK_CATEGORY_WORD = {"armour": "Armour", "weapon": "Weapon", "talisman": "Talisman",
                       "enchanted_item": "Enchanted item", "arcane_item": "Arcane item", "general": "Banner"}
@@ -954,7 +956,7 @@ WORK_RECIPES = (
     ("conv_armaments", "convert", ("chd",), [("coal", 20), ("brimstone", 20), ("iron", 20)], "Armaments",
      "30 Armaments", "Makes 30 Armaments from your stores once a turn",
      {"pool": "wh3_dlc23_chd_armaments", "amount": 30}),
-    ("conv_food", "convert", ("skv",), [("grain", 30), ("salted_fish", 30)], "Food", "4 Food",
+    ("conv_food", "convert", ("skv",), [("grain", 10), ("salted_fish", 10)], "Food", "4 Food",
      "Makes 4 Food from your stores once a turn", {"pool": "skaven_food", "amount": 4}),
     ("conv_oathgold", "convert", ("dwf",), [("gold_idols", 30), ("silver", 30)], "Oathgold", "30 Oathgold",
      "Makes 30 Oathgold from your stores once a turn", {"pool": "dwf_oathgold", "amount": 30}),
@@ -1212,6 +1214,13 @@ def check_recipes(ws):
         if w["kind"] == "convert":
             p = pools.get(w["pool"])
             assert p and p["scope"] == "FACTION" and w["amount"] > 0, "%s: pool %s is no FACTION pool" % (w["key"], w["pool"])
+            # the same price both ways: a recipe buys the currency at the rate a recruitment shortfall charges it
+            for race in w["races"]:
+                c = U.CURRENCY.get(race)
+                if c:
+                    n = sum(k for _s, k in w["goods"])
+                    assert n == c["per"] * w["amount"], "%s: %d goods for %d, the shortfall takes %d a unit" % (
+                        w["key"], n, w["amount"], c["per"])
         if w["kind"] in ("army", "lasting", "trait"):
             assert w.get("fx") or w.get("rank"), "%s gives nothing" % w["key"]
         for e, sc, v in w.get("fx", ()):
@@ -1722,8 +1731,10 @@ def n_loc():
             + 2 * (len(provision_bundles()) + len(supply_bundles())) + 3 + 3 + 2 * len(recipe_bundles()) + 3 * sum(1 for w in works() if w["kind"] == "trait") + 2)   # recipes; 3 + 3: the army food and road loss messages
 
 # Owners with no living people to make or eat a good: daemons, the dead, and beasts with no towns
-# to sell in. Matched on the CHAIN key, so a special variant for one of them goes too.
-EXCLUDE = re.compile(r"(^|_)(dae|kho|nur|sla|tze|tmb|nag|bst|beastmen|BEASTMEN)(_|$)")
+# to sell in. Matched on the CHAIN key, so a special variant for one of them goes too. Not Norsca's god altars
+# (wh3_dlc27_settlement_nor_chaos_altar_kho and their buildings): Norsca's own, dedicated to a god (final review
+# 2026-11-11; gen_mr_ui.check_races asserts no chain named for a race that keeps stores is dropped).
+EXCLUDE = re.compile(r"(?<!chaos_altar)(^|_)(dae|kho|nur|sla|tze|tmb|nag|bst|beastmen|BEASTMEN)(_|$)")
 # Chains that stand in a port or deposit slot but are not a harbour or a mine, by their own names:
 # the Chaos Dwarf river sluice and irrigation qanat, Nakai's port temples; and the `_military`
 # smithies on an iron deposit (Arsenal, Black Orc Forge, Master Swordsmith's Forge), which CA
@@ -4052,6 +4063,9 @@ def selftest():
             (lambda: first("convert").update(goods=[("gromril", 20), ("coal", 20)]), "no common store good"),
             (lambda: first("convert").update(races=("tmb",)), "keeps no stores"),
             (lambda: first("convert").update(pool="wh3_main_ogr_meat"), "no FACTION pool"),
+            # a currency recipe at its race's recruitment-shortfall rate (faction flavour design 2026-11-11, section 6)
+            (lambda: next(x for x in WORKS if x["key"] == "conv_food").update(goods=[("grain", 30), ("salted_fish", 30)]),
+             "the shortfall takes 5 a unit"),
             (lambda: first("lasting").update(fx=[("wh_main_effect_force_all_campaign_upkeep", "faction_to_force_own", 10)]),
              "is a penalty"),
             (lambda: first("army").update(fx=[], rank=None), "gives nothing"),

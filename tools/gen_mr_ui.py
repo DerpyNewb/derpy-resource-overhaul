@@ -16,6 +16,7 @@ move stock; the history the panel charts) the same way, from
 Modding Files/source/resource_overhaul/flows.lua behind DERPY_MR_FLOWS_DEFAULTS / _KIND / _GOODS,
 and runs tools/_resource_overhaul_flows_harness.lua beside the panel's harness.
 """
+import collections
 import functools
 import hashlib
 import io
@@ -329,6 +330,64 @@ WORK_SOUND = {"item": "UI_CLICK_Craft_Item", "unit": "UI_CAM_DWF_BookOfGrudges_P
 # WHO HAS NO STORES TO USE: the subculture tokens whose buildings make nothing
 # (gen_resource_overhaul.EXCLUDE); check_uses() asserts the two lists agree.
 NO_STORES = ("dae", "kho", "nur", "sla", "tze", "tmb", "nag", "bst")
+# WHO KEEPS STORES BUT NEVER EATS: the undead (flows.lua F.family)
+UNDEAD = ("vmp", "cst")
+
+
+def culture_tables():
+    """(token, family) by CA culture key (faction flavour design 2026-11-11, section 7). Other mods' subcultures sit under
+    CA's cultures (Mixu's mixer_cou_vampires under the Vampire Counts, OvN Araby under the Empire), so flows.lua reads a
+    race and a family off the culture before the subculture's name. token: our 17 races' cultures. family: a culture all
+    of whose CA subcultures name a NO_STORES token is "excluded", one naming an UNDEAD token "undead" (2026-11-11: every
+    CA culture has exactly one family)."""
+    import gen_resource_overhaul as G
+    token = {c: t for t, c in G.CULTURES.items()}
+    seen = collections.defaultdict(set)
+    for r in G.db("cultures_subcultures_tables")[1]:
+        sc = r["subculture"]
+        seen[r["culture"]].add("excluded" if any("_%s_" % t in sc for t in NO_STORES)
+                               else "undead" if any("_%s_" % t in sc for t in UNDEAD) else "living")
+    family = {c: f.pop() for c, f in seen.items() if len(f) == 1 and f != {"living"}}
+    return token, family
+
+
+@functools.lru_cache(None)
+def charted_chains():
+    """The main-settlement chains our packs give production rows (faction flavour design 2026-11-11, section 7): the
+    main pack's settlement pool and each installed map submod's own. A settlement whose main building is none of them
+    grows its own meals (flows.lua F.charted). A chain string for a map mod that is not loaded is harmless in Lua."""
+    import gen_resource_overhaul as G
+    out = set(G.pool_chains("settlement"))
+    for name in sorted(G.SUBMODS):
+        if os.path.isfile(G.SUBMODS[name]["pack"]):
+            out |= set(G.submod_pool_chains(name, "settlement"))
+        else:
+            print("charted_chains: %s not installed, its own chains left out" % name)
+    return tuple(sorted(out))
+
+
+def check_races():
+    """The race and family tables name real cultures, cover our 17 races, and agree with NO_STORES and UNDEAD."""
+    import gen_resource_overhaul as G
+    token, family = culture_tables()
+    cultures = {r["culture"] for r in G.db("cultures_subcultures_tables")[1]}
+    assert set(token.values()) == set(G.CULTURES), set(token.values()) ^ set(G.CULTURES)
+    assert set(family) <= cultures, set(family) - cultures
+    assert set(UNDEAD) <= set(G.CULTURES) and set(UNDEAD).isdisjoint(NO_STORES), UNDEAD
+    for t in UNDEAD:
+        assert family.get(G.CULTURES[t]) == "undead", (t, family.get(G.CULTURES[t]))
+    assert not {c for c in token if family.get(c) == "excluded"}, "a race of ours whose culture keeps no stores"
+    charted = set(charted_chains())
+    assert len(charted) >= 150, len(charted)
+    for g in G.GOODS.values():
+        for pool, _c in g["sources"]:
+            if G._kind(pool) == "provisioning":
+                assert set(G.pool_chains(pool)) <= charted, set(G.pool_chains(pool)) - charted
+    assert not [c for c in charted if G.EXCLUDE.search(c)], "a charted chain of a race that keeps no stores"
+    # final review 2026-11-11: EXCLUDE read Norsca's god altars (_nor_chaos_altar_kho) as Khorne's own chains
+    named = sorted(r["key"] for r in G.db("building_chains_tables")[1]
+                   if G.EXCLUDE.search(r["key"]) and any("_%s_" % t in r["key"] for t in G.CULTURES))
+    assert not named, "EXCLUDE drops %d chains named for a race that keeps stores: %s" % (len(named), named[:4])
 # Which factor each kind of move books to: the junction is derpy_mr_store_<stem>_<kind>.
 FLOW_KIND = {"process": "processed", "raid": "raided", "sack": "plundered", "raze": "plundered", "trade": "traded", "eat": "eaten",
              "move": "moved", "spend": "spent", "sell": "sold", "spoil": "spoiled"}
@@ -1228,7 +1287,7 @@ def mct_loc():
     """(key, English) for every text MCT draws from the settings page, by MCT's own key rules."""
     text = mct_lua()
     var = dict(re.findall(r'local o_(\w+) = m:add_new_option\("(\w+)"', text))
-    rows = [(MCT_KEY + "title", MCT_TITLE), (MCT_KEY + "description", MCT_DESC)]
+    rows = [(MCT_KEY + "title", MCT_TITLE), (MCT_KEY + "description", MCT_DESC), (MCT_LOCK_KEY, MCT_LOCK)]
     for line in text.split("\n"):
         m = re.match(r'm:add_new_section\("(\w+)", "((?:[^"\\]|\\.)*)"\)', line)
         if m:
@@ -1549,8 +1608,14 @@ def flows_header():
         lines.append("    %s = {%s}," % (good, ", ".join('%s = "%s"' % (G.CULTURES[r], ch) for r, ch in G.rare_chains(good))))
     lines += ["}", "DERPY_MR_FLOWS_FOUND_LEVELS = {cost = {%s}, req = {%s}}"
               % (", ".join(map(str, costs)), ", ".join(map(str, reqs)))]
+    token, family = culture_tables()
     lines += ["DERPY_MR_FLOWS_NO_STORES = {%s}" % ", ".join('"%s"' % t for t in NO_STORES),
-              "DERPY_MR_FLOWS_BUNDLES = {"]
+              "DERPY_MR_FLOWS_UNDEAD = {%s}" % ", ".join('"%s"' % t for t in UNDEAD),
+              "DERPY_MR_FLOWS_CULTURE_TOKEN = {%s}" % ", ".join('["%s"] = "%s"' % kv for kv in sorted(token.items())),
+              "DERPY_MR_FLOWS_CULTURE_FAMILY = {%s}" % ", ".join('["%s"] = "%s"' % kv for kv in sorted(family.items())),
+              "DERPY_MR_FLOWS_CHARTED = {"]
+    lines += ['    ["%s"] = true,' % c for c in charted_chains()]
+    lines += ["}", "DERPY_MR_FLOWS_BUNDLES = {"]
     lines += ['    %s = "%s",' % (u, k) for u, k, *_r in bundles()]
     # a race's own bundle in place of a use's (gen_resource_overhaul RACE_USE_BUNDLES, check_reach)
     base = {u: k for u, k, *_r in bundles()}
@@ -1597,6 +1662,7 @@ MCT_DESC = ("How goods move between settlement stores. These are fixed for the l
 
 # Shown on a greyed setting in a campaign: the values are frozen into the save (flows.lua).
 MCT_LOCK = "Fixed when a campaign starts. Change it from the main menu before starting a new one."
+MCT_LOCK_KEY = MCT_KEY + "lock_reason"
 
 # THE ROUTE LINES (author, 2026-10-22): how the campaign map draws trade routes. Neither locked nor frozen:
 # they move no goods, so a campaign takes a new choice at the next redraw (terrain_routes.lua R.style).
@@ -1641,6 +1707,12 @@ def mct_lua():
              "if not mct then return end",
              "local IN_CAMPAIGN = __game_mode == __lib_type_campaign",
              'local LOCK_REASON = "%s"' % MCT_LOCK,
+             "-- MCT draws the lock's reason as it is handed, so a translation comes from the loc here (a translator's",
+             "-- report, 2026-11-10). A missing row answers \"\" or its own key: the English stays.",
+             "do",
+             '    local ok, s = pcall(function() return common.get_localised_string("%s") end)' % MCT_LOCK_KEY,
+             '    if ok and type(s) == "string" and s ~= "" and s ~= "%s" then LOCK_REASON = s end' % MCT_LOCK_KEY,
+             "end",
              "",
              'local m = mct:register_mod("derpy_more_resources")',
              'm:set_title("%s")' % MCT_TITLE,
@@ -1916,6 +1988,9 @@ def check_provision_mutations():
         ("Load not told it is a Load", 'op == "unload", op == "load")', 'op == "unload", false)'),
         ("caravans eat", '        or F.NO_RATIONS[force:force_type():key()]\n', ''),
         ("convoys eat", 'CARAVAN = true, CONVOY = true', 'CARAVAN = true'),
+        # Workshop report, 2026-11-10: Thanquol's schemers; and Ogre camps, which CA's scripts count with the caravans
+        ("Thanquol's schemers eat", 'CONVOY = true, CHAOTIC_PLAN_SCHEMERS = true', 'CONVOY = true'),
+        ("Ogre camps eat", 'CHAOTIC_PLAN_SCHEMERS = true, OGRE_CAMP = true', 'CHAOTIC_PLAN_SCHEMERS = true'),
     )
     for label, before, after in mutations:
         assert subject.count(before) == 1, "stale provision mutation: " + label
@@ -2289,13 +2364,35 @@ def check_reach_mutations():
     luac = LUA_EXE.replace("lua.exe", "luac.exe")
     with io.open(TERRAIN_SRC, encoding="utf-8", newline="") as fh:
         terrain = fh.read().replace("\r\n", "\n")
-    # R.journey keeps its roads the same way since 2026-11-08, so the anchor carries R.reach's own memo line
-    at = "local memo = R.reach_memo[key]\n    "
-    kept = at + "if not (memo and memo.data == g.data and R.unchanged(memo.regions, from, to)) then"
+    # R.fresh is R.reach's and R.journey's check of a kept answer (2026-11-11); R.reach's own anchors carry its memo
+    trust = "    if terms and memo.owners == owners and turn - memo.checked < terms.keep then return true end\n"
     mutations = (
-        ("kept answer never checked", kept, at + "if not (memo and memo.data == g.data) then"),
-        ("kept answer never given", kept, at + "if true then"),
-        ("kept answer outlives the map", kept, at + "if not (memo and R.unchanged(memo.regions, from, to)) then"),
+        ("kept answer never checked", "    if not R.unchanged(memo.regions, from, to) then return false end\n", ""),
+        ("kept answer never given",
+         "if R.fresh(memo, g, from, to, owners, turn, terms) then return memo.ok, memo.why, memo.path end",
+         "if false then end"),
+        ("kept answer outlives the map", "if not (memo and memo.data == g.data) then return false end",
+         "if not memo then return false end"),
+        # THE COMPUTERS' TERMS (IEE 2026-11-11: a computer turn start 4.4 s, a round 54 s, in road searches)
+        ("a computer's search never stops", "local step = terms and math.min(100000, terms.left) or 100000",
+         "local step = 100000"),
+        ("an allowance never spent",
+         "        if terms then terms.left = terms.left - (done and j.count - before or step) end\n", ""),
+        ("a search under way starts over at each ask",
+         "if not (job and job.owners == owners and job.data == g.data) then", "if true then"),
+        ("a search under way finished for an end's old owner", "job and job.owners == owners and job.data",
+         "job and job.data"),
+        ("searches nobody asks about kept for ever",
+         "        for k, old in pairs(jobs) do if turn - old.turn > 1 then jobs[k] = nil end end\n", ""),
+        ("a finished search left waiting", "    R.reach_jobs[key] = nil\n", ""),
+        ("the road through enemy land searched without limit", "local done, road = R.run(job.free, terms)",
+         "local done, road = R.run(job.free)"),
+        ("a computer's kept road checked every turn", trust, ""),
+        ("a computer's kept road trusted for ever", "turn - memo.checked < terms.keep", "true"),
+        ("a kept road trusted past a change of hands", "if terms and memo.owners == owners and ", "if terms and "),
+        ("a player's kept road trusted unchecked", trust,
+         "    if memo.owners == owners and turn - memo.checked < 5 then return true end\n"),
+        ("a check that found nothing changed never trusted again", "    memo.owners, memo.checked = owners, turn\n", ""),
         ("reach left out of the key", " .. '>' .. tostring(max)", ""),
         ("no shortcut for a pair with no road at all",
          "    if free and not free.open and free.finished then return false, 'far' end\n", ""),
@@ -2449,7 +2546,13 @@ def check_map_cost_mutations():
          "local links, cargo, seen, owned, plans, used = {}, {}, {}, {}, {}, {}"),
         ("cart goods never dropped",
          "    for seller in pairs(plans) do if not used[seller] then plans[seller] = nil end end   -- renew only what is drawn\n", ""),
-        ("renewal stuck on one seller", "R.plan_next = (R.plan_next or 0) % #sellers + 1", "R.plan_next = 1"),
+        # ONCE A TURN FOR A COMPUTER (IEE 2026-11-11: a big partner's preview 57-85 ms every few seconds)
+        ("a computer's preview worked out every few seconds", "if s ~= me and not R.plan_fresh[s] then", "if s ~= me then"),
+        ("the viewer's own preview never renewed", "    elseif R.plans[me] then seller = me\n", ""),
+        ("a renewal never marked", "R.plans[seller], R.plan_fresh[seller] = F.trade(faction, true), true",
+         "R.plans[seller] = F.trade(faction, true)"),
+        ("a refresh's preview worked out again", "; R.plan_fresh[seller]=true end", " end"),
+        ("a new turn keeps last turn's previews", "    R.plan_fresh = {}   -- the computers' stores have moved", "    --"),
         ("cart goods never renewed", "            R.renew_plan()   -- never on a tick that already refreshed\n", ""),
         ("one reach answer a refresh whatever the time", show, "if open == nil and R.shows == 0 then"),
         ("reach answers without a time budget", show, "if open == nil then"),
@@ -2470,10 +2573,19 @@ def check_map_cost_mutations():
         ("convoy marker kept past a turn start's new road", "s[2] == c.road and ", ""),
         ("convoy marker kept past a step", " and s[3] == c.x and s[4] == c.y)", ")"),
         # a cart's road kept as R.reach keeps its answers (2026-11-08: one search a cart, 0.9 s of a computer round)
-        ("a kept journey never checked", "local memo = R.journey_memo[key]\n    if not (memo and memo.data == g.data and R.unchanged(memo.regions, from, to)) then",
+        ("a kept journey never checked",
+         "local memo = R.journey_memo[key]\n    if not R.fresh(memo, g, from, to, owners, turn, terms) then",
          "local memo = R.journey_memo[key]\n    if not (memo and memo.data == g.data) then"),
         ("a journey never kept", "        R.journey_memo[key] = memo\n", ""),
         ("a cart handed the kept list", "    return copy\nend", "    return memo.path\nend"),
+        ("a cart's search never stops",
+         "local done, path = R.run(job.j, terms)\n        if not done then return nil, 'pending' end\n        R.journey_jobs",
+         "local done, path = R.run(job.j)\n        if not done then return nil, 'pending' end\n        R.journey_jobs"),
+        ("a finished cart search left waiting", "        R.journey_jobs[key] = nil\n", ""),
+        # a search the map's 'show' left under way keeps the line it had and is come back for (2026-11-11)
+        ("a search under way not come back for",
+         "                            if open == nil then\n                                R.dirty = true\n",
+         "                            if open == nil then\n"),
     )
     for label, before, after in mutations:
         assert terrain.count(before) == 1, "stale map cost mutation: " + label
@@ -2492,6 +2604,43 @@ def check_map_cost_mutations():
          "function F.dispatch(fkey, parts)\n    if not F.is_human(fkey) then return end\n",
          "function F.dispatch(fkey, parts)\n    if DERPY_MR_TERRAIN_ROUTES then DERPY_MR_TERRAIN_ROUTES.plans, "
          "DERPY_MR_TERRAIN_ROUTES.dirty = {}, true end\n    if not F.is_human(fkey) then return end\n"),
+        # THE COMPUTERS' TERMS (IEE 2026-11-11): the allowance a computer's turn start searches roads within
+        ("a computer's turn start searches without limit",
+         "F.search_terms = not faction:is_human() and { left = F.SEARCH_HEXES, keep = F.REACH_KEEP } or nil",
+         "F.search_terms = nil"),
+        ("a player's turn start held to the computers' allowance",
+         "F.search_terms = not faction:is_human() and { left = F.SEARCH_HEXES, keep = F.REACH_KEEP } or nil",
+         "F.search_terms = { left = F.SEARCH_HEXES, keep = F.REACH_KEEP }"),
+        ("one allowance an ask, not a turn start", "elseif F.search_terms and not human then terms = F.search_terms end",
+         "elseif F.search_terms and not human then terms = { left = F.SEARCH_HEXES, keep = F.REACH_KEEP } end"),
+        ("the allowance outlives the turn start", "F.stock_cache, F.search_terms, F.price_cache = nil, nil, nil",
+         "F.stock_cache, F.price_cache = nil, nil"),
+        # THE EXCHANGE'S PRICES, ONE PASS A FACTION (IEE 2026-11-11: 8.5 ms a good, 3.4 s of one computer's trade)
+        ("a turn start prices a good at a time", "F.stock_cache, F.price_cache = {}, {}", "F.stock_cache = {}"),
+        ("the prices outlive the turn start", "F.stock_cache, F.search_terms, F.price_cache = nil, nil, nil",
+         "F.stock_cache, F.search_terms = nil, nil"),
+        ("an open pass prices a good at a time", "    local cache = F.price_cache\n    if cache then",
+         "    local cache = nil\n    if cache then"),
+        ("a pass with no guild hold", "        if held then EX.hold_guild() end\n", ""),
+        ("a good the Exchange cannot price loses the faction's others",
+         "local ok, p = pcall(function() return EX.sell_price(g.res) / EX.lot(g.res) end)",
+         "local ok, p = true, EX.sell_price(g.res) / EX.lot(g.res)"),
+        ("a preview prices a good at a time",
+         "    F.price_cache = {}\n    local ok, r = pcall(F.trade_round, exporter, preview)",
+         "    local ok, r = pcall(F.trade_round, exporter, preview)"),
+        ("a preview's prices kept after it",
+         "    local ok, r = pcall(F.trade_round, exporter, preview)\n    F.price_cache = nil\n",
+         "    local ok, r = pcall(F.trade_round, exporter, preview)\n"),
+        ("a player's pair held to the computers' allowance",
+         "elseif F.search_terms and not human then terms = F.search_terms end",
+         "elseif F.search_terms then terms = F.search_terms end"),
+        ("a search under way kept as the turn's answer",
+         "    if ok == nil then return nil end   -- under way: kept by R, not here, so the next ask goes on with it\n", ""),
+        ("the map searches without limit",
+         'if mode == "show" then terms = { left = F.SHOW_HEXES, keep = human and 0 or F.REACH_KEEP }',
+         'if mode == "show" then terms = nil'),
+        ("the map trusts a player's kept road", "keep = human and 0 or F.REACH_KEEP }", "keep = F.REACH_KEEP }"),
+        ("a computer's cart searches without limit", "R.journey(from, to, F.search_terms)", "R.journey(from, to)"),
     )
     for label, before, after in flows_mutations:
         assert flows.count(before) == 1, "stale map cost mutation: " + label
@@ -2575,7 +2724,7 @@ def check_ai_meal_mutations():
     home = "(left == 0 or (other and row.source and rates.ai_home_fed))"
     half = "(other and rates.ai_half_rations) and math.ceil(row.need / 2)"
     field = "(rates.ai_field_rations and not faction:is_human())"
-    food = "if F.rates().ai_food and not region:owning_faction():is_human() then"
+    food = "(F.rates().ai_food and not region:owning_faction():is_human()) then"
     mutations = (
         ("fed at home ignored", home, "(left == 0)"),
         ("fed at home for players too", home, "(left == 0 or (row.source and rates.ai_home_fed))"),
@@ -2584,8 +2733,8 @@ def check_ai_meal_mutations():
         ("half rations for players", half, "(rates.ai_half_rations) and math.ceil(row.need / 2)"),
         ("rations abroad ignored", field, "false"),
         ("rations abroad for players", field, "(rates.ai_field_rations)"),
-        ("more food never made", food, "if false then"),
-        ("more food for players", food, "if F.rates().ai_food then"),
+        ("more food never made", food, "(false) then"),
+        ("more food for players", food, "(F.rates().ai_food) then"),
         ("more food one race", 'return biscuit and "hardtack" or "salted_meat"', 'return "salted_meat"'),
     )
     for label, before, after in mutations:
@@ -2682,6 +2831,67 @@ def check_race_mutations():
     code, out = run_harness(FLOWS_HARNESS)
     assert code == 0, out
     print("race mutations: %d/%d caught; restored harness passes" % (len(mutations), len(mutations)))
+
+
+def _flows_mutations(kind, mutations):
+    """Each (label, before, after) in the shipped flows script: one anchor, still Lua, and the flows harness fails."""
+    subject = flows_lua().replace("\r\n", "\n")
+    for label, before, after in mutations:
+        assert subject.count(before) == 1, "stale %s mutation: %s" % (kind, label)
+        changed = subject.replace(before, after, 1)
+        syntax = subprocess.run([LUA_EXE.replace("lua.exe", "luac.exe"), "-p", "-"],
+            input=changed, capture_output=True, text=True, encoding="utf-8")
+        assert syntax.returncode == 0, (label, syntax.stderr)
+        code, out = run_harness(FLOWS_HARNESS, flows_text=changed)
+        assert code != 0 and "in function" in out and "syntax" not in out, "survived: %s\n%s" % (label, out)
+        print("  caught:", label)
+    code, out = run_harness(FLOWS_HARNESS)
+    assert code == 0, out
+    print("%s mutations: %d/%d caught; restored harness passes" % (kind, len(mutations), len(mutations)))
+
+
+def check_race_identity_mutations():
+    """Who keeps stores and who eats, by culture then by name (faction flavour design 2026-11-11, section 7): each
+    rule broken the way somebody would, in the shipped flows script; the flows harness must fail on every one."""
+    _flows_mutations("race identity", (
+        ("a culture's family ignored", "fam = DERPY_MR_FLOWS_CULTURE_FAMILY[faction:culture()]\n            or",
+         "fam = nil\n            or"),
+        ("excluded only by culture", "    if names_any(sc, DERPY_MR_FLOWS_NO_STORES) then", "    if false then"),
+        ("an undead name ignored", '(names_any(sc, DERPY_MR_FLOWS_UNDEAD) and "undead") or "living"', '"living"'),
+        ("the culture never names the race", 'or DERPY_MR_FLOWS_CULTURE_TOKEN[faction:culture()] or sc', 'or sc'),
+        ("unknown races share one token", 'DERPY_MR_FLOWS_CULTURE_TOKEN[faction:culture()] or sc',
+         'DERPY_MR_FLOWS_CULTURE_TOKEN[faction:culture()] or ""'),
+        ("stores ignore the family", 'return F.family(faction) ~= "excluded"', 'return true'),
+        ("undead eat", 'return F.family(faction) == "living"', 'return F.family(faction) ~= "excluded"'),
+    ))
+
+
+def check_uncharted_mutations():
+    """A settlement whose main building makes none of our goods grows its own meals (faction flavour design
+    2026-11-11, section 7): each rule broken in the shipped flows script; the flows harness must fail on every one."""
+    _flows_mutations("uncharted", (
+        ("uncharted never fed", "if wild or (F.rates().ai_food", "if (F.rates().ai_food"),
+        ("every settlement fed", "local wild = not F.charted(region:name())", "local wild = true"),
+        # final review 2026-11-11: one turn's meals and no more left a player's armies nothing to load
+        ("no surplus for its armies", "level, wild and 2 or 1)", "level, 1)"),
+        ("a submod's chains ignored", " or DERPY_MR_CHARTED[chain] == true", ""),
+        ("unreadable counts as uncharted", 'if type(chain) ~= "string" then return true end',
+         'if type(chain) ~= "string" then return false end'),
+    ))
+    # the Settlements list says why, and only when the flows script answers false; the stores harness must fail
+    stores = stores_lua().replace("\r\n", "\n")
+    line = '            if S.ask("charted", r.key) == false then tip = add_line(tip, S.UNCHARTED) end\n'
+    mutations = (
+        ("the uncharted line never shown", line, ""),
+        ("an old flows script reads as uncharted", 'if S.ask("charted", r.key) == false then',
+         'if S.ask("charted", r.key) ~= true then'),
+    )
+    for label, before, after in mutations:
+        assert stores.count(before) == 1, "stale uncharted panel mutation: " + label
+        code, out = run_harness(HARNESS, stores_text=stores.replace(before, after, 1))
+        assert code != 0 and "harness ok" not in out and "syntax" not in out, "survived: %s\n%s" % (label, out)
+        print("  caught:", label)
+    print("uncharted panel mutations: %d/%d caught" % (len(mutations), len(mutations)))
 
 
 def check_turn_end_mutations():
@@ -2788,10 +2998,14 @@ def check_edict_mutations():
         ("Closed at one war", "near >= a.closed_wars", "near > 0"),
         ("Rations for a faction that does not eat",
          'if which == "rations" and not F.eats(faction) then return false end', ""),
-        ("a player's bundles not caught up", "if faction:is_human() then return F.edict_bundles(faction) end",
-         "if faction:is_human() then return end"),
-        ("computer edicts under other factions' stores off", "if r.edicts and r.ai and F.uses_stores(faction)",
-         "if r.edicts and F.uses_stores(faction)"),
+        ("the bundles not caught up", "F.edict_ai(faction) end\n    F.edict_bundles(faction)\nend",
+         "F.edict_ai(faction) end\nend"),
+        ("computer edicts under other factions' stores off", "and r.edicts and r.ai and F.uses_stores(faction)",
+         "and r.edicts and F.uses_stores(faction)"),
+        # final review 2026-11-11: an older save's Rations bundle on a faction that no longer eats
+        ("a non-eater keeps its Rations bundle", "(which ~= \"rations\" or F.eats(faction)) and F.edict_bundle(",
+         "F.edict_bundle("),
+        ("a player's edicts chosen by the computer rules", "if not faction:is_human() and r.edicts", "if r.edicts"),
         ("the rebels' missing trade list read", 'type(partners) ~= "boolean" and partners:num_items()', "partners:num_items()"),
         ("a missing wars list read", '    if type(wars) == "boolean" then return false end\n    for i = 0, wars:num_items() - 1 do\n        if not wars:item_at(i):is_rebel()',
          "    for i = 0, wars:num_items() - 1 do\n        if not wars:item_at(i):is_rebel()"),
@@ -3156,8 +3370,7 @@ def check_supply_cart_mutations():
     )
     panel_m = (
         ("Send supplies enabled with nothing to spare",
-         '\n    elseif (S.ask("provision_spare", f, note.source) or 0) <= 0 then why = S.T("{1} has no food to spare.", S.place(note.source)) end',
-         " end"),
+         '    elseif (S.ask("provision_spare", f, note.source) or 0) <= 0 then\n', "    elseif false then\n"),
     )
     _run_mutants("supply cart", flows, flows_m, stores_lua().replace("\r\n", "\n"), panel_m, "", ())
 
@@ -3598,8 +3811,9 @@ def check_smooth_mutations():
         ("the kept copy is the first reader's table", "kept[rk] = { copy(held), cap, copy(capacity) }",
          "kept[rk] = { held, cap, capacity }"),
         ("a write keeps the stale copy", "    if F.stock_cache then F.stock_cache[region:name()] = nil end\n", ""),
-        ("the copy outlives the turn start", "    F.stock_cache = nil\n    if not ok then error(e, 0) end\n",
-         "    if not ok then error(e, 0) end\n"),
+        ("the copy outlives the turn start",
+         "    F.stock_cache, F.search_terms, F.price_cache = nil, nil, nil\n    if not ok then error(e, 0) end\n",
+         "    F.search_terms, F.price_cache = nil, nil\n    if not ok then error(e, 0) end\n"),
         ("a throw leaves the copy", "local ok, e = pcall(F.turn_start, faction)", "local ok, e = true, F.turn_start(faction)"),
         ("the runner offered after the goods went", " and not sent_this_turn(fkey, k, turn)", ""),
         ("the Ogre bandits never asked", "for _, s in ipairs(sc == F.ROAD.qb_sc and { sc } or { sc, F.ROAD.qb_sc }) do",
@@ -3644,6 +3858,7 @@ def selftest():
     check_sizes()
     check_capture_kinds()
     check_uses()
+    check_races()
     check_recruit()
     check_escorts()
     import gen_resource_overhaul as G
@@ -3679,6 +3894,8 @@ def selftest():
     check_keep_mutations()
     check_ai_meal_mutations()
     check_race_mutations()
+    check_race_identity_mutations()
+    check_uncharted_mutations()
     check_turn_end_mutations()
     check_size_mutations()
     check_edict_mutations()

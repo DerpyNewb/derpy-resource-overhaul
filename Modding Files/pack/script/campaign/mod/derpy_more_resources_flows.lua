@@ -281,6 +281,181 @@ DERPY_MR_FLOWS_FOUND_CHAIN = {
 }
 DERPY_MR_FLOWS_FOUND_LEVELS = {cost = {1000, 2000, 3000}, req = {1, 2, 3}}
 DERPY_MR_FLOWS_NO_STORES = {"dae", "kho", "nur", "sla", "tze", "tmb", "nag", "bst"}
+DERPY_MR_FLOWS_UNDEAD = {"vmp", "cst"}
+DERPY_MR_FLOWS_CULTURE_TOKEN = {["wh2_dlc11_cst_vampire_coast"] = "cst", ["wh2_main_def_dark_elves"] = "def", ["wh2_main_hef_high_elves"] = "hef", ["wh2_main_lzd_lizardmen"] = "lzd", ["wh2_main_skv_skaven"] = "skv", ["wh3_dlc23_chd_chaos_dwarfs"] = "chd", ["wh3_main_cth_cathay"] = "cth", ["wh3_main_ksl_kislev"] = "ksl", ["wh3_main_ogr_ogre_kingdoms"] = "ogr", ["wh_dlc05_wef_wood_elves"] = "wef", ["wh_dlc08_nor_norsca"] = "nor", ["wh_main_brt_bretonnia"] = "brt", ["wh_main_chs_chaos"] = "chs", ["wh_main_dwf_dwarfs"] = "dwf", ["wh_main_emp_empire"] = "emp", ["wh_main_grn_greenskins"] = "grn", ["wh_main_vmp_vampire_counts"] = "vmp"}
+DERPY_MR_FLOWS_CULTURE_FAMILY = {["wh2_dlc09_tmb_tomb_kings"] = "excluded", ["wh2_dlc11_cst_vampire_coast"] = "undead", ["wh3_dlc29_nag_undead_legions"] = "excluded", ["wh3_main_dae_daemons"] = "excluded", ["wh3_main_kho_khorne"] = "excluded", ["wh3_main_nur_nurgle"] = "excluded", ["wh3_main_sla_slaanesh"] = "excluded", ["wh3_main_tze_tzeentch"] = "excluded", ["wh_dlc03_bst_beastmen"] = "excluded", ["wh_main_vmp_vampire_counts"] = "undead"}
+DERPY_MR_FLOWS_CHARTED = {
+    ["cr_special_city_mordheim_woodelves"] = true,
+    ["cr_special_roc_outpost"] = true,
+    ["wh2_dlc11_special_settlement_galleons_graveyard"] = true,
+    ["wh2_dlc11_special_settlement_galleons_graveyard_other"] = true,
+    ["wh2_dlc11_vampirecoast_settlement_major"] = true,
+    ["wh2_dlc11_vampirecoast_settlement_minor"] = true,
+    ["wh2_dlc13_lzd_nakai_settlement_major"] = true,
+    ["wh2_dlc13_lzd_nakai_settlement_minor"] = true,
+    ["wh2_dlc15_special_settlement_massif_orcal_brt"] = true,
+    ["wh2_dlc15_special_settlement_massif_orcal_grn"] = true,
+    ["wh2_dlc15_special_settlement_massif_orcal_savage"] = true,
+    ["wh2_dlc15_special_settlement_tor_yvresse_def"] = true,
+    ["wh2_dlc15_special_settlement_tor_yvresse_eltharion"] = true,
+    ["wh2_dlc15_special_settlement_tor_yvresse_hef"] = true,
+    ["wh2_main_def_settlement_major"] = true,
+    ["wh2_main_def_settlement_minor"] = true,
+    ["wh2_main_hef_settlement_major"] = true,
+    ["wh2_main_hef_settlement_minor"] = true,
+    ["wh2_main_lzd_settlement_major"] = true,
+    ["wh2_main_lzd_settlement_minor"] = true,
+    ["wh2_main_rogue_settlement_major"] = true,
+    ["wh2_main_rogue_settlement_minor"] = true,
+    ["wh2_main_skv_settlement_major"] = true,
+    ["wh2_main_skv_settlement_minor"] = true,
+    ["wh2_main_special_empire_fort_emp"] = true,
+    ["wh2_main_special_fortress_gate_eagle_hef"] = true,
+    ["wh2_main_special_fortress_gate_eagle_untainted"] = true,
+    ["wh2_main_special_fortress_gate_griffon_hef"] = true,
+    ["wh2_main_special_fortress_gate_griffon_untainted"] = true,
+    ["wh2_main_special_fortress_gate_phoenix_hef"] = true,
+    ["wh2_main_special_fortress_gate_phoenix_untainted"] = true,
+    ["wh2_main_special_fortress_gate_unicorn_hef"] = true,
+    ["wh2_main_special_fortress_gate_unicorn_untainted"] = true,
+    ["wh2_main_special_settlement_colony_major_hef"] = true,
+    ["wh2_main_special_settlement_colony_minor_hef"] = true,
+    ["wh2_main_special_settlement_eight_peaks_skv"] = true,
+    ["wh2_main_special_settlement_gaean_vale"] = true,
+    ["wh2_main_special_settlement_gaean_vale_wef"] = true,
+    ["wh2_main_special_settlement_hellpit"] = true,
+    ["wh2_main_special_settlement_hellpit_wef"] = true,
+    ["wh2_main_special_settlement_hexoatl_lzd"] = true,
+    ["wh2_main_special_settlement_hexoatl_wef"] = true,
+    ["wh2_main_special_settlement_itza_lzd"] = true,
+    ["wh2_main_special_settlement_itza_wef"] = true,
+    ["wh2_main_special_settlement_karaz_a_karak_skv"] = true,
+    ["wh2_main_special_settlement_khemri_wef"] = true,
+    ["wh2_main_special_settlement_konquata_wef"] = true,
+    ["wh2_main_special_settlement_lahmia_wef"] = true,
+    ["wh2_main_special_settlement_lothern"] = true,
+    ["wh2_main_special_settlement_lothern_def"] = true,
+    ["wh2_main_special_settlement_lothern_wef"] = true,
+    ["wh2_main_special_settlement_naggarond"] = true,
+    ["wh2_main_special_settlement_naggarond_hef"] = true,
+    ["wh2_main_special_settlement_naggarond_wef"] = true,
+    ["wh2_main_special_settlement_pyramid_of_nagash_wef"] = true,
+    ["wh2_main_special_settlement_sartosa_brt"] = true,
+    ["wh2_main_special_settlement_sartosa_cst"] = true,
+    ["wh2_main_special_settlement_sartosa_def"] = true,
+    ["wh2_main_special_settlement_sartosa_emp"] = true,
+    ["wh2_main_special_settlement_sartosa_wef"] = true,
+    ["wh2_main_special_settlement_skavenblight"] = true,
+    ["wh2_main_special_settlement_skavenblight_wef"] = true,
+    ["wh2_main_special_settlement_the_awakening_cst"] = true,
+    ["wh2_main_special_settlement_the_awakening_wef"] = true,
+    ["wh2_main_wef_oak_of_ages_occupied"] = true,
+    ["wh2_twa03_special_settlement_konquata_lzd"] = true,
+    ["wh3_cp1_cth_bhashiva_settlement_major"] = true,
+    ["wh3_cp1_cth_bhashiva_settlement_minor"] = true,
+    ["wh3_dlc20_settlement_woc_chaos_altar"] = true,
+    ["wh3_dlc20_settlement_woc_chaos_altar_special_gate"] = true,
+    ["wh3_dlc20_settlement_woc_dark_fortress"] = true,
+    ["wh3_dlc23_chd_settlement_factory"] = true,
+    ["wh3_dlc23_chd_settlement_outpost"] = true,
+    ["wh3_dlc23_chd_settlement_tower"] = true,
+    ["wh3_dlc23_chd_special_settlement_tower"] = true,
+    ["wh3_dlc23_special_empire_fort_chd"] = true,
+    ["wh3_dlc23_special_fortress_gate_eagle_chd"] = true,
+    ["wh3_dlc23_special_fortress_gate_griffon_chd"] = true,
+    ["wh3_dlc23_special_fortress_gate_phoenix_chd"] = true,
+    ["wh3_dlc23_special_fortress_gate_unicorn_chd"] = true,
+    ["wh3_dlc23_special_settlement_bastion_chd"] = true,
+    ["wh3_dlc25_special_settlement_oak_of_ages_dwf"] = true,
+    ["wh3_dlc27_hef_colony_settlement_major"] = true,
+    ["wh3_dlc27_hef_colony_settlement_minor"] = true,
+    ["wh3_dlc27_settlement_nor_chaos_altar_kho"] = true,
+    ["wh3_dlc27_settlement_nor_chaos_altar_kho_special_gate"] = true,
+    ["wh3_dlc27_settlement_nor_chaos_altar_kho_special_port"] = true,
+    ["wh3_dlc27_settlement_nor_chaos_altar_nur"] = true,
+    ["wh3_dlc27_settlement_nor_chaos_altar_nur_special_gate"] = true,
+    ["wh3_dlc27_settlement_nor_chaos_altar_nur_special_port"] = true,
+    ["wh3_dlc27_settlement_nor_chaos_altar_sla"] = true,
+    ["wh3_dlc27_settlement_nor_chaos_altar_sla_special_gate"] = true,
+    ["wh3_dlc27_settlement_nor_chaos_altar_sla_special_port"] = true,
+    ["wh3_dlc27_settlement_nor_chaos_altar_tze"] = true,
+    ["wh3_dlc27_settlement_nor_chaos_altar_tze_special_gate"] = true,
+    ["wh3_dlc27_settlement_nor_chaos_altar_tze_special_port"] = true,
+    ["wh3_dlc27_settlement_nor_chaos_altar_und"] = true,
+    ["wh3_dlc27_settlement_nor_chaos_altar_und_special_gate"] = true,
+    ["wh3_dlc27_settlement_nor_chaos_altar_und_special_port"] = true,
+    ["wh3_dlc29_bch_woc_settlement_nurgle_garden"] = true,
+    ["wh3_dlc29_bch_woc_settlement_nurgle_garden_minor"] = true,
+    ["wh3_dlc29_special_settlement_lahmia_vmp"] = true,
+    ["wh3_dlc29_special_settlement_middenheim"] = true,
+    ["wh3_dlc29_special_settlement_oak_of_ages_woc_glottkin"] = true,
+    ["wh3_main_chs_settlement_minor"] = true,
+    ["wh3_main_cth_bastion_primary"] = true,
+    ["wh3_main_cth_settlement_major"] = true,
+    ["wh3_main_cth_settlement_minor"] = true,
+    ["wh3_main_ksl_erengrad_city"] = true,
+    ["wh3_main_ksl_kislev_city"] = true,
+    ["wh3_main_ksl_praag_city"] = true,
+    ["wh3_main_ksl_settlement_major"] = true,
+    ["wh3_main_ksl_settlement_minor"] = true,
+    ["wh3_main_ogr_settlement_major"] = true,
+    ["wh3_main_ogr_settlement_minor"] = true,
+    ["wh3_main_special_city_wei_jin_woodelves"] = true,
+    ["wh3_main_special_city_zharr_naggrund_woodelves"] = true,
+    ["wh3_main_special_settlement_bastion_other"] = true,
+    ["wh3_main_special_settlement_fort_other"] = true,
+    ["wh3_main_special_settlement_silver_pinnacle"] = true,
+    ["wh3_main_special_settlement_wei_jin"] = true,
+    ["wh_dlc05_settlement_wef_outpost"] = true,
+    ["wh_dlc05_special_city_altdorf_woodelves"] = true,
+    ["wh_dlc05_special_city_black_crag_woodelves"] = true,
+    ["wh_dlc05_special_city_castle_drakenhof_woodelves"] = true,
+    ["wh_dlc05_special_city_couronne_woodelves"] = true,
+    ["wh_dlc05_special_city_eight_peaks_woodelves"] = true,
+    ["wh_dlc05_special_city_karaz_a_karak_woodelves"] = true,
+    ["wh_dlc05_special_city_kislev_woodelves"] = true,
+    ["wh_dlc05_special_city_miragliano_woodelves"] = true,
+    ["wh_dlc05_wef_oak_of_ages"] = true,
+    ["wh_dlc05_wef_settlement_major_main"] = true,
+    ["wh_dlc06_GREENSKIN_settlement_major_skarsnik"] = true,
+    ["wh_dlc06_GREENSKIN_settlement_major_wurrzag"] = true,
+    ["wh_dlc06_GREENSKIN_settlement_minor_skarsnik"] = true,
+    ["wh_dlc06_GREENSKIN_settlement_minor_wurrzag"] = true,
+    ["wh_main_BRETONNIA_settlement_major"] = true,
+    ["wh_main_BRETONNIA_settlement_minor"] = true,
+    ["wh_main_DWARFS_settlement_major"] = true,
+    ["wh_main_DWARFS_settlement_minor"] = true,
+    ["wh_main_EMPIRE_settlement_major"] = true,
+    ["wh_main_EMPIRE_settlement_minor"] = true,
+    ["wh_main_GREENSKIN_settlement_major"] = true,
+    ["wh_main_GREENSKIN_settlement_minor"] = true,
+    ["wh_main_NORSCA_settlement_major"] = true,
+    ["wh_main_NORSCA_settlement_minor"] = true,
+    ["wh_main_SAVAGEORC_settlement_major"] = true,
+    ["wh_main_SAVAGEORC_settlement_minor"] = true,
+    ["wh_main_VAMPIRES_settlement_major"] = true,
+    ["wh_main_VAMPIRES_settlement_minor"] = true,
+    ["wh_main_special_settlement_altdorf"] = true,
+    ["wh_main_special_settlement_altdorf_vampires"] = true,
+    ["wh_main_special_settlement_black_crag"] = true,
+    ["wh_main_special_settlement_black_crag_dwarf"] = true,
+    ["wh_main_special_settlement_black_crag_savage"] = true,
+    ["wh_main_special_settlement_castle_drakenhof"] = true,
+    ["wh_main_special_settlement_castle_drakenhof_bretonnia"] = true,
+    ["wh_main_special_settlement_castle_drakenhof_empire"] = true,
+    ["wh_main_special_settlement_couronne"] = true,
+    ["wh_main_special_settlement_couronne_empire"] = true,
+    ["wh_main_special_settlement_couronne_vampires"] = true,
+    ["wh_main_special_settlement_eight_peaks"] = true,
+    ["wh_main_special_settlement_eight_peaks_dwarf"] = true,
+    ["wh_main_special_settlement_eight_peaks_savage"] = true,
+    ["wh_main_special_settlement_karaz_a_karak"] = true,
+    ["wh_main_special_settlement_karaz_a_karak_greenskins"] = true,
+    ["wh_main_special_settlement_karaz_a_karak_savage"] = true,
+    ["wh_main_special_settlement_miragliano"] = true,
+    ["wh_main_special_settlement_miragliano_bretonnia"] = true,
+    ["wh_main_special_settlement_miragliano_empire"] = true,
+}
 DERPY_MR_FLOWS_BUNDLES = {
     provisions = "derpy_mr_well_fed",
     war = "derpy_mr_garrison_stocked",
@@ -352,7 +527,7 @@ DERPY_MR_FLOWS_WORKS = {
     {key = "up_feathers", kind = "upgrade", rare = "feathers", rare_n = 60, use = "mounts", use_n = 200, races = {"brt", "emp"}, grant = "derpy_mr_up_feathers", group = "", pool = ""},
     {key = "up_wyvern_scales", kind = "upgrade", rare = "wyvern_scales", rare_n = 60, use = "mounts", use_n = 200, races = {"grn", "ogr"}, grant = "derpy_mr_up_wyvern_scales", group = "", pool = ""},
     {key = "conv_armaments", kind = "convert", rare = "", rare_n = 0, use = "", use_n = 0, races = {"chd"}, grant = "", group = "", pool = "wh3_dlc23_chd_armaments", goods = {{"coal", 20}, {"brimstone", 20}, {"iron", 20}}, amount = 30, wait = 1},
-    {key = "conv_food", kind = "convert", rare = "", rare_n = 0, use = "", use_n = 0, races = {"skv"}, grant = "", group = "", pool = "skaven_food", goods = {{"grain", 30}, {"salted_fish", 30}}, amount = 4, wait = 1},
+    {key = "conv_food", kind = "convert", rare = "", rare_n = 0, use = "", use_n = 0, races = {"skv"}, grant = "", group = "", pool = "skaven_food", goods = {{"grain", 10}, {"salted_fish", 10}}, amount = 4, wait = 1},
     {key = "conv_oathgold", kind = "convert", rare = "", rare_n = 0, use = "", use_n = 0, races = {"dwf"}, grant = "", group = "", pool = "dwf_oathgold", goods = {{"gold_idols", 30}, {"silver", 30}}, amount = 30, wait = 1},
     {key = "conv_infamy", kind = "convert", rare = "", rare_n = 0, use = "", use_n = 0, races = {"cst"}, grant = "", group = "", pool = "cst_infamy", goods = {{"rum", 30}, {"pearls", 30}}, amount = 50, wait = 1},
     {key = "army_rations", kind = "army", rare = "", rare_n = 0, use = "", use_n = 0, races = {"all"}, grant = "", group = "", pool = "", goods = {{"grain", 35}, {"salt", 35}, {"beer", 35}}, rank = 1, wait = 5},
@@ -398,11 +573,20 @@ DERPY_MR_FLOWS_POOL_HAS = {
 DERPY_MR_LOC_KEYS = {
     ["Nothing is stored here yet."] = "derpy_mr_ui_9287bbc6af",
     ["You hold no settlements and so have no stores."] = "derpy_mr_ui_34a9352977",
+    ["Its buildings make no goods yet. It grows its own food, and other goods come by trade."] = "derpy_mr_ui_949cb9d51e",
     ["This store is full and anything more made here is lost."] = "derpy_mr_ui_92f77f56ea",
     ["The history starts next turn."] = "derpy_mr_ui_726c1d67bc",
     ["{1} [[col:red]]Full[[/col]]"] = "derpy_mr_ui_2f0091807b",
+    ["made"] = "derpy_mr_ui_4ab8710d78",
+    ["raided"] = "derpy_mr_ui_3d4117546c",
+    ["plundered"] = "derpy_mr_ui_02a25bdd3a",
     ["traded in"] = "derpy_mr_ui_d6e9e3b5b4",
     ["traded out"] = "derpy_mr_ui_9bb32a5d4c",
+    ["eaten"] = "derpy_mr_ui_79ef87bc31",
+    ["spoiled"] = "derpy_mr_ui_8bd5fa0f94",
+    ["moved"] = "derpy_mr_ui_11dfd868d9",
+    ["spent"] = "derpy_mr_ui_167b8c8551",
+    ["sold"] = "derpy_mr_ui_7391de3df0",
     ["Last turn: no change"] = "derpy_mr_ui_9b92ea99d8",
     ["Last turn: {1}"] = "derpy_mr_ui_802464f5a6",
     ["Last turn: {1}, ..."] = "derpy_mr_ui_914ff4e104",
@@ -413,8 +597,10 @@ DERPY_MR_LOC_KEYS = {
     ["[[col:{1}]]{2}[[/col]]"] = "derpy_mr_ui_a81debb8ff",
     ["Click to hide the resources you do not have."] = "derpy_mr_ui_8051ad5bf6",
     ["Click to show the resources you do not have."] = "derpy_mr_ui_ac659b4bd6",
-    ["Allow all "] = "derpy_mr_ui_278c53a96e",
-    ["Stop all "] = "derpy_mr_ui_d153ba9e62",
+    ["Allow all exports"] = "derpy_mr_ui_c42976754a",
+    ["Stop all exports"] = "derpy_mr_ui_2ea85607cf",
+    ["Allow all imports"] = "derpy_mr_ui_477bcaac6f",
+    ["Stop all imports"] = "derpy_mr_ui_3eafb0d51a",
     ["From next turn every resource can be traded again and earn trade income."] = "derpy_mr_ui_cfbb700901",
     ["From next turn no resource can be traded or earn trade income.\nYour own carts stop carrying them at once."] = "derpy_mr_ui_a6266a69a4",
     ["Take every resource your trade partners send to your stores."] = "derpy_mr_ui_f85fe8117a",
@@ -482,12 +668,12 @@ DERPY_MR_LOC_KEYS = {
     ["store"] = "derpy_mr_ui_8cd892b7b9",
     ["stores"] = "derpy_mr_ui_61af09f34b",
     ["There is nothing worth selling.\nOnly what your stores of {1} hold over half full can be sold."] = "derpy_mr_ui_b427b908bc",
-    ["It needs %s gold."] = "derpy_mr_ui_355aa79dec",
-    ["It needs a level %d settlement."] = "derpy_mr_ui_9c5c64e37f",
-    ["It needs an empty building slot."] = "derpy_mr_ui_0879a569dc",
     ["{1} gold"] = "derpy_mr_ui_0a6b5ab016",
     ["Build {1} here at once for {2} even though no building slot here normally takes it."] = "derpy_mr_ui_925fb2cc83",
     ["Upgrade to {1} at once for {2}."] = "derpy_mr_ui_14fe83513b",
+    ["It needs {1} gold."] = "derpy_mr_ui_8fd52e5ae5",
+    ["It needs a level {1} settlement."] = "derpy_mr_ui_e4fd8eedbe",
+    ["It needs an empty building slot."] = "derpy_mr_ui_0879a569dc",
     ["Not built"] = "derpy_mr_ui_12bc4d809b",
     ["Level {1} of 3"] = "derpy_mr_ui_79a15cf527",
     ["Found"] = "derpy_mr_ui_5d695cc28c",
@@ -697,7 +883,7 @@ DERPY_MR_LOC_KEYS = {
     ["This army is in your own lands.\nLoad it here instead."] = "derpy_mr_ui_b4b35cdb8d",
     ["This army has no supply road."] = "derpy_mr_ui_189e87167f",
     ["This army already carries 5 turns of provisions."] = "derpy_mr_ui_47b497f846",
-    ["{1} has no food to spare."] = "derpy_mr_ui_9d02111ded",
+    ["{1} has no food to spare.\nA settlement keeps {2} turns of the food it eats and uses before it feeds an army."] = "derpy_mr_ui_323b23ad5d",
     ["Send a cart of provisions from {1}.\nIt arrives in {2}.\nAn army at war with you can seize it."] = "derpy_mr_ui_705b55867a",
     ["Supply cart"] = "derpy_mr_ui_b89a0adb92",
     ["Send supplies"] = "derpy_mr_ui_0712b67f47",
@@ -836,7 +1022,7 @@ DERPY_MR_LOC_KEYS = {
     ["This settlement was taken too recently to feed an army."] = "derpy_mr_ui_7260e1e2e7",
     ["It refills from this settlement."] = "derpy_mr_ui_53d78dcc3a",
     ["This settlement has {1} provisions to spare."] = "derpy_mr_ui_f8ea19175a",
-    ["This settlement has no provisions to spare."] = "derpy_mr_ui_13ae2fc7bf",
+    ["This settlement has no provisions to spare.\nA settlement keeps {1} turns of the food it eats and uses before it feeds an army."] = "derpy_mr_ui_99d2999302",
     ["You can buy {1} rations for {2} gold."] = "derpy_mr_ui_a8f16cf995",
     ["The army cannot buy more rations this turn."] = "derpy_mr_ui_bf90d57f02",
     ["The seller or buyer is gone"] = "derpy_mr_ui_8e6f48ab81",
@@ -951,8 +1137,8 @@ DERPY_MR_LOC_KEYS = {
     ["Recruitment cost -15%"] = "derpy_mr_ui_856ed27284",
     ["Recruitment cost -15% in the province. Permanent"] = "derpy_mr_ui_7cb2164988",
     ["Wyvern Roost"] = "derpy_mr_ui_822f544c40",
-    ["Army upkeep -5%"] = "derpy_mr_ui_feef73ceba",
-    ["Upkeep -5% for your armies here. Permanent"] = "derpy_mr_ui_79d8832775",
+    ["Upkeep and melee attack"] = "derpy_mr_ui_9fad66118d",
+    ["Upkeep -10% and melee attack +10 for your armies here. Permanent"] = "derpy_mr_ui_c75766b869",
     ["Armaments"] = "derpy_mr_ui_0afc19dc3a",
     ["30 Armaments"] = "derpy_mr_ui_27b18c6fb2",
     ["Makes 30 Armaments from your stores once a turn"] = "derpy_mr_ui_f784dc3fa5",
@@ -1511,6 +1697,16 @@ function F.invalidate_reach()
         R.dirty = true
     end
 end
+-- THE COMPUTERS' TERMS (IEE, 2026-11-11: one computer turn start spent 4.4 s, and one round 54 s, in road searches;
+-- terrain_routes.lua R.run): a computer's turn start may search F.SEARCH_HEXES hexes of road in all (about 0.1 s at
+-- R.advance's 8-10 us a hex), and a search it cannot finish goes on at the next ask; meanwhile the pair is out of
+-- reach. A kept road between computers is trusted F.REACH_KEEP turns. The map's 'show' searches F.SHOW_HEXES a call.
+-- A pair with a player in it is never limited at a turn start: the player's trade is worked out in full.
+F.SEARCH_HEXES, F.SHOW_HEXES, F.REACH_KEEP = 10000, 2000, 5
+function F.human_owned(region)
+    local f = region:owning_faction()
+    return not f:is_null_interface() and f:is_human()
+end
 function F.reach(a, b, mode)
     local R = DERPY_MR_TERRAIN_ROUTES
     if not (R and R.reach) or not a or not b then return true end
@@ -1519,7 +1715,11 @@ function F.reach(a, b, mode)
     local hit = F.reach_known[key]
     if hit and (mode or hit.turn == turn) then return hit.ok, hit.why, hit.path end
     if mode == "peek" or (mode == "show" and cm:is_multiplayer()) then return nil end
-    local ok, why, path = R.reach(a, b, F.rates().reach * F.ROAD_PER_TURN)
+    local human, terms = F.human_owned(a) or F.human_owned(b), nil
+    if mode == "show" then terms = { left = F.SHOW_HEXES, keep = human and 0 or F.REACH_KEEP }
+    elseif F.search_terms and not human then terms = F.search_terms end
+    local ok, why, path = R.reach(a, b, F.rates().reach * F.ROAD_PER_TURN, terms)
+    if ok == nil then return nil end   -- under way: kept by R, not here, so the next ask goes on with it
     F.reach_known[key] = { turn = turn, ok = ok, why = why, path = path }
     return ok, why, path
 end
@@ -1588,6 +1788,16 @@ end
 
 -- Preview only adjusts disposable stock views, in the same partner/good order as a real turn.
 function F.trade(exporter, preview)
+    -- a preview's own price pass (F.price): a turn start has one open already
+    if F.price_cache then return F.trade_round(exporter, preview) end
+    F.price_cache = {}
+    local ok, r = pcall(F.trade_round, exporter, preview)
+    F.price_cache = nil
+    if not ok then error(r, 0) end
+    return r
+end
+
+function F.trade_round(exporter, preview)
     local goods = {}
     if F.rates().trade <= 0 then return goods end
     local partners = exporter:factions_trading_with()
@@ -1873,20 +2083,33 @@ F.STOCKED_PCT = 25       -- Garrison stocked and Comforts: this share of one sto
 F.BUNDLE_TURNS = 2
 
 -- Daemons, the undead and Beastmen: their buildings make nothing, so they keep nothing to use.
-function F.uses_stores(faction)
-    local sc = faction:subculture()
-    for _, t in ipairs(DERPY_MR_FLOWS_NO_STORES) do
-        -- no plain flag: it corrupts the game's string library; the tokens are letters only
-        if string.find(sc, "_" .. t .. "_") then return false end
+-- WHO KEEPS STORES AND WHO EATS (2026-11-11): the culture first - other mods' subcultures sit under CA's cultures
+-- (Mixu's vampires under the Vampire Counts) - then the subculture's name. A subculture belongs to one culture.
+F.FAMILY_OF = {}
+local function names_any(sc, tokens)
+    -- no plain flag: it corrupts the game's string library; the tokens are letters only
+    for _, t in ipairs(tokens) do
+        if string.find(sc, "_" .. t .. "_") then return true end
     end
-    return true
+    return false
 end
 
-function F.eats(faction)
-    if not F.uses_stores(faction) then return false end
+function F.family(faction)
     local sc = faction:subculture()
-    return not string.find(sc, "_vmp_") and not string.find(sc, "_cst_")
+    local fam = F.FAMILY_OF[sc]
+    if fam then return fam end
+    if names_any(sc, DERPY_MR_FLOWS_NO_STORES) then
+        fam = "excluded"
+    else
+        fam = DERPY_MR_FLOWS_CULTURE_FAMILY[faction:culture()]
+            or (names_any(sc, DERPY_MR_FLOWS_UNDEAD) and "undead") or "living"
+    end
+    F.FAMILY_OF[sc] = fam
+    return fam
 end
+
+function F.uses_stores(faction) return F.family(faction) ~= "excluded" end
+function F.eats(faction) return F.family(faction) == "living" end
 
 -- One read of a settlement's stores: {stem = held}, and one store's space.
 -- ONE READ A TURN START (2026-11-03: 7,500 whole reads in one computer round, 2.35 s): inside F.on_faction_turn_start
@@ -2015,13 +2238,26 @@ function F.ration_stem(race)
     return biscuit and "hardtack" or "salted_meat"
 end
 
-function F.grow_food(region, held, level)
+function F.grow_food(region, held, level, turns)
     local stem = F.ration_stem(F.race(region:owning_faction()))
-    local n = math.min(F.NEED * level, F.free(region, stem))
+    local n = math.min((turns or 1) * F.NEED * level, F.free(region, stem))
     if n <= 0 then return end
     local before = F.held(region, stem)
     F.pool_add(region, F.PREFIX .. stem .. "_" .. KIND.process, n)
     held[stem] = (held[stem] or 0) + math.max(0, F.held(region, stem) - before)
+end
+
+-- AN UNCHARTED SETTLEMENT FEEDS ITSELF (2026-11-11): its main building is no chain we give production rows - another
+-- mod's race, or one that mod's building kept after a capture - so it grows its own Normal meals for any owner that
+-- eats, and as many again: the stock its armies load and its supply carts carry, which a charted settlement's farms
+-- make (final review 2026-11-11: one turn's meals left the store empty and a player's armies starved by turn 6).
+-- A race submod lists its own chains in DERPY_MR_CHARTED; a chain that cannot be read counts as charted.
+DERPY_MR_CHARTED = DERPY_MR_CHARTED or {}
+function F.charted(rkey)
+    local chain
+    pcall(function() chain = cm:get_region(rkey):settlement():primary_slot():building():chain() end)
+    if type(chain) ~= "string" then return true end
+    return DERPY_MR_FLOWS_CHARTED[chain] == true or DERPY_MR_CHARTED[chain] == true
 end
 
 function F.upkeep_region(region, fkey, uses)
@@ -2032,7 +2268,8 @@ function F.upkeep_region(region, fkey, uses)
         pcall(function() level = region:settlement():primary_slot():building():building_level() end)
         local need = F.need(fkey) * level
         if need > 0 and F.eats(region:owning_faction()) then
-            if F.rates().ai_food and not region:owning_faction():is_human() then F.grow_food(region, held, level) end
+            local wild = not F.charted(region:name())
+            if wild or (F.rates().ai_food and not region:owning_faction():is_human()) then F.grow_food(region, held, level, wild and 2 or 1) end
             F.draw(region, held, "provisions", need, KIND.eat, fkey)
             -- five turns of NORMAL meals, whatever the Rations edict: on Rationing's own meals it took half the food
             fed = F.use_total(held, "provisions") >= F.FED_TURNS * F.NEED * level
@@ -2201,12 +2438,14 @@ local function edict_family()
     return out
 end
 
--- The bundles of the options in force on, every other edict bundle off; all off with the switch off.
+-- The bundles of the options in force on, every other edict bundle off; all off with the switch off. No Rations
+-- bundle for a faction that does not eat: an older save's Rationing or Plenty, chosen while it still ate (final
+-- review 2026-11-11), would otherwise stay on for good, since F.edict_set refuses it any change.
 function F.edict_bundles(faction)
     local fkey, want = faction:name(), {}
     if F.edicts_on() and F.uses_stores(faction) then
         for _, which in ipairs(F.EDICT.order) do
-            local b = F.edict_bundle(faction, F.edict(fkey, which))
+            local b = (which ~= "rations" or F.eats(faction)) and F.edict_bundle(faction, F.edict(fkey, which))
             if b then want[b] = true end
         end
     end
@@ -2306,11 +2545,12 @@ function F.edict_ai(faction)
     F.edict_set(faction, "roads", near >= a.closed_wars and "closed" or "tolled")
 end
 
--- A player's edicts get their bundles (an older save catches up); a computer's run the rules.
+-- A computer's run the rules; then every faction's edicts get their bundles, so an older save catches up and one
+-- that no longer keeps stores or eats loses what it had (final review 2026-11-11).
 function F.edict_turn(faction)
-    if faction:is_human() then return F.edict_bundles(faction) end
     local r = F.rates()
-    if r.edicts and r.ai and F.uses_stores(faction) then F.edict_ai(faction) end
+    if not faction:is_human() and r.edicts and r.ai and F.uses_stores(faction) then F.edict_ai(faction) end
+    F.edict_bundles(faction)
 end
 
 -- ---- tolls and blockades (design 2026-11-01, Part C) ------------------------------------------
@@ -3272,9 +3512,11 @@ for _, w in ipairs(DERPY_MR_FLOWS_WORKS) do F.WORK[w.key] = w end
 F.WORK_CFG = DERPY_MR_FLOWS_WORK
 F.WORK_FACTOR = "derpy_mr_workshop"   -- gen_resource_overhaul.WORK_FACTOR: a conversion's gain-only factor
 
--- the race token of a subculture key: wh_main_sc_dwf_dwarfs -> dwf; "" for one with none
+-- the race token: wh_main_sc_dwf_dwarfs -> dwf; a subculture with no token takes its culture's, and an
+-- unknown one keeps its own key, so two unknown races never share one (2026-11-11)
 function F.race(faction)
-    return string.match(faction:subculture(), "_sc_(%a+)_") or ""
+    local sc = faction:subculture()
+    return string.match(sc, "_sc_(%a+)_") or DERPY_MR_FLOWS_CULTURE_TOKEN[faction:culture()] or sc
 end
 
 -- A work or an event is open to its races ("all" for every one), less its not_races: a race gets its
@@ -3776,9 +4018,39 @@ end
 -- Exchange's own note on EX.holdings_value) and was paid per unit, 10x. And it reads the houses'
 -- stance toward EX.who(), the LOCAL player unless bound: EX.with_player binds it to the seller,
 -- so every machine prices one sale alike (a UITrigger action runs on all of them).
+-- ONE PASS A FACTION (IEE, 2026-11-11): EX.with_player drops the Exchange's guild hold, so a good priced alone walks
+-- every house's diplomacy (EX.stance_of), 8.5 ms a good at IEE's 138 houses, 0.5 s a faction's 58 goods and 3.4 s of
+-- one computer's trade. Every good under one hold (EX.hold_guild) was 14 ms, with the same prices. While a pass is
+-- open (F.price_cache: a turn start's, or a trade preview's) each faction's list is worked out once and kept for it;
+-- nothing here moves an Exchange price, so the list is what each good alone would have answered.
+local function exchange() return type(EX) == "table" and type(EX.sell_price) == "function" and type(EX.lot) == "function"
+                                 and type(EX.with_player) == "function" end
+function F.exchange_prices(fkey)
+    local out = {}
+    if not exchange() then return out end
+    local held = type(EX.hold_guild) == "function" and type(EX.free_guild) == "function"
+    EX.with_player(fkey, function()
+        if held then EX.hold_guild() end
+        for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+            -- each good on its own guard, as each was alone: one the Exchange cannot price takes the fixed rate
+            local ok, p = pcall(function() return EX.sell_price(g.res) / EX.lot(g.res) end)
+            if ok and type(p) == "number" and p > 0 then out[g.stem] = p end
+        end
+        if held then EX.free_guild() end
+    end)
+    return out
+end
 function F.price(g, fkey)
-    if type(EX) == "table" and type(EX.sell_price) == "function" and type(EX.lot) == "function"
-       and type(EX.with_player) == "function" then
+    local cache = F.price_cache
+    if cache then
+        local list = cache[fkey]
+        if not list then
+            list = F.exchange_prices(fkey)
+            cache[fkey] = list
+        end
+        return list[g.stem] or DERPY_MR_FLOWS_SELL_RATE[g.use] or 0
+    end
+    if exchange() then
         local p
         local ok = EX.with_player(fkey, function() p = EX.sell_price(g.res) / EX.lot(g.res) end)
         if ok and type(p) == "number" and p > 0 then return p end
@@ -3889,7 +4161,9 @@ end
 
 -- CARAVANS AND CONVOYS CARRY NO RATIONS (Workshop report, 2026-11-06): Cathay's caravans and the Chaos Dwarfs'
 -- convoys spend their trips on foreign roads, where nothing can refill, so every trip ended hungry.
-F.NO_RATIONS = { CARAVAN = true, CONVOY = true }
+-- Thanquol's schemers (wh3_dlc29_thanquol_schemers.lua) and Ogre camps (wh3_campaign_ogre_contracts.lua): CA's own
+-- scripts treat neither as an army (Workshop report, 2026-11-10).
+F.NO_RATIONS = { CARAVAN = true, CONVOY = true, CHAOTIC_PLAN_SCHEMERS = true, OGRE_CAMP = true }
 
 function F.provision_force(faction, force)
     if not force or force:is_null_interface() or not F.eats(faction)
@@ -3985,7 +4259,7 @@ function F.provision_rows(faction)
             if source then
                 local available = F.provision_spare(faction, source:name())
                 reason = available > 0 and F.T("This settlement has {1} provisions to spare.", available)
-                    or F.T("This settlement has no provisions to spare.")
+                    or F.T("This settlement has no provisions to spare.\nA settlement keeps {1} turns of the food it eats and uses before it feeds an army.", F.FED_TURNS)
             end
             -- RATIONS ABROAD (MCT, on by default): an army no player controls buys them anywhere away from home
             local row = { id = id, force = force, need = need, cap = 10 * need,
@@ -5800,7 +6074,9 @@ function F.ship(faction, from, to, stem, n, order)
     n = fit.n
     local got = fit.got
     local R = DERPY_MR_TERRAIN_ROUTES
-    local road = R and R.journey and R.journey(from, to) or nil
+    -- a computer's turn start searches within its allowance (F.search_terms); a road still under way is no road, and
+    -- the cart keeps its two spots as before roads
+    local road = R and R.journey and R.journey(from, to, F.search_terms) or nil
     -- A BLOCKADE (Part C 6.2): a partner cart does not leave while an enemy army stands on its road
     if partner and F.blockade(seller, faction, road) then return nil, "blockaded" end
     local escrow, price_c = 0, nil
@@ -6668,9 +6944,11 @@ end
 
 -- the turn start keeps what it reads of the stores (F.stock), and drops it when it ends, thrown or not
 function F.on_faction_turn_start(faction)
-    F.stock_cache = {}
+    F.stock_cache, F.price_cache = {}, {}   -- and the Exchange's prices, a faction at a time (F.price)
+    -- a computer's road searches share one allowance of hexes (F.reach): the same hexes on every machine
+    F.search_terms = not faction:is_human() and { left = F.SEARCH_HEXES, keep = F.REACH_KEEP } or nil
     local ok, e = pcall(F.turn_start, faction)
-    F.stock_cache = nil
+    F.stock_cache, F.search_terms, F.price_cache = nil, nil, nil
     if not ok then error(e, 0) end
 end
 

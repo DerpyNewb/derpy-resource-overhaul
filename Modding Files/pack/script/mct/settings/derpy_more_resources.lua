@@ -9,6 +9,12 @@ local mct = get_mct and get_mct()
 if not mct then return end
 local IN_CAMPAIGN = __game_mode == __lib_type_campaign
 local LOCK_REASON = "Fixed when a campaign starts. Change it from the main menu before starting a new one."
+-- MCT draws the lock's reason as it is handed, so a translation comes from the loc here (a translator's
+-- report, 2026-11-10). A missing row answers "" or its own key: the English stays.
+do
+    local ok, s = pcall(function() return common.get_localised_string("mct_derpy_more_resources_lock_reason") end)
+    if ok and type(s) == "string" and s ~= "" and s ~= "mct_derpy_more_resources_lock_reason" then LOCK_REASON = s end
+end
 
 local m = mct:register_mod("derpy_more_resources")
 m:set_title("Derpy Resource Overhaul")

@@ -849,7 +849,7 @@ effect_bundles_localised_description_derpy_mr_up_starwood	Built from your stores
 effect_bundles_localised_title_derpy_mr_up_feathers	Eyrie	false
 effect_bundles_localised_description_derpy_mr_up_feathers	Built from your stores: recruitment cost -15% in the province.	false
 effect_bundles_localised_title_derpy_mr_up_wyvern_scales	Wyvern Roost	false
-effect_bundles_localised_description_derpy_mr_up_wyvern_scales	Built from your stores: upkeep -5% for your armies here.	false
+effect_bundles_localised_description_derpy_mr_up_wyvern_scales	Built from your stores: upkeep -10% and melee attack +10 for your armies here.	false
 effect_bundles_localised_title_derpy_mr_order_festival	Festival	false
 effect_bundles_localised_description_derpy_mr_order_festival	Paid for from your stores: public order +4 in every province.	false
 effect_bundles_localised_title_derpy_mr_order_muster	Muster	false

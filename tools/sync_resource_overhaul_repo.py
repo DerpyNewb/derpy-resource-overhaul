@@ -61,6 +61,12 @@ def _tsvs(root=ROOT):
             if n.endswith(".tsv") and n.split("__")[0] not in CA_CLONES and n not in CA_CLONE_FILES]
 
 
+def _translation(root=ROOT):
+    """The translators' kit: the guide, english.tsv and every changes_ file (the loc TSVs above, reshaped)."""
+    d = os.path.join(root, _SRC, "translation")
+    return [_SRC + "translation/" + n for n in sorted(os.listdir(d))] if os.path.isdir(d) else []
+
+
 def manifest(root=ROOT):
     same = _tsvs(root) + ["tools/" + n for n in (
         "gen_resource_overhaul.py",            # the mod: every row, the loc, the IEE submod
@@ -91,7 +97,8 @@ def manifest(root=ROOT):
         "_resource_terrain_routes_harness.lua",    # the routes' test, run by gen_mr_ui --selftest
         "test_service_labels.py",           # gen_mr_ui --selftest imports it
         "rpfm_client.py",                   # build_mr_terrain_routes --probe-pack's RPFM client
-    )] + ["Modding Files/reference/resource_overhaul_building_audit.md",
+        "gen_ro_translation.py",            # the translation kit below (2026-11-11)
+    )] + _translation(root) + ["Modding Files/reference/resource_overhaul_building_audit.md",
           "Modding Files/source/resource_overhaul/terrain_routes.lua",
           "Modding Files/source/resource_overhaul/trade_vehicles.json",
           "Modding Files/source/resource_overhaul/trade_vehicle_manifest.json",

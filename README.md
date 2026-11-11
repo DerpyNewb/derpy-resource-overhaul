@@ -146,6 +146,13 @@ Every figure is an MCT setting. `docs/RESOURCE_OVERHAUL_MECHANICS.md` has the fu
   mod that replaces or wraps the same function may conflict: CA's listeners call whichever
   version is the global at the time.
 
+## Translating it
+
+[`Modding Files/source/resource_overhaul/translation/`](Modding%20Files/source/resource_overhaul/translation/)
+has every line of the mod's text as one RPFM loc TSV, a list of what changed in each update, and
+a short guide: what to name the loc file so it lays over the English key by key, which markup to
+keep, and what to do with each changed line after an update.
+
 ## Building it
 
 Python 3 and Pillow. The tools read CA's data straight out of your own game install. The paths

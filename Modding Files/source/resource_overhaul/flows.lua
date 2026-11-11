@@ -438,6 +438,16 @@ function F.invalidate_reach()
         R.dirty = true
     end
 end
+-- THE COMPUTERS' TERMS (IEE, 2026-11-11: one computer turn start spent 4.4 s, and one round 54 s, in road searches;
+-- terrain_routes.lua R.run): a computer's turn start may search F.SEARCH_HEXES hexes of road in all (about 0.1 s at
+-- R.advance's 8-10 us a hex), and a search it cannot finish goes on at the next ask; meanwhile the pair is out of
+-- reach. A kept road between computers is trusted F.REACH_KEEP turns. The map's 'show' searches F.SHOW_HEXES a call.
+-- A pair with a player in it is never limited at a turn start: the player's trade is worked out in full.
+F.SEARCH_HEXES, F.SHOW_HEXES, F.REACH_KEEP = 10000, 2000, 5
+function F.human_owned(region)
+    local f = region:owning_faction()
+    return not f:is_null_interface() and f:is_human()
+end
 function F.reach(a, b, mode)
     local R = DERPY_MR_TERRAIN_ROUTES
     if not (R and R.reach) or not a or not b then return true end
@@ -446,7 +456,11 @@ function F.reach(a, b, mode)
     local hit = F.reach_known[key]
     if hit and (mode or hit.turn == turn) then return hit.ok, hit.why, hit.path end
     if mode == "peek" or (mode == "show" and cm:is_multiplayer()) then return nil end
-    local ok, why, path = R.reach(a, b, F.rates().reach * F.ROAD_PER_TURN)
+    local human, terms = F.human_owned(a) or F.human_owned(b), nil
+    if mode == "show" then terms = { left = F.SHOW_HEXES, keep = human and 0 or F.REACH_KEEP }
+    elseif F.search_terms and not human then terms = F.search_terms end
+    local ok, why, path = R.reach(a, b, F.rates().reach * F.ROAD_PER_TURN, terms)
+    if ok == nil then return nil end   -- under way: kept by R, not here, so the next ask goes on with it
     F.reach_known[key] = { turn = turn, ok = ok, why = why, path = path }
     return ok, why, path
 end
@@ -515,6 +529,16 @@ end
 
 -- Preview only adjusts disposable stock views, in the same partner/good order as a real turn.
 function F.trade(exporter, preview)
+    -- a preview's own price pass (F.price): a turn start has one open already
+    if F.price_cache then return F.trade_round(exporter, preview) end
+    F.price_cache = {}
+    local ok, r = pcall(F.trade_round, exporter, preview)
+    F.price_cache = nil
+    if not ok then error(r, 0) end
+    return r
+end
+
+function F.trade_round(exporter, preview)
     local goods = {}
     if F.rates().trade <= 0 then return goods end
     local partners = exporter:factions_trading_with()
@@ -800,20 +824,33 @@ F.STOCKED_PCT = 25       -- Garrison stocked and Comforts: this share of one sto
 F.BUNDLE_TURNS = 2
 
 -- Daemons, the undead and Beastmen: their buildings make nothing, so they keep nothing to use.
-function F.uses_stores(faction)
-    local sc = faction:subculture()
-    for _, t in ipairs(DERPY_MR_FLOWS_NO_STORES) do
-        -- no plain flag: it corrupts the game's string library; the tokens are letters only
-        if string.find(sc, "_" .. t .. "_") then return false end
+-- WHO KEEPS STORES AND WHO EATS (2026-11-11): the culture first - other mods' subcultures sit under CA's cultures
+-- (Mixu's vampires under the Vampire Counts) - then the subculture's name. A subculture belongs to one culture.
+F.FAMILY_OF = {}
+local function names_any(sc, tokens)
+    -- no plain flag: it corrupts the game's string library; the tokens are letters only
+    for _, t in ipairs(tokens) do
+        if string.find(sc, "_" .. t .. "_") then return true end
     end
-    return true
+    return false
 end
 
-function F.eats(faction)
-    if not F.uses_stores(faction) then return false end
+function F.family(faction)
     local sc = faction:subculture()
-    return not string.find(sc, "_vmp_") and not string.find(sc, "_cst_")
+    local fam = F.FAMILY_OF[sc]
+    if fam then return fam end
+    if names_any(sc, DERPY_MR_FLOWS_NO_STORES) then
+        fam = "excluded"
+    else
+        fam = DERPY_MR_FLOWS_CULTURE_FAMILY[faction:culture()]
+            or (names_any(sc, DERPY_MR_FLOWS_UNDEAD) and "undead") or "living"
+    end
+    F.FAMILY_OF[sc] = fam
+    return fam
 end
+
+function F.uses_stores(faction) return F.family(faction) ~= "excluded" end
+function F.eats(faction) return F.family(faction) == "living" end
 
 -- One read of a settlement's stores: {stem = held}, and one store's space.
 -- ONE READ A TURN START (2026-11-03: 7,500 whole reads in one computer round, 2.35 s): inside F.on_faction_turn_start
@@ -942,13 +979,26 @@ function F.ration_stem(race)
     return biscuit and "hardtack" or "salted_meat"
 end
 
-function F.grow_food(region, held, level)
+function F.grow_food(region, held, level, turns)
     local stem = F.ration_stem(F.race(region:owning_faction()))
-    local n = math.min(F.NEED * level, F.free(region, stem))
+    local n = math.min((turns or 1) * F.NEED * level, F.free(region, stem))
     if n <= 0 then return end
     local before = F.held(region, stem)
     F.pool_add(region, F.PREFIX .. stem .. "_" .. KIND.process, n)
     held[stem] = (held[stem] or 0) + math.max(0, F.held(region, stem) - before)
+end
+
+-- AN UNCHARTED SETTLEMENT FEEDS ITSELF (2026-11-11): its main building is no chain we give production rows - another
+-- mod's race, or one that mod's building kept after a capture - so it grows its own Normal meals for any owner that
+-- eats, and as many again: the stock its armies load and its supply carts carry, which a charted settlement's farms
+-- make (final review 2026-11-11: one turn's meals left the store empty and a player's armies starved by turn 6).
+-- A race submod lists its own chains in DERPY_MR_CHARTED; a chain that cannot be read counts as charted.
+DERPY_MR_CHARTED = DERPY_MR_CHARTED or {}
+function F.charted(rkey)
+    local chain
+    pcall(function() chain = cm:get_region(rkey):settlement():primary_slot():building():chain() end)
+    if type(chain) ~= "string" then return true end
+    return DERPY_MR_FLOWS_CHARTED[chain] == true or DERPY_MR_CHARTED[chain] == true
 end
 
 function F.upkeep_region(region, fkey, uses)
@@ -959,7 +1009,8 @@ function F.upkeep_region(region, fkey, uses)
         pcall(function() level = region:settlement():primary_slot():building():building_level() end)
         local need = F.need(fkey) * level
         if need > 0 and F.eats(region:owning_faction()) then
-            if F.rates().ai_food and not region:owning_faction():is_human() then F.grow_food(region, held, level) end
+            local wild = not F.charted(region:name())
+            if wild or (F.rates().ai_food and not region:owning_faction():is_human()) then F.grow_food(region, held, level, wild and 2 or 1) end
             F.draw(region, held, "provisions", need, KIND.eat, fkey)
             -- five turns of NORMAL meals, whatever the Rations edict: on Rationing's own meals it took half the food
             fed = F.use_total(held, "provisions") >= F.FED_TURNS * F.NEED * level
@@ -1128,12 +1179,14 @@ local function edict_family()
     return out
 end
 
--- The bundles of the options in force on, every other edict bundle off; all off with the switch off.
+-- The bundles of the options in force on, every other edict bundle off; all off with the switch off. No Rations
+-- bundle for a faction that does not eat: an older save's Rationing or Plenty, chosen while it still ate (final
+-- review 2026-11-11), would otherwise stay on for good, since F.edict_set refuses it any change.
 function F.edict_bundles(faction)
     local fkey, want = faction:name(), {}
     if F.edicts_on() and F.uses_stores(faction) then
         for _, which in ipairs(F.EDICT.order) do
-            local b = F.edict_bundle(faction, F.edict(fkey, which))
+            local b = (which ~= "rations" or F.eats(faction)) and F.edict_bundle(faction, F.edict(fkey, which))
             if b then want[b] = true end
         end
     end
@@ -1233,11 +1286,12 @@ function F.edict_ai(faction)
     F.edict_set(faction, "roads", near >= a.closed_wars and "closed" or "tolled")
 end
 
--- A player's edicts get their bundles (an older save catches up); a computer's run the rules.
+-- A computer's run the rules; then every faction's edicts get their bundles, so an older save catches up and one
+-- that no longer keeps stores or eats loses what it had (final review 2026-11-11).
 function F.edict_turn(faction)
-    if faction:is_human() then return F.edict_bundles(faction) end
     local r = F.rates()
-    if r.edicts and r.ai and F.uses_stores(faction) then F.edict_ai(faction) end
+    if not faction:is_human() and r.edicts and r.ai and F.uses_stores(faction) then F.edict_ai(faction) end
+    F.edict_bundles(faction)
 end
 
 -- ---- tolls and blockades (design 2026-11-01, Part C) ------------------------------------------
@@ -2199,9 +2253,11 @@ for _, w in ipairs(DERPY_MR_FLOWS_WORKS) do F.WORK[w.key] = w end
 F.WORK_CFG = DERPY_MR_FLOWS_WORK
 F.WORK_FACTOR = "derpy_mr_workshop"   -- gen_resource_overhaul.WORK_FACTOR: a conversion's gain-only factor
 
--- the race token of a subculture key: wh_main_sc_dwf_dwarfs -> dwf; "" for one with none
+-- the race token: wh_main_sc_dwf_dwarfs -> dwf; a subculture with no token takes its culture's, and an
+-- unknown one keeps its own key, so two unknown races never share one (2026-11-11)
 function F.race(faction)
-    return string.match(faction:subculture(), "_sc_(%a+)_") or ""
+    local sc = faction:subculture()
+    return string.match(sc, "_sc_(%a+)_") or DERPY_MR_FLOWS_CULTURE_TOKEN[faction:culture()] or sc
 end
 
 -- A work or an event is open to its races ("all" for every one), less its not_races: a race gets its
@@ -2703,9 +2759,39 @@ end
 -- Exchange's own note on EX.holdings_value) and was paid per unit, 10x. And it reads the houses'
 -- stance toward EX.who(), the LOCAL player unless bound: EX.with_player binds it to the seller,
 -- so every machine prices one sale alike (a UITrigger action runs on all of them).
+-- ONE PASS A FACTION (IEE, 2026-11-11): EX.with_player drops the Exchange's guild hold, so a good priced alone walks
+-- every house's diplomacy (EX.stance_of), 8.5 ms a good at IEE's 138 houses, 0.5 s a faction's 58 goods and 3.4 s of
+-- one computer's trade. Every good under one hold (EX.hold_guild) was 14 ms, with the same prices. While a pass is
+-- open (F.price_cache: a turn start's, or a trade preview's) each faction's list is worked out once and kept for it;
+-- nothing here moves an Exchange price, so the list is what each good alone would have answered.
+local function exchange() return type(EX) == "table" and type(EX.sell_price) == "function" and type(EX.lot) == "function"
+                                 and type(EX.with_player) == "function" end
+function F.exchange_prices(fkey)
+    local out = {}
+    if not exchange() then return out end
+    local held = type(EX.hold_guild) == "function" and type(EX.free_guild) == "function"
+    EX.with_player(fkey, function()
+        if held then EX.hold_guild() end
+        for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+            -- each good on its own guard, as each was alone: one the Exchange cannot price takes the fixed rate
+            local ok, p = pcall(function() return EX.sell_price(g.res) / EX.lot(g.res) end)
+            if ok and type(p) == "number" and p > 0 then out[g.stem] = p end
+        end
+        if held then EX.free_guild() end
+    end)
+    return out
+end
 function F.price(g, fkey)
-    if type(EX) == "table" and type(EX.sell_price) == "function" and type(EX.lot) == "function"
-       and type(EX.with_player) == "function" then
+    local cache = F.price_cache
+    if cache then
+        local list = cache[fkey]
+        if not list then
+            list = F.exchange_prices(fkey)
+            cache[fkey] = list
+        end
+        return list[g.stem] or DERPY_MR_FLOWS_SELL_RATE[g.use] or 0
+    end
+    if exchange() then
         local p
         local ok = EX.with_player(fkey, function() p = EX.sell_price(g.res) / EX.lot(g.res) end)
         if ok and type(p) == "number" and p > 0 then return p end
@@ -2816,7 +2902,9 @@ end
 
 -- CARAVANS AND CONVOYS CARRY NO RATIONS (Workshop report, 2026-11-06): Cathay's caravans and the Chaos Dwarfs'
 -- convoys spend their trips on foreign roads, where nothing can refill, so every trip ended hungry.
-F.NO_RATIONS = { CARAVAN = true, CONVOY = true }
+-- Thanquol's schemers (wh3_dlc29_thanquol_schemers.lua) and Ogre camps (wh3_campaign_ogre_contracts.lua): CA's own
+-- scripts treat neither as an army (Workshop report, 2026-11-10).
+F.NO_RATIONS = { CARAVAN = true, CONVOY = true, CHAOTIC_PLAN_SCHEMERS = true, OGRE_CAMP = true }
 
 function F.provision_force(faction, force)
     if not force or force:is_null_interface() or not F.eats(faction)
@@ -2912,7 +3000,7 @@ function F.provision_rows(faction)
             if source then
                 local available = F.provision_spare(faction, source:name())
                 reason = available > 0 and F.T("This settlement has {1} provisions to spare.", available)
-                    or F.T("This settlement has no provisions to spare.")
+                    or F.T("This settlement has no provisions to spare.\nA settlement keeps {1} turns of the food it eats and uses before it feeds an army.", F.FED_TURNS)
             end
             -- RATIONS ABROAD (MCT, on by default): an army no player controls buys them anywhere away from home
             local row = { id = id, force = force, need = need, cap = 10 * need,
@@ -4727,7 +4815,9 @@ function F.ship(faction, from, to, stem, n, order)
     n = fit.n
     local got = fit.got
     local R = DERPY_MR_TERRAIN_ROUTES
-    local road = R and R.journey and R.journey(from, to) or nil
+    -- a computer's turn start searches within its allowance (F.search_terms); a road still under way is no road, and
+    -- the cart keeps its two spots as before roads
+    local road = R and R.journey and R.journey(from, to, F.search_terms) or nil
     -- A BLOCKADE (Part C 6.2): a partner cart does not leave while an enemy army stands on its road
     if partner and F.blockade(seller, faction, road) then return nil, "blockaded" end
     local escrow, price_c = 0, nil
@@ -5595,9 +5685,11 @@ end
 
 -- the turn start keeps what it reads of the stores (F.stock), and drops it when it ends, thrown or not
 function F.on_faction_turn_start(faction)
-    F.stock_cache = {}
+    F.stock_cache, F.price_cache = {}, {}   -- and the Exchange's prices, a faction at a time (F.price)
+    -- a computer's road searches share one allowance of hexes (F.reach): the same hexes on every machine
+    F.search_terms = not faction:is_human() and { left = F.SEARCH_HEXES, keep = F.REACH_KEEP } or nil
     local ok, e = pcall(F.turn_start, faction)
-    F.stock_cache = nil
+    F.stock_cache, F.search_terms, F.price_cache = nil, nil, nil
     if not ok then error(e, 0) end
 end
 

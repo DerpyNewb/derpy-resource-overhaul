@@ -244,68 +244,132 @@ function R.unchanged(regions, from, to)
     return true
 end
 
+-- THE COMPUTERS' TERMS (Workshop reports 2026-11-08 to 11-10; measured on IEE 2026-11-11: one computer turn start
+-- spent 4.4 s, and one round 54 s, searching roads inside single frames). `terms`, nil for no limit, is
+-- { left = hexes still to search, keep = turns a kept answer is trusted }, one table a turn start (flows.lua
+-- F.search_terms). Counted in hexes, never seconds, so every machine stops at the same hex.
+-- The owners of a road's two ends, which a kept answer or a search under way was made for.
+function R.owners(from, to)
+    local function key(region)
+        local f = region:owning_faction()
+        return f:is_null_interface() and '' or f:name()
+    end
+    return key(from) .. '>' .. key(to)
+end
+
+-- A kept answer still the answer? Unchecked for terms.keep turns while both ends keep their owners (a war far along a
+-- computer's road reaches its trade a few turns late, not for a search of half the map every turn); else while every
+-- region its search judged still judges the same, and then trusted again from today.
+function R.fresh(memo, g, from, to, owners, turn, terms)
+    if not (memo and memo.data == g.data) then return false end
+    if terms and memo.owners == owners and turn - memo.checked < terms.keep then return true end
+    if not R.unchanged(memo.regions, from, to) then return false end
+    memo.owners, memo.checked = owners, turn
+    return true
+end
+
+-- The search kept under `key`, or a new one (make(regions) starts it) when there is none, its ends have changed hands
+-- or the map has. Searches nobody asked about for over a turn are dropped as a new one starts: each holds a table a
+-- hex it has seen.
+function R.job(jobs, key, owners, g, turn, make)
+    local job = jobs[key]
+    if not (job and job.owners == owners and job.data == g.data) then
+        for k, old in pairs(jobs) do if turn - old.turn > 1 then jobs[k] = nil end end
+        job = { owners = owners, data = g.data, regions = {} }
+        job.j = make(job.regions)
+        jobs[key] = job
+    end
+    job.turn = turn
+    return job
+end
+
+-- A search to its end, or until terms.left hexes are spent: false then, and the next call goes on from there.
+-- A step it does not finish is charged whole, one it finishes by the hexes it opened, so no step overdraws.
+function R.run(j, terms)
+    while true do
+        local step = terms and math.min(100000, terms.left) or 100000
+        if step <= 0 then return false end
+        local before = j.count
+        local done, path = R.advance(j, step)
+        if terms then terms.left = terms.left - (done and j.count - before or step) end
+        if done then return true, path end
+    end
+end
+
 -- TRADE REACH: is there a road between two settlements that stays off land hostile to either owner and is
--- no longer than max hexes (nil: any length)? Returns ok, why ('far' or 'enemy') and the road. Synchronous,
--- for the economy at a turn start; enemy land is a wall here, where R.path only charges for it.
--- Answers are kept by road (its two ends and max) and given again while R.unchanged holds, which is the
--- answer a new search would give, so every machine agrees whatever each one has kept.
+-- no longer than max hexes (nil: any length)? Returns ok, why ('far' or 'enemy') and the road; nil, 'pending'
+-- while a search under the computers' terms is still under way. For the economy at a turn start; enemy land
+-- is a wall here, where R.path only charges for it.
+-- Answers are kept by road (its two ends and max) and given again while R.fresh holds: with no terms that is
+-- R.unchanged, the answer a new search would give. Every machine asks the same questions at the same points,
+-- so each keeps the same answers and the same searches under way.
 -- ponytail: kept for every pair ever asked; prune by last use if memory shows it.
-R.reach_memo, R.free_memo = {}, {}
-function R.reach(from, to, max)
+R.reach_memo, R.free_memo, R.reach_jobs = {}, {}, {}
+function R.reach(from, to, max, terms)
     local g = R.grids[cm:model():campaign_name_key()]
     if not g then return true end   -- a map with no grid has nothing to judge by, so trade is never stopped
     local a, b = from:settlement(), to:settlement()
     local first, last = {a:logical_position_x(), a:logical_position_y()}, {b:logical_position_x(), b:logical_position_y()}
     if max and math.max(math.abs(first[1] - last[1]), math.abs(first[2] - last[2])) > max then return false, 'far' end
-    local function run(avoid)
-        local j = R.start(g, first, last, avoid)
-        j.wall, j.max = true, max
-        local done, path
-        repeat done, path = R.advance(j, 100000) until done
-        return path, j.count < R.SEARCH_CAP
-    end
     local key = first[1] .. ',' .. first[2] .. '>' .. last[1] .. ',' .. last[2] .. '>' .. tostring(max)
     -- the road through enemy land too: terrain alone, so worked out once per road and map, when first needed
     local free = R.free_memo[key]
     if free and free.data ~= g.data then free = nil end
     -- no road even through enemy land, the search having run to its end: a walled one cannot find one either
     if free and not free.open and free.finished then return false, 'far' end
+    local turn, owners = cm:model():turn_number(), R.owners(from, to)
     local memo = R.reach_memo[key]
-    if not (memo and memo.data == g.data and R.unchanged(memo.regions, from, to)) then
-        local regions = {}
-        local path = run(R.avoider(from, to, regions))
-        if not path and not free then
-            local road, finished = run(nil)
-            free = { data = g.data, open = road ~= nil, finished = finished }
-            R.free_memo[key] = free
-        end
-        -- no safe road: the enemy is to blame when a road through their land would have been short enough
-        memo = { data = g.data, regions = regions, ok = path ~= nil, path = path,
-                 why = not path and (free.open and 'enemy' or 'far') or nil }
-        R.reach_memo[key] = memo
+    if R.fresh(memo, g, from, to, owners, turn, terms) then return memo.ok, memo.why, memo.path end
+    local job = R.job(R.reach_jobs, key, owners, g, turn, function(regions)
+        local j = R.start(g, first, last, R.avoider(from, to, regions))
+        j.wall, j.max = true, max
+        return j
+    end)
+    if not job.searched then
+        local done, path = R.run(job.j, terms)
+        if not done then return nil, 'pending' end
+        job.searched, job.path = true, path
     end
+    if not job.path and not free then
+        if not job.free then
+            job.free = R.start(g, first, last)
+            job.free.wall, job.free.max = true, max
+        end
+        local done, road = R.run(job.free, terms)
+        if not done then return nil, 'pending' end
+        free = { data = g.data, open = road ~= nil, finished = job.free.count < R.SEARCH_CAP }
+        R.free_memo[key] = free
+    end
+    R.reach_jobs[key] = nil
+    -- no safe road: the enemy is to blame when a road through their land would have been short enough
+    memo = { data = g.data, regions = job.regions, owners = owners, checked = turn, ok = job.path ~= nil, path = job.path,
+             why = not job.path and (free.open and 'enemy' or 'far') or nil }
+    R.reach_memo[key] = memo
     return memo.ok, memo.why, memo.path
 end
 
 -- Computed by the synchronized dispatch, then saved on the cargo; never use the UI's path cache here.
--- KEPT AS R.reach KEEPS ITS ANSWERS (2026-11-08: one search a cart, 0.9 s of a computer round at turn 18): the road
--- is given again while every region its search judged still judges the same, which is the road a new search finds.
+-- KEPT AS R.reach KEEPS ITS ANSWERS (2026-11-08: one search a cart, 0.9 s of a computer round at turn 18), and under
+-- the same terms: nil, 'pending' while a computer's search is under way (the cart then leaves with no road).
 -- Each caller gets its own copy of the list, as a cargo keeps it.
 -- ponytail: kept for every pair ever sent; prune by last use if memory shows it, as R.reach_memo.
-R.journey_memo = {}
-function R.journey(from, to)
+R.journey_memo, R.journey_jobs = {}, {}
+function R.journey(from, to, terms)
     local g = R.grids[cm:model():campaign_name_key()]
     if not g then return nil end
     local a, b = from:settlement(), to:settlement()
     local first, last = {a:logical_position_x(), a:logical_position_y()}, {b:logical_position_x(), b:logical_position_y()}
     local key = first[1] .. ',' .. first[2] .. '>' .. last[1] .. ',' .. last[2]
+    local turn, owners = cm:model():turn_number(), R.owners(from, to)
     local memo = R.journey_memo[key]
-    if not (memo and memo.data == g.data and R.unchanged(memo.regions, from, to)) then
-        local regions = {}
-        local j = R.start(g, first, last, R.avoider(from, to, regions))
-        local done, path
-        repeat done, path = R.advance(j, 100000) until done
-        memo = { data = g.data, regions = regions, path = path }
+    if not R.fresh(memo, g, from, to, owners, turn, terms) then
+        local job = R.job(R.journey_jobs, key, owners, g, turn, function(regions)
+            return R.start(g, first, last, R.avoider(from, to, regions))
+        end)
+        local done, path = R.run(job.j, terms)
+        if not done then return nil, 'pending' end
+        R.journey_jobs[key] = nil
+        memo = { data = g.data, regions = job.regions, owners = owners, checked = turn, path = path }
         R.journey_memo[key] = memo
     end
     if not memo.path then return nil end
@@ -384,23 +448,30 @@ end
 
 -- THE CART GOODS' PREVIEWS ARE KEPT (2026-10-29): one allocator preview is ~3 ms and a refresh asked for ten, so a
 -- still camera's timed refresh stalled a frame. The map keeps them in R.plans and works out one seller again every
--- R.PLAN_EVERY ticks (R.renew_plan), so a sale or a switch shows within seconds and no frame pays for them all.
-R.plans, R.reach_shown, R.spots = {}, {}, {}
+-- R.PLAN_EVERY ticks (R.renew_plan), so no frame pays for them all.
+-- ONCE A TURN FOR A COMPUTER (IEE, 2026-11-11: a big partner's preview was 57-85 ms every few seconds, 346 ms at
+-- worst): a computer's stores move only at its own turn start, so each computer seller is worked out once in the
+-- player's turn (R.plan_fresh, emptied by R.new_turn) and after that only the viewer's own comes round again, which a
+-- recruit moves and nothing reports. A player's action (flows.lua F.dispatch) drops them all. A partner's carts to the
+-- player can lag a recruit of the player's until the next turn.
+R.plans, R.plan_fresh, R.reach_shown, R.spots = {}, {}, {}, {}
 function R.renew_plan()
-    local F, sellers = DERPY_MR_FLOWS, {}
+    local F = DERPY_MR_FLOWS
     if not F then return end
-    for seller in pairs(R.plans) do sellers[#sellers + 1] = seller end
-    if #sellers == 0 then return end
-    table.sort(sellers)
-    R.plan_next = (R.plan_next or 0) % #sellers + 1
-    local seller = sellers[R.plan_next]
+    local me, stale, seller = cm:get_local_faction_name(true), {}, nil
+    for s in pairs(R.plans) do if s ~= me and not R.plan_fresh[s] then stale[#stale + 1] = s end end
+    if #stale > 0 then
+        table.sort(stale)
+        seller = stale[1]
+    elseif R.plans[me] then seller = me
+    else return end
     local faction = cm:get_faction(seller)
-    if faction and not faction:is_null_interface() then R.plans[seller] = F.trade(faction, true) end
+    if faction and not faction:is_null_interface() then R.plans[seller], R.plan_fresh[seller] = F.trade(faction, true), true end
 end
 
 function R.carried(goods,seller,buyer,plans)
     local F,stocked=DERPY_MR_FLOWS,{}
-    if not plans[seller] then plans[seller]=F.trade(cm:get_faction(seller),true) end
+    if not plans[seller] then plans[seller]=F.trade(cm:get_faction(seller),true); R.plan_fresh[seller]=true end
     local allowed={}
     for _,stem in ipairs(plans[seller][buyer] or {}) do allowed[stem]=true end
     for _,stem in ipairs(goods) do
@@ -700,7 +771,10 @@ function R.links(faction)
                             if open == nil and (R.shows == 0 or os.clock() < R.show_until) then
                                 R.shows = R.shows + 1
                                 open, _, road = F.reach(home, dest, 'show')
-                            elseif open == nil then
+                            end
+                            -- still unknown, or its search still under way ('show' stops after F.SHOW_HEXES hexes): the
+                            -- map comes back for it at the next tick
+                            if open == nil then
                                 R.dirty = true
                                 local was = R.reach_shown[pair]
                                 if was then open, road = was[1], was[2] end
@@ -1101,6 +1175,7 @@ end
 -- The player's turn: every shown road is checked again and the network bundled again.
 function R.new_turn()
     R.epoch, R.dirty, R.network_cache, R.bundled = R.epoch + 1, true, nil, {}
+    R.plan_fresh = {}   -- the computers' stores have moved: each preview is worked out again once
 end
 
 function R.init()
