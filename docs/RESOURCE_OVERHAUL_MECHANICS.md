@@ -562,6 +562,14 @@ Replaces the game's own supply lines (each army after a player's first making ev
 - **Map.** One dashed road per army, pale (supplied), amber (stretched) or magenta (cut), up to 40 armies; "Army supply roads" under Trade route lines turns them off.
 - **Live checks (2026-11-09).** Upkeep x1.25 exactly on a cut road; cart sent, arrived, survived a reload and was seized; the game's turn-start listener runs through the replacement; the 8,040-call scene sweep on load costs 32 ms.
 
+### Mortals, Mercs and Management (2026-11-11)
+
+*Mortals, Mercs and Management* (Workshop 2815401013, `!zorbaz_kiki.pack`, script prefix `cpap_`) feeds armies from its own regional food and lets people starve when a region's food runs out. It knows no other mod, so the bridge lives here, in `flows.lua`. With Kiki absent, both functions return at their first line.
+
+- **One feeder per army (`F.kiki_install`, `F.feeds`).** At the first tick this mod wraps Kiki's `cpap_supply.is_force_exempt`. An army this mod feeds counts as exempt to Kiki. The test is the one Army provisions uses: provisions on, a player's army or "goods move between other factions" on, a race that eats, a general, not a garrison, caravan, convoy, schemer band or Ogre camp. An army in its escort battle still counts as fed. Kiki reads the function on every call. At the owner's turn start it purges an exempt army's supply row and readiness bundle (`purge_force_row` in `mmm_supply.lua`), and its army panel hides the supply bar. Kiki keeps feeding every army this mod does not feed. A throw in the test counts as "not ours", and Kiki's own rule decides.
+- **The stores feed hungry people (`F.kiki_relief`).** At each faction's turn start, after the army meals and before spoilage, a settlement whose people Kiki left short at its last count (`cpap_regions[key].food.unmet`) sends the food goods it can spare into Kiki's food reserve. It spares what a cart would: everything above every keep (`F.stock_view`). One provision is 300 of Kiki's food, from each mod's own army rule: a provision feeds 4 units a turn here, and Kiki feeds a unit a turn on 75 food (`CPAP_SUPPLY.food_per_supply`), one person for one turn each. A settlement sends no more than the shortfall and never past the reserve's free space, so Kiki spills none of it. The write goes through Kiki's own `cpap2_engine.set_food_reserve` with the reason `DERPY_RO_STORES`, and the store's history books the goods as eaten. Other factions take part when "goods move between other factions" is on. Races that eat nothing here never do.
+- **Not bridged.** Kiki's food production and this mod's are separate: its farmers on the land, this mod's buildings. Settlement meals here stay a store sink with a well-fed bonus. Kiki's population does not change what a store eats or makes.
+
 In an existing save, armies that already have a cargo ledger keep it unchanged; other eligible armies receive the one-time five-meal cargo on the first tick after loading (`F.provision_seed_all`). Previewing does not seed or refill them, and a saved turn guard prevents duplicate meals from repeated callbacks.
 
 ## Interface, settings and AI
@@ -626,7 +634,7 @@ Relief cannot feed armies at sea or in foreign territory, and does not command t
 
 ### Turn sequencing
 
-The scripted owner-turn economy broadly processes a computer's edict choices, arriving shipments (each cargo that moves can meet bandits on its way), settlement consumption, army meals/refill, spoilage, province supplies, processing/services, partner stock trade (which pays its tolls and finds its blockades), duty and later opportunities/AI purchases. Consequently, an import arriving later in that sequence may only fund next turn's earlier payment. UI history and forecasts should be read with that ordering in mind.
+The scripted owner-turn economy broadly processes a computer's edict choices, arriving shipments (each cargo that moves can meet bandits on its way), settlement consumption, army meals/refill, food for *Mortals, Mercs and Management*'s hungry people when that mod is installed, spoilage, province supplies, processing/services, partner stock trade (which pays its tolls and finds its blockades), duty and later opportunities/AI purchases. Consequently, an import arriving later in that sequence may only fund next turn's earlier payment. UI history and forecasts should be read with that ordering in mind.
 
 ## Implementation status and limits
 

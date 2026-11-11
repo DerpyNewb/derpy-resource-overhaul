@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-11, second update
+
+- Works with Mortals, Mercs and Management: an army this mod feeds no longer uses that mod's army supply as well,
+  so it is never fed or penalised twice.
+- With Mortals, Mercs and Management installed, a settlement whose people go hungry sends the food it can spare from
+  its stores to feed them.
+
 ## 2026-11-11
 
 - Skaven Food recipe: 10 Grain + 10 Salted Fish for 4 Food.

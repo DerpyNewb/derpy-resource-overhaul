@@ -7780,4 +7780,145 @@ end)()
     EX, F.state, F.turn_start, F.trade_pair = ex_was, saved_state, saved_ts, saved_tp
 end)()
 
+-- MORTALS, MERCS AND MANAGEMENT (Workshop 2815401013, cpap_*): one feeder an army, and the stores feed its hungry people.
+;(function()
+    local n0, old, started = #ERRORS, F.state, F.started
+    F.state = { factions = {}, rates = F.read_rates() }
+    F.state.rates.army_provisions, F.state.rates.ai = true, false
+    -- NO KIKI: nothing to wrap, nothing to feed, nothing thrown
+    cpap_supply, cpap_regions, cpap2_engine, CPAP_SUPPLY, F.kiki_exempt = nil, nil, nil, nil, nil
+    eq(pcall(F.kiki_install), true, "without Kiki the install throws nothing")
+    eq(F.kiki_exempt, nil, "and keeps nothing")
+    local p = faction("kiki_p", { human = true })
+    local home = region("kiki_home", 0, 0, 1000, { grain = 100 })
+    own(p, home, true)
+    eq(pcall(F.kiki_relief, p.iface), true, "nor does the relief")
+    eq(home.held.grain, 100, "and it moves nothing")
+
+    -- ONE FEEDER AN ARMY: an army this mod feeds is exempt to Kiki; Kiki's own rule decides the rest
+    local function force(f, id, opts)
+        opts = opts or {}
+        local mf = { is_null_interface = function() return false end, command_queue_index = function() return id end,
+            faction = function() if opts.broken then error("no faction") end return f.iface end,
+            has_general = function() return opts.general ~= false end,
+            is_armed_citizenry = function() return opts.garrison == true end,
+            force_type = function() return { key = function() return opts.type or "ARMY" end } end,
+            unit_list = function() return list({ {}, {}, {}, {} }) end, kiki = opts.kiki == true }
+        f.armies[#f.armies + 1] = mf
+        return mf
+    end
+    local kiki_calls = 0
+    local function kiki_rule(mf) kiki_calls = kiki_calls + 1; return mf.kiki end
+    cpap_supply = { is_force_exempt = kiki_rule }
+    F.kiki_install()
+    eq(F.kiki_exempt, kiki_rule, "Kiki's rule is kept")
+    local wrapper = cpap_supply.is_force_exempt
+    eq(wrapper ~= kiki_rule, true, "and the global is ours")
+    F.kiki_install()
+    eq(cpap_supply.is_force_exempt, wrapper, "a second install wraps nothing again")
+    eq(F.kiki_exempt, kiki_rule, "and still keeps Kiki's rule, not ours")
+    local fed = force(p, 9101)
+    eq(cpap_supply.is_force_exempt(fed), true, "an army this mod feeds is exempt to Kiki")
+    F.state.fight = { escort = 9101 }
+    eq(cpap_supply.is_force_exempt(fed), true, "and stays exempt for the fight it escorts")
+    F.state.fight = nil
+    kiki_calls = 0
+    eq(cpap_supply.is_force_exempt(force(p, 9102, { type = "CARAVAN" })), false, "a caravan eats nothing here: Kiki's")
+    eq(kiki_calls, 1, "and Kiki's own rule decides it")
+    eq(cpap_supply.is_force_exempt(force(p, 9103, { type = "CARAVAN", kiki = true })), true, "Kiki's own exemptions stand")
+    eq(cpap_supply.is_force_exempt(force(p, 9104, { general = false })), false, "an army with no general: Kiki's")
+    eq(cpap_supply.is_force_exempt(force(p, 9105, { garrison = true })), false, "a garrison: Kiki's")
+    kiki_calls = 0
+    eq(cpap_supply.is_force_exempt(force(p, 9106, { broken = true })), false, "a throw in ours is not ours")
+    eq(kiki_calls, 1, "and Kiki decides it")
+    F.state.rates.army_provisions = false
+    eq(cpap_supply.is_force_exempt(fed), false, "provisions off: every army is Kiki's")
+    F.state.rates.army_provisions = true
+    local ai = faction("kiki_ai")
+    local ai_home = region("kiki_ai_home", 50, 50, 1000, { grain = 100 })
+    own(ai, ai_home, true)
+    local ai_army = force(ai, 9107)
+    eq(cpap_supply.is_force_exempt(ai_army), false, "other factions' stores off: their armies are Kiki's")
+    F.state.rates.ai = true
+    eq(cpap_supply.is_force_exempt(ai_army), true, "on: this mod feeds them, so Kiki leaves them")
+    F.state.rates.ai = false
+    local vmp = faction("kiki_vmp", { sc = "wh_main_sc_vmp_vampire_counts", culture = "wh_main_vmp_vampire_counts" })
+    eq(cpap_supply.is_force_exempt(force(vmp, 9108)), false, "a race that eats nothing here: Kiki's")
+    p.armies, ai.armies = {}, {}     -- no army meals in the keeps below
+
+    -- THE STORES FEED KIKI'S HUNGRY PEOPLE, at 300 of its food a provision (4 units a meal, 75 a unit)
+    local writes = {}
+    cpap2_engine = { set_food_reserve = function(data, value, reason, fields)
+        writes[#writes + 1] = { region = data.region, value = value, reason = reason, sent = fields.provisions }
+        data.food.reserve = value
+    end }
+    CPAP_SUPPLY = { food_per_supply = 75 }
+    local food = { unmet = 1000, reserve = 0, reserve_capacity = 3000 }
+    local ai_food = { unmet = 1000, reserve = 0, reserve_capacity = 3000 }
+    cpap_regions = { kiki_home = { region = "kiki_home", food = food }, kiki_ai_home = { region = "kiki_ai_home", food = ai_food } }
+    F.kiki_relief(p.iface)
+    eq(#writes, 1, "a shortfall writes the reserve once")
+    eq(writes[1].region, "kiki_home", "of the hungry settlement")
+    eq(writes[1].reason, "DERPY_RO_STORES", "under its own reason")
+    eq(writes[1].sent, 4, "1000 short is 4 provisions at 300 each")
+    eq(home.held.grain, 96, "taken from the store")
+    eq(food.reserve, 1000, "and the reserve gets the shortfall, not the 1200 the 4 make")
+    eq(F.book("kiki_p").now.grain[DERPY_MR_FLOWS_KIND.eat .. "_out"], 4, "the history books it as eaten")
+    -- fed people, or a full reserve: nothing moves
+    writes, food.unmet = {}, 0
+    F.kiki_relief(p.iface)
+    eq(#writes, 0, "fed people take nothing"); eq(home.held.grain, 96, "and the store keeps it")
+    food.unmet, food.reserve = 1000, 3000
+    F.kiki_relief(p.iface)
+    eq(#writes, 0, "a full reserve takes nothing"); eq(home.held.grain, 96, "and spills nothing")
+    -- room for 100: one provision, and the reserve stops at its capacity
+    food.reserve = 2900
+    F.kiki_relief(p.iface)
+    eq(writes[1].sent, 1, "room for 100 takes one provision"); eq(food.reserve, 3000, "and fills it to the brim, no more")
+    eq(home.held.grain, 95, "one off the store")
+    -- THE KEEP: a level 1 settlement keeps 5 turns of its 2 meals, counted over every food good
+    writes, food.reserve, home.held.grain = {}, 0, 10
+    F.kiki_relief(p.iface)
+    eq(#writes, 0, "a store at its keep sends nothing"); eq(home.held.grain, 10, "and keeps all 10")
+    writes, food.unmet, home.held = {}, 3000, { grain = 12, salted_meat = 3 }
+    F.kiki_relief(p.iface)
+    eq(writes[1].sent, 5, "the keep counts across goods: 15 held, 10 kept, 5 sent")
+    eq(home.held.grain + home.held.salted_meat, 10, "and the store keeps its 10")
+    eq(food.reserve, 1500, "5 provisions are 1500 of Kiki's food")
+    -- other factions only with their stores on; a race that eats nothing here never
+    writes = {}
+    F.kiki_relief(ai.iface)
+    eq(#writes, 0, "other factions' stores off: theirs send nothing"); eq(ai_home.held.grain, 100, "and keep it")
+    F.state.rates.ai = true
+    F.kiki_relief(ai.iface)
+    eq(#writes, 1, "on: theirs feed their people too"); eq(ai_home.held.grain, 96, "from their store")
+    local vmp_home = region("kiki_vmp_home", 90, 90, 1000, { grain = 100 })
+    own(vmp, vmp_home, true)
+    cpap_regions.kiki_vmp_home = { region = "kiki_vmp_home", food = { unmet = 1000, reserve = 0, reserve_capacity = 3000 } }
+    writes = {}
+    F.kiki_relief(vmp.iface)
+    eq(#writes, 0, "a race that eats nothing here sends nothing"); eq(vmp_home.held.grain, 100, "and keeps it")
+    -- a region Kiki has no record of, or a record with no food yet, is skipped
+    cpap_regions = {}
+    eq(pcall(F.kiki_relief, p.iface), true, "no record: nothing thrown"); eq(#writes, 0, "and nothing written")
+
+    -- WHERE THEY RUN: the install beside CA's upkeep at the first tick; the people eat after the armies, before spoilage
+    local names, order, guard, n_listeners = {}, {}, F.guard, #LISTENERS
+    for k, v in pairs(F) do if type(v) == "function" then names[v] = k end end
+    F.guard = function(fn) order[#order + 1] = names[fn] end
+    F.turn_start(p.iface)
+    F.started = false; F.init()
+    F.guard = guard
+    while #LISTENERS > n_listeners do table.remove(LISTENERS) end
+    local at = {}
+    for i, k in ipairs(order) do at[k] = at[k] or i end
+    eq(at.provisions_turn < at.kiki_relief and at.kiki_relief < at.spoil, true, "the people eat after the armies, before spoilage")
+    eq(at.kiki_install == at.supply_lines_install + 1, true, "the install runs at the first tick, beside CA's upkeep")
+
+    eq(#ERRORS, n0, "no script errors with Kiki: " .. table.concat(ERRORS, "; "))
+    p.human = false
+    cpap_supply, cpap_regions, cpap2_engine, CPAP_SUPPLY, F.kiki_exempt = nil, nil, nil, nil, nil
+    F.state, F.started = old, started
+end)()
+
 print("harness ok")

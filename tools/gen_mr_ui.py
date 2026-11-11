@@ -1991,6 +1991,28 @@ def check_provision_mutations():
         # Workshop report, 2026-11-10: Thanquol's schemers; and Ogre camps, which CA's scripts count with the caravans
         ("Thanquol's schemers eat", 'CONVOY = true, CHAOTIC_PLAN_SCHEMERS = true', 'CONVOY = true'),
         ("Ogre camps eat", 'CHAOTIC_PLAN_SCHEMERS = true, OGRE_CAMP = true', 'CHAOTIC_PLAN_SCHEMERS = true'),
+        # Mortals, Mercs and Management (Workshop 2815401013), 2026-11-11: one feeder an army, stores feed its people
+        ("Kiki: every army ours", 'if ok and ours then return true end', 'if ok then return true end'),
+        ("Kiki: escort army handed back", 'return (r.army_provisions and (r.ai or faction:is_human()) and F.fed_force(faction, force)) == true',
+         'return (r.army_provisions and (r.ai or faction:is_human()) and F.provision_force(faction, force)) == true'),
+        ("Kiki: computer stores switch ignored", 'return (r.army_provisions and (r.ai or faction:is_human()) and F.fed_force(faction, force)) == true',
+         'return (r.army_provisions and F.fed_force(faction, force)) == true'),
+        ("Kiki: provisions switch ignored", 'return (r.army_provisions and (r.ai or faction:is_human()) and F.fed_force(faction, force)) == true',
+         'return ((r.ai or faction:is_human()) and F.fed_force(faction, force)) == true'),
+        ("Kiki: wraps its own wrapper", 'or type(cpap_supply.is_force_exempt) ~= "function" or F.kiki_exempt then return end',
+         'or type(cpap_supply.is_force_exempt) ~= "function" then return end'),
+        ("Kiki: relief past the reserve's room", 'local want = math.min(tonumber(food.unmet) or 0, (tonumber(food.reserve_capacity) or 0) - reserve)',
+         'local want = tonumber(food.unmet) or 0'),
+        ("Kiki: relief writes what the provisions make", 'reserve + math.min(want, sent * per)', 'reserve + sent * per'),
+        ("Kiki: relief ignores the keep", 'local n = math.min(F.available_stock(view, g.stem), left)', 'local n = math.min(view.held[g.stem] or 0, left)'),
+        ("Kiki: relief keep per good", '                            F.stock_adjust(view, g.stem, -n)\n', ''),
+        ("Kiki: a provision is one unit's food", 'F.KIKI_UNITS_PER_MEAL = 4', 'F.KIKI_UNITS_PER_MEAL = 1'),
+        ("Kiki: relief ignores the computer stores switch", 'if not (F.eats(faction) and (r.ai or faction:is_human())) then return end',
+         'if not F.eats(faction) then return end'),
+        ("Kiki: the undead send food", 'if not (F.eats(faction) and (r.ai or faction:is_human())) then return end',
+         'if not (r.ai or faction:is_human()) then return end'),
+        ("Kiki: relief never runs", '    F.guard(F.kiki_relief, faction)', '    F.guard(F.spoil, faction)'),
+        ("Kiki: never installed", '    F.guard(F.kiki_install)', '    F.guard(F.quiet_dilemmas)'),
     )
     for label, before, after in mutations:
         assert subject.count(before) == 1, "stale provision mutation: " + label
@@ -2749,7 +2771,10 @@ def check_spoil_mutations():
     """Spoilage (design 2026-11-01, Part A): each rule broken the way somebody would, in the shipped
     flows script; the flows harness must fail on every one."""
     subject = flows_lua().replace("\r\n", "\n")
-    turn = "    F.guard(F.upkeep, faction)\n    F.guard(F.provisions_turn, faction)\n    F.guard(F.spoil, faction)"
+    # Mortals, Mercs and Management's relief sits between the army meals and spoilage (2026-11-11)
+    meals = ("    F.guard(F.upkeep, faction)\n    F.guard(F.provisions_turn, faction)\n"
+             "    F.guard(F.kiki_relief, faction)               -- Mortals, Mercs and Management's hungry people, after the armies\n")
+    turn = meals + "    F.guard(F.spoil, faction)"
     mutations = (
         ("rounds up", "return math.floor(exposed * rate / 100)", "return math.ceil(exposed * rate / 100)"),
         ("the safe share kept nothing back", "local exposed = (held or 0) - math.floor((capacity or 0) * safe / 100)",
@@ -2764,9 +2789,8 @@ def check_spoil_mutations():
          "return r.spoilage and F.uses_stores(faction)"),
         ("a race with no stores", "return r.spoilage and (r.ai or faction:is_human()) and F.uses_stores(faction)",
          "return r.spoilage and (r.ai or faction:is_human())"),
-        ("never runs", turn, "    F.guard(F.upkeep, faction)\n    F.guard(F.provisions_turn, faction)\n    do end"),
-        ("runs before the meals", turn,
-         "    F.guard(F.spoil, faction)\n    F.guard(F.upkeep, faction)\n    F.guard(F.provisions_turn, faction)"),
+        ("never runs", turn, meals + "    do end"),
+        ("runs before the meals", turn, "    F.guard(F.spoil, faction)\n" + meals.rstrip("\n")),
         ("booked as eaten", "n, KIND.spoil, fkey)", "n, KIND.eat, fkey)"),
         ("the forecast's net ignores it", "fc.net = p - d - s", "fc.net = p - d"),
         ("the forecast counts it down like a use", "local d = fc.use_per_turn\n", "local d = fc.use_per_turn + s\n"),

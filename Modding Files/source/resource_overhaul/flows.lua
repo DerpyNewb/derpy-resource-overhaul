@@ -2906,11 +2906,16 @@ end
 -- scripts treat neither as an army (Workshop report, 2026-11-10).
 F.NO_RATIONS = { CARAVAN = true, CONVOY = true, CHAOTIC_PLAN_SCHEMERS = true, OGRE_CAMP = true }
 
-function F.provision_force(faction, force)
-    if not force or force:is_null_interface() or not F.eats(faction)
+-- An army this mod feeds at all. F.provision_force also leaves out an army for the one fight it escorts.
+function F.fed_force(faction, force)
+    return not (not force or force:is_null_interface() or not F.eats(faction)
         or not force:has_general() or force:is_armed_citizenry()
         or F.NO_RATIONS[force:force_type():key()]
-        or force:faction():name() ~= faction:name() then return false end
+        or force:faction():name() ~= faction:name())
+end
+
+function F.provision_force(faction, force)
+    if not F.fed_force(faction, force) then return false end
     local fight = F.state.fight
     return not (fight and fight.escort == force:command_queue_index())
 end
@@ -3211,6 +3216,73 @@ function F.provision_supply(faction)
                         if F.ship_count(faction:name()) >= F.ship_cap(faction) then return end
                     end
                 end
+            end
+        end
+    end
+end
+
+-- ---- Mortals, Mercs and Management (Workshop 2815401013, !zorbaz_kiki.pack, cpap_*) -----------------------
+-- It feeds armies too, from the food its people farm (mmm_supply.lua), and lets people its reserve cannot feed
+-- starve (mmm_population.lua, STARVATION_DEATHS). It knows no other mod, so the bridge is here, on its globals,
+-- and does nothing without them.
+
+-- ONE FEEDER AN ARMY: an army this mod feeds is exempt to it. It reads cpap_supply.is_force_exempt on every call,
+-- purges an exempt army's supply row and readiness bundle at its owner's turn start (purge_force_row) and hides
+-- the army's supply bar (mmm_ui_military.lua). An army this mod does not feed - a race that eats nothing here,
+-- provisions off, other factions' with their stores off - stays its. F.fed_force, not F.provision_force: an escort
+-- fight leaves the army out of that for one battle, and it would start a supply row for it.
+function F.feeds(force)
+    local faction, r = force:faction(), F.rates()
+    return (r.army_provisions and (r.ai or faction:is_human()) and F.fed_force(faction, force)) == true
+end
+
+function F.kiki_install()
+    if type(cpap_supply) ~= "table" or type(cpap_supply.is_force_exempt) ~= "function" or F.kiki_exempt then return end
+    F.kiki_exempt = cpap_supply.is_force_exempt
+    cpap_supply.is_force_exempt = function(force)
+        -- a throw here lands in its turn: read it as not ours and let it decide
+        local ok, ours = pcall(F.feeds, force)
+        if ok and ours then return true end
+        return F.kiki_exempt(force)
+    end
+end
+
+-- STORES FEED HUNGRY PEOPLE: a settlement whose people it could not feed at its last count (food.unmet, what was
+-- left once its reserve ran dry) sends the food it can spare - above every keep, as a cart takes it (F.stock_view)
+-- - into its reserve for the next count: at most that shortfall, never past the reserve's room, so none spills.
+-- A provision feeds 4 units a turn here (F.provision_rows); it feeds a unit a turn on CPAP_SUPPLY.food_per_supply
+-- (75) of its food, one person a turn each. So a provision is 300 of its food.
+F.KIKI_UNITS_PER_MEAL = 4
+
+function F.kiki_relief(faction)
+    local engine = type(cpap2_engine) == "table" and cpap2_engine.set_food_reserve
+    if type(cpap_regions) ~= "table" or type(engine) ~= "function" then return end
+    local r = F.rates()
+    if not (F.eats(faction) and (r.ai or faction:is_human())) then return end
+    local per = F.KIKI_UNITS_PER_MEAL * (type(CPAP_SUPPLY) == "table" and tonumber(CPAP_SUPPLY.food_per_supply) or 75)
+    local fkey, provs, rl = faction:name(), nil, faction:region_list()
+    for i = 0, rl:num_items() - 1 do
+        local region = rl:item_at(i)
+        local data = cpap_regions[region:name()]
+        local food = type(data) == "table" and data.food
+        if type(food) == "table" then
+            local reserve = tonumber(food.reserve) or 0
+            local want = math.min(tonumber(food.unmet) or 0, (tonumber(food.reserve_capacity) or 0) - reserve)
+            if want > 0 then
+                provs = provs or F.provinces(faction)
+                local view, left, sent = F.stock_view(faction, region, provs), math.ceil(want / per), 0
+                for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+                    if left <= 0 then break end
+                    if F.bulk("provisions")(g) then
+                        local n = math.min(F.available_stock(view, g.stem), left)
+                        if n > 0 then
+                            F.move(region, nil, g.stem, n, KIND.eat, fkey, nil)
+                            F.stock_adjust(view, g.stem, -n)
+                            left, sent = left - n, sent + n
+                        end
+                    end
+                end
+                if sent > 0 then engine(data, reserve + math.min(want, sent * per), "DERPY_RO_STORES", { provisions = sent }) end
             end
         end
     end
@@ -5715,6 +5787,7 @@ function F.turn_start(faction)
     F.guard(F.ships_turn, faction)
     F.guard(F.upkeep, faction)
     F.guard(F.provisions_turn, faction)
+    F.guard(F.kiki_relief, faction)               -- Mortals, Mercs and Management's hungry people, after the armies
     F.guard(F.spoil, faction)                     -- after the meals, before processing and trade
     F.guard(F.supply_turn, faction)               -- the army's upkeep by its line, after the meals; again at the turn end (F.init)
     F.guard(F.provision_supply, faction)
@@ -5746,6 +5819,7 @@ function F.init()
     -- has read the player's settings by now (its LoadingGame callback). A loaded save is frozen.
     F.guard(F.freeze_rates)
     F.guard(F.supply_lines_install)         -- the game's army-count upkeep, off unless the box is ticked
+    F.guard(F.kiki_install)                 -- Mortals, Mercs and Management leaves the armies this mod feeds
     F.guard(F.quiet_dilemmas)
     F.guard(F.name_pending_goods)
     for _,event in ipairs({'FactionLeaderDeclaresWar','PositiveDiplomaticEvent','NegativeDiplomaticEvent','RegionFactionChangeEvent'}) do
