@@ -196,10 +196,11 @@ function S.good_detail(realm, stem)
     return out
 end
 
-function S.settlement_detail(s)
+-- `also` (stem -> true): goods listed even when none is held or made - a recipe's inputs.
+function S.settlement_detail(s, also)
     local out = {}
     for _, g in ipairs(DERPY_MR_STORES_GOODS) do
-        if keeps(s, g.stem) then
+        if keeps(s, g.stem) or (also and also[g.stem]) then
             local held = s.held[g.stem] or 0
             out[#out + 1] = { stem = g.stem, name = S.name(g.stem), icon = g.icon, res = g.res,
                               held = held, cap = s.cap, made = s.made[g.stem] or 0,
@@ -1086,8 +1087,10 @@ function S.view_model(realm)
         local f = S.actions_on() and model_faction
         local fs = f and S.ask("found_state", f, s.key)
         if fs then v.rows[#v.rows + 1] = S.found_row(fs, s.key) end
-        if f and region then S.economy_rows(v, f, region) end
-        for _, d in ipairs(S.settlement_detail(s)) do
+        -- A RECIPE'S INPUTS GET A ROW (Bilbo Bagins, 2026-11-12): Vitevo's biscuits needed salt it
+        -- had none of, and a good with no row has no Send here and no regular supply.
+        local inputs = f and region and S.economy_rows(v, f, region)
+        for _, d in ipairs(S.settlement_detail(s, inputs)) do
             local tip = S.good_tip(d)
             if d.full then tip = S.FULL_TIP end
             local price, sentence = S.price_of(model_faction, region, d.stem)
@@ -1204,11 +1207,16 @@ function S.economy_cells(st)
     }
 end
 
+-- Returns the inputs of every recipe this settlement can run or is running, stem -> true.
 function S.economy_rows(v, faction, region)
     local rows = S.ask("economy_rows", faction, region) or {}
-    if #rows == 0 then return end
+    local inputs = {}
+    if #rows == 0 then return inputs end
     v.rows[#v.rows + 1] = { S.section(S.T("Processing and services")), S.section(S.T("Inputs")), S.section(S.T("State")), S.section(S.T("Benefit")), "", section = true }
     for _, st in ipairs(rows) do
+        if st.open or st.on then
+            for stem in pairs(st.definition.cost or {}) do inputs[stem] = true end
+        end
         local c = S.economy_cells(st)
         local tip = c.head .. "\n" .. c.reason .. c.note
         v.rows[#v.rows + 1] = { st.definition.label, c.amount, S.economy_status(st), c.benefit, "", economy = st.key,
@@ -1216,6 +1224,7 @@ function S.economy_rows(v, faction, region)
             send = { label = st.on and S.T("Pause") or S.T("Enable"), off = not st.open and not st.on, tip = tip } }
     end
     v.rows[#v.rows + 1] = { S.section(S.T("Stored resources")), "", "", "", "", section = true }
+    return inputs
 end
 
 -- THE PRODUCTION TAB (asked 2026-10-30): every recipe your race has, a section each, and under it
@@ -3290,6 +3299,9 @@ end
 function S.plate_tip(pv)
     local foot = S.T("Lost: this army has no settlement")
     if pv.to then foot = S.T("Into {1}", loc("regions_onscreen_" .. pv.to, pv.to)) end
+    if (pv.raiders or 1) > 1 then
+        foot = foot .. "\n" .. S.T("{1} armies are raiding here.\nEach one takes from what the others leave.", S.num(pv.raiders))
+    end
     return tip_lines(S.T("Raiding takes each turn:"), pv.parts, foot)
 end
 

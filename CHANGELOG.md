@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-12
+
+- When several armies raid the same settlement, the goods shown above each army now match what it actually takes.
+- The raid tooltip says how many armies are raiding there.
+- A settlement's stores now list the goods its recipes need, even when it holds none, so you can send them there.
+
 ## 2026-11-11, second update
 
 - Works with Mortals, Mercs and Management: an army this mod feeds no longer uses that mod's army supply as well,

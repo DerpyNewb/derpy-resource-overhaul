@@ -64,6 +64,7 @@ local function region(key, x, y, cap, held)
             return list(t)
         end,
         is_abandoned = function() return r.owner == nil end,
+        characters_in_region = function() return list(r.chars or {}) end,   -- r.chars: the armies standing in it
         public_order = function() return r.po or 0 end,   -- Part D: the wild-land rule
         has_effect_bundle = function(_, b) return BUNDLES[key] ~= nil and BUNDLES[key][b] ~= nil end,
         effect_bundles = function()
@@ -175,8 +176,12 @@ local function lose(f, r)
     for i, x in ipairs(f.regions) do if x == r then table.remove(f.regions, i) break end end
     r.owner = nil
 end
+ARMY_CQI = 50000             -- a global: the main chunk is at its 200 locals
 local function army(f, r, x, y, stance)
+    ARMY_CQI = ARMY_CQI + 1
+    local cqi = ARMY_CQI
     return {
+        command_queue_index = function() return cqi end,
         has_military_force = function() return true end,
         military_force = function() return { active_stance = function()
             return stance or "MILITARY_FORCE_ACTIVE_STANCE_TYPE_LAND_RAID" end } end,
@@ -498,6 +503,32 @@ local frozen = F.state.rates; F.state.rates = nil
 eq(F.raid_preview(army(hum, a1, 12, 0)), nil, "no plate before the rates are frozen")
 eq(F.state.rates, nil, "and the plate does not freeze them: that is the turn start's job")
 F.state.rates = frozen
+
+-- SEVERAL RAIDERS (Xoatl, 2026-11-12): three plates read the whole store and promised 3 each of 30, and the
+-- round took 3, 2 and 2. Each plate now shows its place in cqi order, so the plates add up to the round.
+do
+    local w = region("pw", 300, 0, 400, { coal = 30 })
+    own(ai1, w)
+    local r1, r2, r3 = army(hum, w, 300, 0), army(ally, w, 300, 0), army(horde, w, 300, 0)
+    local idle = army(hum, w, 300, 0, "MILITARY_FORCE_ACTIVE_STANCE_TYPE_DEFAULT")
+    w.chars = { r3, idle, r1, r2 }                 -- the engine's order is not cqi order
+    local plates = {}
+    for i, a in ipairs({ r1, r2, r3 }) do plates[i] = F.raid_preview(a) end
+    eq(plates[1].total, 3, "the first raider's plate: a tenth of 30")
+    eq(plates[2].total, 2, "the second: a tenth of the 27 left")
+    eq(plates[3].total, 2, "the third: a tenth of the 25 left")
+    eq(plates[1].raiders, 3, "three raiders, the marching army not counted")
+    local took = 0
+    for i, a in ipairs({ r1, r2, r3 }) do
+        local before = w.held.coal
+        raid(a)
+        eq(before - w.held.coal, plates[i].total, "raider " .. i .. " takes what its plate said")
+        took = took + before - w.held.coal
+    end
+    eq(took, 7, "and the plates add up to what the round took")
+    w.held.coal, w.chars = 30, { r1 }
+    eq(F.raid_preview(r1).total, 3, "a lone raider still takes a tenth"); eq(F.raid_preview(r1).raiders, 1, "and counts itself")
+end
 
 -- ---- sack and raze ----------------------------------------------------------------------
 a1.held, h1.held, h2.held = { coal = 100 }, {}, {}

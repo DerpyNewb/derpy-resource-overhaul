@@ -1233,9 +1233,19 @@ do
             { key = "halls", on = false, open = true, ready = false, short = "Short of pipeweed",
               definition = { label = "Drinking halls", cost = { beer = 4, pipeweed = 1 },
                     benefit = "Province control +2", value = 2, effect = "wh_main_effect_public_order_events" } },
+            { key = "weave", on = false, open = false, reason = "Needs an undamaged workshop",
+              definition = { label = "Carpet weaving", cost = { silk = 8 }, output = { "carpets", 8 } } },
         }
     end
     S.refresh()
+    -- A RECIPE'S INPUTS GET A ROW (Bilbo Bagins, 2026-11-12): Vitevo's biscuits needed salt it had none of
+    local by = {}
+    for _, row in ipairs(S.data) do if row.stem then by[row.stem] = row end end
+    eq(by.grain ~= nil, true, "a running recipe's input gets a row with none held")
+    eq(by.pipeweed ~= nil and by.beer ~= nil, true, "so do an open recipe's")
+    eq(by.pipeweed.send ~= nil, true, "with Send here"); eq(by.pipeweed.open, "routes:reg_a:pipeweed", "and a regular supply")
+    eq(by.silk, nil, "a recipe this settlement cannot run adds no row")
+    eq(by.coal ~= nil and by.brimstone ~= nil, true, "the goods it holds and makes keep theirs")
     eq(S.data[2].economy, "brew", "recipe row retains validated key")
     eq(S.data[2].send.label, "Pause", "active recipe can pause")
     eq(S.data[3].send.label, "Enable", "service starts disabled")
@@ -2596,6 +2606,11 @@ PREVIEW[ch7].to = "reg_b"
 REPEATS.derpy_mr_raid_plate(); eq(plates(rh, S.PLATE), 2, "made once, not once a poll")
 PREVIEW[ch7].to = nil; REPEATS.derpy_mr_raid_plate()
 eq(string.find(plate.tip, "no settlement", 1, true) ~= nil, true, "a horde's plate says the goods are lost")
+fits(plate.tip)
+eq(string.find(plate.tip, "armies are raiding here", 1, true), nil, "a lone raider's plate says nothing of others")
+PREVIEW[ch7].to, PREVIEW[ch7].raiders = "reg_b", 3; REPEATS.derpy_mr_raid_plate()
+eq(string.find(plate.tip, "3 armies are raiding here.\nEach one takes from what the others leave.", 1, true) ~= nil, true,
+   "several raiders: the plate says its share comes from what the others leave")
 fits(plate.tip)
 PREVIEW[ch7] = nil; REPEATS.derpy_mr_raid_plate(); eq(plates(rh, S.PLATE, true), 0, "all hidden when the raid stops")
 rh.visible = false; PREVIEW[ch7] = { total = 1, parts = { { stem = "coal", n = 1 } }, to = "reg_b" }

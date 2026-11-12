@@ -997,6 +997,7 @@ DERPY_MR_LOC_KEYS = {
     ["and {1} more"] = "derpy_mr_ui_4f03ad1d6f",
     ["Lost: this army has no settlement"] = "derpy_mr_ui_b8dde67e95",
     ["Into {1}"] = "derpy_mr_ui_7769700682",
+    ["{1} armies are raiding here.\nEach one takes from what the others leave."] = "derpy_mr_ui_7ed8f94f4c",
     ["Raiding takes each turn:"] = "derpy_mr_ui_9ce3ef4881",
     ["Sacking"] = "derpy_mr_ui_af853435f1",
     ["Razing"] = "derpy_mr_ui_c6f4edb530",
@@ -1572,11 +1573,16 @@ function F.on_character_turn_start(character)
 end
 
 -- WHAT F.take WOULD TAKE from `region` at `pct`: {total, parts = {{stem, n}}}, most first, or nil
--- when nothing. Read only - the plates' number, by the same F.share the move uses.
-function F.preview(region, pct)
+-- when nothing. Read only - the plates' number, by the same F.share the move uses. `nth` (default 1):
+-- the nth take in a row, each from what the ones before it left.
+function F.preview(region, pct, nth)
     local parts, total = {}, 0
     for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
-        local n = F.share(F.held(region, g.stem), pct)
+        local held, n = F.held(region, g.stem), 0
+        for _ = 1, nth or 1 do
+            n = F.share(held, pct)
+            held = held - n
+        end
         if n > 0 then
             parts[#parts + 1] = { stem = g.stem, n = n }
             total = total + n
@@ -1590,16 +1596,37 @@ function F.preview(region, pct)
     return { total = total, parts = parts }
 end
 
+-- Every army raiding `region`, as character cqis in order.
+function F.raiders(region)
+    local out = {}
+    local chars = region:characters_in_region()
+    for i = 0, chars:num_items() - 1 do
+        local ch = chars:item_at(i)
+        if F.raid_target(ch) then out[#out + 1] = ch:command_queue_index() end
+    end
+    table.sort(out)
+    return out
+end
+
 -- WHAT THE RAID TAKES NEXT TURN, for the army's plate: F.preview plus `to`, the region key it
--- lands in (nil for a horde). Nothing before the rates are frozen: a UI read must not freeze
--- them on one machine ahead of the turn start that does it everywhere.
+-- lands in (nil for a horde), and `raiders`. Nothing before the rates are frozen: a UI read must
+-- not freeze them on one machine ahead of the turn start that does it everywhere.
+-- SEVERAL RAIDERS (Xoatl, 2026-11-12): each raid takes its share of what the ones before it left,
+-- but every plate read the whole store, so three plates promised 3 each of 30 and the round took
+-- 3, 2 and 2. A plate now shows its place in cqi order, so the plates add up to what the round takes.
 function F.raid_preview(character)
     local rates = F.state.rates
     if not rates or (rates.raid or 0) <= 0 then return nil end
     local region, _, taker = F.raid_target(character)
     if not region then return nil end
-    local pv = F.preview(region, rates.raid)
+    local raiders, nth = F.raiders(region), 1
+    if #raiders > 1 then
+        local me = character:command_queue_index()
+        for i, cqi in ipairs(raiders) do if cqi == me then nth = i end end
+    end
+    local pv = F.preview(region, rates.raid, nth)
     if not pv then return nil end
+    pv.raiders = math.max(1, #raiders)
     local to = F.nearest(taker, character:logical_position_x(), character:logical_position_y())
     pv.to = to and to:name() or nil
     return pv

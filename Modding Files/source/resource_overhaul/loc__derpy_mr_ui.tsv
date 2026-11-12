@@ -426,6 +426,7 @@ derpy_mr_ui_9eba32e8c5	Provisions\nThis army eats {1} a turn and carries {2} of 
 derpy_mr_ui_4f03ad1d6f	and {1} more	false
 derpy_mr_ui_b8dde67e95	Lost: this army has no settlement	false
 derpy_mr_ui_7769700682	Into {1}	false
+derpy_mr_ui_7ed8f94f4c	{1} armies are raiding here.\nEach one takes from what the others leave.	false
 derpy_mr_ui_9ce3ef4881	Raiding takes each turn:	false
 derpy_mr_ui_af853435f1	Sacking	false
 derpy_mr_ui_c6f4edb530	Razing	false
