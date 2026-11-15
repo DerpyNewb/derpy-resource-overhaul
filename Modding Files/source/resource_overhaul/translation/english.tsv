@@ -1327,10 +1327,10 @@ derpy_mr_ui_d0b37cb641	Benefit	false
 derpy_mr_ui_2faec1f9f8	Enable	false
 derpy_mr_ui_abd5ca87bd	Stored resources	false
 derpy_mr_ui_58755c1e0c	Your race has no processing or services.	false
+derpy_mr_ui_cc4341eb69	{1}\nBuildings that run it: {2}.	false
 derpy_mr_ui_9261cc5c1a	It needs {1} {2}{3} and {4} has {5} to spare.	false
 derpy_mr_ui_6a1b9c173f	 a turn	false
 derpy_mr_ui_12a13313ce	None of your settlements	false
-derpy_mr_ui_cc4341eb69	{1}\nBuildings that run it: {2}.	false
 derpy_mr_ui_d02f595b82	What your settlements can make	false
 derpy_mr_ui_8c9c6b3c57	Workshops make new resources and services spend them for a bonus.	false
 derpy_mr_ui_e96f7a63ac	Gives	false
@@ -1376,6 +1376,7 @@ derpy_mr_ui_b4b35cdb8d	This army is in your own lands.\nLoad it here instead.	fa
 derpy_mr_ui_189e87167f	This army has no supply road.	false
 derpy_mr_ui_47b497f846	This army already carries 5 turns of provisions.	false
 derpy_mr_ui_323b23ad5d	{1} has no food to spare.\nA settlement keeps {2} turns of the food it eats and uses before it feeds an army.	false
+derpy_mr_ui_faead27e2d	Produce more food there or send it some.	false
 derpy_mr_ui_705b55867a	Send a cart of provisions from {1}.\nIt arrives in {2}.\nAn army at war with you can seize it.	false
 derpy_mr_ui_b89a0adb92	Supply cart	false
 derpy_mr_ui_0712b67f47	Send supplies	false

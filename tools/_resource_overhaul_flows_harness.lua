@@ -7410,6 +7410,29 @@ end)()
        "no settlement left: the cart is lost and nothing is moved")
     own(P, src, true); P.armies = { a.iface }
 
+    -- THE CART TRIES THE NEXT SETTLEMENT (Basilevs, 2026-11-15: armies starved while the nearest settlement had no food
+    -- to spare): c_two stands 180 hexes from the army, c_src 160. With nothing to spare at c_src the cart comes from c_two
+    -- down c_two's own road; the army's road, and so its upkeep, stays on c_src
+    do
+        local two = region("c_two", -20, Y, 1000, { grain = 100 })
+        LAND[#LAND + 1] = two; own(P, two); F.line_kept = {}
+        local kept_grain = src.held.grain
+        src.held.grain = 0
+        c = send({ grain = 5 })
+        eq(tostring(c and c.from) .. "/" .. F.supply_line(P.iface, a.iface).source, "c_two/c_src",
+           "the cart comes from the next settlement with food; the road stays on the nearest")
+        eq(c.basket.grain .. "/" .. two.held.grain .. "/" .. (c.due - TURN), "15/85/5", "loaded there, due in its own road's 5 turns")
+        eq(F.supply_note(P.iface, "8801", true).cart_source .. "/" .. F.supply_note(P.iface, "8801").source, "c_two/c_src",
+           "the panel's note names the cart's settlement apart from the road's")
+        eq(F.supply_note(P.iface, "8801").cart_source, nil, "and only when asked: the army button's poll reads no stores")
+        F.supply_cart_return(c)
+        two.held.grain = 0
+        eq(tostring(send({ grain = 5 })) .. "/" .. F.supply_note(P.iface, "8801", true).cart_source, "nil/c_src",
+           "nobody has food to spare: no cart, and the panel names the nearest")
+        src.held.grain = kept_grain
+        lose(P, two); table.remove(LAND); F.line_kept = {}
+    end
+
     -- AN ARMY BIGGER THAN ITS CART (review focus 5): 20 units at 5 held send 20; shrunk to 8 the army takes 20 and the
     -- rest goes back
     a.n = 20; TURN = 40; b.done = TURN

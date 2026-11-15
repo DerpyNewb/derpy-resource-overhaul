@@ -3394,7 +3394,7 @@ def check_supply_cart_mutations():
     )
     panel_m = (
         ("Send supplies enabled with nothing to spare",
-         '    elseif (S.ask("provision_spare", f, note.source) or 0) <= 0 then\n', "    elseif false then\n"),
+         '    elseif (S.ask("provision_spare", f, note.cart_source) or 0) <= 0 then\n', "    elseif false then\n"),
     )
     _run_mutants("supply cart", flows, flows_m, stores_lua().replace("\r\n", "\n"), panel_m, "", ())
 

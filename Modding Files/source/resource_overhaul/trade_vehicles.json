@@ -4,12 +4,14 @@
       "pack": "models4.pack",
       "source": "rigidmodels/campaign/generic_props/resources/gen_wooden_cart.rigid_model_v2",
       "sea": false,
-      "yaw": 180
+      "yaw": 180,
+      "lod": 0
     },
     "land_dwf": {
       "pack": "models4.pack",
       "source": "rigidmodels/campaign/generic_props/mines/gen_minecart.rigid_model_v2",
-      "sea": false
+      "sea": false,
+      "lod": 0
     },
     "land_chd": {
       "pack": "models4.pack",
@@ -27,13 +29,15 @@
       "pack": "models4.pack",
       "source": "rigidmodels/campaign/highelves/hef_wagon.rigid_model_v2",
       "sea": false,
-      "yaw": 90
+      "yaw": 90,
+      "lod": 0
     },
     "land_def": {
       "pack": "models4.pack",
       "source": "rigidmodels/campaign/dark_elves/def_cart_02.rigid_model_v2",
       "sea": false,
-      "yaw": 180
+      "yaw": 180,
+      "lod": 0
     },
     "land_chs": {
       "pack": "models_other.pack",

@@ -4,7 +4,7 @@
     py tools/gen_resource_overhaul.py --check      # build and verify, write nothing
     py tools/gen_resource_overhaul.py --selftest
     py tools/gen_resource_overhaul.py --audit      # what each building makes, by its in-game name
-    py tools/gen_resource_overhaul.py --pack       # RPFM open: build Modpacks/derpy_resource_overhaul.pack
+    py tools/gen_resource_overhaul.py --pack       # through rpfm_server: build Modpacks/derpy_resource_overhaul.pack
                                                 # and one derpy_resource_overhaul_<map>.pack per SUBMODS
                                                 # (DB tables inside keep FRAG, derpy_more_resources)
 
@@ -24,7 +24,7 @@ Dwarf taverns make Beer, High Elf industry makes Trinkets, both at 6/8/12 per le
 by a lore condition on the building's region - see the comment above GOODS. New map deposits
 would need a startpos; see the doc.
 
-Packing needs RPFM open (--pack); it packs the TSVs on DISK, so write them first.
+Packing (--pack) goes through rpfm_server, which starts itself; it packs the TSVs on DISK, so write them first.
 """
 import collections, functools, io, json, math, os, re, shutil, sys
 

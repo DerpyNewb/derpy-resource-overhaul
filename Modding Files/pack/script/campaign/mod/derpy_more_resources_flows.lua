@@ -835,10 +835,10 @@ DERPY_MR_LOC_KEYS = {
     ["Enable"] = "derpy_mr_ui_2faec1f9f8",
     ["Stored resources"] = "derpy_mr_ui_abd5ca87bd",
     ["Your race has no processing or services."] = "derpy_mr_ui_58755c1e0c",
+    ["{1}\nBuildings that run it: {2}."] = "derpy_mr_ui_cc4341eb69",
     ["It needs {1} {2}{3} and {4} has {5} to spare."] = "derpy_mr_ui_9261cc5c1a",
     [" a turn"] = "derpy_mr_ui_6a1b9c173f",
     ["None of your settlements"] = "derpy_mr_ui_12a13313ce",
-    ["{1}\nBuildings that run it: {2}."] = "derpy_mr_ui_cc4341eb69",
     ["What your settlements can make"] = "derpy_mr_ui_d02f595b82",
     ["Workshops make new resources and services spend them for a bonus."] = "derpy_mr_ui_8c9c6b3c57",
     ["Gives"] = "derpy_mr_ui_e96f7a63ac",
@@ -884,6 +884,7 @@ DERPY_MR_LOC_KEYS = {
     ["This army has no supply road."] = "derpy_mr_ui_189e87167f",
     ["This army already carries 5 turns of provisions."] = "derpy_mr_ui_47b497f846",
     ["{1} has no food to spare.\nA settlement keeps {2} turns of the food it eats and uses before it feeds an army."] = "derpy_mr_ui_323b23ad5d",
+    ["Produce more food there or send it some."] = "derpy_mr_ui_faead27e2d",
     ["Send a cart of provisions from {1}.\nIt arrives in {2}.\nAn army at war with you can seize it."] = "derpy_mr_ui_705b55867a",
     ["Supply cart"] = "derpy_mr_ui_b89a0adb92",
     ["Send supplies"] = "derpy_mr_ui_0712b67f47",
@@ -4646,7 +4647,8 @@ end
 -- none: disabled, exempt, at sea or landless; home: at a settled supply source.
 -- supplied: at most ceil(reach / 2) turns; stretched: within reach; cut: no route or an enemy on it.
 -- Enemy-cut lines retain their path. UI callers pass `ui = true` to keep enemy caches separate.
-function F.supply_line(faction, force, ui)
+-- `skip` (source key -> true) passes over those sources. F.supply_cart_line uses it to look past sources with no food.
+function F.supply_line(faction, force, ui, skip)
     if not F.lines_apply(faction, force) then return { state = "none", turns = 0 } end
     local ch = force:general_character()
     if ch:is_at_sea() or faction:region_list():num_items() == 0 then return { state = "none", turns = 0 } end
@@ -4682,7 +4684,7 @@ function F.supply_line(faction, force, ui)
     local blocked = nil
     for i = 1, math.min(F.SUPPLY_TRIES, #found) do
         local s = found[i]
-        local path = F.supply_road(R, g, kept, stand, fkey, x, y, s, reach * F.ROAD_PER_TURN)
+        local path = not (skip and skip[s.key]) and F.supply_road(R, g, kept, stand, fkey, x, y, s, reach * F.ROAD_PER_TURN)
         if path then
             local turns = math.max(1, F.road_turns(path))
             -- Enemies beside the army do not cut its line. Filter a copy because the cached path is shared.
@@ -4699,6 +4701,22 @@ function F.supply_line(faction, force, ui)
         end
     end
     return blocked or { state = "cut", turns = 0 }
+end
+
+-- THE CART'S SOURCE. Basilevs reported on 2026-11-15 that his armies starved while the nearest settlement had no
+-- food to spare. The army's road, and so its upkeep, still runs to the nearest open source. The cart loads from the
+-- first of the F.SUPPLY_TRIES nearest sources that has an open road and provisions above its reserve. When none
+-- has any, the cart uses the road's source and the panel says why it cannot go.
+function F.supply_cart_line(faction, force, ui)
+    local skip, first = {}, nil
+    for _ = 1, F.SUPPLY_TRIES do
+        local line = F.supply_line(faction, force, ui, skip)
+        if line.state ~= "supplied" and line.state ~= "stretched" then return first or line end
+        first = first or line
+        if F.provision_spare(faction, line.source) > 0 then return line end
+        skip[line.source] = true
+    end
+    return first
 end
 
 -- Each army needs its own bundle because road upkeep varies by distance.
@@ -4744,12 +4762,19 @@ end
 
 -- UI only: call at the panel's refresh rate, since each call rescans regions. Use the UI enemy cache.
 -- Omit the shared path from the returned note so callers cannot mutate it.
-function F.supply_note(faction, id)
+function F.supply_note(faction, id, cart)
     if not faction:is_human() then return nil end
     local mf = cm:get_military_force_by_cqi(tonumber(id))
     if not mf or mf:is_null_interface() or not F.provision_force(faction, mf) then return nil end
     local line = F.supply_line(faction, mf, true)
-    return { state = line.state, source = line.source, turns = line.turns, by = line.by, upkeep = F.supply_upkeep(line, faction) }
+    local note = { state = line.state, source = line.source, turns = line.turns, by = line.by, upkeep = F.supply_upkeep(line, faction) }
+    -- `cart` is set only by the army view's Send supplies row. Finding the cart's source reads stores, and the army
+    -- button's poll has no use for it.
+    if cart then
+        local c = F.supply_cart_line(faction, mf, true)
+        note.cart_source, note.cart_turns = c.source, c.turns
+    end
+    return note
 end
 
 -- ---- recurring routes and paid partner contracts ----------------------------------------
@@ -6690,7 +6715,7 @@ function F.supply_send(faction, row, b, auto)
     if not (rates.supply_lines and rates.army_provisions and faction:is_human()) or F.supply_cart_of(row.id) then return nil end
     local gap = row.need * 5 - F.provision_total(b)
     if gap <= 0 then return nil end
-    local line = F.supply_line(faction, row.force)
+    local line = F.supply_cart_line(faction, row.force)
     if line.state ~= "supplied" and line.state ~= "stretched" then return nil end
     if auto and F.enemy_beside(faction, row.force) then return nil end
     local source = F.owned(faction, line.source)

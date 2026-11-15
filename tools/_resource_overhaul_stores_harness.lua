@@ -1234,10 +1234,19 @@ do
               definition = { label = "Drinking halls", cost = { beer = 4, pipeweed = 1 },
                     benefit = "Province control +2", value = 2, effect = "wh_main_effect_public_order_events" } },
             { key = "weave", on = false, open = false, reason = "Needs an undamaged workshop",
-              definition = { label = "Carpet weaving", cost = { silk = 8 }, output = { "carpets", 8 } } },
+              definition = { label = "Carpet weaving", cost = { silk = 8 }, output = { "carpets", 8 }, kind = "processing",
+                             levels = { derpy_test_chd_weavery_1 = true, derpy_test_chd_weavery_2 = true } } },
         }
     end
+    RACE_BEFORE = fl.race   -- a global: the main chunk is at Lua's 200-local limit
+    fl.race = function() return "chd" end
+    LOC.building_culture_variants_name_derpy_test_chd_weavery_1 = "Weavery"
     S.refresh()
+    -- A MISSING WORKSHOP NAMES ITS BUILDING (Pink, 2026-11-13: the settlement view said "No workshop" and nothing more)
+    eq(S.data[4][3], "No workshop", "a recipe with no workshop says so in its State")
+    eq(string.find(S.data[4].tip, "Needs an undamaged workshop\nBuildings that run it: Weavery.", 1, true) ~= nil, true,
+       "and its tooltip names the building that runs it")
+    fl.race = RACE_BEFORE
     -- A RECIPE'S INPUTS GET A ROW (Bilbo Bagins, 2026-11-12): Vitevo's biscuits needed salt it had none of
     local by = {}
     for _, row in ipairs(S.data) do if row.stem then by[row.stem] = row end end
@@ -2760,7 +2769,7 @@ do
     eq(cr.send.off,true,"an army at home loads instead"); eq(cr.send.tip,"This army is in your own lands.\nLoad it here instead.","and says so")
     NOTE={state="none"}; S.refresh(); cr=cart_row()
     eq(cr.send.off,true,"no line, no cart"); eq(cr.send.tip,"This army has no supply road.","and says so")
-    NOTE={state="stretched",source="reg_a",turns=5,upkeep=20}; CART={due=14}; S.refresh(); cr=cart_row()
+    NOTE={state="stretched",source="reg_a",turns=5,upkeep=20,cart_source="reg_a",cart_turns=5}; CART={due=14}; S.refresh(); cr=cart_row()
     eq(cr.send.off,true,"one cart at a time"); eq(cr.send.tip,"A cart is already on its way.\nIt arrives on turn 14.","and says when it lands")
     CART=nil; S.refresh(); cr=cart_row()
     eq(cr.send.off,true,"an army with five turns aboard"); eq(cr.send.tip,"This army already carries 5 turns of provisions.","says so")
@@ -2780,13 +2789,19 @@ do
     SPARE=0; S.refresh(); cr=cart_row()
     eq(cr.send.off,true,"a source with no food to spare sends no cart")
     -- and why (Gidwelion, 2026-11-11: "has nothing to spare" while the settlement made spare grain)
-    eq(cr.send.tip,"Alpha has no food to spare.\nA settlement keeps 5 turns of the food it eats and uses before it feeds an army.","and says so, and why")
+    eq(cr.send.tip,"Alpha has no food to spare.\nA settlement keeps 5 turns of the food it eats and uses before it feeds an army.\nProduce more food there or send it some.","and says so, why, and what to do")
     DERPY_MR_FLOWS.FED_TURNS=4; S.refresh(); cr=cart_row()
-    eq(cr.send.tip,"Alpha has no food to spare.\nA settlement keeps 4 turns of the food it eats and uses before it feeds an army.","the turns are the flows script's own")
+    eq(cr.send.tip,"Alpha has no food to spare.\nA settlement keeps 4 turns of the food it eats and uses before it feeds an army.\nProduce more food there or send it some.","the turns are the flows script's own")
     DERPY_MR_FLOWS.FED_TURNS=nil; S.refresh(); cr=cart_row()
-    eq(SPARE_ASKED,LOCAL.."|reg_a","the line's own source is asked, for the local faction")
+    eq(SPARE_ASKED,LOCAL.."|reg_a","the cart's own source is asked, for the local faction")
     SPARE=3; S.refresh(); cr=cart_row()
     eq(cr.send.off,false,"a source with food to spare sends one")
+    -- THE CART FROM ANOTHER SETTLEMENT (Basilevs, 2026-11-15): the road stays on Alpha, the cart comes from Bravo
+    NOTE={state="stretched",source="reg_a",turns=5,upkeep=20,cart_source="reg_b",cart_turns=6}; S.refresh(); cr=cart_row()
+    eq(cr[2].."|"..cr.send.tip,"Bravo|Send a cart of provisions from Bravo.\nIt arrives in 6 turns.\nAn army at war with you can seize it.",
+       "the cart row names the settlement the cart comes from")
+    local _,road=road_rows(); eq(road[2],"Alpha","and the road row still names the road's own source")
+    eq(SPARE_ASKED,LOCAL.."|reg_b","the cart's source is the one asked")
     DERPY_MR_FLOWS.provision_spare=nil
     NOTE=nil
     end)()

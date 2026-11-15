@@ -56,13 +56,36 @@ def _rpc(method, params):
     return _post({"jsonrpc": "2.0", "id": _n[0], "method": method, "params": params})
 
 
+def _bridge():
+    import sys
+    here = os.path.dirname(os.path.abspath(__file__))
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    import rpfm_mcp_bridge
+    return rpfm_mcp_bridge
+
+
+_registered = [False]
+
+
 def _connect():
+    """Initialise an MCP session. With nothing on 45127, start rpfm_server headless through
+    tools/rpfm_mcp_bridge.py (RPFM's window need not be open); this process then counts as a
+    client, and the last client out stops a server the bridge started (see _close_opened)."""
     _sid[0] = None
+    init = {"protocolVersion": "2025-11-25", "capabilities": {},
+            "clientInfo": {"name": "derpy-tools", "version": "2"}}
     try:
-        _rpc("initialize", {"protocolVersion": "2025-11-25", "capabilities": {},
-                            "clientInfo": {"name": "derpy-tools", "version": "2"}})
+        _rpc("initialize", init)
     except urllib.error.URLError:
-        raise SystemExit("RPFM is not running - its MCP server only exists while RPFM is open")
+        ok, why = _bridge().start()
+        if not ok:
+            raise SystemExit("rpfm_server is not running and could not be started: " + why)
+        print("  rpfm_server: " + why)
+        _rpc("initialize", init)
+    if not _registered[0]:
+        _bridge().register_client()
+        _registered[0] = True
     _post({"jsonrpc": "2.0", "method": "notifications/initialized"})
 
 
@@ -193,3 +216,5 @@ def _close_opened():
             _call_once("close_pack", {"pack": key})
         except Exception:
             pass
+    if _registered[0]:                  # after the packs close, or busy() keeps the server up
+        _bridge().release_client()

@@ -4,7 +4,7 @@
     py tools/gen_commission_dilemmas.py          # writes the flow-A rite + dilemma TSVs
     py tools/import_house_ancillaries.py         # creates + fills the pack
 
-Needs RPFM open (its MCP server lives inside it); talks to it through tools/rpfm_client.py.
+Talks to rpfm_server through tools/rpfm_client.py, which starts it headless if RPFM is closed.
 
 Re-runnable: the pack is created fresh each time and saved over the same path.
 """

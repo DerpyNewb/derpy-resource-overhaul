@@ -1218,7 +1218,9 @@ function S.economy_rows(v, faction, region)
             for stem in pairs(st.definition.cost or {}) do inputs[stem] = true end
         end
         local c = S.economy_cells(st)
-        local tip = c.head .. "\n" .. c.reason .. c.note
+        -- A missing workshop names the buildings that run the recipe. Before, it said "No workshop" and nothing else (Pink, 2026-11-13).
+        local why = st.reason == "Needs an undamaged workshop" and S.economy_why(st.definition, faction, c.reason) or c.reason
+        local tip = c.head .. "\n" .. why .. c.note
         v.rows[#v.rows + 1] = { st.definition.label, c.amount, S.economy_status(st), c.benefit, "", economy = st.key,
             region = region:name(), tip = tip,
             send = { label = st.on and S.T("Pause") or S.T("Enable"), off = not st.open and not st.on, tip = tip } }
@@ -1249,6 +1251,15 @@ function S.economy_buildings(d, race)
     end
     table.sort(names)
     return names
+end
+
+-- Says why a processing recipe cannot run, then lists the buildings that run it.
+function S.economy_why(d, f, why)
+    if d.kind == "processing" then
+        local names = S.economy_buildings(d, S.ask("race", f))
+        if #names > 0 then why = S.T("{1}\nBuildings that run it: {2}.", why, table.concat(names, ", ")) end
+    end
+    return why
 end
 
 function S.production_row(f, r, actions)
@@ -1287,12 +1298,7 @@ function S.production_none(f, st)
     for k, stem in ipairs(c.stems) do
         row.price[k] = { icon = S.icon_of(stem), short = true, text = S.grey(S.num(d.cost[stem])) }
     end
-    local why = S.ECON_WHY[st.reason] or c.reason
-    if d.kind == "processing" then
-        local names = S.economy_buildings(d, S.ask("race", f))
-        if #names > 0 then why = S.T("{1}\nBuildings that run it: {2}.", why, table.concat(names, ", ")) end
-    end
-    row.tip = c.head .. "\n" .. why .. c.note
+    row.tip = c.head .. "\n" .. S.economy_why(d, f, S.ECON_WHY[st.reason] or c.reason) .. c.note
     return row
 end
 
@@ -1431,7 +1437,7 @@ function S.army_view(v)
         send = { label = row.auto and S.T("Pause") or S.T("Enable"), off = not S.actions_on(), tip = auto } }
     v.rows[#v.rows + 1] = { row.mobile and S.T("Buy rations") or S.T("Load here"), source, row.mobile and (S.T("{1} gold", S.num(row.price))) or "", "", provisions = "load", army = id, tip = load,
         send = { label = row.mobile and S.T("Buy") or S.T("Load"), off = (not row.source and (row.buy or 0) == 0) or not S.actions_on(), tip = load } }
-    local note = S.ask("supply_note", f, id)
+    local note = S.ask("supply_note", f, id, true)
     local cart, state = S.ask("supply_cart_of", id), note and note.state
     local why
     if cart then why = S.T("A cart is already on its way.\nIt arrives on turn {1}.", tostring(cart.due))
@@ -1439,14 +1445,16 @@ function S.army_view(v)
     elseif state == "home" then why = S.T("This army is in your own lands.\nLoad it here instead.")
     elseif state ~= "supplied" and state ~= "stretched" then why = S.T("This army has no supply road.")
     elseif row.held >= row.need * 5 then why = S.T("This army already carries 5 turns of provisions.")
-    elseif (S.ask("provision_spare", f, note.source) or 0) <= 0 then
-        -- and why: a store below its own reserve looks full to a player who sees it making grain (Gidwelion, 2026-11-11)
+    elseif (S.ask("provision_spare", f, note.cart_source) or 0) <= 0 then
+        -- and why: a store below its own reserve looks full to a player who sees it making grain (Gidwelion, 2026-11-11).
+        -- The cart has already tried the three nearest settlements (flows.lua F.supply_cart_line), so none of them has any.
         why = S.T("{1} has no food to spare.\nA settlement keeps {2} turns of the food it eats and uses before it feeds an army.",
-            S.place(note.source), (DERPY_MR_FLOWS and DERPY_MR_FLOWS.FED_TURNS) or 5)
+            S.place(note.cart_source), (DERPY_MR_FLOWS and DERPY_MR_FLOWS.FED_TURNS) or 5)
+            .. "\n" .. S.T("Produce more food there or send it some.")
     end
     local supply = why or S.T("Send a cart of provisions from {1}.\nIt arrives in {2}.\nAn army at war with you can seize it.",
-        S.place(note.source), turns(note.turns))
-    v.rows[#v.rows + 1] = { S.T("Supply cart"), note and note.source and S.place(note.source) or "-", "", "", provisions = "send",
+        S.place(note.cart_source), turns(note.cart_turns))
+    v.rows[#v.rows + 1] = { S.T("Supply cart"), note and note.cart_source and S.place(note.cart_source) or "-", "", "", provisions = "send",
         army = id, tip = supply, send = { label = S.T("Send supplies"), off = why ~= nil or not S.actions_on(), tip = supply } }
     v.rows[#v.rows + 1] = { S.T("Unload here"), S.T("Pauses refill"), "", "", provisions = "unload", army = id, tip = unload,
         send = { label = S.T("Unload"), off = not row.source or row.held == 0 or not S.actions_on(), tip = unload } }

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-15
+
+- More detailed wooden, Dwarf, High Elf and Dark Elf carts.
+- Send supplies now looks for food in your three nearest settlements, not just the closest.
+- No food to spare: the tooltip now says to produce more food there or send it some.
+- Recipes that need a workshop now name the buildings that run them.
+
 ## 2026-11-12
 
 - When several armies raid the same settlement, the goods shown above each army now match what it actually takes.

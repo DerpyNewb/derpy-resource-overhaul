@@ -76,7 +76,7 @@ MANIFEST = [(p, p) for p in [
     "tools/read_vanilla_cache.py",
     "tools/read_vanilla_db.py",
     "tools/read_vanilla_loc.py",
-    "tools/rpfm_client.py",
+    "tools/rpfm_client.py", "tools/rpfm_mcp_bridge.py",
 ]] + [
     ("docs/superpowers/specs/2026-09-10-great-guilds-design.md",
      "docs/design/2026-09-10-great-guilds-design.md"),

@@ -7,7 +7,7 @@
                                            and prove --check sees drift
     py tools/sync_derpy_hub.py --pack-left-bar
                                            build Modding Files/Modpacks/derpy_hub_left_bar.pack
-                                           (needs RPFM open)
+                                           (rpfm_server starts itself)
 
 Edit only Modding Files/source/derpy_hub/derpy_hud_hub.lua. Each mod ships its own copy
 under its own path (derpy_hub_ic / _gg / _ex / _mr), so every installed copy loads, and the
@@ -37,8 +37,8 @@ HARNESS = os.path.join(ROOT, "tools", "_hub_harness.lua")
 LUA = r"C:\Program Files (x86)\Lua\5.1\lua.exe"
 
 # tag -> GUID prefix. Registered in docs/CUSTOM_UI.md's prefix table.
-TAGS = {"ic": "DH01", "gg": "DH02", "ex": "DH03", "mr": "DH07", "lb": "DH09"}
-PLATE_TAGS = {"ic": "DH04", "gg": "DH05", "ex": "DH06", "mr": "DH08", "lb": "DH10"}
+TAGS = {"ic": "DH01", "gg": "DH02", "ex": "DH03", "mr": "DH07", "lb": "DH09", "dr": "DH11"}
+PLATE_TAGS = {"ic": "DH04", "gg": "DH05", "ex": "DH06", "mr": "DH08", "lb": "DH10", "dr": "DH12"}
 HUB_W = HUB_H = 48          # must match HUB.SIZE in the source; check() asserts it
 # Chosen by the author from tools/hub_icon_sheet.py's contact sheet (#212), 2026-10-01.
 ICON = "ui/skins/default/tech_tree_tab_chd_sorcery.png"

@@ -71,12 +71,19 @@ BOAT_MODEL = 'rigidmodels/derpy_mr_trade_boat.rigid_model_v2'
 
 
 @functools.lru_cache(None)
-def low_poly_model(pack, source):
-    """Keep the final native LOD, preserving its mesh materials and vertex format."""
+def low_poly_model(pack, source, level=None):
+    """Keep one LOD of a CA model: the final one, unless `level` picks another. Mesh materials and vertex format are
+    kept as they are.
+
+    MERPHY reported plain-looking carts on 2026-11-15. The final LODs of the wooden, Dwarf, High Elf and Dark Elf carts
+    are 36 to 274 triangles, and the wooden one drew in game as a small plain block. trade_vehicles.json now gives
+    those four "lod": 0, which is CA's full-detail mesh of 164 to 566 triangles."""
     data=db._unwrap(read(GAME/pack,source)[0][2])
     assert struct.unpack_from('<I',data,4)[0] in (7,8)
     lods=struct.unpack_from('<I',data,8)[0]
-    lod=bytearray(data[140+(lods-1)*28:140+lods*28])
+    index=lods-1 if level is None else level
+    assert 0<=index<lods,(source,index,lods)
+    lod=bytearray(data[140+index*28:140+(index+1)*28])
     meshes,_,_,offset=struct.unpack_from('<4I',lod)
     at,triangles,vertices=offset,0,0
     bounds=[]
@@ -108,7 +115,7 @@ def vehicle_config():
 def vehicle_manifest():
     manifest={}
     for key,entry in vehicle_config()['models'].items():
-        model,stats=low_poly_model(entry['pack'],entry['source'])
+        model,stats=low_poly_model(entry['pack'],entry['source'],entry.get('lod'))
         bb=stats['bounds']
         scale=min(0.8/max(bb[3]-bb[0],bb[5]-bb[2]),0.55/(bb[4]-bb[1]))
         # CA props face wherever their artist left them; `yaw` (degrees, clockwise from above) turns the nose onto +Z.
@@ -256,7 +263,7 @@ def assets():
     out.update(icon_assets(native))
     out[BOAT_MODEL]=low_poly_boat()[0]
     for key,entry in vehicle_config()['models'].items():
-        out['rigidmodels/derpy_mr_vehicle_'+key+'.rigid_model_v2']=low_poly_model(entry['pack'],entry['source'])[0]
+        out['rigidmodels/derpy_mr_vehicle_'+key+'.rigid_model_v2']=low_poly_model(entry['pack'],entry['source'],entry.get('lod'))[0]
         for turn in range(8):
             out['composite_scene/derpy_mr_route_vehicle_%s_%d.csc'%(key,turn)]=(OUT/('route_vehicle_%s_%d.csc'%(key,turn))).read_bytes()
     return out

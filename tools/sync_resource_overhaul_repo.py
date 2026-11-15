@@ -96,7 +96,7 @@ def manifest(root=ROOT):
         "campaign_route_paths.py",          # reads the installed map's pathfinding grid
         "_resource_terrain_routes_harness.lua",    # the routes' test, run by gen_mr_ui --selftest
         "test_service_labels.py",           # gen_mr_ui --selftest imports it
-        "rpfm_client.py",                   # build_mr_terrain_routes --probe-pack's RPFM client
+        "rpfm_client.py", "rpfm_mcp_bridge.py",                   # build_mr_terrain_routes --probe-pack's RPFM client
         "gen_ro_translation.py",            # the translation kit below (2026-11-11)
     )] + _translation(root) + ["Modding Files/reference/resource_overhaul_building_audit.md",
           "Modding Files/source/resource_overhaul/terrain_routes.lua",
