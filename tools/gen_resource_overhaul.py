@@ -546,7 +546,24 @@ def provision_bundles():
             ("derpy_mr_army_starved", "growth.png", "Empty provision wagons",
              "Three or more missed meals. A full meal clears these penalties.",
              [("wh_main_effect_force_all_campaign_movement_range", "force_to_force_own", -10),
-              ("wh_main_effect_force_all_campaign_replenishment_rate", "force_to_force_own", -10)])]
+              ("wh_main_effect_force_all_campaign_replenishment_rate", "force_to_force_own", -10)]),
+            # HUNGER WEAKENS ARMIES (MCT hunger_men, 2026-11-17): flows.lua F.hunger_losses takes the strength, so
+            # these carry no effect and only name the state. One paragraph each: the engine reads the loc as it is.
+            ("derpy_mr_army_short", "growth.png", "Short rations",
+             "This army has missed two meals in a row. Its units lose 5% of their strength each turn until it eats "
+             "a full meal.", []),
+            ("derpy_mr_army_starving", "growth.png", "Starving",
+             "This army has missed three or more meals in a row. Its units lose 10% of their strength each turn and "
+             "regain none. After five missed meals, one unit deserts each turn. A full meal ends this.", [])]
+
+
+def fed_bundles():
+    """WELL FED (2026-11-17): an army that missed no meal and still carries five turns after eating (flows.lua
+    F.provisions_turn). A bonus, so it stays out of provision_bundles(), whose rows check_bundles reads as penalties."""
+    return [("derpy_mr_army_well_fed", "replenishment.png", "Well fed",
+             "This army has missed no meals and still carries at least five turns of provisions.",
+             [("wh_main_effect_force_stat_leadership", "force_to_force_own", 4),
+              ("wh_main_effect_force_all_campaign_replenishment_rate", "force_to_force_own", 5)])]
 
 
 def supply_bundles():
@@ -1728,7 +1745,7 @@ def n_loc():
             + 2 * len(SUPPLY) + 2 + len(MINT_FX) + 2 + 2 * len(store_stems())   # Exports held; the hidden markers
             + 2 * len(WORK_UPGRADES) + 2 * sum(1 for w in WORK_ITEMS if not w[3])
             + 2   # Recruits
-            + 2 * (len(provision_bundles()) + len(supply_bundles())) + 3 + 3 + 2 * len(recipe_bundles()) + 3 * sum(1 for w in works() if w["kind"] == "trait") + 2)   # recipes; 3 + 3: the army food and road loss messages
+            + 2 * (len(provision_bundles()) + len(fed_bundles()) + len(supply_bundles())) + 5 + 3 + 2 * len(recipe_bundles()) + 3 * sum(1 for w in works() if w["kind"] == "trait") + 2)   # recipes; 3 + 3: the army food and road loss messages
 
 # Owners with no living people to make or eat a good: daemons, the dead, and beasts with no towns
 # to sell in. Matched on the CHAIN key, so a special variant for one of them goes too. Not Norsca's god altars
@@ -2535,7 +2552,7 @@ def _bundles(add, loc):
     # THE NAMED RECIPES' BUNDLES (workshop expansion spec section 4): an army work's force bundle on
     # CA's force donor, a lasting work's faction bundle on the order donor
     force, = [r for r in db("effect_bundles_tables")[1] if r["key"] == FORCE_DONOR]
-    for key, icon_, title, desc, fx in provision_bundles() + supply_bundles():
+    for key, icon_, title, desc, fx in provision_bundles() + fed_bundles() + supply_bundles():
         add("effect_bundles_tables", dict(force, key=key, localised_title=title,
             localised_description=desc, ui_icon=icon_))
         for e, scope, v in fx:
@@ -2547,7 +2564,11 @@ def _bundles(add, loc):
     loc += [("event_feed_strings_text_derpy_mr_army_food_title", "Provision wagons running dry"),
             ("event_feed_strings_text_derpy_mr_army_food_primary", "An army has missed its meal."),
             ("event_feed_strings_text_derpy_mr_army_food_secondary",
-             "Open Resource Vault > Spending to check army provisions. Refill from your own unsieged local settlement above Keep. Repeated shortages reduce movement and replenishment.")]
+             "Open Resource Vault > Spending to check army provisions. Refill from your own unsieged local settlement above Keep. Repeated shortages reduce movement and replenishment."),
+            # HUNGER WEAKENS ARMIES (flows.lua F.provisions_turn picks these with the switch on, or when a unit deserts)
+            ("event_feed_strings_text_derpy_mr_army_food_primary_desert", "Hungry soldiers have deserted an army."),
+            ("event_feed_strings_text_derpy_mr_army_food_secondary_hard",
+             "Open Resource Vault > Spending to check army provisions. Refill from your own unsieged local settlement above Keep. After two missed meals the army's units lose strength each turn. After five, units desert.")]
     # BANDITS (Part D): a computer's convoy bound for a player lost goods on the road (flows.lua F.road_settle)
     loc += [("event_feed_strings_text_derpy_mr_road_loss_title", "Cargo robbed on the road"),
             ("event_feed_strings_text_derpy_mr_road_loss_primary", "Bandits took part of a cargo bound for you."),
@@ -2585,7 +2606,7 @@ def all_bundles():
            [("faction", k, i, fx) for _o, _u, k, i, _t, _w, fx in ORDERS] + \
            [("faction", HOLD[0], HOLD[1], [])] + \
            [("faction", k, i, fx) for k, i, _t, _d, fx in edict_bundles()] + \
-           [("force", k, i, fx) for k, i, _t, _d, fx in provision_bundles() + supply_bundles()] + \
+           [("force", k, i, fx) for k, i, _t, _d, fx in provision_bundles() + fed_bundles() + supply_bundles()] + \
            recipe_bundles()   # its effects are the script's (HOLD)
 
 

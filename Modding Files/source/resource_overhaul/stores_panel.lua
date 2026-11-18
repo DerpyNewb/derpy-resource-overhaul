@@ -1388,6 +1388,17 @@ S.ARMY_TIP = S.T("An army eats 1 provision a turn for every 4 units and refills 
 S.ARMY_AUTO = S.T("On Auto the army refills to 5 turns of provisions after eating.\nIt carries at most 10 turns and never buys rations.")
 S.ARMY_BUY = S.T("Buy up to two meals of rations once a turn at 10 gold each.")
 S.ARMY_HUNGER = S.T("After two missed meals the army moves 5% slower.\nAfter three it moves and recovers 10% slower.\nOne full meal ends this.")
+-- HUNGER WEAKENS ARMIES (flows.lua F.hunger_losses, MCT "hunger_men"): the words for the rule the campaign froze
+S.ARMY_HUNGER_HARD = S.T("After two missed meals the army's units lose 5% of their strength each turn.\nAfter three they lose 10% and regain none.\nAfter five, one unit deserts each turn.\nOne full meal ends this.")
+-- One frozen campaign setting, or nil without the flows script.
+function S.rate(key)
+    local rates = S.flows("rates")
+    local ok, r = pcall(rates or function() return nil end)
+    return ok and type(r) == "table" and r[key] or nil
+end
+function S.army_hunger()
+    return S.rate("hunger_men") and S.ARMY_HUNGER_HARD or S.ARMY_HUNGER
+end
 
 -- Shared wording for the army-bar tooltip and Vault row; omit armies with no line.
 S.SUPPLY_STATE = { home = S.T("At home"), supplied = S.T("Supplied"), stretched = S.T("Stretched"), cut = S.T("Cut off") }
@@ -1458,7 +1469,7 @@ function S.army_view(v)
         army = id, tip = supply, send = { label = S.T("Send supplies"), off = why ~= nil or not S.actions_on(), tip = supply } }
     v.rows[#v.rows + 1] = { S.T("Unload here"), S.T("Pauses refill"), "", "", provisions = "unload", army = id, tip = unload,
         send = { label = S.T("Unload"), off = not row.source or row.held == 0 or not S.actions_on(), tip = unload } }
-    v.rows[#v.rows + 1] = { S.T("Missed meals"), S.num(row.short), "", "", "", tip = S.ARMY_HUNGER }
+    v.rows[#v.rows + 1] = { S.T("Missed meals"), S.num(row.short), "", "", "", tip = S.army_hunger() }
     if note and S.SUPPLY_STATE[note.state] then
         v.rows[#v.rows + 1] = { S.section(S.T("Supply road")), S.section(S.T("From")), S.section(S.T("Distance")),
                                 S.section(S.T("Upkeep")), "", section = true }
@@ -1549,8 +1560,8 @@ function S.spending(v)
     -- RECRUITS (workshop expansion spec section 3): what last turn's recruits took (flows.lua F.on_unit_trained)
     local rl = S.flows("recruit_last")
     local r = rl and rl(f:name())
-    if r and (r.goods > 0 or r.gold > 0 or next(r.paid)) then
-        local parts, lines, words = { S.T("{1} resources", S.num(r.goods)) }, {}, {}
+    if r and (r.goods > 0 or r.gold > 0 or next(r.paid) or (r.weak or 0) > 0 or (r.repl or 0) > 0 or (r.repl_held or 0) > 0) then
+        local parts, lines, words = { S.T("{1} resources", S.num(r.goods + (r.repl or 0))) }, {}, {}
         for w in pairs(r.paid) do words[#words + 1] = w end
         table.sort(words)
         for _, w in ipairs(words) do
@@ -1558,9 +1569,17 @@ function S.spending(v)
             if r.line then lines[#lines + 1] = string.format(r.line, r.paid[w], w) end
         end
         if r.gold > 0 then parts[#parts + 1] = S.T("{1} gold", S.num(r.gold)) end
+        -- UNDERSTRENGTH RECRUITS AND THE REPLENISHMENT BILL (flows.lua F.on_unit_trained, F.repl_turn)
+        if (r.repl or 0) > 0 then lines[#lines + 1] = S.T("Replenishing took {1} resources.", S.num(r.repl)) end
+        if (r.weak or 0) > 0 then lines[#lines + 1] = S.T("Recruits that arrived understrength: {1}.", S.num(r.weak)) end
+        if (r.repl_held or 0) > 0 then
+            lines[#lines + 1] = S.T("Units that lost strength they could not pay for: {1}.", S.num(r.repl_held))
+        end
+        local gold_rule = (r.gold > 0 or S.rate("recruit_gold")) and S.T("Anything missing is paid {1}in gold.", (r.line and S.T("in your own currency and then ") or ""))
+            or S.T("Anything missing is paid {1}with strength: the recruit arrives understrength.", (r.line and S.T("in your own currency and then ") or ""))
         v.rows[#v.rows + 1] = { S.section(S.RECRUIT_HEAD), "", "", "", "", section = true }
         v.rows[#v.rows + 1] = { table.concat(parts, ", "), "", "", "", "", icon = S.DUTY_ICON,
-            tip = S.T("Each recruit takes resources from your stores by its type and cost.\nAnything missing is paid {1}in gold.{2}", (r.line and S.T("in your own currency and then ") or ""), (#lines > 0 and ("\n" .. table.concat(lines, "\n")) or "")) }
+            tip = S.T("Each recruit takes resources from your stores by its type and cost.\n{1}{2}", gold_rule, (#lines > 0 and ("\n" .. table.concat(lines, "\n")) or "")) }
     end
     if #v.rows == 0 or v.rows[1].section then v.heads = { "", "", "", "", "" } end
     if S.actions_on() then

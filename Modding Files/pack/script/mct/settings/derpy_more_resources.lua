@@ -102,6 +102,16 @@ o_recruit_per:set_default_value(1)
 o_recruit_per:set_assigned_section("stores")
 if IN_CAMPAIGN then o_recruit_per:set_locked(true, LOCK_REASON) end
 
+local o_replenish_per = m:add_new_option("replenish_per", "slider")
+o_replenish_per:set_text("Replenishment cost")
+o_replenish_per:set_tooltip_text("Strength a unit regains takes resources from your stores, as a share of what recruiting it takes: at 100, a unit that regains half its strength takes half its recruit's resources. Strength your stores cannot pay for is lost again. 0 turns this off.")
+o_replenish_per:slider_set_precision(0)
+o_replenish_per:slider_set_min_max(0, 200)
+o_replenish_per:slider_set_step_size(1, 0)
+o_replenish_per:set_default_value(100)
+o_replenish_per:set_assigned_section("stores")
+if IN_CAMPAIGN then o_replenish_per:set_locked(true, LOCK_REASON) end
+
 local o_toll = m:add_new_option("toll", "slider")
 o_toll:set_text("Tolls")
 o_toll:set_tooltip_text("Each turn, trade that crosses another faction's lands pays that faction this share of the value of the goods it carries. All the tolls on one cargo together are at most 15%. A faction whose Roads edict is Open charges nothing. Neither do your allies and vassals. 0 turns tolls off.")
@@ -124,7 +134,7 @@ if IN_CAMPAIGN then o_road_danger:set_locked(true, LOCK_REASON) end
 
 local o_army_provisions = m:add_new_option("army_provisions", "checkbox")
 o_army_provisions:set_text("Carried army provisions")
-o_army_provisions:set_tooltip_text("Armies eat the provisions they carry once a turn. In your own settlements they refill from the stores, never below what a settlement keeps: Auto keeps 5 turns, and Load fills the army to 10. At sea, or with no settlements, Load buys two meals at 10 gold each, once a turn. Armies cannot refill in foreign lands. Missed meals slow an army and its recovery. Caravans and convoys carry none. This is fixed when a campaign starts: changing it later does nothing to a campaign already under way. In multiplayer it is always on.")
+o_army_provisions:set_tooltip_text("Armies eat the provisions they carry once a turn. In your own settlements they refill from the stores, never below what a settlement keeps: Auto keeps 5 turns, and Load fills the army to 10. At sea, or with no settlements, Load buys two meals at 10 gold each, once a turn. Armies cannot refill in foreign lands. Missed meals hurt an army. Caravans and convoys carry none. This is fixed when a campaign starts: changing it later does nothing to a campaign already under way. In multiplayer it is always on.")
 o_army_provisions:set_default_value(true)
 o_army_provisions:set_assigned_section("using")
 if IN_CAMPAIGN then o_army_provisions:set_locked(true, LOCK_REASON) end
@@ -178,6 +188,13 @@ o_ai_food:set_default_value(false)
 o_ai_food:set_assigned_section("stores")
 if IN_CAMPAIGN then o_ai_food:set_locked(true, LOCK_REASON) end
 
+local o_ai_armoury = m:add_new_option("ai_armoury", "checkbox")
+o_ai_armoury:set_text("Other factions restock for recruits")
+o_ai_armoury:set_tooltip_text("Each settlement of a faction no player controls is topped up, every turn, with the resources its recruits and replenishment use: up to 6 war materials, 3 mounts and 2 building materials for each settlement level. Off: it has only what its buildings make and its trade brings.")
+o_ai_armoury:set_default_value(true)
+o_ai_armoury:set_assigned_section("stores")
+if IN_CAMPAIGN then o_ai_armoury:set_locked(true, LOCK_REASON) end
+
 local o_spoilage = m:add_new_option("spoilage", "checkbox")
 o_spoilage:set_text("Spoilage")
 o_spoilage:set_tooltip_text("Each turn, grain loses 4% and beer and kvas 2% of what a store holds above a quarter of its space. With the Great Granary, grain is safe up to half. Hardtack, salted meat, salted fish, wine and every other good never spoil. Off: nothing spoils.")
@@ -224,10 +241,24 @@ if IN_CAMPAIGN then o_supply:set_locked(true, LOCK_REASON) end
 
 local o_recruit = m:add_new_option("recruit", "checkbox")
 o_recruit:set_text("Recruits use the stores")
-o_recruit:set_tooltip_text("Every unit you recruit takes resources from your stores by its type and worth (cavalry and monsters take mounts, infantry and war machines take war materials, the finest also take your rare resource). What the stores lack is paid in your race's own currency where it has one, then in gold. Off: recruiting takes nothing.")
+o_recruit:set_tooltip_text("Every unit you recruit takes resources from your stores by its type and worth (cavalry and monsters take mounts, infantry and war machines take war materials, the finest also take your rare resource). What the stores lack is paid in your race's own currency where it has one. A recruit whose resources are still short arrives understrength, unless Gold pays for recruits is ticked. Off: recruiting takes nothing.")
 o_recruit:set_default_value(true)
 o_recruit:set_assigned_section("using")
 if IN_CAMPAIGN then o_recruit:set_locked(true, LOCK_REASON) end
+
+local o_recruit_gold = m:add_new_option("recruit_gold", "checkbox")
+o_recruit_gold:set_text("Gold pays for recruits")
+o_recruit_gold:set_tooltip_text("What a recruit's resources and your race's currency do not cover is paid in gold, as before. Off: the recruit arrives understrength instead, and must regain the rest by replenishing. A faction no player controls always pays in gold.")
+o_recruit_gold:set_default_value(false)
+o_recruit_gold:set_assigned_section("using")
+if IN_CAMPAIGN then o_recruit_gold:set_locked(true, LOCK_REASON) end
+
+local o_hunger_men = m:add_new_option("hunger_men", "checkbox")
+o_hunger_men:set_text("Hunger weakens armies")
+o_hunger_men:set_tooltip_text("After two missed meals an army's units lose 5% of their strength each turn. After three they lose 10% and regain nothing. After five, one unit deserts each turn. A full meal ends this. An army that still carries 5 turns of provisions after eating is Well fed: leadership +4 and replenishment +5%. Off: missed meals slow the army and its replenishment instead, and no army is Well fed.")
+o_hunger_men:set_default_value(true)
+o_hunger_men:set_assigned_section("using")
+if IN_CAMPAIGN then o_hunger_men:set_locked(true, LOCK_REASON) end
 
 local o_escort = m:add_new_option("escort", "checkbox")
 o_escort:set_text("Escort battles")

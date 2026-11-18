@@ -119,6 +119,7 @@ end
 -- is frozen with the rest; the keys already frozen do not move.
 -- A READ, never a write: the panel calls it, and opening the panel before the first turn start
 -- froze the settings there (single player: the MCT then did nothing). F.freeze_rates writes.
+F.OLD_SAVE_RATES = { hunger_men = false, recruit_gold = true, replenish_per = 0, ai_armoury = false }
 function F.rates()
     local r = F.state.rates
     if not r then return F.read_rates() end
@@ -128,6 +129,9 @@ function F.rates()
             for k2, v in pairs(r) do out[k2] = v end
             -- Older saved settings predate army provisions, whose original default was off.
             if r.army_provisions == nil then out.army_provisions = false end
+            -- Older saved settings predate the harder supply rules (2026-11-17): MCT is locked in a running
+            -- campaign, so a player who updates mid-campaign keeps the rules the campaign started with.
+            for k2, v in pairs(F.OLD_SAVE_RATES) do if r[k2] == nil then out[k2] = v end end
             return out
         end
     end
@@ -1014,6 +1018,31 @@ function F.grow_food(region, held, level, turns)
     held[stem] = (held[stem] or 0) + math.max(0, F.held(region, stem) - before)
 end
 
+-- RECRUIT GOODS FOR OTHER FACTIONS (MCT "ai_armoury", on by default, 2026-11-18): the computer does not plan for the
+-- goods its recruits and its replenishment take (AI soak 2026-11-18: its armies lost 6% strength in seven turns to
+-- the replenishment bill), so a settlement of a faction no player controls tops its war materials, mounts and
+-- building materials up to F.ARMOURY[use] for each settlement level, in the good of that use it holds most of
+-- (ties by the goods' order), else F.ARMOURY_STEM's. A top-up, not a yield: what it never spends is not added again.
+F.ARMOURY = { war = 6, mounts = 3, building = 2 }
+F.ARMOURY_STEM = { war = "leather", mounts = "animals", building = "timber" }
+function F.stock_armoury(region, held, level)
+    for _, use in ipairs({ "war", "mounts", "building" }) do
+        local want = F.ARMOURY[use] * level - F.use_total(held, use)
+        if want > 0 then
+            local stem, most = F.ARMOURY_STEM[use], 0
+            for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
+                if g.use == use and not g.rare and (held[g.stem] or 0) > most then stem, most = g.stem, held[g.stem] end
+            end
+            local n = math.min(want, F.free(region, stem))
+            if n > 0 then
+                local before = F.held(region, stem)
+                F.pool_add(region, F.PREFIX .. stem .. "_" .. KIND.process, n)
+                held[stem] = (held[stem] or 0) + math.max(0, F.held(region, stem) - before)
+            end
+        end
+    end
+end
+
 -- AN UNCHARTED SETTLEMENT FEEDS ITSELF (2026-11-11): its main building is no chain we give production rows - another
 -- mod's race, or one that mod's building kept after a capture - so it grows its own Normal meals for any owner that
 -- eats, and as many again: the stock its armies load and its supply carts carry, which a charted settlement's farms
@@ -1041,6 +1070,7 @@ function F.upkeep_region(region, fkey, uses)
             -- five turns of NORMAL meals, whatever the Rations edict: on Rationing's own meals it took half the food
             fed = F.use_total(held, "provisions") >= F.FED_TURNS * F.NEED * level
         end
+        if F.rates().ai_armoury and not region:owning_faction():is_human() then F.stock_armoury(region, held, level) end
         local quarter = cap * F.STOCKED_PCT / 100
         war = cap > 0 and F.use_total(held, "war") >= quarter
         lux = cap > 0 and F.use_total(held, "luxuries") >= quarter
@@ -2580,20 +2610,22 @@ function F.recruit_bill(faction, caste, value)
         local pick = F.bulk(p[1])
         share = share + p[2]
         local upto = math.ceil(base * share)
-        if upto > done then out[#out + 1] = { pick = pick, n = upto - done, worth = F.cheapest(pick) } end
+        if upto > done then out[#out + 1] = { key = p[1], pick = pick, n = upto - done, worth = F.cheapest(pick) } end
         done = upto
     end
     local race = F.race(faction)
     local rare = (DERPY_MR_FLOWS_INFANTRY[caste] and DERPY_MR_FLOWS_RACE_RARE_INF[race]) or DERPY_MR_FLOWS_RACE_RARE[race]
     if rare and value >= F.RECRUIT.elite then
         local pick = rare_pick(rare)
-        out[#out + 1] = { pick = pick, n = math.ceil(value / F.RECRUIT.elite_per), worth = F.cheapest(pick) }
+        out[#out + 1] = { key = rare, pick = pick, n = math.ceil(value / F.RECRUIT.elite_per), worth = F.cheapest(pick) }
     end
     return out
 end
 
 -- The shortfall, in bill order: the race's currency first (one per `per` goods, rounded up), then gold.
-function F.recruit_short(faction, short)
+-- no_gold (the recruit arrives understrength instead, F.on_unit_trained): no gold, and the goods still missing
+-- come back as the fourth value.
+function F.recruit_short(faction, short, no_gold)
     local fkey, paid, missing = faction:name(), {}, 0
     for _, s in ipairs(short) do missing = missing + s.n end
     local c, cover = DERPY_MR_FLOWS_CURRENCY[F.race(faction)], 0
@@ -2606,12 +2638,14 @@ function F.recruit_short(faction, short)
             paid[c.word], cover = take, take * c.per
         end
     end
-    local due = 0
+    local due, uncovered = 0, 0
     for _, s in ipairs(short) do
         local covered = math.min(cover, s.n)
         cover = cover - covered
+        uncovered = uncovered + s.n - covered
         due = due + (s.n - covered) * s.worth * F.RECRUIT.gold_x
     end
+    if no_gold then return paid, 0, c and c.line or nil, uncovered end
     local gold = math.min(math.ceil(due), math.max(0, faction:treasury()))
     if gold > 0 then cm:treasury_mod(fkey, -gold) end
     return paid, gold, c and c.line or nil
@@ -2640,26 +2674,140 @@ function F.on_unit_trained(context)
     if F.recruit_skip(fkey, unit:unit_key()) then return end
     local bill = F.recruit_bill(faction, unit:unit_caste(), unit:get_unit_custom_battle_cost())
     if #bill == 0 then return end
-    local stocks, got_n, short = F.stocks(faction), 0, {}
+    local stocks, got_n, short, total = F.stocks(faction), 0, {}, 0
     for _, b in ipairs(bill) do
         local got = F.draw_realm(stocks, b.pick, b.n, KIND.spend, fkey)
-        got_n = got_n + got
+        got_n, total = got_n + got, total + b.n
         if got < b.n then short[#short + 1] = { n = b.n - got, worth = b.worth } end
     end
-    local paid, gold, line = F.recruit_short(faction, short)
-    if F.is_human(fkey) then F.book_recruit(fkey, got_n, paid, gold, line) end
+    -- A COMPUTER FACTION ALWAYS PAYS IN GOLD (AI soak 2026-11-18: under the understrength rule 61% of its recruits
+    -- arrived at about 14%; it plans for gold and knows nothing of the stores)
+    local paid, gold, line, uncovered = F.recruit_short(faction, short, not r.recruit_gold and faction:is_human())
+    -- UNDERSTRENGTH (2026-11-17): what nothing paid for is strength the recruit does not have. It regains it by
+    -- replenishing, which costs resources too (F.repl_turn).
+    local weak = false
+    if (uncovered or 0) > 0 and total > 0 then
+        local share = math.max(F.HUNGER.recruit_min, (total - uncovered) / total)
+        cm:set_unit_hp_to_unary_of_maximum(unit, share)
+        -- kept for the bill: a unit it has not seen counts as full, so the engine's replenishment in the same turn
+        -- start went unpaid (seen in game 2026-11-17: High Elf spearmen recruited at 10% were at 28% by turn end)
+        F.repl_note(faction, unit, share * 100)
+        weak = true
+    end
+    if F.is_human(fkey) then F.book_recruit(fkey, got_n, paid, gold, line, weak) end
 end
 
 -- THE LEDGER: this turn's and last turn's, for the Spending tab. Clearing a field during pairs
 -- is allowed in Lua 5.1 (adding one is not).
-function F.book_recruit(fkey, goods, paid, gold, line)
+function F.recruit_entry(fkey)
     local b, turn = F.book(fkey), cm:model():turn_number()
     b.recruit = b.recruit or {}
     for t in pairs(b.recruit) do if t < turn - 1 then b.recruit[t] = nil end end
     local e = b.recruit[turn] or { goods = 0, paid = {}, gold = 0 }
     b.recruit[turn] = e
+    return e
+end
+
+function F.book_recruit(fkey, goods, paid, gold, line, weak)
+    local e = F.recruit_entry(fkey)
     e.goods, e.gold, e.line = e.goods + goods, e.gold + gold, e.line or line
+    if weak then e.weak = (e.weak or 0) + 1 end
     for w, n in pairs(paid) do e.paid[w] = (e.paid[w] or 0) + n end
+end
+
+-- ---- REPLENISHMENT COSTS GOODS (MCT "replenish_per", 2026-11-17) ------------------------------------------
+-- The engine replenishes; a script cannot stop it. So each unit's strength is kept (F.state.repl[faction][unit
+-- cqi], only below full), and at the owner's turn start AND turn end whatever a unit gained since is billed:
+-- replenish_per percent of its recruit's bill (F.recruit_bill) for each 100% regained. Both ends, because which of
+-- the two the engine's replenishment lands before has not been measured: a gain is billed at whichever comes
+-- first. Whole goods are drawn and the fraction carried (F.state.repl_carry), so twenty small gains pay what one
+-- large one would. The race's currency covers a shortfall as it does a recruit's; what is still unpaid is taken
+-- back from every unit that gained, in proportion. An army starving under "hunger_men" (three missed meals or
+-- more) keeps nothing it gained. Losses are not billed: a lower reading is simply kept.
+function F.repl_note(faction, unit, hp)
+    F.state.repl = F.state.repl or {}
+    local fkey = faction:name()
+    local kept = F.state.repl[fkey] or {}
+    F.state.repl[fkey] = kept
+    kept[tostring(unit:command_queue_index())] = hp < F.REPL_FULL and hp or nil
+end
+
+F.REPL_FULL, F.REPL_EPSILON = 99.99, 0.01
+
+function F.repl_turn(faction)
+    local r, fkey = F.rates(), faction:name()
+    local per = r.replenish_per or 0
+    if (per <= 0 and not r.hunger_men) or not F.uses_stores(faction) or not (r.ai or faction:is_human()) then
+        if F.state.repl then F.state.repl[fkey] = nil end
+        return
+    end
+    F.state.repl = F.state.repl or {}
+    local was, now, gains, need = F.state.repl[fkey] or {}, {}, {}, {}
+    local fs = faction:military_force_list()
+    for i = 0, fs:num_items() - 1 do
+        local force = fs:item_at(i)
+        if force:has_general() and not force:is_armed_citizenry() and not F.NO_RATIONS[force:force_type():key()] then
+            local b = F.state.armies and F.state.armies[tostring(force:command_queue_index())]
+            local starving = r.hunger_men and b and b.f == fkey and (b.short or 0) >= 3
+            for _, t in ipairs(F.troops(force)) do
+                local id = tostring(t.unit:command_queue_index())
+                local from = was[id] or 100
+                if t.hp > from + F.REPL_EPSILON then
+                    local g = { unit = t.unit, id = id, from = from, to = t.hp, goods = 0, starving = starving }
+                    if not starving and per > 0 then
+                        for _, p in ipairs(F.recruit_bill(faction, t.unit:unit_caste(), t.unit:get_unit_custom_battle_cost())) do
+                            local n = p.n * (t.hp - from) / 100 * per / 100
+                            local e = need[p.key] or { pick = p.pick, n = 0, worth = p.worth }
+                            need[p.key], e.n, g.goods = e, e.n + n, g.goods + n
+                        end
+                    end
+                    gains[#gains + 1] = g
+                end
+                if t.hp < F.REPL_FULL then now[id] = t.hp end
+            end
+        end
+    end
+    F.state.repl[fkey] = now
+    if #gains == 0 then return end
+    F.state.repl_carry = F.state.repl_carry or {}
+    local carry = F.state.repl_carry[fkey] or {}
+    F.state.repl_carry[fkey] = carry
+    local keys, short, owed, spent, stocks = {}, {}, 0, 0, nil
+    for k in pairs(need) do keys[#keys + 1] = k end
+    table.sort(keys)
+    for _, k in ipairs(keys) do
+        local e = need[k]
+        local want = e.n + (carry[k] or 0)
+        local whole = math.floor(want + 1e-9)
+        carry[k] = math.max(0, want - whole)
+        if whole > 0 then
+            stocks = stocks or F.stocks(faction)
+            local got = F.draw_realm(stocks, e.pick, whole, KIND.spend, fkey)
+            spent, owed = spent + got, owed + whole
+            if got < whole then short[#short + 1] = { n = whole - got, worth = e.worth } end
+        end
+    end
+    local paid, uncovered = {}, 0
+    if #short > 0 then
+        local _gold, _line
+        paid, _gold, _line, uncovered = F.recruit_short(faction, short, true)
+    end
+    local ratio = owed > 0 and (owed - uncovered) / owed or 1
+    local held = 0
+    for _, g in ipairs(gains) do
+        local keep = g.starving and 0 or (g.goods > 0 and ratio or 1)
+        if keep < 1 then
+            local hp = g.from + (g.to - g.from) * keep
+            cm:set_unit_hp_to_unary_of_maximum(g.unit, hp / 100)
+            now[g.id] = hp < F.REPL_FULL and hp or nil
+            held = held + 1
+        end
+    end
+    if F.is_human(fkey) and (spent > 0 or held > 0 or next(paid)) then
+        local e = F.recruit_entry(fkey)
+        e.repl, e.repl_held = (e.repl or 0) + spent, (e.repl_held or 0) + held
+        for w, n in pairs(paid) do e.paid[w] = (e.paid[w] or 0) + n end
+    end
 end
 
 function F.recruit_last(fkey)
@@ -2919,6 +3067,18 @@ end
 
 -- ---- carried army provisions ------------------------------------------------------------
 F.PROVISION_BUNDLES = { "derpy_mr_army_hungry", "derpy_mr_army_starved" }
+-- HUNGER WEAKENS ARMIES (MCT "hunger_men", 2026-11-17). The old bundles above were percentages a priest's
+-- replenishment or a lord's movement skills cancelled (Workshop feedback 2026-11-16), so missed meals now take
+-- strength, which nothing in the game gives back for free. These two bundles carry no effect: they name the state
+-- in the army's effects list. Well fed is the reward for carrying a full five turns.
+F.HUNGER_BUNDLES = { "derpy_mr_army_short", "derpy_mr_army_starving" }
+F.FED_BUNDLE = "derpy_mr_army_well_fed"
+-- short: strength lost a turn at two missed meals, in percent; starve: at three and more; floor: no unit is taken
+-- below it by hunger; desert: missed meals before one unit a turn deserts; recruit_min: the least strength an
+-- unpaid recruit arrives with (unary); fed: turns of meals carried after eating that make an army Well fed.
+F.HUNGER = { short = 5, starve = 10, floor = 10, desert = 5, recruit_min = 0.1, fed = 5 }
+-- Units of a character: hunger, desertion and the replenishment bill leave them alone.
+F.CHARACTER_CASTES = { lord = true, hero = true }
 
 function F.provision_total(b)
     local n = 0
@@ -3057,7 +3217,50 @@ function F.provision_clear(id)
     local force = cm:get_military_force_by_cqi(tonumber(id))
     if force and not force:is_null_interface() then
         for _, key in ipairs(F.PROVISION_BUNDLES) do cm:remove_effect_bundle_from_force(key, tonumber(id)) end
+        for _, key in ipairs(F.HUNGER_BUNDLES) do cm:remove_effect_bundle_from_force(key, tonumber(id)) end
+        cm:remove_effect_bundle_from_force(F.FED_BUNDLE, tonumber(id))
     end
+end
+
+-- The force's soldiers: every unit that is not a lord or hero, with its strength in percent.
+function F.troops(force)
+    local out, units = {}, force:unit_list()
+    for i = 0, units:num_items() - 1 do
+        local u = units:item_at(i)
+        if not F.CHARACTER_CASTES[u:unit_caste()] then
+            out[#out + 1] = { unit = u, hp = u:percentage_proportion_of_full_strength() }
+        end
+    end
+    return out
+end
+
+-- HUNGER TAKES STRENGTH: `short` missed meals in a row. Every soldier unit loses short or starve percent of its
+-- full strength, never below the floor; from `desert` meals the weakest unit leaves (ties by key). The engine
+-- removes the FIRST unit of that key in the army, so of two alike the one that leaves may be the stronger. The
+-- general's own unit never leaves. What it sets is noted for the replenishment bill (F.repl_note), so
+-- the loss is not read as a gain to charge for, or to give back.
+function F.hunger_losses(faction, force, short)
+    local H = F.HUNGER
+    local loss = short >= 3 and H.starve or short == 2 and H.short or 0
+    if loss <= 0 then return 0 end
+    local troops = F.troops(force)
+    for _, t in ipairs(troops) do
+        local hp = math.max(math.min(t.hp, H.floor), t.hp - loss)
+        if hp < t.hp then
+            cm:set_unit_hp_to_unary_of_maximum(t.unit, hp / 100)
+            t.hp = hp
+        end
+        F.repl_note(faction, t.unit, hp)
+    end
+    if short < H.desert or #troops == 0 then return 0 end
+    local worst
+    for _, t in ipairs(troops) do
+        if not worst or t.hp < worst.hp or (t.hp == worst.hp and t.unit:unit_key() < worst.unit:unit_key()) then
+            worst = t
+        end
+    end
+    cm:remove_unit_from_character(cm:char_lookup_str(force:general_character()), worst.unit:unit_key())
+    return 1
 end
 
 function F.provision_buy(faction, row, b)
@@ -3175,7 +3378,7 @@ function F.provisions_turn(faction)
     for _, id in ipairs(retire) do F.provision_clear(id) end
     if not enabled then return end
     F.state.armies = F.state.armies or {}
-    local warn = false
+    local warn, deserted = false, 0
     for _, row in ipairs(rows) do
         local b = F.state.armies[row.id]
         if not b then b = F.provision_record(faction, row) end
@@ -3197,9 +3400,21 @@ function F.provisions_turn(faction)
             b.short = (left == 0 or (other and row.source and rates.ai_home_fed)) and 0 or b.short + 1
             b.done = turn
             warn = warn or (b.short > previous and b.short <= 3)
-            for _, key in ipairs(F.PROVISION_BUNDLES) do cm:remove_effect_bundle_from_force(key, tonumber(row.id)) end
-            local key = b.short >= 3 and F.PROVISION_BUNDLES[2] or b.short == 2 and F.PROVISION_BUNDLES[1]
-            if key then cm:apply_effect_bundle_to_force(key, tonumber(row.id), 0) end
+            local cqi = tonumber(row.id)
+            for _, key in ipairs(F.PROVISION_BUNDLES) do cm:remove_effect_bundle_from_force(key, cqi) end
+            for _, key in ipairs(F.HUNGER_BUNDLES) do cm:remove_effect_bundle_from_force(key, cqi) end
+            cm:remove_effect_bundle_from_force(F.FED_BUNDLE, cqi)
+            local stages = rates.hunger_men and F.HUNGER_BUNDLES or F.PROVISION_BUNDLES
+            local key = b.short >= 3 and stages[2] or b.short == 2 and stages[1]
+            if key then cm:apply_effect_bundle_to_force(key, cqi, 0) end
+            if rates.hunger_men and b.short >= 2 then
+                deserted = deserted + F.hunger_losses(faction, row.force, b.short)
+            end
+            -- WELL FED: five turns still carried after eating (an army that missed a meal ate all it had). It comes
+            -- with the hunger rule, so a campaign started before 2026-11-17 (F.OLD_SAVE_RATES) gets neither.
+            if rates.hunger_men and F.provision_total(b) >= F.HUNGER.fed * row.need then
+                cm:apply_effect_bundle_to_force(F.FED_BUNDLE, cqi, 0)
+            end
             -- A SUPPLY CART for the gap the meal left (F.supply_send): its own guard, so a throw for one army leaves the
             -- armies after it fed. `auto`: none while an enemy army stands beside the army (F.supply_send)
             if b.auto then
@@ -3208,9 +3423,11 @@ function F.provisions_turn(faction)
             end
         end
     end
-    if warn and faction:is_human() then
+    if (warn or deserted > 0) and faction:is_human() then
+        local hard = rates.hunger_men and "_hard" or ""
         cm:show_message_event(fkey, "event_feed_strings_text_derpy_mr_army_food_title",
-            "event_feed_strings_text_derpy_mr_army_food_primary", "event_feed_strings_text_derpy_mr_army_food_secondary", false, 1014)
+            "event_feed_strings_text_derpy_mr_army_food_primary" .. (deserted > 0 and "_desert" or ""),
+            "event_feed_strings_text_derpy_mr_army_food_secondary" .. hard, false, 1014)
     end
 end
 
@@ -5835,6 +6052,8 @@ function F.turn_start(faction)
     -- Arrivals fund this turn; essentials and elective local orders precede exports.
     F.guard(F.convoys_turn, faction)
     F.guard(F.ships_turn, faction)
+    -- what the armies regained is paid for (or taken back) before this turn's hunger takes any (F.hunger_losses)
+    F.guard(F.repl_turn, faction)
     F.guard(F.upkeep, faction)
     F.guard(F.provisions_turn, faction)
     F.guard(F.kiki_relief, faction)               -- Mortals, Mercs and Management's hungry people, after the armies
@@ -5914,6 +6133,9 @@ function F.init()
     core:add_listener("derpy_mr_flows_supply_end", "FactionTurnEnd",
         function(context) return context:faction():is_human() end,
         function(context) F.enemy_cache, F.enemy_cache_ui = {}, {}; F.guard(F.supply_turn, context:faction()) end, true)
+    -- every faction's: the replenishment bill reads the armies at both ends of the turn (F.repl_turn)
+    core:add_listener("derpy_mr_flows_repl_end", "FactionTurnEnd", true,
+        function(context) F.guard(F.repl_turn, context:faction()) end, true)
     F.guard(F.provision_seed_all)
 end
 

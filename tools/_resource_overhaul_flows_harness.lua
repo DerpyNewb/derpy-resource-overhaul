@@ -205,7 +205,36 @@ SCENES = {}
 ITEMS, POOL, RESEARCH, GRANTED = {}, {}, {}, {}   -- the Workshop's grants
 REPAIRED = {}                     -- Restore: the slots cm repaired   -- phase 5: the shipment markers on the map; a spot CA cannot find
 local FIRST, LISTENERS = {}, {}
+-- A UNIT IN AN ARMY (flows.lua F.troops, F.hunger_losses, F.repl_turn, F.on_unit_trained): its strength is u.hp
+-- in percent, which cm.set_unit_hp_to_unary_of_maximum writes. o: hp, key, caste, value, cqi.
+UNIT_SEQ, DESERTED = 0, {}
+function soldier(o)
+    o = o or {}
+    UNIT_SEQ = UNIT_SEQ + 1
+    local u = { hp = o.hp or 100, key = o.key or "stub_inf", caste = o.caste or "melee_infantry",
+                value = o.value or 500, cqi = o.cqi or (60000 + UNIT_SEQ) }
+    u.percentage_proportion_of_full_strength = function() return u.hp end
+    u.unit_caste = function() return u.caste end
+    u.unit_key = function() return u.key end
+    u.get_unit_custom_battle_cost = function() return u.value end
+    u.command_queue_index = function() return u.cqi end
+    return u
+end
+function soldiers(n)
+    local t = {}
+    for i = 1, n do t[i] = soldier() end
+    return t
+end
 cm = {
+    set_unit_hp_to_unary_of_maximum = function(_, u, p)
+        assert(type(p) == "number" and p >= 0 and p <= 1, "set_unit_hp_to_unary_of_maximum takes a unary proportion")
+        u.hp = p * 100
+    end,
+    remove_unit_from_character = function(_, lookup, key)
+        assert(type(lookup) == "string" and type(key) == "string", "remove_unit_from_character takes two strings")
+        DESERTED[#DESERTED + 1] = { lookup = lookup, key = key }
+    end,
+    char_lookup_str = function(_, c) return "character_cqi:" .. tostring(type(c) == "table" and c.command_queue_index and c:command_queue_index() or c) end,
     saving_game_callbacks = {}, loading_game_callbacks = {},
     add_saving_game_callback = function() error("the save callback must go first in CA's list") end,
     add_loading_game_callback = function() error("the load callback must go first in CA's list") end,
@@ -1660,7 +1689,7 @@ local function host(cqi, units, kind)
                  has_general = function() return true end,
                  force_type = function() return { key = function() return kind or "ARMY" end } end,
                  command_queue_index = function() return cqi + 1000 end,
-                 unit_list = function() return list(units) end,
+                 unit_list = function() return list(soldiers(#units)) end,
                  general_character = function() return { command_queue_index = function() return cqi end } end }
     return mf
 end
@@ -1730,7 +1759,7 @@ local function field(f, x, y, cqi, garrison)
              command_queue_index = function() return cqi + 1000 end,
              has_garrison_residence = function() return false end,
              active_stance = function() return (STANCES or {})[cqi + 1000] or "MILITARY_FORCE_ACTIVE_STANCE_TYPE_DEFAULT" end,
-             unit_list = function() return list({ 1 }) end,
+             unit_list = function() return list({ soldier() }) end,
              general_character = function() return {
                  command_queue_index = function() return cqi end,
                  logical_position_x = function() return x end,
@@ -3384,9 +3413,13 @@ end
 -- ---- THE RECRUITMENT DRAW (spec 2026-10-08 workshop expansion, section 3) ----
 ;(function()
     local function train(f, key, caste, value)
-        fire("UnitTrained", { unit = function() return {
+        UNIT_SEQ = UNIT_SEQ + 1
+        local id = 70000 + UNIT_SEQ
+        local u = { hp = 100, command_queue_index = function() return id end,
             faction = function() return f.iface end, unit_key = function() return key end,
-            unit_caste = function() return caste end, get_unit_custom_battle_cost = function() return value end } end })
+            unit_caste = function() return caste end, get_unit_custom_battle_cost = function() return value end }
+        fire("UnitTrained", { unit = function() return u end })
+        return u
     end
     -- the gold price of a missing good, from the data: CA's trade value of the cheapest of its kind
     local function worth(pick)
@@ -3400,6 +3433,8 @@ end
     TURN = 9000
     F.state.rates = nil; F.freeze_rates()
     F.state.rates.recruit, F.state.rates.recruit_per, F.state.rates.ai = true, 1, true
+    -- the shortfall in gold below is the "Gold pays for recruits" rule; the understrength one follows the block
+    F.state.rates.recruit_gold = true
     local rcP = faction("rcP", { human = true, sc = "wh_main_sc_dwf_dwarfs" })
     local rc1 = region("rc1", 42000, 0, 2000, { coal = 50, gromril = 10, warhorses = 50 }); own(rcP, rc1, true)
     train(rcP, "modded_inf", "melee_infantry", 650)
@@ -3479,6 +3514,36 @@ end
     local dm1 = region("dm1", 42300, 0, 2000, { coal = 50 }); own(dmP, dm1, true)
     train(dmP, "modded_inf", "melee_infantry", 650); eq(dm1.held.coal, 50, "a race that keeps no stores pays nothing")
     eq(F.cost.recruit ~= nil, true, "REVIEW FOCUS 5: the handler counts its time")
+    -- UNDERSTRENGTH (2026-11-17): with "Gold pays for recruits" off, what nothing paid for is strength
+    F.state.rates.recruit_gold = false
+    TURN = 9003
+    rc1.held.coal = 3; local t1 = rcP.iface:treasury()
+    local u = train(rcP, "modded_inf", "melee_infantry", 650)
+    eq(rc1.held.coal, 0, "understrength: the stores still give what they hold")
+    eq(rcP.iface:treasury(), t1, "and no gold is taken")
+    eq(math.floor(u.hp * 100 + 0.5), math.floor(3 / 7 * 10000 + 0.5), "3 of 7 goods paid: the recruit arrives at 3/7 strength")
+    eq(F.state.repl and F.state.repl.rcP and F.state.repl.rcP[tostring(u.command_queue_index())], u.hp,
+        "and the bill keeps that strength, so what it regains is paid for (seen in game 2026-11-17)")
+    rc1.held.coal = 0; u = train(rcP, "modded_inf", "melee_infantry", 650)
+    eq(u.hp, F.HUNGER.recruit_min * 100, "nothing paid: the least strength, never none")
+    rc1.held.coal = 50; u = train(rcP, "modded_inf", "melee_infantry", 650)
+    eq(u.hp, 100, "fully paid: full strength")
+    -- the race's currency still pays first: 10 Armaments cover a whole bill, 1 Armament covers cur.per goods
+    FPOOL.cdP.wh3_dlc23_chd_armaments = 10; local g1 = cdP.iface:treasury()
+    u = train(cdP, "modded_inf", "melee_infantry", 650)
+    eq(u.hp, 100, "Armaments that cover the bill leave the recruit whole")
+    FPOOL.cdP.wh3_dlc23_chd_armaments = 1
+    u = train(cdP, "modded_inf", "melee_infantry", 650)
+    eq(math.floor(u.hp * 100 + 0.5), math.floor(cur.per / 7 * 10000 + 0.5), "one Armament covers its goods, the rest is strength")
+    eq(cdP.iface:treasury(), g1, "and no gold either way")
+    TURN = 9004
+    eq(F.recruit_last("rcP").weak, 2, "the ledger counts the recruits that arrived understrength")
+    eq(F.recruit_last("rcP").gold, 0, "and no gold")
+    -- A COMPUTER FACTION PAYS IN GOLD under the same rule (AI soak 2026-11-18)
+    ai1.held.coal = 3; local ta = aiF.iface:treasury()
+    u = train(aiF, "modded_inf", "melee_infantry", 650)
+    eq(u.hp, 100, "a computer faction's recruit arrives whole under the understrength rule")
+    eq(aiF.iface:treasury() - ta, -math.ceil(4 * war * R.gold_x), "and pays the 4 missing in gold")
     lose(rcP, rc1); lose(cdP, cd1); lose(aiF, ai1); lose(dmP, dm1)
     F.state.rates, TURN = rates0, turn0
 end)()
@@ -4293,7 +4358,7 @@ end)()
             faction=function() return a.owner.iface end, has_general=function() return true end,
             is_armed_citizenry=function() return a.garrison==true end, general_character=function() return ch end,
             force_type=function() return {key=function() return a.type or "ARMY" end} end,
-            unit_list=function() local t={} for i=1,a.n do t[i]={} end return list(t) end}
+            unit_list=function() return list(soldiers(a.n)) end}
         forces[id]=a; f.armies[#f.armies+1]=a.iface
         return a
     end
@@ -4303,6 +4368,8 @@ end)()
     local remove = cm.remove_effect_bundle_from_force
     cm.remove_effect_bundle_from_force=function() end
     F.state={factions={},rates=F.read_rates()}; F.state.rates.army_provisions=true
+    -- the movement penalties below are the rule with "Hunger weakens armies" off; the block after this one has it on
+    F.state.rates.hunger_men=false
     local a=force(801,20)
     local sc=f.iface.subculture
     for _, subculture in ipairs({"wh_main_sc_vmp_vampire_counts","wh2_dlc11_sc_cst_vampire_coast"}) do
@@ -4477,7 +4544,7 @@ end)()
         if string.find(key,"_processed",1,true) then made[#made+1]=key..":"..n end
         return tx(s,reg,key,n)
     end
-    r.held={}
+    r.held={}; local arm0=R0.ai_armoury; R0.ai_armoury=false
     F.upkeep_region(r.iface,f.name,true); eq(#made,0,"more food off: nothing made")
     R0.ai_food=true
     F.upkeep_region(r.iface,f.name,true)
@@ -4488,7 +4555,7 @@ end)()
     f.iface.subculture=sc0
     f.human=true; made={}
     F.upkeep_region(r.iface,f.name,true); eq(#made,0,"more food: never a player's settlement")
-    f.human=false; cm.entity_add_pooled_resource_transaction=tx
+    f.human=false; cm.entity_add_pooled_resource_transaction=tx; R0.ai_armoury=arm0
     R0.ai_home_fed, R0.ai_field_rations, R0.ai_half_rations, R0.ai_food = true, true, false, false
     local d=force(803,4); d.garrison=true
     eq(#F.provision_rows(f.iface),1,"garrison excluded")
@@ -4513,7 +4580,8 @@ end)()
     F.provisions_turn(f.iface)
     cm.remove_effect_bundle_from_force=removed
     eq(tostring(F.state.armies["803"])..","..table.concat(cleared,";"),
-        "nil,derpy_mr_army_hungry:803;derpy_mr_army_starved:803","a saved caravan's record and penalties are cleared")
+        "nil,derpy_mr_army_hungry:803;derpy_mr_army_starved:803;derpy_mr_army_short:803;derpy_mr_army_starving:803;derpy_mr_army_well_fed:803",
+        "a saved caravan's record, its penalties of both rules and Well fed are cleared")
     d.type=nil
     F.state.rates.army_provisions=false; TURN=309
     F.provisions_turn(f.iface)
@@ -4656,6 +4724,159 @@ end)()
     f.iface.subculture=living
     cm.show_message_event=message
     F.state,TURN,cm.get_military_force_by_cqi,cm.remove_effect_bundle_from_force=old,turn,lookup,remove
+end)()
+-- ---- HUNGER WEAKENS ARMIES, WELL FED, THE REPLENISHMENT BILL (2026-11-17) ----
+;(function()
+    local old, turn, lookup = F.state, TURN, cm.get_military_force_by_cqi
+    local message, remove = cm.show_message_event, cm.remove_effect_bundle_from_force
+    local shown = {}
+    cm.show_message_event = function(_, _fk, _t, p, s) shown[#shown + 1] = p .. "|" .. s end
+    local removed = {}
+    cm.remove_effect_bundle_from_force = function(_, k, cqi) removed[#removed + 1] = k .. ":" .. cqi end
+    F.state = { factions = {}, rates = F.read_rates() }
+    local R = F.state.rates
+    eq(R.hunger_men, true, "new campaigns: hunger weakens armies")
+    eq(R.recruit_gold, false, "new campaigns: gold does not pay for recruits")
+    eq(R.replenish_per, 100, "new campaigns: replenishing costs its recruit's resources")
+    R.army_provisions, R.ai, R.recruit_per = true, true, 1
+    local f = faction("hg", { human = true })
+    local r = region("hg_home", 43000, 0, 2000, { coal = 0 }); own(f, r, true)
+    local forces = {}
+    -- an army at sea, so nothing refills it, with Auto off, so no cart is sent for it
+    local function force(id, units, owner)
+        owner = owner or f
+        local a = { units = units }
+        local ch = { is_at_sea = function() return true end, has_region = function() return false end,
+            region = function() return NULL end, command_queue_index = function() return id + 1 end }
+        a.iface = { is_null_interface = function() return false end, command_queue_index = function() return id end,
+            faction = function() return owner.iface end, has_general = function() return true end,
+            is_armed_citizenry = function() return false end, general_character = function() return ch end,
+            force_type = function() return { key = function() return "ARMY" end } end,
+            unit_list = function() return list(a.units) end }
+        forces[id] = a; owner.armies[#owner.armies + 1] = a.iface
+        F.state.army_issued = F.state.army_issued or {}; F.state.army_issued[tostring(id)] = true
+        return a
+    end
+    cm.get_military_force_by_cqi = function(_, id) return forces[id] and forces[id].iface or false end
+
+    -- HUNGER: 4 units eat 1 provision a turn
+    local lord = soldier({ caste = "lord", key = "hg_lord" })
+    local s1, s2, s3 = soldier({ key = "hg_b" }), soldier({ key = "hg_a", hp = 50 }), soldier({ key = "hg_c", hp = 8 })
+    force(901, { lord, s1, s2, s3 })
+    F.state.armies = { ["901"] = { f = "hg", goods = {}, auto = false, short = 0 } }
+    local b = F.state.armies["901"]
+    DESERTED = {}
+    TURN = 9200; F.provisions_turn(f.iface)
+    eq(b.short, 1, "a first missed meal"); eq(s1.hp, 100, "costs no strength")
+    TURN = 9201; F.provisions_turn(f.iface)
+    eq(FORCE_BUNDLES[#FORCE_BUNDLES][1], "derpy_mr_army_short", "two missed meals: Short rations")
+    eq(s1.hp, 95, "units lose 5% of their full strength"); eq(s2.hp, 45, "every soldier unit")
+    eq(s3.hp, 8, "a unit already below the floor is taken no lower"); eq(lord.hp, 100, "and the general is spared")
+    eq(shown[#shown], "event_feed_strings_text_derpy_mr_army_food_primary|event_feed_strings_text_derpy_mr_army_food_secondary_hard",
+        "the warning names the new rule")
+    TURN = 9202; F.provisions_turn(f.iface)
+    eq(FORCE_BUNDLES[#FORCE_BUNDLES][1], "derpy_mr_army_starving", "three: Starving")
+    eq(s1.hp, 85, "10% a turn"); eq(s2.hp, 35, "for every soldier unit")
+    eq(#DESERTED, 0, "nobody deserts before five missed meals")
+    TURN = 9203; F.provisions_turn(f.iface); eq(#DESERTED, 0, "nor at four")
+    eq(s2.hp, 25, "and never below the floor while above it"); s2.hp = 12
+    TURN = 9204; F.provisions_turn(f.iface)
+    eq(s2.hp, 10, "a unit near the floor stops at it")
+    eq(#DESERTED, 1, "five missed meals: one unit deserts")
+    eq(DESERTED[1].key, "hg_c", "the weakest"); eq(DESERTED[1].lookup, "character_cqi:902", "from the army's general")
+    eq(shown[#shown], "event_feed_strings_text_derpy_mr_army_food_primary_desert|event_feed_strings_text_derpy_mr_army_food_secondary_hard",
+        "and the player is told")
+    s3.hp, s2.hp = 10, 10; DESERTED = {}
+    TURN = 9205; F.provisions_turn(f.iface)
+    eq(DESERTED[1] and DESERTED[1].key, "hg_a", "a tie for weakest goes by key")
+    -- WELL FED: no missed meal and five meals still carried after eating
+    b.goods = { grain = 6 }; DESERTED = {}
+    TURN = 9206; F.provisions_turn(f.iface)
+    eq(b.short, 0, "a full meal ends the hunger"); eq(#DESERTED, 0, "and the desertion")
+    eq(FORCE_BUNDLES[#FORCE_BUNDLES][1], "derpy_mr_army_well_fed", "five meals left after eating: Well fed")
+    local n = #FORCE_BUNDLES
+    removed = {}
+    TURN = 9207; F.provisions_turn(f.iface)
+    eq(#FORCE_BUNDLES, n, "four left: no bundle laid")
+    eq(table.concat(removed, ";"):find("derpy_mr_army_well_fed:901", 1, true) ~= nil, true, "and Well fed taken off")
+    -- the switch off: the old movement penalty, and no strength taken
+    R.hunger_men = false; b.goods = {}; b.short = 1; local hp0 = s1.hp
+    TURN = 9208; F.provisions_turn(f.iface)
+    eq(FORCE_BUNDLES[#FORCE_BUNDLES][1], "derpy_mr_army_hungry", "hunger off: two missed meals slow the army")
+    eq(s1.hp, hp0, "and take no strength")
+    b.goods = { grain = 20 }; n = #FORCE_BUNDLES
+    TURN = 9209; F.provisions_turn(f.iface)
+    eq(#FORCE_BUNDLES, n, "hunger off, as in a campaign started before it: never Well fed")
+    R.hunger_men = true; TURN = 9210
+
+    -- THE REPLENISHMENT BILL: a 500-gold infantry unit's recruit bill is 5 war materials
+    F.state.armies = {}; f.armies = {}
+    local u1, u2 = soldier({ key = "hg_r1", hp = 40 }), soldier({ key = "hg_r2" })
+    local gen = soldier({ caste = "lord", hp = 50 })
+    force(911, { gen, u1, u2 })
+    r.held.coal = 100
+    F.repl_turn(f.iface)
+    eq(r.held.coal, 100, "a unit first seen below full is not billed")
+    u1.hp, gen.hp, u2.hp = 90, 100, 70
+    F.repl_turn(f.iface)
+    eq(r.held.coal, 98, "half its strength regained: 2.5 of its 5 goods, 2 drawn and the half carried")
+    eq(u1.hp, 90, "paid for, so kept"); eq(gen.hp, 100, "a general's unit regains for free")
+    eq(u2.hp, 70, "a loss is kept as it is, and costs nothing")
+    u1.hp = 100; F.repl_turn(f.iface)
+    eq(r.held.coal, 97, "the carried half and a new half make one good")
+    eq(F.state.repl.hg[tostring(u1.cqi)], nil, "a unit back at full is no longer kept")
+    u2.hp = 90; r.held.coal = 0
+    F.repl_turn(f.iface)
+    eq(u2.hp, 70, "nothing to pay with: the gain is taken back")
+    -- a shortfall shared: each unit keeps the paid share of its gain
+    f.armies = {}
+    local p1, p2 = soldier({ key = "hg_p1", hp = 50 }), soldier({ key = "hg_p2", hp = 50 })
+    force(921, { p1, p2 }); F.repl_turn(f.iface)
+    p1.hp, p2.hp = 90, 90
+    r.held.coal = 2; F.repl_turn(f.iface)
+    eq(r.held.coal, 0, "the stores give what they hold")
+    eq(p1.hp, 70, "half the bill paid: each keeps half its gain"); eq(p2.hp, 70, "the other alike")
+    -- a starving army keeps nothing it regained, and pays nothing
+    F.state.armies = { ["921"] = { f = "hg", goods = {}, auto = false, short = 3 } }
+    r.held.coal = 100; p1.hp = 100
+    F.repl_turn(f.iface)
+    eq(p1.hp, 70, "a starving army regains nothing"); eq(r.held.coal, 100, "and pays nothing")
+    F.state.armies = {}
+    -- the turn end bills too, for every faction
+    local e0 = #ERRORS
+    p1.hp = 90; fire("FactionTurnEnd", { faction = function() return f.iface end })
+    eq(r.held.coal, 99, "the turn end bills what was regained since")
+    eq(#ERRORS, e0, "and throws nothing: " .. table.concat(ERRORS, "; ", e0 + 1))
+    TURN = 9211
+    local led = F.recruit_last("hg")
+    eq(led and led.repl, 6, "the ledger counts the resources replenishing took")
+    eq(led and led.repl_held, 4, "and the units that lost what they could not pay for")
+    -- the Chaos Dwarfs' Armaments cover a shortfall as they do a recruit's
+    local cd = faction("hg_cd", { human = true, sc = "wh3_dlc23_sc_chd_chaos_dwarfs", pools = { wh3_dlc23_chd_armaments = 10 } })
+    local cr = region("hg_cd1", 43100, 0, 2000, {}); own(cd, cr, true)
+    local c1 = soldier({ key = "hg_c1", hp = 20 })
+    force(931, { c1 }, cd); F.repl_turn(cd.iface)
+    c1.hp = 100; F.repl_turn(cd.iface)
+    eq(c1.hp, 100, "4 goods owed and none held: Armaments pay"); eq(FPOOL.hg_cd.wh3_dlc23_chd_armaments, 8, "2 of them")
+    -- switches: 0 with hunger off is free and keeps nothing; a computer faction only with its stores switch
+    R.replenish_per, R.hunger_men = 0, false
+    p1.hp = 50; F.repl_turn(f.iface); p1.hp = 100; F.repl_turn(f.iface)
+    eq(r.held.coal, 99, "0 and hunger off: replenishing is free"); eq(F.state.repl.hg, nil, "and nothing is kept")
+    R.replenish_per, R.hunger_men = 100, true
+    local ai = faction("hg_ai"); local ar = region("hg_ai1", 43200, 0, 2000, { coal = 50 }); own(ai, ar, true)
+    local q = soldier({ key = "hg_q", hp = 20 }); force(941, { q }, ai)
+    R.ai = false; F.repl_turn(ai.iface); q.hp = 100; F.repl_turn(ai.iface)
+    eq(ar.held.coal, 50, "a computer faction regains for free with its stores switch off")
+    R.ai = true; q.hp = 20; F.repl_turn(ai.iface); q.hp = 100; F.repl_turn(ai.iface)
+    eq(ar.held.coal, 46, "and pays with it on")
+    -- A SAVE FROM BEFORE the harder rules keeps the old ones (MCT is locked in a running campaign)
+    F.state.rates = { army_provisions = true }
+    local o = F.rates()
+    eq(o.hunger_men, false, "an older save keeps the old hunger"); eq(o.recruit_gold, true, "and gold for recruits")
+    eq(o.replenish_per, 0, "and free replenishment")
+    cm.show_message_event, cm.remove_effect_bundle_from_force = message, remove
+    F.state, TURN, cm.get_military_force_by_cqi = old, turn, lookup
+    print("hunger: strength, floor, desertion, Well fed; replenishment bill, carry, shortfall, starving, turn end, Armaments, switches, old saves pass")
 end)()
 ;(function()
     F.route_turns = distance_turns
@@ -6858,7 +7079,8 @@ end)()
                     faction = function() return f.iface end, has_general = function() return true end,
                     is_armed_citizenry = function() return a.garrison == true end, general_character = function() return ch end,
                     is_set_piece_battle_army = function() return a.setpiece == true end,
-                    force_type = function() return { key = function() return a.type or "ARMY" end } end }
+                    force_type = function() return { key = function() return a.type or "ARMY" end } end,
+                    unit_list = function() return list(soldiers(4)) end }
         f.armies[#f.armies + 1] = a.iface
         return a
     end
@@ -7320,7 +7542,7 @@ end)()
                 is_armed_citizenry = function() return false end, general_character = function() return ch end,
                 is_set_piece_battle_army = function() return false end,
                 force_type = function() return { key = function() return "ARMY" end } end,
-                unit_list = function() local t = {} for i = 1, a.n do t[i] = {} end return list(t) end }
+                unit_list = function() return list(soldiers(a.n)) end }
     P.armies = { a.iface }
     F.state.army_issued = { ["8801"] = true }
     F.state.armies = { ["8801"] = { f = "scP", goods = { grain = 9 }, auto = true, short = 0 } }
@@ -7606,7 +7828,7 @@ end)()
         if string.find(key, "_processed", 1, true) then made[#made + 1] = key .. ":" .. n end
         return tx(s, reg, key, n)
     end
-    local food0 = R0.ai_food; R0.ai_food = false
+    local food0, arm0 = R0.ai_food, R0.ai_armoury; R0.ai_food, R0.ai_armoury = false, false
     local uf = faction("unch", { human = true, sc = "ovn_sc_arb_araby", culture = "wh_main_emp_empire" })
     local ur = region("unch1", 47000, 0, 2000, {}); own(uf, ur, true)
     -- its own meals and as many again, the stock its armies load and its carts carry (final review 2026-11-11)
@@ -7625,7 +7847,42 @@ end)()
     F.upkeep_region(ur.iface, uf.name, true); eq(#made, 0, "a charted settlement is not fed by script")
     eq(F.charted("unch1"), true, "the panel's question answers the same")
     ur.chain = "ovn_araby_settlement_major"; eq(F.charted("unch1"), false, "and the other way")
-    cm.entity_add_pooled_resource_transaction = tx; R0.ai_food = food0
+    cm.entity_add_pooled_resource_transaction = tx; R0.ai_food, R0.ai_armoury = food0, arm0
+end)()
+
+-- ---- OTHER FACTIONS RESTOCK FOR RECRUITS (AI soak 2026-11-18) ----
+;(function()
+    local R0, tx, made = F.state.rates, cm.entity_add_pooled_resource_transaction, {}
+    cm.entity_add_pooled_resource_transaction = function(s, reg, key, n)
+        if string.find(key, "_processed", 1, true) then made[key] = (made[key] or 0) + n end
+        return tx(s, reg, key, n)
+    end
+    local arm0, food0 = R0.ai_armoury, R0.ai_food; R0.ai_food = false
+    local af = faction("armf", { sc = "wh_main_sc_emp_empire" })
+    local ar = region("arm1", 47100, 0, 2000, {}); own(af, ar, true); ar.level = 2
+    local function key(stem) return "derpy_mr_store_" .. stem .. "_processed" end
+    R0.ai_armoury = false
+    F.upkeep_region(ar.iface, af.name, true); eq(made[key("leather")], nil, "restock off: nothing made")
+    R0.ai_armoury = true
+    F.upkeep_region(ar.iface, af.name, true)
+    eq(made[key("leather")], 2 * F.ARMOURY.war, "an empty store gets a level's war materials, in leather")
+    eq(made[key("animals")], 2 * F.ARMOURY.mounts, "mounts, in animals")
+    eq(made[key("timber")], 2 * F.ARMOURY.building, "building materials, in timber")
+    made = {}
+    F.upkeep_region(ar.iface, af.name, true); eq(next(made), nil, "a top-up: a full share makes nothing more")
+    ar.held = { coal = 5, leather = 1, gromril = 50 }; made = {}
+    F.upkeep_region(ar.iface, af.name, true)
+    eq(made[key("coal")], 2 * F.ARMOURY.war - 6, "the good it holds most of, short of the share; a rare good never counts")
+    eq(made[key("leather")], nil, "and no other")
+    ar.held = {}; made = {}; af.human = true
+    F.upkeep_region(ar.iface, af.name, true); eq(next(made), nil, "never a player's settlement")
+    -- a campaign started before it never restocks
+    af.human = false; ar.held = {}; made = {}
+    local saved = F.state.rates; F.state.rates = { ai = true, upkeep = true }
+    F.upkeep_region(ar.iface, af.name, true); eq(made[key("leather")], nil, "an older campaign: no restock")
+    F.state.rates = saved
+    lose(af, ar)
+    cm.entity_add_pooled_resource_transaction = tx; R0.ai_armoury, R0.ai_food = arm0, food0
 end)()
 
 -- ---- FINAL REVIEW 2026-11-11: an uncharted race's armies, old saves' rations, Norsca's god altars ----
@@ -7643,7 +7900,7 @@ end)()
         faction = function() return hf.iface end, has_general = function() return true end,
         is_armed_citizenry = function() return false end, general_character = function() return ch end,
         force_type = function() return { key = function() return "ARMY" end } end,
-        unit_list = function() local t = {} for i = 1, 20 do t[i] = {} end return list(t) end }
+        unit_list = function() return list(soldiers(20)) end }
     hf.armies = { army }
     cm.get_military_force_by_cqi = function(_, id) if id == 9901 then return army end return false end
     local warned = 0
@@ -7857,7 +8114,7 @@ end)()
             has_general = function() return opts.general ~= false end,
             is_armed_citizenry = function() return opts.garrison == true end,
             force_type = function() return { key = function() return opts.type or "ARMY" end } end,
-            unit_list = function() return list({ {}, {}, {}, {} }) end, kiki = opts.kiki == true }
+            unit_list = function() return list(soldiers(4)) end, kiki = opts.kiki == true }
         f.armies[#f.armies + 1] = mf
         return mf
     end

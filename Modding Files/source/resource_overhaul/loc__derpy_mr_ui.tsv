@@ -280,6 +280,7 @@ derpy_mr_ui_50dac4a4c9	An army eats 1 provision a turn for every 4 units and ref
 derpy_mr_ui_a4be6e93f1	On Auto the army refills to 5 turns of provisions after eating.\nIt carries at most 10 turns and never buys rations.	false
 derpy_mr_ui_505892cc96	Buy up to two meals of rations once a turn at 10 gold each.	false
 derpy_mr_ui_695657aa45	After two missed meals the army moves 5% slower.\nAfter three it moves and recovers 10% slower.\nOne full meal ends this.	false
+derpy_mr_ui_59c101d305	After two missed meals the army's units lose 5% of their strength each turn.\nAfter three they lose 10% and regain none.\nAfter five, one unit deserts each turn.\nOne full meal ends this.	false
 derpy_mr_ui_b744007f56	At home	false
 derpy_mr_ui_d5622d0a6c	Supplied	false
 derpy_mr_ui_7e96ac5725	Stretched	false
@@ -351,8 +352,13 @@ derpy_mr_ui_2fa3647b2f	No armies carry provisions	false
 derpy_mr_ui_8fd91afb64	This army eats {1}{2} a turn.\n{3}{4}\nClick to manage its provisions.	false
 derpy_mr_ui_778df9cd96	\nMissed meals: {1}.	false
 derpy_mr_ui_a5da103f78	{1} resources	false
-derpy_mr_ui_0959b5c477	Each recruit takes resources from your stores by its type and cost.\nAnything missing is paid {1}in gold.{2}	false
+derpy_mr_ui_31985675b4	Replenishing took {1} resources.	false
+derpy_mr_ui_d1b89c1196	Recruits that arrived understrength: {1}.	false
+derpy_mr_ui_d163a7b6af	Units that lost strength they could not pay for: {1}.	false
+derpy_mr_ui_428dcdd467	Anything missing is paid {1}in gold.	false
 derpy_mr_ui_a99f34353f	in your own currency and then 	false
+derpy_mr_ui_5d4ee32b08	Anything missing is paid {1}with strength: the recruit arrives understrength.	false
+derpy_mr_ui_11b9bac28f	Each recruit takes resources from your stores by its type and cost.\n{1}{2}	false
 derpy_mr_ui_9dea4016db	Items	false
 derpy_mr_ui_e5771a362d	Units	false
 derpy_mr_ui_81c26bc551	Settlement upgrades	false
@@ -707,12 +713,14 @@ mct_derpy_more_resources_ships_text	Shipments on the road	false
 mct_derpy_more_resources_ships_tooltip	How many shipments of yours can be on the road at once. Sending a resource between your settlements takes one to six turns, by the length of its road, and an army at war with you can seize it on the way. Other factions keep one.	false
 mct_derpy_more_resources_recruit_per_text	Resources per 100 gold of a recruit	false
 mct_derpy_more_resources_recruit_per_tooltip	How many resources a recruit takes from your stores for each 100 gold it is worth. 0 turns this off.	false
+mct_derpy_more_resources_replenish_per_text	Replenishment cost	false
+mct_derpy_more_resources_replenish_per_tooltip	Strength a unit regains takes resources from your stores, as a share of what recruiting it takes: at 100, a unit that regains half its strength takes half its recruit's resources. Strength your stores cannot pay for is lost again. 0 turns this off.	false
 mct_derpy_more_resources_toll_text	Tolls	false
 mct_derpy_more_resources_toll_tooltip	Each turn, trade that crosses another faction's lands pays that faction this share of the value of the goods it carries. All the tolls on one cargo together are at most 15%. A faction whose Roads edict is Open charges nothing. Neither do your allies and vassals. 0 turns tolls off.	false
 mct_derpy_more_resources_road_danger_text	Road danger	false
 mct_derpy_more_resources_road_danger_tooltip	How likely trouble on the road is on the most dangerous land, each turn. Half as dangerous land is half as likely. 0 turns road encounters off.	false
 mct_derpy_more_resources_army_provisions_text	Carried army provisions	false
-mct_derpy_more_resources_army_provisions_tooltip	Armies eat the provisions they carry once a turn. In your own settlements they refill from the stores, never below what a settlement keeps: Auto keeps 5 turns, and Load fills the army to 10. At sea, or with no settlements, Load buys two meals at 10 gold each, once a turn. Armies cannot refill in foreign lands. Missed meals slow an army and its recovery. Caravans and convoys carry none. This is fixed when a campaign starts: changing it later does nothing to a campaign already under way. In multiplayer it is always on.	false
+mct_derpy_more_resources_army_provisions_tooltip	Armies eat the provisions they carry once a turn. In your own settlements they refill from the stores, never below what a settlement keeps: Auto keeps 5 turns, and Load fills the army to 10. At sea, or with no settlements, Load buys two meals at 10 gold each, once a turn. Armies cannot refill in foreign lands. Missed meals hurt an army. Caravans and convoys carry none. This is fixed when a campaign starts: changing it later does nothing to a campaign already under way. In multiplayer it is always on.	false
 mct_derpy_more_resources_processing_text	Additional processing batches	false
 mct_derpy_more_resources_processing_tooltip	Allow local workshops to spend stored inputs on extra batches. Passive production is unchanged. Enable individual recipes in a settlement's Stores view.	false
 mct_derpy_more_resources_services_text	Sustained services	false
@@ -727,6 +735,8 @@ mct_derpy_more_resources_ai_half_rations_text	Other armies eat half	false
 mct_derpy_more_resources_ai_half_rations_tooltip	Armies of factions no player controls eat half the provisions a player's army eats, rounded up. Off: they eat the same.	false
 mct_derpy_more_resources_ai_food_text	Other factions make more food	false
 mct_derpy_more_resources_ai_food_tooltip	Each settlement of a faction no player controls makes, every turn, the provisions it eats at Normal rations: 2 for each settlement level. Off: it makes only what its buildings make.	false
+mct_derpy_more_resources_ai_armoury_text	Other factions restock for recruits	false
+mct_derpy_more_resources_ai_armoury_tooltip	Each settlement of a faction no player controls is topped up, every turn, with the resources its recruits and replenishment use: up to 6 war materials, 3 mounts and 2 building materials for each settlement level. Off: it has only what its buildings make and its trade brings.	false
 mct_derpy_more_resources_spoilage_text	Spoilage	false
 mct_derpy_more_resources_spoilage_tooltip	Each turn, grain loses 4% and beer and kvas 2% of what a store holds above a quarter of its space. With the Great Granary, grain is safe up to half. Hardtack, salted meat, salted fish, wine and every other good never spoil. Off: nothing spoils.	false
 mct_derpy_more_resources_using_section_text	Using stores	false
@@ -741,7 +751,11 @@ mct_derpy_more_resources_random_off_tooltip	Stops the game's random dilemmas, th
 mct_derpy_more_resources_supply_text	Province supplies	false
 mct_derpy_more_resources_supply_tooltip	A province capital can pay from its stores each turn for Materials on hand, Stable stocked and Arms stocked in every settlement you hold in its province, and can send for resources from the province's other settlements. Off: no province supplies.	false
 mct_derpy_more_resources_recruit_text	Recruits use the stores	false
-mct_derpy_more_resources_recruit_tooltip	Every unit you recruit takes resources from your stores by its type and worth (cavalry and monsters take mounts, infantry and war machines take war materials, the finest also take your rare resource). What the stores lack is paid in your race's own currency where it has one, then in gold. Off: recruiting takes nothing.	false
+mct_derpy_more_resources_recruit_tooltip	Every unit you recruit takes resources from your stores by its type and worth (cavalry and monsters take mounts, infantry and war machines take war materials, the finest also take your rare resource). What the stores lack is paid in your race's own currency where it has one. A recruit whose resources are still short arrives understrength, unless Gold pays for recruits is ticked. Off: recruiting takes nothing.	false
+mct_derpy_more_resources_recruit_gold_text	Gold pays for recruits	false
+mct_derpy_more_resources_recruit_gold_tooltip	What a recruit's resources and your race's currency do not cover is paid in gold, as before. Off: the recruit arrives understrength instead, and must regain the rest by replenishing. A faction no player controls always pays in gold.	false
+mct_derpy_more_resources_hunger_men_text	Hunger weakens armies	false
+mct_derpy_more_resources_hunger_men_tooltip	After two missed meals an army's units lose 5% of their strength each turn. After three they lose 10% and regain nothing. After five, one unit deserts each turn. A full meal ends this. An army that still carries 5 turns of provisions after eating is Well fed: leadership +4 and replenishment +5%. Off: missed meals slow the army and its replenishment instead, and no army is Well fed.	false
 mct_derpy_more_resources_escort_text	Escort battles	false
 mct_derpy_more_resources_escort_tooltip	Every shipment travels with an escort of its owner's soldiers. An army that reaches it must beat the escort to take the cargo, and you are asked before your army attacks one. Off: an army at war takes a shipment without a fight.	false
 mct_derpy_more_resources_edicts_text	Trade edicts	false

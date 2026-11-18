@@ -100,6 +100,11 @@ RATES = (
     ("recruit_per", "Resources per 100 gold of a recruit",
      "How many resources a recruit takes from your stores for each 100 gold it is worth. 0 turns this off.",
      0, 5, 1),
+    # REPLENISHMENT COSTS GOODS (Workshop feedback 2026-11-16): a share of the recruit's own bill for what it regains
+    ("replenish_per", "Replenishment cost",
+     "Strength a unit regains takes resources from your stores, as a share of what recruiting it takes: at 100, a "
+     "unit that regains half its strength takes half its recruit's resources. Strength your stores cannot pay for "
+     "is lost again. 0 turns this off.", 0, 200, 100),
     # TOLLS (design 2026-11-01, Part C 6.1): each toll-taker's share of a cargo's value, TOLL_MAX_PCT in all
     ("toll", "Tolls",
      "Each turn, trade that crosses another faction's lands pays that faction this share of the value of the "
@@ -148,7 +153,19 @@ RECRUIT_SWITCH = ("recruit", "Recruits use the stores",
                   "Every unit you recruit takes resources from your stores by its type and worth "
                   "(cavalry and monsters take mounts, infantry and war machines take war materials, "
                   "the finest also take your rare resource). What the stores lack is paid in your "
-                  "race's own currency where it has one, then in gold. Off: recruiting takes nothing.", True)
+                  "race's own currency where it has one. A recruit whose resources are still short arrives "
+                  "understrength, unless Gold pays for recruits is ticked. Off: recruiting takes nothing.", True)
+# HARDER SUPPLY (Workshop feedback 2026-11-16: a priest's replenishment and a lord's movement cancelled the old
+# percentage penalties). Both are frozen into the save; a save from before them keeps the old rules (F.rates).
+RECRUIT_GOLD_SWITCH = ("recruit_gold", "Gold pays for recruits",
+    "What a recruit's resources and your race's currency do not cover is paid in gold, as before. Off: the "
+    "recruit arrives understrength instead, and must regain the rest by replenishing. A faction no player controls "
+    "always pays in gold.", False)
+HUNGER_SWITCH = ("hunger_men", "Hunger weakens armies",
+    "After two missed meals an army's units lose 5% of their strength each turn. After three they lose 10% and "
+    "regain nothing. After five, one unit deserts each turn. A full meal ends this. An army that still carries 5 "
+    "turns of provisions after eating is Well fed: leadership +4 and replenishment +5%. Off: missed meals slow the "
+    "army and its replenishment instead, and no army is Well fed.", True)
 ESCORT_SWITCH = ("escort", "Escort battles",
                  "Every shipment travels with an escort of its owner's soldiers. An army that reaches it must "
                  "beat the escort to take the cargo, and you are asked before your army attacks one. Off: an "
@@ -167,7 +184,7 @@ PROVISIONS_SWITCH = ("army_provisions", "Carried army provisions",
     "Armies eat the provisions they carry once a turn. In your own settlements they refill from the stores, "
     "never below what a settlement keeps: Auto keeps 5 turns, and Load fills the army to 10. At sea, or with no "
     "settlements, Load buys two meals at 10 gold each, once a turn. Armies cannot refill in foreign lands. Missed "
-    "meals slow an army and its recovery. Caravans and convoys carry none. This is fixed when a campaign starts: "
+    "meals hurt an army. Caravans and convoys carry none. This is fixed when a campaign starts: "
     "changing it later does nothing to a campaign already under way. In multiplayer it is always on.", True)
 SPOIL_SWITCH = ("spoilage", "Spoilage",
                 "Each turn, grain loses 4% and beer and kvas 2% of what a store holds above a quarter of its "
@@ -201,9 +218,16 @@ AI_HALF_SWITCH = ("ai_half_rations", "Other armies eat half",
 AI_FOOD_SWITCH = ("ai_food", "Other factions make more food",
     "Each settlement of a faction no player controls makes, every turn, the provisions it eats at Normal rations: 2 "
     "for each settlement level. Off: it makes only what its buildings make.", False)
-AI_MEAL_SWITCHES = (AI_HOME_FED_SWITCH, AI_FIELD_SWITCH, AI_HALF_SWITCH, AI_FOOD_SWITCH)
+# AI soak 2026-11-18: the computer never stocks what its recruits and replenishment take; on by default, and off in a
+# campaign started before it (flows.lua F.OLD_SAVE_RATES)
+AI_ARMOURY_SWITCH = ("ai_armoury", "Other factions restock for recruits",
+    "Each settlement of a faction no player controls is topped up, every turn, with the resources its recruits and "
+    "replenishment use: up to 6 war materials, 3 mounts and 2 building materials for each settlement level. Off: it "
+    "has only what its buildings make and its trade brings.", True)
+AI_MEAL_SWITCHES = (AI_HOME_FED_SWITCH, AI_FIELD_SWITCH, AI_HALF_SWITCH, AI_FOOD_SWITCH, AI_ARMOURY_SWITCH)
 SWITCHES = (PROVISIONS_SWITCH, PROCESSING_SWITCH, SERVICES_SWITCH, AI_SWITCH, UPKEEP_SWITCH, ACTIONS_SWITCH, EVENTS_SWITCH, SUPPLY_SWITCH, RECRUIT_SWITCH, ESCORT_SWITCH,
-            RANDOM_SWITCH, SPOIL_SWITCH, EDICT_SWITCH, TOLL_SWITCH, BANDIT_SWITCH, SUPPLY_LINES_SWITCH) + AI_MEAL_SWITCHES
+            RANDOM_SWITCH, SPOIL_SWITCH, EDICT_SWITCH, TOLL_SWITCH, BANDIT_SWITCH, SUPPLY_LINES_SWITCH,
+            HUNGER_SWITCH, RECRUIT_GOLD_SWITCH) + AI_MEAL_SWITCHES
 # THE THREE EDICTS: (key, name, tip, default, options); an option is (key, label, tip, bundle or None,
 # the Chaos Dwarfs' tip or None). The tips are the player text that lists each option's exact effects,
 # one sentence a line. The middle option is the default and changes nothing.
@@ -1739,6 +1763,7 @@ def mct_lua():
                                         (SPOIL_SWITCH, "stores"), (UPKEEP_SWITCH, "using"),
                                         (ACTIONS_SWITCH, "using"), (EVENTS_SWITCH, "using"),
                                         (RANDOM_SWITCH, "using"), (SUPPLY_SWITCH, "using"), (RECRUIT_SWITCH, "using"),
+                                        (RECRUIT_GOLD_SWITCH, "using"), (HUNGER_SWITCH, "using"),
                                         (ESCORT_SWITCH, "using"), (EDICT_SWITCH, "using"), (TOLL_SWITCH, "stores"),
                                         (BANDIT_SWITCH, "using")):
         if k == "upkeep":
@@ -2013,6 +2038,53 @@ def check_provision_mutations():
          'if not (r.ai or faction:is_human()) then return end'),
         ("Kiki: relief never runs", '    F.guard(F.kiki_relief, faction)', '    F.guard(F.spoil, faction)'),
         ("Kiki: never installed", '    F.guard(F.kiki_install)', '    F.guard(F.quiet_dilemmas)'),
+        # HARDER SUPPLY (Workshop feedback 2026-11-16, built 2026-11-17)
+        ("hunger takes no strength", 'deserted = deserted + F.hunger_losses(faction, row.force, b.short)', 'deserted = deserted'),
+        ("hunger ignores its switch", 'if rates.hunger_men and b.short >= 2 then', 'if b.short >= 2 then'),
+        ("hunger keeps the old bundles", 'local stages = rates.hunger_men and F.HUNGER_BUNDLES or F.PROVISION_BUNDLES',
+         'local stages = F.PROVISION_BUNDLES'),
+        ("starving takes the short rate", 'local loss = short >= 3 and H.starve or short == 2 and H.short or 0',
+         'local loss = short >= 2 and H.short or 0'),
+        ("hunger ignores the floor", 'local hp = math.max(math.min(t.hp, H.floor), t.hp - loss)', 'local hp = math.max(0, t.hp - loss)'),
+        ("hunger takes the general", 'if not F.CHARACTER_CASTES[u:unit_caste()] then', 'if true then'),
+        ("desertion from the start", 'if short < H.desert or #troops == 0 then return 0 end', 'if #troops == 0 then return 0 end'),
+        ("desertion takes the strongest", 'if not worst or t.hp < worst.hp or', 'if not worst or t.hp > worst.hp or'),
+        ("desertion never told", '"event_feed_strings_text_derpy_mr_army_food_primary" .. (deserted > 0 and "_desert" or "")',
+         '"event_feed_strings_text_derpy_mr_army_food_primary"'),
+        ("never Well fed", '                cm:apply_effect_bundle_to_force(F.FED_BUNDLE, cqi, 0)\n', ''),
+        ("Well fed in an older campaign", 'if rates.hunger_men and F.provision_total(b) >= F.HUNGER.fed * row.need then',
+         'if F.provision_total(b) >= F.HUNGER.fed * row.need then'),
+        ("Well fed bundle left on", '            cm:remove_effect_bundle_from_force(F.FED_BUNDLE, cqi)\n', ''),
+        ("unpaid recruits whole", 'cm:set_unit_hp_to_unary_of_maximum(unit, share)', 'do end'),
+        ("unpaid recruits pay gold", 'F.recruit_short(faction, short, not r.recruit_gold and faction:is_human())',
+         'F.recruit_short(faction, short, false)'),
+        ("computer recruits understrength", 'F.recruit_short(faction, short, not r.recruit_gold and faction:is_human())',
+         'F.recruit_short(faction, short, not r.recruit_gold)'),
+        ("restock for players", 'if F.rates().ai_armoury and not region:owning_faction():is_human() then',
+         'if F.rates().ai_armoury then'),
+        ("restock in an older campaign", 'replenish_per = 0, ai_armoury = false }', 'replenish_per = 0 }'),
+        ("restock never", '                F.pool_add(region, F.PREFIX .. stem .. "_" .. KIND.process, n)\n', ''),
+        ("restock a yield", 'local want = F.ARMOURY[use] * level - F.use_total(held, use)',
+         'local want = F.ARMOURY[use] * level'),
+        ("restock in a rare good", 'if g.use == use and not g.rare and (held[g.stem] or 0) > most then',
+         'if g.use == use and (held[g.stem] or 0) > most then'),
+        ("restock ignores what it holds", 'if g.use == use and not g.rare and (held[g.stem] or 0) > most then',
+         'if false then'),
+        ("unpaid recruits regain for free", '        F.repl_note(faction, unit, share * 100)\n', ''),
+        ("replenishing free", 'local got = F.draw_realm(stocks, e.pick, whole, KIND.spend, fkey)', 'local got = whole'),
+        ("replenishment fraction lost", 'local want = e.n + (carry[k] or 0)', 'local want = e.n'),
+        ("replenishment never taken back", '            cm:set_unit_hp_to_unary_of_maximum(g.unit, hp / 100)\n', ''),
+        ("replenishment all or nothing", 'local hp = g.from + (g.to - g.from) * keep', 'local hp = g.from'),
+        ("starving armies regain", 'local keep = g.starving and 0 or (g.goods > 0 and ratio or 1)', 'local keep = g.goods > 0 and ratio or 1'),
+        ("replenishment ignores Armaments", 'paid, _gold, _line, uncovered = F.recruit_short(faction, short, true)',
+         'uncovered = 0; for _, s in ipairs(short) do uncovered = uncovered + s.n end'),
+        ("replenishment first sight billed", 'local from = was[id] or 100', 'local from = was[id] or 0'),
+        ("replenishment ignores the computer switch",
+         'if (per <= 0 and not r.hunger_men) or not F.uses_stores(faction) or not (r.ai or faction:is_human()) then',
+         'if (per <= 0 and not r.hunger_men) or not F.uses_stores(faction) then'),
+        ("no bill at the turn end", '        function(context) F.guard(F.repl_turn, context:faction()) end, true)',
+         '        function() end, true)'),
+        ("old saves take the new rules", 'for k2, v in pairs(F.OLD_SAVE_RATES) do if r[k2] == nil then out[k2] = v end end', ''),
     )
     for label, before, after in mutations:
         assert subject.count(before) == 1, "stale provision mutation: " + label
@@ -2995,7 +3067,9 @@ def check_edict_mutations():
     closed = "    local F = DERPY_MR_FLOWS\n    if F and F.edict and F.edict(owner:name(), 'roads') == 'closed' then return true end\n"
     party = "    for _, p in ipairs(parties) do\n        if owner:name() == p:name() then return false end\n    end\n    -- CLOSED ROADS"
     first = ("    F.guard(F.edict_turn, faction)\n    -- Arrivals fund this turn; essentials and elective local orders precede exports.\n"
-             "    F.guard(F.convoys_turn, faction)\n    F.guard(F.ships_turn, faction)\n    F.guard(F.upkeep, faction)\n")
+             "    F.guard(F.convoys_turn, faction)\n    F.guard(F.ships_turn, faction)\n"
+             "    -- what the armies regained is paid for (or taken back) before this turn's hunger takes any (F.hunger_losses)\n"
+             "    F.guard(F.repl_turn, faction)\n    F.guard(F.upkeep, faction)\n")
     flows_m = (
         ("the cooldown ignored", "    if not force and F.edict_wait(fkey, which) > 0 then return false end\n", ""),
         ("the race bundle ignored", "return (own and own[F.race(faction)]) or F.EDICT.bundles[option]",

@@ -464,7 +464,17 @@ The default rate is one. The reference value is the unit's custom-battle/multipl
 
 Lords, heroes, unknown castes and zero-value units do not receive an invented bill. Units valued at least **1,200** can also require `ceil(value / 400)` of a culture-specific rare good. These include Gromril for Dwarfs, Ithilmar for High Elves, Starwood for Wood Elves and the matching beast goods for several mount-focused cultures. Dark Elf infantry uses Black Lotus rather than Sea Dragon Hide.
 
-Payment draws held goods across the realm. A Chaos Dwarf shortfall first uses one Armament per two missing goods, rounded up; Skaven use one Food per five. Remaining shortfall costs gold at twice the cheapest matching good's native unit trade value, capped by available treasury. There is no Ogre Meat recruitment charge. This is a capped surcharge, not a debt or automatic cancellation of the recruited unit.
+Payment draws held goods across the realm. A Chaos Dwarf shortfall first uses one Armament per two missing goods, rounded up; Skaven use one Food per five. There is no Ogre Meat recruitment charge.
+
+**What is still missing (2026-11-17).** With "Gold pays for recruits" off (the default for new campaigns), the recruit arrives understrength: its strength is the share of the bill that goods and currency paid, and never below 10% (`F.HUNGER.recruit_min`). A recruit missing 4 of 7 goods arrives at 3/7 strength and has to regain the rest by replenishing, which costs goods too (below). A computer faction pays the shortfall in gold whatever the switch (the 2026-11-18 AI soak: 61% of its recruits arrived at about 14%). With the switch ticked, which an older save keeps, the remaining shortfall costs gold at twice the cheapest matching good's native unit trade value, capped by available treasury, and the recruit arrives whole. Neither is a debt or a cancellation. The change answers a Workshop comment of 2026-11-16: gold was the escape hatch that made the goods optional.
+
+### Replenishment costs goods (2026-11-17)
+
+Replenishment is the engine's, and no script call stops it, so the bill is taken afterwards (`F.repl_turn`). The script keeps each soldier unit's strength while it is below full (`F.state.repl[faction][unit cqi]`). At the owner's turn start, before the meals, and again at every faction's turn end, it compares each unit with what it kept. A unit that gained is billed "Replenishment cost" percent (default 100) of its own recruit bill for each 100% regained: a 500-gold infantry unit regaining half its strength owes 2.5 war materials. Whole goods are drawn and fractions carried per faction (`F.state.repl_carry`), so many small gains pay what one large gain would.
+
+The race's currency covers a shortfall as it does a recruit's. Whatever is still unpaid is taken back from every unit that gained, in proportion: half the bill paid, each unit keeps half its gain. Lords' and heroes' units, units first seen below full, and losses are never billed. An army starving under "Hunger weakens armies" keeps nothing it regained and pays nothing. Garrisons, caravans, convoys, schemers and Ogre camps are left out, as they are for provisions.
+
+The engine replenishes before the turn-start listeners (measured 2026-11-17), so a gain is billed at the owner's turn start, before the player sees it. The turn-end bill is a guard for strength regained during the turn. A recruit that arrives understrength has its strength kept at once, so what it regains is billed like any other gain. The bill draws from the same realm stores and under the same switches as recruitment ("Other factions use their stores" for computer factions). A Replenishment cost of 0 with hunger off turns the whole step off and clears what it kept.
 
 ## Processing and services
 
@@ -541,13 +551,28 @@ Human purchases are manual: Auto-refill never spends gold on field rations. Elig
 
 ### Shortage and recovery
 
+With **Hunger weakens armies** on (the default for new campaigns since 2026-11-17, `F.hunger_losses`):
+
+| Consecutive incomplete meals | Effect |
+|---|---|
+| First | Warning |
+| Second | "Short rations": every soldier unit loses 5% of its full strength each turn |
+| Third and fourth | "Starving": 10% a turn, and the army keeps nothing it regains (see Replenishment costs goods) |
+| Fifth and later | As the third, and the weakest soldier unit deserts each turn |
+
+Hunger never takes a unit below 10% strength, and a unit already below that loses nothing more. Lords' and heroes' units are spared. The deserter is the unit with the lowest strength, ties broken by unit key. `cm:remove_unit_from_character` removes the *first* unit of that key in the army, so of two alike the one that leaves may be the stronger. The two bundles carry no effect and only name the state. The army-food message names the new rule, and a desertion turn says units deserted.
+
+The rule exists because the old penalties were percentages that a priest's replenishment or a lord's movement skills cancelled (Workshop comment, 2026-11-16). With the switch off, which an older save keeps, the old table applies:
+
 | Consecutive incomplete meals | Effect |
 |---|---|
 | First | Warning |
 | Second | -5% movement |
 | Third and later | -10% movement and -10% replenishment |
 
-Partial food is consumed, but an incomplete meal still advances the shortage count. One full meal resets the count and removes the shortage penalties. The mechanic does not script direct hit-point damage.
+Partial food is consumed, but an incomplete meal still advances the shortage count. One full meal resets the count and removes the shortage penalties.
+
+**Well fed (2026-11-17).** An army that still carries five turns of meals after eating gets the "Well fed" force bundle: leadership +4 and replenishment +5%. An army that missed a meal has eaten all it carried, so it never qualifies. It comes with "Hunger weakens armies": with that off, which an older save keeps, no army is Well fed, so a campaign started before 2026-11-17 sees none of the harder supply rules.
 
 At sea an army retains cargo and eats it; it can buy limited field rations but cannot load or unload settlement stores. A shrinking force retains existing cargo even if it exceeds its newly reduced capacity; army composition changes do not mint food. Changing the general preserves the force's inventory. Destruction/retirement loses cargo, and ownership changes discard the old owner's cargo. Nearby armies do not automatically inherit it.
 
@@ -604,7 +629,11 @@ The Vault is reached through the mod's HUD opener/hub and closes when the player
 | Trade reach | 6 turns | 1–10; no "any distance" setting, since a cut-off pair's search covers everything within reach |
 | Human shipment cap | 3 | 1–10 |
 | Recruitment rate | 1 | 0–5 per 100 reference gold |
+| Gold pays for recruits | **Off** | Ticked: a recruit's missing goods cost gold, as before 2026-11-17. Off: the recruit arrives understrength. An older save keeps it ticked. A computer faction always pays in gold (AI soak 2026-11-18) |
+| Hunger weakens armies | **On** | Missed meals take strength and cause desertion (see Shortage and recovery). Off: the old movement and replenishment penalties. An older save keeps it off |
+| Replenishment cost | 100 | 0–200: percent of a unit's recruit bill for each 100% of strength it regains; 0 makes replenishing free. An older save keeps 0 |
 | AI stores actions | On | Enables AI participation in stores gameplay |
+| Other factions restock for recruits | **On** | Each computer settlement is topped up every turn to 6 war materials, 3 mounts and 2 building materials per settlement level, in the good of that use it holds most of (else leather, animals, timber). A top-up, not a yield. An older save keeps it off |
 | Settlement upkeep, orders, scripted opportunities, supplies, recruitment and escorts | On | Separate mechanic switches |
 | Processing and sustained services | On | Global permission; individual player orders still need enabling |
 | Army provisions | **On** | New campaigns; existing saved switches stay unchanged |

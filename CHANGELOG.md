@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-18
+
+- Hungry armies lose strength each turn, and starving armies regain none.
+- After five missed meals, units desert.
+- Well fed armies get +4 leadership and +5% replenishment.
+- Recruits missing their resources arrive understrength instead of costing gold.
+- Replenishing units costs resources from your stores.
+- Other factions pay gold for missing recruit resources.
+- Other factions restock the resources their recruits use.
+- New MCT options: Hunger weakens armies, Gold pays for recruits, Replenishment cost, Other factions restock for recruits.
+- Campaigns started before this update keep the old rules.
+
 ## 2026-11-15
 
 - More detailed wooden, Dwarf, High Elf and Dark Elf carts.
