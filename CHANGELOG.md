@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-18, second update
+
+- Multiplayer: replenishment costs are now saved the same way on every PC.
+- Replenishment is free for one turn after this update.
+
 ## 2026-11-18
 
 - Hungry armies lose strength each turn, and starving armies regain none.

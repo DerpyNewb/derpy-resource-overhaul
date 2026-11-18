@@ -3995,12 +3995,19 @@ end
 -- large one would. The race's currency covers a shortfall as it does a recruit's; what is still unpaid is taken
 -- back from every unit that gained, in proportion. An army starving under "hunger_men" (three missed meals or
 -- more) keeps nothing it gained. Losses are not billed: a lower reading is simply kept.
+-- WHOLE NUMBERS IN THE SAVE, as F.push's: strength is kept in hundredths of a percent (F.state.repl_h) and the
+-- carried part of a good in thousandths (F.state.repl_carry_m). A fraction crosses CA's table save as "66,666"
+-- under a decimal-comma locale and loads as 66, so two machines would bill different gains. The 11-17 build kept
+-- fractions under F.state.repl / repl_carry; they are dropped, and a unit with no reading counts as full, so the
+-- first turn after loading such a save bills nothing.
+function F.repl_pack(hp) return math.floor(hp * 100 + 0.5) end
+
 function F.repl_note(faction, unit, hp)
-    F.state.repl = F.state.repl or {}
+    F.state.repl_h = F.state.repl_h or {}
     local fkey = faction:name()
-    local kept = F.state.repl[fkey] or {}
-    F.state.repl[fkey] = kept
-    kept[tostring(unit:command_queue_index())] = hp < F.REPL_FULL and hp or nil
+    local kept = F.state.repl_h[fkey] or {}
+    F.state.repl_h[fkey] = kept
+    kept[tostring(unit:command_queue_index())] = hp < F.REPL_FULL and F.repl_pack(hp) or nil
 end
 
 F.REPL_FULL, F.REPL_EPSILON = 99.99, 0.01
@@ -4008,12 +4015,13 @@ F.REPL_FULL, F.REPL_EPSILON = 99.99, 0.01
 function F.repl_turn(faction)
     local r, fkey = F.rates(), faction:name()
     local per = r.replenish_per or 0
+    F.state.repl, F.state.repl_carry = nil, nil              -- the 11-17 build's fractions (above)
     if (per <= 0 and not r.hunger_men) or not F.uses_stores(faction) or not (r.ai or faction:is_human()) then
-        if F.state.repl then F.state.repl[fkey] = nil end
+        if F.state.repl_h then F.state.repl_h[fkey] = nil end
         return
     end
-    F.state.repl = F.state.repl or {}
-    local was, now, gains, need = F.state.repl[fkey] or {}, {}, {}, {}
+    F.state.repl_h = F.state.repl_h or {}
+    local was, now, gains, need = F.state.repl_h[fkey] or {}, {}, {}, {}
     local fs = faction:military_force_list()
     for i = 0, fs:num_items() - 1 do
         local force = fs:item_at(i)
@@ -4022,7 +4030,7 @@ function F.repl_turn(faction)
             local starving = r.hunger_men and b and b.f == fkey and (b.short or 0) >= 3
             for _, t in ipairs(F.troops(force)) do
                 local id = tostring(t.unit:command_queue_index())
-                local from = was[id] or 100
+                local from = was[id] and was[id] / 100 or 100
                 if t.hp > from + F.REPL_EPSILON then
                     local g = { unit = t.unit, id = id, from = from, to = t.hp, goods = 0, starving = starving }
                     if not starving and per > 0 then
@@ -4034,23 +4042,23 @@ function F.repl_turn(faction)
                     end
                     gains[#gains + 1] = g
                 end
-                if t.hp < F.REPL_FULL then now[id] = t.hp end
+                if t.hp < F.REPL_FULL then now[id] = F.repl_pack(t.hp) end
             end
         end
     end
-    F.state.repl[fkey] = now
+    F.state.repl_h[fkey] = now
     if #gains == 0 then return end
-    F.state.repl_carry = F.state.repl_carry or {}
-    local carry = F.state.repl_carry[fkey] or {}
-    F.state.repl_carry[fkey] = carry
+    F.state.repl_carry_m = F.state.repl_carry_m or {}
+    local carry = F.state.repl_carry_m[fkey] or {}
+    F.state.repl_carry_m[fkey] = carry
     local keys, short, owed, spent, stocks = {}, {}, 0, 0, nil
     for k in pairs(need) do keys[#keys + 1] = k end
     table.sort(keys)
     for _, k in ipairs(keys) do
         local e = need[k]
-        local want = e.n + (carry[k] or 0)
+        local want = e.n + (carry[k] or 0) / 1000
         local whole = math.floor(want + 1e-9)
-        carry[k] = math.max(0, want - whole)
+        carry[k] = math.max(0, math.floor((want - whole) * 1000 + 0.5))
         if whole > 0 then
             stocks = stocks or F.stocks(faction)
             local got = F.draw_realm(stocks, e.pick, whole, KIND.spend, fkey)
@@ -4070,7 +4078,7 @@ function F.repl_turn(faction)
         if keep < 1 then
             local hp = g.from + (g.to - g.from) * keep
             cm:set_unit_hp_to_unary_of_maximum(g.unit, hp / 100)
-            now[g.id] = hp < F.REPL_FULL and hp or nil
+            now[g.id] = hp < F.REPL_FULL and F.repl_pack(hp) or nil
             held = held + 1
         end
     end

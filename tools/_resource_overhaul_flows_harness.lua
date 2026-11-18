@@ -3522,8 +3522,9 @@ end
     eq(rc1.held.coal, 0, "understrength: the stores still give what they hold")
     eq(rcP.iface:treasury(), t1, "and no gold is taken")
     eq(math.floor(u.hp * 100 + 0.5), math.floor(3 / 7 * 10000 + 0.5), "3 of 7 goods paid: the recruit arrives at 3/7 strength")
-    eq(F.state.repl and F.state.repl.rcP and F.state.repl.rcP[tostring(u.command_queue_index())], u.hp,
-        "and the bill keeps that strength, so what it regains is paid for (seen in game 2026-11-17)")
+    eq(F.state.repl_h and F.state.repl_h.rcP and F.state.repl_h.rcP[tostring(u.command_queue_index())],
+        math.floor(u.hp * 100 + 0.5),
+        "and the bill keeps that strength, in hundredths, so what it regains is paid for (seen in game 2026-11-17)")
     rc1.held.coal = 0; u = train(rcP, "modded_inf", "melee_infantry", 650)
     eq(u.hp, F.HUNGER.recruit_min * 100, "nothing paid: the least strength, never none")
     rc1.held.coal = 50; u = train(rcP, "modded_inf", "melee_infantry", 650)
@@ -4820,11 +4821,27 @@ end)()
     u1.hp, gen.hp, u2.hp = 90, 100, 70
     F.repl_turn(f.iface)
     eq(r.held.coal, 98, "half its strength regained: 2.5 of its 5 goods, 2 drawn and the half carried")
+    -- WHOLE NUMBERS ONLY IN THE SAVE (multiplayer): a fraction crosses CA's table save as "0,5" under a
+    -- decimal-comma locale, so a machine that loads it bills differently from its partner. Half a good is
+    -- carried right now, and a 3/7-strength recruit is kept: both must be whole.
+    local fractions = {}
+    local function whole(t, path, seen)
+        if seen[t] then return end
+        seen[t] = true
+        for k, v in pairs(t) do
+            local at = path .. "." .. tostring(k)
+            if type(v) == "number" and v ~= math.floor(v) then fractions[#fractions + 1] = at .. "=" .. v end
+            if type(v) == "table" then whole(v, at, seen) end
+        end
+    end
+    whole(F.state, "F.state", {})
+    table.sort(fractions)
+    eq(table.concat(fractions, ", "), "", "every number the save holds is whole")
     eq(u1.hp, 90, "paid for, so kept"); eq(gen.hp, 100, "a general's unit regains for free")
     eq(u2.hp, 70, "a loss is kept as it is, and costs nothing")
     u1.hp = 100; F.repl_turn(f.iface)
     eq(r.held.coal, 97, "the carried half and a new half make one good")
-    eq(F.state.repl.hg[tostring(u1.cqi)], nil, "a unit back at full is no longer kept")
+    eq(F.state.repl_h.hg[tostring(u1.cqi)], nil, "a unit back at full is no longer kept")
     u2.hp = 90; r.held.coal = 0
     F.repl_turn(f.iface)
     eq(u2.hp, 70, "nothing to pay with: the gain is taken back")
@@ -4861,7 +4878,11 @@ end)()
     -- switches: 0 with hunger off is free and keeps nothing; a computer faction only with its stores switch
     R.replenish_per, R.hunger_men = 0, false
     p1.hp = 50; F.repl_turn(f.iface); p1.hp = 100; F.repl_turn(f.iface)
-    eq(r.held.coal, 99, "0 and hunger off: replenishing is free"); eq(F.state.repl.hg, nil, "and nothing is kept")
+    eq(r.held.coal, 99, "0 and hunger off: replenishing is free"); eq(F.state.repl_h.hg, nil, "and nothing is kept")
+    -- AN 11-17 SAVE kept fractions under the old keys: they go at the next bill, whatever it does
+    F.state.repl, F.state.repl_carry = { hg = { ["901"] = 66.666 } }, { hg = { coal = 0.5 } }
+    F.repl_turn(f.iface)
+    eq(F.state.repl == nil and F.state.repl_carry == nil, true, "the old fractional keys are dropped")
     R.replenish_per, R.hunger_men = 100, true
     local ai = faction("hg_ai"); local ar = region("hg_ai1", 43200, 0, 2000, { coal = 50 }); own(ai, ar, true)
     local q = soldier({ key = "hg_q", hp = 20 }); force(941, { q }, ai)
