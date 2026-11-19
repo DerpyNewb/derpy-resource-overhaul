@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-19
+
+- Vampire Counts and Vampire Coast recruits, Raise Dead included, no longer cost resources.
+- Their units also replenish for free.
+- Replenishing with empty stores no longer gains strength for a few turns and then takes it all back.
+
 ## 2026-11-18, second update
 
 - Multiplayer: replenishment costs are now saved the same way on every PC.

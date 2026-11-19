@@ -881,6 +881,10 @@ end
 
 function F.uses_stores(faction) return F.family(faction) ~= "excluded" end
 function F.eats(faction) return F.family(faction) == "living" end
+-- WHO PAYS FOR TROOPS (author, 2026-11-19, from a Workshop report: Raise Dead units arrived at 10%): the living. The
+-- undead raise theirs and need no war goods to do it, as they eat no meals, so their recruits and their replenishment
+-- cost nothing (F.recruit_bill). A Vampire Counts start holds no war goods at all.
+function F.equips(faction) return F.family(faction) == "living" end
 
 -- One read of a settlement's stores: {stem = held}, and one store's space.
 -- ONE READ A TURN START (2026-11-03: 7,500 whole reads in one computer round, 2.35 s): inside F.on_faction_turn_start
@@ -1070,7 +1074,9 @@ function F.upkeep_region(region, fkey, uses)
             -- five turns of NORMAL meals, whatever the Rations edict: on Rationing's own meals it took half the food
             fed = F.use_total(held, "provisions") >= F.FED_TURNS * F.NEED * level
         end
-        if F.rates().ai_armoury and not region:owning_faction():is_human() then F.stock_armoury(region, held, level) end
+        if F.rates().ai_armoury and not region:owning_faction():is_human() and F.equips(region:owning_faction()) then
+            F.stock_armoury(region, held, level)
+        end
         local quarter = cap * F.STOCKED_PCT / 100
         war = cap > 0 and F.use_total(held, "war") >= quarter
         lux = cap > 0 and F.use_total(held, "luxuries") >= quarter
@@ -2601,7 +2607,7 @@ end
 function F.recruit_bill(faction, caste, value)
     local out, per = {}, F.rates().recruit_per or 0
     local parts = caste and DERPY_MR_FLOWS_CASTE[caste]
-    if not parts or type(value) ~= "number" or value <= 0 or per <= 0 then return out end
+    if not parts or type(value) ~= "number" or value <= 0 or per <= 0 or not F.equips(faction) then return out end
     local draw = F.edict(faction:name(), "workshops") == "merchant" and F.EDICT.merchant_draw or 100
     local base = math.ceil(value / F.RECRUIT.per * per * draw / 100)
     -- the RUNNING total is rounded, not each part: a 7 split in halves is 4 and 3, never 4 and 4
@@ -2720,15 +2726,20 @@ end
 -- cqi], only below full), and at the owner's turn start AND turn end whatever a unit gained since is billed:
 -- replenish_per percent of its recruit's bill (F.recruit_bill) for each 100% regained. Both ends, because which of
 -- the two the engine's replenishment lands before has not been measured: a gain is billed at whichever comes
--- first. Whole goods are drawn and the fraction carried (F.state.repl_carry), so twenty small gains pay what one
--- large one would. The race's currency covers a shortfall as it does a recruit's; what is still unpaid is taken
--- back from every unit that gained, in proportion. An army starving under "hunger_men" (three missed meals or
--- more) keeps nothing it gained. Losses are not billed: a lower reading is simply kept.
+-- first. Whole goods are drawn and what a good pays for beyond this turn's gains is kept as credit (F.state.
+-- repl_credit_m), so twenty small gains pay what one large one would. The race's currency covers a shortfall as it
+-- does a recruit's; what is still unpaid is taken back from every unit that gained, in proportion. An army starving
+-- under "hunger_men" (three missed meals or more) keeps nothing it gained. Losses are not billed: a lower reading is
+-- simply kept.
+-- PAID BEFORE, NEVER OWED (author, 2026-11-19, from a Workshop report): the 11-18 build drew whole goods only once a
+-- carried DEBT reached one, so with empty stores a cheap army regained for free for a few turns, then lost a whole
+-- turn's gain when the debt came due (seen in game: Vampire Counts units +7.5%, then nothing). Now a gain draws the
+-- next whole good up front, so empty stores mean no gain on any turn, and stocked stores bill as before.
 -- WHOLE NUMBERS IN THE SAVE, as F.push's: strength is kept in hundredths of a percent (F.state.repl_h) and the
--- carried part of a good in thousandths (F.state.repl_carry_m). A fraction crosses CA's table save as "66,666"
--- under a decimal-comma locale and loads as 66, so two machines would bill different gains. The 11-17 build kept
--- fractions under F.state.repl / repl_carry; they are dropped, and a unit with no reading counts as full, so the
--- first turn after loading such a save bills nothing.
+-- credit in thousandths of a good (F.state.repl_credit_m). A fraction crosses CA's table save as "66,666" under a
+-- decimal-comma locale and loads as 66, so two machines would bill different gains. The 11-17 build kept fractions
+-- under F.state.repl / repl_carry, and the 11-18 build its debt under F.state.repl_carry_m; they are dropped, and a
+-- unit with no reading counts as full, so the first turn after loading such a save bills nothing.
 function F.repl_pack(hp) return math.floor(hp * 100 + 0.5) end
 
 function F.repl_note(faction, unit, hp)
@@ -2745,6 +2756,7 @@ function F.repl_turn(faction)
     local r, fkey = F.rates(), faction:name()
     local per = r.replenish_per or 0
     F.state.repl, F.state.repl_carry = nil, nil              -- the 11-17 build's fractions (above)
+    F.state.repl_carry_m = nil                                -- the 11-18 build's debt (above)
     if (per <= 0 and not r.hunger_men) or not F.uses_stores(faction) or not (r.ai or faction:is_human()) then
         if F.state.repl_h then F.state.repl_h[fkey] = nil end
         return
@@ -2777,30 +2789,45 @@ function F.repl_turn(faction)
     end
     F.state.repl_h[fkey] = now
     if #gains == 0 then return end
-    F.state.repl_carry_m = F.state.repl_carry_m or {}
-    local carry = F.state.repl_carry_m[fkey] or {}
-    F.state.repl_carry_m[fkey] = carry
-    local keys, short, owed, spent, stocks = {}, {}, 0, 0, nil
+    F.state.repl_credit_m = F.state.repl_credit_m or {}
+    local credit = F.state.repl_credit_m[fkey] or {}
+    F.state.repl_credit_m[fkey] = credit
+    local keys, short, have, spent, stocks = {}, {}, {}, 0, nil
     for k in pairs(need) do keys[#keys + 1] = k end
     table.sort(keys)
     for _, k in ipairs(keys) do
         local e = need[k]
-        local want = e.n + (carry[k] or 0) / 1000
-        local whole = math.floor(want + 1e-9)
-        carry[k] = math.max(0, math.floor((want - whole) * 1000 + 0.5))
+        local c = (credit[k] or 0) / 1000
+        local whole = math.max(0, math.ceil(e.n - c - 1e-9))
+        local got = 0
         if whole > 0 then
             stocks = stocks or F.stocks(faction)
-            local got = F.draw_realm(stocks, e.pick, whole, KIND.spend, fkey)
-            spent, owed = spent + got, owed + whole
-            if got < whole then short[#short + 1] = { n = whole - got, worth = e.worth } end
+            got = F.draw_realm(stocks, e.pick, whole, KIND.spend, fkey)
+            spent = spent + got
+            if got < whole then short[#short + 1] = { k = k, n = whole - got, worth = e.worth } end
         end
+        have[k] = c + got
     end
     local paid, uncovered = {}, 0
     if #short > 0 then
         local _gold, _line
         paid, _gold, _line, uncovered = F.recruit_short(faction, short, true)
+        -- what the currency covered, given to the shortfalls in bill order as F.recruit_short takes them
+        local cover = -uncovered
+        for _, s in ipairs(short) do cover = cover + s.n end
+        for _, s in ipairs(short) do
+            local n = math.min(cover, s.n)
+            have[s.k], cover = have[s.k] + n, cover - n
+        end
     end
-    local ratio = owed > 0 and (owed - uncovered) / owed or 1
+    local due, met = 0, 0
+    for _, k in ipairs(keys) do
+        local e = need[k]
+        due, met = due + e.n, met + math.min(have[k], e.n)
+        local left = math.floor(math.max(0, have[k] - e.n) * 1000 + 0.5)
+        credit[k] = left > 0 and left or nil
+    end
+    local ratio = due > 0 and met / due or 1
     local held = 0
     for _, g in ipairs(gains) do
         local keep = g.starving and 0 or (g.goods > 0 and ratio or 1)

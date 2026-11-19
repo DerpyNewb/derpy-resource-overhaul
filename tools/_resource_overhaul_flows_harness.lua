@@ -3540,6 +3540,18 @@ end
     TURN = 9004
     eq(F.recruit_last("rcP").weak, 2, "the ledger counts the recruits that arrived understrength")
     eq(F.recruit_last("rcP").gold, 0, "and no gold")
+    -- THE UNDEAD PAY NOTHING (author, 2026-11-19, Workshop report: Raise Dead units arrived at 10%), war goods held or not
+    for i, sc in ipairs({ "wh_main_sc_vmp_vampire_counts", "wh2_dlc11_sc_cst_vampire_coast" }) do
+        local uP = faction("rcU" .. i, { human = true, sc = sc })
+        local ur = region("rcU" .. i .. "r", 42400 + i * 10, 0, 2000, { coal = 50 }); own(uP, ur, true)
+        local tu = uP.iface:treasury()
+        u = train(uP, "modded_inf", "melee_infantry", 650)
+        eq(u.hp, 100, sc .. ": a recruit arrives whole"); eq(ur.held.coal, 50, "takes none of the war goods it holds")
+        eq(uP.iface:treasury(), tu, "and no gold"); eq(#F.recruit_bill(uP.iface, "monster", 2000), 0, "nor does any other unit")
+        ur.held.coal = 0; u = train(uP, "modded_inf", "melee_infantry", 650)
+        eq(u.hp, 100, "with none held, still whole")
+        lose(uP, ur)
+    end
     -- A COMPUTER FACTION PAYS IN GOLD under the same rule (AI soak 2026-11-18)
     ai1.held.coal = 3; local ta = aiF.iface:treasury()
     u = train(aiF, "modded_inf", "melee_infantry", 650)
@@ -4820,10 +4832,11 @@ end)()
     eq(r.held.coal, 100, "a unit first seen below full is not billed")
     u1.hp, gen.hp, u2.hp = 90, 100, 70
     F.repl_turn(f.iface)
-    eq(r.held.coal, 98, "half its strength regained: 2.5 of its 5 goods, 2 drawn and the half carried")
+    eq(r.held.coal, 97, "half its strength regained: 2.5 of its 5 goods, 3 drawn and the half left over prepaid")
+    eq(F.state.repl_credit_m.hg.war, 500, "kept as 500 thousandths of a good")
     -- WHOLE NUMBERS ONLY IN THE SAVE (multiplayer): a fraction crosses CA's table save as "0,5" under a
     -- decimal-comma locale, so a machine that loads it bills differently from its partner. Half a good is
-    -- carried right now, and a 3/7-strength recruit is kept: both must be whole.
+    -- prepaid right now, and a 3/7-strength recruit is kept: both must be whole.
     local fractions = {}
     local function whole(t, path, seen)
         if seen[t] then return end
@@ -4840,11 +4853,17 @@ end)()
     eq(u1.hp, 90, "paid for, so kept"); eq(gen.hp, 100, "a general's unit regains for free")
     eq(u2.hp, 70, "a loss is kept as it is, and costs nothing")
     u1.hp = 100; F.repl_turn(f.iface)
-    eq(r.held.coal, 97, "the carried half and a new half make one good")
+    eq(r.held.coal, 97, "the prepaid half pays for the next half: nothing drawn")
+    eq(F.state.repl_credit_m.hg.war, nil, "and nothing left prepaid")
     eq(F.state.repl_h.hg[tostring(u1.cqi)], nil, "a unit back at full is no longer kept")
     u2.hp = 90; r.held.coal = 0
     F.repl_turn(f.iface)
     eq(u2.hp, 70, "nothing to pay with: the gain is taken back")
+    -- NOTHING REGAINED ON CREDIT (Workshop report 2026-11-19): the 11-18 build kept a gain worth less than a good
+    -- and took a whole turn's back once the debt reached one; a quarter of a good with empty stores is taken back now
+    u2.hp = 75; F.repl_turn(f.iface)
+    eq(u2.hp, 70, "a gain worth a quarter of a good, with nothing held or prepaid, is taken back too")
+    eq(F.state.repl_credit_m.hg.war, nil, "and nothing is owed for it")
     -- a shortfall shared: each unit keeps the paid share of its gain
     f.armies = {}
     local p1, p2 = soldier({ key = "hg_p1", hp = 50 }), soldier({ key = "hg_p2", hp = 50 })
@@ -4867,7 +4886,7 @@ end)()
     TURN = 9211
     local led = F.recruit_last("hg")
     eq(led and led.repl, 6, "the ledger counts the resources replenishing took")
-    eq(led and led.repl_held, 4, "and the units that lost what they could not pay for")
+    eq(led and led.repl_held, 5, "and the units that lost what they could not pay for")
     -- the Chaos Dwarfs' Armaments cover a shortfall as they do a recruit's
     local cd = faction("hg_cd", { human = true, sc = "wh3_dlc23_sc_chd_chaos_dwarfs", pools = { wh3_dlc23_chd_armaments = 10 } })
     local cr = region("hg_cd1", 43100, 0, 2000, {}); own(cd, cr, true)
@@ -4881,8 +4900,10 @@ end)()
     eq(r.held.coal, 99, "0 and hunger off: replenishing is free"); eq(F.state.repl_h.hg, nil, "and nothing is kept")
     -- AN 11-17 SAVE kept fractions under the old keys: they go at the next bill, whatever it does
     F.state.repl, F.state.repl_carry = { hg = { ["901"] = 66.666 } }, { hg = { coal = 0.5 } }
+    F.state.repl_carry_m = { hg = { war = 990 } }
     F.repl_turn(f.iface)
     eq(F.state.repl == nil and F.state.repl_carry == nil, true, "the old fractional keys are dropped")
+    eq(F.state.repl_carry_m, nil, "and so is the 11-18 build's debt")
     R.replenish_per, R.hunger_men = 100, true
     local ai = faction("hg_ai"); local ar = region("hg_ai1", 43200, 0, 2000, { coal = 50 }); own(ai, ar, true)
     local q = soldier({ key = "hg_q", hp = 20 }); force(941, { q }, ai)
@@ -4890,6 +4911,14 @@ end)()
     eq(ar.held.coal, 50, "a computer faction regains for free with its stores switch off")
     R.ai = true; q.hp = 20; F.repl_turn(ai.iface); q.hp = 100; F.repl_turn(ai.iface)
     eq(ar.held.coal, 46, "and pays with it on")
+    -- THE UNDEAD REGAIN FOR NOTHING, as they recruit (author, 2026-11-19)
+    local vf = faction("hg_vmp", { human = true, sc = "wh_main_sc_vmp_vampire_counts" })
+    local vr = region("hg_vmp1", 43300, 0, 2000, { coal = 50 }); own(vf, vr, true)
+    local z = soldier({ key = "hg_z", hp = 20 }); force(951, { z }, vf)
+    F.repl_turn(vf.iface); z.hp = 100; F.repl_turn(vf.iface)
+    eq(z.hp, 100, "a Vampire Counts unit keeps what it regained"); eq(vr.held.coal, 50, "and pays none of the war goods held")
+    vr.held.coal = 0; z.hp = 50; F.repl_turn(vf.iface); z.hp = 90; F.repl_turn(vf.iface)
+    eq(z.hp, 90, "with none held, it still keeps it")
     -- A SAVE FROM BEFORE the harder rules keeps the old ones (MCT is locked in a running campaign)
     F.state.rates = { army_provisions = true }
     local o = F.rates()
@@ -7897,6 +7926,11 @@ end)()
     eq(made[key("leather")], nil, "and no other")
     ar.held = {}; made = {}; af.human = true
     F.upkeep_region(ar.iface, af.name, true); eq(next(made), nil, "never a player's settlement")
+    -- the undead pay nothing for troops (2026-11-19), so nothing is made for them to pay with
+    local vf = faction("armv", { sc = "wh_main_sc_vmp_vampire_counts" })
+    local vr = region("armv1", 47200, 0, 2000, {}); own(vf, vr, true); vr.level = 2; made = {}
+    F.upkeep_region(vr.iface, vf.name, true); eq(made[key("leather")], nil, "never an undead settlement")
+    lose(vf, vr)
     -- a campaign started before it never restocks
     af.human = false; ar.held = {}; made = {}
     local saved = F.state.rates; F.state.rates = { ai = true, upkeep = true }

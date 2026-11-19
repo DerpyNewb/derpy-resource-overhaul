@@ -154,7 +154,8 @@ RECRUIT_SWITCH = ("recruit", "Recruits use the stores",
                   "(cavalry and monsters take mounts, infantry and war machines take war materials, "
                   "the finest also take your rare resource). What the stores lack is paid in your "
                   "race's own currency where it has one. A recruit whose resources are still short arrives "
-                  "understrength, unless Gold pays for recruits is ticked. Off: recruiting takes nothing.", True)
+                  "understrength, unless Gold pays for recruits is ticked. Vampire Counts and Vampire Coast "
+                  "recruits take nothing. Off: recruiting takes nothing.", True)
 # HARDER SUPPLY (Workshop feedback 2026-11-16: a priest's replenishment and a lord's movement cancelled the old
 # percentage penalties). Both are frozen into the save; a save from before them keeps the old rules (F.rates).
 RECRUIT_GOLD_SWITCH = ("recruit_gold", "Gold pays for recruits",
@@ -2060,8 +2061,10 @@ def check_provision_mutations():
          'F.recruit_short(faction, short, false)'),
         ("computer recruits understrength", 'F.recruit_short(faction, short, not r.recruit_gold and faction:is_human())',
          'F.recruit_short(faction, short, not r.recruit_gold)'),
-        ("restock for players", 'if F.rates().ai_armoury and not region:owning_faction():is_human() then',
-         'if F.rates().ai_armoury then'),
+        ("restock for players", 'if F.rates().ai_armoury and not region:owning_faction():is_human() and F.equips(region:owning_faction()) then',
+         'if F.rates().ai_armoury and F.equips(region:owning_faction()) then'),
+        ("restock for the undead", 'if F.rates().ai_armoury and not region:owning_faction():is_human() and F.equips(region:owning_faction()) then',
+         'if F.rates().ai_armoury and not region:owning_faction():is_human() then'),
         ("restock in an older campaign", 'replenish_per = 0, ai_armoury = false }', 'replenish_per = 0 }'),
         ("restock never", '                F.pool_add(region, F.PREFIX .. stem .. "_" .. KIND.process, n)\n', ''),
         ("restock a yield", 'local want = F.ARMOURY[use] * level - F.use_total(held, use)',
@@ -2071,11 +2074,17 @@ def check_provision_mutations():
         ("restock ignores what it holds", 'if g.use == use and not g.rare and (held[g.stem] or 0) > most then',
          'if false then'),
         ("unpaid recruits regain for free", '        F.repl_note(faction, unit, share * 100)\n', ''),
-        ("replenishing free", 'local got = F.draw_realm(stocks, e.pick, whole, KIND.spend, fkey)', 'local got = whole'),
-        ("replenishment fraction lost", 'local want = e.n + (carry[k] or 0) / 1000', 'local want = e.n'),
+        ("replenishing free", 'got = F.draw_realm(stocks, e.pick, whole, KIND.spend, fkey)', 'got = whole'),
+        # PAID BEFORE, NEVER OWED (Workshop report 2026-11-19: gains kept on a debt, then a whole turn's taken back)
+        ("replenishment credit ignored", 'local c = (credit[k] or 0) / 1000', 'local c = 0'),
+        ("replenishment owes instead of prepaying", 'local whole = math.max(0, math.ceil(e.n - c - 1e-9))',
+         'local whole = math.max(0, math.floor(e.n - c + 1e-9))'),
+        ("replenishment credit never kept", '        credit[k] = left > 0 and left or nil\n', ''),
+        ("replenishment currency not counted", 'have[s.k], cover = have[s.k] + n, cover - n', 'cover = cover - n'),
+        ("an 11-18 save keeps its debt", "    F.state.repl_carry_m = nil                                -- the 11-18 build's debt (above)\n", ''),
         # WHOLE NUMBERS IN THE SAVE: a fraction loads differently on a decimal-comma machine (multiplayer)
-        ("replenishment carry saved as a fraction",
-         'carry[k] = math.max(0, math.floor((want - whole) * 1000 + 0.5))', 'carry[k] = math.max(0, want - whole)'),
+        ("replenishment credit saved as a fraction",
+         'local left = math.floor(math.max(0, have[k] - e.n) * 1000 + 0.5)', 'local left = math.max(0, have[k] - e.n)'),
         ("replenishment strength saved as a fraction",
          'if t.hp < F.REPL_FULL then now[id] = F.repl_pack(t.hp) end', 'if t.hp < F.REPL_FULL then now[id] = t.hp end'),
         ("an 11-17 save keeps its fractions",
@@ -2966,7 +2975,13 @@ def check_race_identity_mutations():
         ("unknown races share one token", 'DERPY_MR_FLOWS_CULTURE_TOKEN[faction:culture()] or sc',
          'DERPY_MR_FLOWS_CULTURE_TOKEN[faction:culture()] or ""'),
         ("stores ignore the family", 'return F.family(faction) ~= "excluded"', 'return true'),
-        ("undead eat", 'return F.family(faction) == "living"', 'return F.family(faction) ~= "excluded"'),
+        ("undead eat", 'function F.eats(faction) return F.family(faction) == "living"',
+         'function F.eats(faction) return F.family(faction) ~= "excluded"'),
+        # THE UNDEAD PAY NOTHING FOR TROOPS (Workshop report 2026-11-19: Raise Dead units arrived at 10%)
+        ("undead pay for troops", 'function F.equips(faction) return F.family(faction) == "living"',
+         'function F.equips(faction) return F.family(faction) ~= "excluded"'),
+        ("the recruit bill ignores the undead", ' or per <= 0 or not F.equips(faction) then return out end',
+         ' or per <= 0 then return out end'),
     ))
 
 
