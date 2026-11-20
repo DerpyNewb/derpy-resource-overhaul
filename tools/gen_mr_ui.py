@@ -1483,6 +1483,13 @@ def check_player_text():
     sections = {v for k, v in rows if k.endswith("_section_text")}
     labels = {v for k, v in rows if k.endswith("_text") and not k.endswith("_section_text")}
     assert not sections & labels, "an MCT section shares a switch's name: %s" % sorted(sections & labels)
+    made = set()
+    for line in mct_lua().splitlines():
+        m = re.match(r'm:add_new_section\("(\w+)"', line) or re.search(r':set_assigned_section\("(\w+)"\)', line)
+        if m and "add_new_section" in line:
+            made.add(m.group(1))
+        elif m:
+            assert m.group(1) in made, "an MCT option names section %s before it is made: %s" % (m.group(1), line)
 
 
 def header():
@@ -1820,6 +1827,9 @@ def mct_lua():
     for row in RATES:
         if row not in SUPPLY_RATES:
             lines += slider(row, "stores")
+    # Before the first option that names it: MCT logs an error and drops an option into the last section made
+    # when its section does not exist yet (the player's log, 2026-11-20). Sections draw in the order made.
+    lines += ["", 'm:add_new_section("using", "Using stores")']
     for (k, label, tip, d), section in ((PROVISIONS_SWITCH, "using"), (PROCESSING_SWITCH, "using"), (SERVICES_SWITCH, "using"),
                                         (AI_SWITCH, "stores")) + tuple((s, "stores") for s in AI_MEAL_SWITCHES) + (
                                         (SPOIL_SWITCH, "stores"), (UPKEEP_SWITCH, "using"),
@@ -1828,8 +1838,6 @@ def mct_lua():
                                         (RECRUIT_GOLD_SWITCH, "using"), (HUNGER_SWITCH, "using"),
                                         (ESCORT_SWITCH, "using"), (EDICT_SWITCH, "using"), (TOLL_SWITCH, "stores"),
                                         (BANDIT_SWITCH, "using")):
-        if k == "upkeep":
-            lines += ["", 'm:add_new_section("using", "Using stores")']
         lines += ["",
                   'local o_%s = m:add_new_option("%s", "checkbox")' % (k, k),
                   'o_%s:set_text("%s")' % (k, label),

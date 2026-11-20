@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-20, fifth update
+
+- The army provisions, processing and services options in MCT now show under Using stores.
+
 ## 2026-11-20, fourth update
 
 - Caravans from other mods, such as Marienburg's, no longer need provisions or pay for replenishment.

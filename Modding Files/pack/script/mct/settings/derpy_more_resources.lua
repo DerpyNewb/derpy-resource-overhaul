@@ -130,6 +130,8 @@ o_road_danger:set_default_value(20)
 o_road_danger:set_assigned_section("stores")
 if IN_CAMPAIGN then o_road_danger:set_locked(true, LOCK_REASON) end
 
+m:add_new_section("using", "Using stores")
+
 local o_army_provisions = m:add_new_option("army_provisions", "checkbox")
 o_army_provisions:set_text("Carried army provisions")
 o_army_provisions:set_tooltip_text("Armies eat the provisions they carry once a turn. In your own settlements they refill from the stores, never below what a settlement keeps: Auto keeps 5 turns, and Load fills the army to 10. At sea, or with no settlements, Load buys two meals at 10 gold each, once a turn. Armies cannot refill in foreign lands. Missed meals hurt an army. Caravans and convoys carry none. This is fixed when a campaign starts: changing it later does nothing to a campaign already under way. In multiplayer it is always on.")
@@ -199,8 +201,6 @@ o_spoilage:set_tooltip_text("Each turn, grain loses 4% and beer and kvas 2% of w
 o_spoilage:set_default_value(true)
 o_spoilage:set_assigned_section("stores")
 if IN_CAMPAIGN then o_spoilage:set_locked(true, LOCK_REASON) end
-
-m:add_new_section("using", "Using stores")
 
 local o_upkeep = m:add_new_option("upkeep", "checkbox")
 o_upkeep:set_text("Settlements use their stores")
