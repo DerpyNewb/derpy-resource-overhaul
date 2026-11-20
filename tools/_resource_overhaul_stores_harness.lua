@@ -1269,6 +1269,40 @@ do
     fl.economy_rows, fl.owned = nil, owned_before
     S.refresh()
 end
+-- WHAT A SETTLEMENT USES GETS A ROW (Ikrani, 2026-11-20: a starving settlement had no grain row, so no Send here and
+-- no regular supply, while another settlement held grain). One table, not locals: the main chunk is at Lua's limit.
+do
+    NEED = { fl = DERPY_MR_FLOWS, owned = DERPY_MR_FLOWS.owned, list = FACTIONS.fac_a.region_list, use = { war = 6 } }
+    NEED.d = region("reg_d", 4, 1, 200, { gromril = 20, grain = 30 }, "")
+    FACTIONS.fac_a.region_list = function() return list({ C, B, A, NEED.d }) end
+    NEED.fl.owned = function(_f, key) if key == "reg_a" then return A end end
+    NEED.fl.recurring_use = function(f, region)
+        eq(f:name(), LOCAL, "the local faction's needs"); eq(region:name(), "reg_a", "for the settlement shown")
+        return NEED.use
+    end
+    NEED.rows = function()
+        S.refresh()
+        NEED.by = {}
+        for _, row in ipairs(S.data) do if row.stem then NEED.by[row.stem] = row end end
+        return NEED.by
+    end
+    NEED.rows()
+    eq(find("sub_title").text, "Stores of Alpha", "Alpha's stores")
+    eq(NEED.by.iron ~= nil, true, "a war good Alpha uses and Bravo holds gets a row, with none held in Alpha")
+    eq(NEED.by.iron and NEED.by.iron.open, "routes:reg_a:iron", "with a regular supply")
+    eq(NEED.by.iron and NEED.by.iron.send ~= nil, true, "and Send here")
+    eq(NEED.by.quicksilver, nil, "a war good none of your settlements holds or makes adds no row")
+    eq(NEED.by.gromril, nil, "nor does a rare one another settlement holds")
+    eq(NEED.by.grain, nil, "nor food, while Alpha eats nothing")
+    NEED.use = { war = 6, meals = 4, provisions = 4 }
+    eq(NEED.rows().grain ~= nil, true, "food another settlement holds gets a row once Alpha eats")
+    NEED.use = { war = 0 }
+    eq(NEED.rows().iron, nil, "a category used at 0 a turn adds nothing")
+    NEED.fl.owned, NEED.fl.recurring_use, FACTIONS.fac_a.region_list = NEED.owned, nil, NEED.list
+    CCO["4"] = nil
+    S.refresh()
+    NEED = nil
+end
 -- SPOILAGE on the drill-down: a spoiling good's row says what is safe and what goes next turn
 do
     local fl = DERPY_MR_FLOWS

@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-20, third update
+
+- Settlements now show the food and other goods they use whenever another of your settlements holds some, so you can Send here or set up a regular supply.
+
 ## 2026-11-20, second update
 
 - Units no longer replenish for free on the turn after a battle.

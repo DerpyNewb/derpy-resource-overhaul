@@ -3208,6 +3208,15 @@ def check_minor_mutations():
          '    if ok and type(r) == "table" then return r[key] or nil end'),
         ("an undead owner told it grows food", 'S.ask("eats", f) == false and S.UNCHARTED_UNDEAD or S.UNCHARTED',
          "S.UNCHARTED"),
+        # WHAT A SETTLEMENT USES GETS A ROW (Ikrani, 2026-11-20: no grain row in a starving settlement, so no Send here)
+        ("a settlement's needs never listed",
+         "        if f and region then inputs = S.needed_goods(f, region, realm, inputs or {}) end\n", ""),
+        ("a rare good listed as a need", 'if not g.rare and type(use[g.use]) == "number" and use[g.use] > 0 then',
+         'if type(use[g.use]) == "number" and use[g.use] > 0 then'),
+        ("a need nobody can send listed", "if keeps(o, g.stem) then also[g.stem] = true; break end",
+         "also[g.stem] = true; break"),
+        ("a category used at 0 listed", 'type(use[g.use]) == "number" and use[g.use] > 0 then',
+         'type(use[g.use]) == "number" then'),
     )
     for label, before, after in mutations:
         assert stores.count(before) == 1, "stale minor panel mutation: " + label

@@ -198,7 +198,23 @@ function S.good_detail(realm, stem)
     return out
 end
 
--- `also` (stem -> true): goods listed even when none is held or made - a recipe's inputs.
+-- AND SO DOES WHAT THE SETTLEMENT USES (Ikrani, 2026-11-20: a starving settlement with no grain had no grain row, so
+-- no Send here and no regular supply, while another settlement held grain): every common good of a category the
+-- settlement uses a turn (F.recurring_use: its own meals, armies refilling there, province supplies) that one of your
+-- settlements holds or makes. Only those: all fourteen common provisions in every settlement buried the list.
+function S.needed_goods(f, region, realm, also)
+    local use = S.ask("recurring_use", f, region) or {}
+    for _, g in ipairs(DERPY_MR_STORES_GOODS) do
+        if not g.rare and type(use[g.use]) == "number" and use[g.use] > 0 then
+            for _, o in ipairs(realm) do
+                if keeps(o, g.stem) then also[g.stem] = true; break end
+            end
+        end
+    end
+    return also
+end
+
+-- `also` (stem -> true): goods listed even when none is held or made - a recipe's inputs, the goods it uses.
 function S.settlement_detail(s, also)
     local out = {}
     for _, g in ipairs(DERPY_MR_STORES_GOODS) do
@@ -1093,6 +1109,7 @@ function S.view_model(realm)
         -- A RECIPE'S INPUTS GET A ROW (Bilbo Bagins, 2026-11-12): Vitevo's biscuits needed salt it
         -- had none of, and a good with no row has no Send here and no regular supply.
         local inputs = f and region and S.economy_rows(v, f, region)
+        if f and region then inputs = S.needed_goods(f, region, realm, inputs or {}) end
         for _, d in ipairs(S.settlement_detail(s, inputs)) do
             local tip = S.good_tip(d)
             if d.full then tip = S.FULL_TIP end
