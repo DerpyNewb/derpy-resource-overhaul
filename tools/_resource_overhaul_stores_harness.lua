@@ -1351,9 +1351,15 @@ do
     fl.settlement_meals = function() return 0 end
     eq(string.find(alpha_tip(), "It eats", 1, true), nil, "a settlement that eats nothing says nothing")
     -- AN UNCHARTED SETTLEMENT SAYS WHY IT MAKES NOTHING (faction flavour design 2026-11-11, section 7)
-    local line, charted0 = "Its buildings make no goods yet. It grows its own food, and other goods come by trade.", fl.charted
+    local line, charted0 = "Its buildings make no goods. It grows its own food, and other goods come by trade.", fl.charted
     fl.charted = function(k) return k ~= "reg_a" end
     eq(string.find(alpha_tip(), line, 1, true) ~= nil, true, "an uncharted settlement says why: " .. alpha_tip())
+    -- AN OWNER THAT EATS NOTHING grows no food there (deferred minor, 2026-11-11 ledger), and no "yet" promises goods
+    fl.eats = function(f) eq(f:name(), LOCAL, "the local faction's diet"); return false end
+    eq(string.find(alpha_tip(), "Its buildings make no goods. Goods come here by trade.", 1, true) ~= nil
+       and string.find(alpha_tip(), "grows its own food", 1, true) == nil, true,
+       "an undead owner's uncharted settlement grows no food: " .. alpha_tip())
+    fl.eats = nil
     fl.charted = function() return true end
     eq(string.find(alpha_tip(), line, 1, true), nil, "a charted settlement does not")
     fl.charted = nil
@@ -2796,6 +2802,19 @@ do
     eq(SPARE_ASKED,LOCAL.."|reg_a","the cart's own source is asked, for the local faction")
     SPARE=3; S.refresh(); cr=cart_row()
     eq(cr.send.off,false,"a source with food to spare sends one")
+    -- ROAD GUARDS ON (deferred minor, 2026-11-09 ledger): every cart pays the guards' fee, Auto's too, and both tips say so
+    local guard_line="Road guards ride with each supply cart.\nThey cost 5% of its value when it leaves."
+    eq(string.find(cr.send.tip,guard_line,1,true),nil,"with guards off no fee is mentioned")
+    DERPY_MR_FLOWS.guards_on=function(fk) eq(fk,LOCAL,"the local faction's guards"); return true end
+    S.refresh(); cr=cart_row()
+    eq(string.find(cr.send.tip,guard_line,1,true)~=nil,true,"Send supplies names the guards' fee: "..cr.send.tip)
+    eq(string.find(S.data[1].tip,guard_line,1,true)~=nil,true,"and so does Auto, whose carts pay it too: "..S.data[1].tip)
+    DERPY_MR_FLOWS.guards_on=nil
+    -- SUPPLY LINES OFF (deferred minor, 2026-11-09 ledger): no cart can be sent, so no greyed row stands in for one
+    local rates0=DERPY_MR_FLOWS.rates
+    DERPY_MR_FLOWS.rates=function() return {actions=true,army_provisions=true,supply_lines=false} end
+    S.refresh(); eq(cart_row(),nil,"with supply lines off there is no Supply cart row")
+    DERPY_MR_FLOWS.rates=rates0; S.refresh(); cr=cart_row()
     -- THE CART FROM ANOTHER SETTLEMENT (Basilevs, 2026-11-15): the road stays on Alpha, the cart comes from Bravo
     NOTE={state="stretched",source="reg_a",turns=5,upkeep=20,cart_source="reg_b",cart_turns=6}; S.refresh(); cr=cart_row()
     eq(cr[2].."|"..cr.send.tip,"Bravo|Send a cart of provisions from Bravo.\nIt arrives in 6 turns.\nAn army at war with you can seize it.",

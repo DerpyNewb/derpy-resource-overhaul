@@ -890,6 +890,11 @@ event_feed_strings_text_derpy_mr_army_food_secondary_hard	Open Resource Vault > 
 event_feed_strings_text_derpy_mr_road_loss_title	Cargo robbed on the road	false
 event_feed_strings_text_derpy_mr_road_loss_primary	Bandits took part of a cargo bound for you.	false
 event_feed_strings_text_derpy_mr_road_loss_secondary	Open Resource Vault > Trade to see what arrived.	false
+event_feed_strings_text_derpy_mr_road_cart_title	Trouble on a supply road	false
+event_feed_strings_text_derpy_mr_road_cart_ambush_primary	Bandits robbed a supply cart on its way to your army. Half of its food was lost.	false
+event_feed_strings_text_derpy_mr_road_cart_highwaymen_primary	Highwaymen stopped a supply cart on its way to your army. It paid a fifth of its value in gold to pass.	false
+event_feed_strings_text_derpy_mr_road_cart_washout_primary	A washed-out road held up a supply cart on its way to your army. It will arrive a turn late.	false
+event_feed_strings_text_derpy_mr_road_cart_secondary	Open Resource Vault > Spending to check army provisions. Road guards on the Trade tab make trouble half as likely.	false
 effect_bundles_localised_title_derpy_mr_rc_army_ammo	Ammunition Train	false
 effect_bundles_localised_description_derpy_mr_rc_army_ammo	Paid for from your stores: ammunition +20% (5 turns).	false
 effect_bundles_localised_title_derpy_mr_rc_army_forge	Field Forge	false

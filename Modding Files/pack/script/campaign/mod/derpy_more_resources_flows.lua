@@ -33,13 +33,14 @@ DERPY_MR_FLOWS_DEFAULTS = {
     bandits = true,
     supply_lines = true,
     hunger_men = true,
-    recruit_gold = false,
+    recruit_gold = true,
     ai_home_fed = true,
     ai_field_rations = true,
     ai_half_rations = false,
     ai_food = false,
     ai_armoury = true,
 }
+DERPY_MR_FLOWS_LIVE = {recruit = true, recruit_gold = true, recruit_per = true, replenish_per = true}
 DERPY_MR_FLOWS_KIND = {
     eat = "eaten",
     move = "moved",
@@ -577,7 +578,8 @@ DERPY_MR_FLOWS_POOL_HAS = {
 DERPY_MR_LOC_KEYS = {
     ["Nothing is stored here yet."] = "derpy_mr_ui_9287bbc6af",
     ["You hold no settlements and so have no stores."] = "derpy_mr_ui_34a9352977",
-    ["Its buildings make no goods yet. It grows its own food, and other goods come by trade."] = "derpy_mr_ui_949cb9d51e",
+    ["Its buildings make no goods. It grows its own food, and other goods come by trade."] = "derpy_mr_ui_81533d7374",
+    ["Its buildings make no goods. Goods come here by trade."] = "derpy_mr_ui_025260d0a0",
     ["This store is full and anything more made here is lost."] = "derpy_mr_ui_92f77f56ea",
     ["The history starts next turn."] = "derpy_mr_ui_726c1d67bc",
     ["{1} [[col:red]]Full[[/col]]"] = "derpy_mr_ui_2f0091807b",
@@ -612,6 +614,7 @@ DERPY_MR_LOC_KEYS = {
     ["sent {1} and received {2}"] = "derpy_mr_ui_84871287aa",
     ["Recruits last turn"] = "derpy_mr_ui_4c58cb4a29",
     ["Guards ride with every cart and convoy you send.\nThey cost 5% of the cargo's value when it leaves.\nThey make trouble on the road half as likely."] = "derpy_mr_ui_3e18f60438",
+    ["Road guards ride with each supply cart.\nThey cost 5% of its value when it leaves."] = "derpy_mr_ui_56cc641acf",
     ["Nothing moves between you and these partners."] = "derpy_mr_ui_8f57993ed3",
     ["The road takes more than {1}, crosses hostile lands or has an enemy army on it."] = "derpy_mr_ui_eded1a9e96",
     ["1 turn"] = "derpy_mr_ui_8f63d54d46",
@@ -1371,16 +1374,18 @@ function F.mct(key)
 end
 
 -- MULTIPLAYER TAKES THE DEFAULTS: two machines' MCT settings can differ and a move must not.
-function F.read_rates()
+function F.read_rates(only)   -- only: a set of keys, else every rate
     local mp = false
     pcall(function() mp = cm:is_multiplayer() end)
     local r = {}
     for k, d in pairs(DERPY_MR_FLOWS_DEFAULTS) do
-        local v = nil
-        if not mp then v = F.mct(k) end   -- NOT `not mp and F.mct(k) or nil`: an unticked box is false
-        if type(v) ~= type(d) then v = d end
-        if type(v) == "number" then v = math.floor(v + 0.5) end
-        r[k] = v
+        if not only or only[k] then
+            local v = nil
+            if not mp then v = F.mct(k) end   -- NOT `not mp and F.mct(k) or nil`: an unticked box is false
+            if type(v) ~= type(d) then v = d end
+            if type(v) == "number" then v = math.floor(v + 0.5) end
+            r[k] = v
+        end
     end
     return r
 end
@@ -1410,9 +1415,16 @@ function F.rates()
 end
 
 -- THE ONE WRITER, at every faction's turn start: the same point on every machine.
+-- CHANGED IN A RUNNING CAMPAIGN (author, 2026-11-20, from Workshop reports: armies that could not replenish, and no way
+-- out but a new campaign): the recruit and replenish settings (DERPY_MR_FLOWS_LIVE) are read again at every freeze, so
+-- they are what the MCT shows, an older save's included. Taking a change only once the player moved it was tried: a
+-- campaign frozen with gold off then showed the box ticked (the new default) and ran without it. Multiplayer and a
+-- game without MCT read the defaults (F.read_rates), the same on every machine.
 function F.freeze_rates()
-    F.state.rates = F.rates()
-    return F.state.rates
+    local r = F.rates()
+    for k, v in pairs(F.read_rates(DERPY_MR_FLOWS_LIVE)) do r[k] = v end
+    F.state.rates = r
+    return r
 end
 
 -- "TURN OFF RANDOM DILEMMAS" (MCT, default off): the campaign director's generation is one global
@@ -1540,6 +1552,33 @@ function F.nearest(faction, x, y)
         end
     end
     return best
+end
+
+-- WHERE GOODS COMING HOME GO (deferred minor, 2026-11-09: a cart home to a full store lost the rest): `first` while it
+-- has room, then the faction's other settlements nearest (x, y), ties by key. No faction: an empty list.
+function F.homes(faction, first, x, y)
+    local out, far = { first }, {}
+    if not faction then return out end
+    local rl = faction:region_list()
+    for i = 0, rl:num_items() - 1 do
+        local r = rl:item_at(i)
+        local st = r:settlement()
+        if not st:is_null_interface() and not (first and r:name() == first:name()) then
+            local dx, dy = st:logical_position_x() - x, st:logical_position_y() - y
+            far[#far + 1] = { r = r, d = dx * dx + dy * dy, k = r:name() }
+        end
+    end
+    table.sort(far, function(a, b) if a.d ~= b.d then return a.d < b.d end return a.k < b.k end)
+    for _, e in ipairs(far) do out[#out + 1] = e.r end
+    return out
+end
+
+-- n of stem into `homes` in order, each up to its room; what fits nowhere is lost.
+function F.store_home(homes, stem, n, kind, key)
+    for _, r in ipairs(homes) do
+        if n <= 0 then return end
+        n = n - F.move(nil, r, stem, n, kind, nil, key)
+    end
 end
 
 -- Every good in `region` with stock: pct of it to the taker's settlement nearest (x, y), the
@@ -2919,17 +2958,33 @@ function F.cargo_wait(kind, rec)
     if rec.basket then rec.due = rec.due + 1 else rec.due = F.ship_due(rec) + 1 end
 end
 
+-- A PLAYER'S SUPPLY CART meets its encounters with no dilemma (F.road_event), so the player is told what happened
+-- (deferred minor, 2026-11-09: they were settled in silence).
+local function cart_told(faction, kind, key)
+    if kind ~= "supply" or not faction:is_human() then return end
+    cm:show_message_event(faction:name(), "event_feed_strings_text_derpy_mr_road_cart_title",
+        "event_feed_strings_text_derpy_mr_road_cart_" .. key .. "_primary",
+        "event_feed_strings_text_derpy_mr_road_cart_secondary", false, 1014)
+end
+
 -- THE OTHER CHOICE, which every encounter takes that no dilemma or battle settles: bandits take half, highwaymen
 -- a fifth of the value in gold (never more than the treasury), a washed-out road a turn. A computer's convoy
 -- bound for a player that loses goods tells that player.
 function F.road_settle(faction, kind, rec, key)
-    if key == "washout" then return F.cargo_wait(kind, rec) end
+    if key == "washout" then
+        F.cargo_wait(kind, rec)
+        return cart_told(faction, kind, key)
+    end
     if key == "highwaymen" then
         local pay = math.min(math.floor(F.cargo_value_base(rec) * F.ROAD.toll_pct / 100), math.max(0, faction:treasury()))
-        if pay > 0 then cm:treasury_mod(faction:name(), -pay) end
+        if pay > 0 then
+            cm:treasury_mod(faction:name(), -pay)
+            cart_told(faction, kind, key)
+        end
         return
     end
     local lost = F.cargo_lose(kind, rec, F.ROAD.half_pct)
+    if lost > 0 then cart_told(faction, kind, key) end
     local buyer = kind == "convoy" and F.live(rec.buyer)
     if lost > 0 and buyer and buyer:is_human() and not faction:is_human() then
         cm:show_message_event(buyer:name(), "event_feed_strings_text_derpy_mr_road_loss_title",
@@ -3901,7 +3956,8 @@ end
 
 -- The shortfall, in bill order: the race's currency first (one per `per` goods, rounded up), then gold.
 -- no_gold (the recruit arrives understrength instead, F.on_unit_trained): no gold, and the goods still missing
--- come back as the fourth value.
+-- come back as the fourth value. With gold, the fifth is the goods the gold could not pay for (a treasury too small):
+-- the replenishment bill takes that strength back, and a recruit arrives whole as it always has.
 function F.recruit_short(faction, short, no_gold)
     local fkey, paid, missing = faction:name(), {}, 0
     for _, s in ipairs(short) do missing = missing + s.n end
@@ -3925,7 +3981,7 @@ function F.recruit_short(faction, short, no_gold)
     if no_gold then return paid, 0, c and c.line or nil, uncovered end
     local gold = math.min(math.ceil(due), math.max(0, faction:treasury()))
     if gold > 0 then cm:treasury_mod(fkey, -gold) end
-    return paid, gold, c and c.line or nil
+    return paid, gold, c and c.line or nil, nil, due > 0 and uncovered * math.max(0, due - gold) / due or 0
 end
 
 -- A UNIT PAID FOR IN THE WORKSHOP is not charged again when it is recruited (spec section 3):
@@ -3999,7 +4055,8 @@ end
 -- the two the engine's replenishment lands before has not been measured: a gain is billed at whichever comes
 -- first. Whole goods are drawn and what a good pays for beyond this turn's gains is kept as credit (F.state.
 -- repl_credit_m), so twenty small gains pay what one large one would. The race's currency covers a shortfall as it
--- does a recruit's; what is still unpaid is taken back from every unit that gained, in proportion. An army starving
+-- does a recruit's, then gold as it does a recruit's (since 2026-11-20, below); what is still unpaid is taken back
+-- from every unit that gained, in proportion. An army starving
 -- under "hunger_men" (three missed meals or more) keeps nothing it gained. Losses are not billed: a lower reading is
 -- simply kept.
 -- PAID BEFORE, NEVER OWED (author, 2026-11-19, from a Workshop report): the 11-18 build drew whole goods only once a
@@ -4023,7 +4080,32 @@ end
 
 F.REPL_FULL, F.REPL_EPSILON = 99.99, 0.01
 
-function F.repl_turn(faction)
+-- MERGED, NOT REGAINED (Workshop report 2026-11-19, seen in game the same day): a merge moves strength from one unit to
+-- another of its kind in the same army, and the bill read the rise as replenishment. With nothing to pay, it took the
+-- rise back and the entities that came over were lost. A merge that empties a unit fires UnitMergedAndDestroyed: the
+-- unit it went into is noted that much stronger (none kept for the one that went: it was full). A merge that leaves
+-- both standing fires nothing, so at the turn end what a unit lost pays for a gain of its own kind in its own army
+-- before any is billed. Only at the turn end: merges happen in the owner's turn and the engine's replenishment lands
+-- before its start (2026-11-19, Thorgrim), so a battle lost in the computers' turns pays for no sibling's regain.
+-- ponytail: a gain made in the owner's turn by something else (a post-battle replenish effect) is also paid by a
+-- same-kind unit's loss in that battle; a merge event per unit pair would end that if one ever appears.
+function F.on_unit_merged(context)
+    local into = context:new_unit()
+    local faction = into:faction()
+    if not faction or faction:is_null_interface() then return end
+    local kept = F.state.repl_h and F.state.repl_h[faction:name()]
+    if not kept then return end
+    local gone, id = tostring(context:unit():command_queue_index()), tostring(into:command_queue_index())
+    if kept[id] then
+        local sum = kept[id] + (kept[gone] or F.repl_pack(100))
+        kept[id] = sum < F.repl_pack(F.REPL_FULL) and sum or nil
+    end
+    kept[gone] = nil
+end
+
+function F.repl_turn_end(faction) F.repl_turn(faction, true) end
+
+function F.repl_turn(faction, ending)
     local r, fkey = F.rates(), faction:name()
     local per = r.replenish_per or 0
     F.state.repl, F.state.repl_carry = nil, nil              -- the 11-17 build's fractions (above)
@@ -4040,9 +4122,18 @@ function F.repl_turn(faction)
         if force:has_general() and not force:is_armed_citizenry() and not F.NO_RATIONS[force:force_type():key()] then
             local b = F.state.armies and F.state.armies[tostring(force:command_queue_index())]
             local starving = r.hunger_men and b and b.f == fkey and (b.short or 0) >= 3
-            for _, t in ipairs(F.troops(force)) do
+            local troops, spare = F.troops(force), {}   -- spare: unit key -> strength its units gave up this turn
+            for _, t in ipairs(ending and troops or {}) do
+                local w = was[tostring(t.unit:command_queue_index())]
+                local lost = (w and w / 100 or 100) - t.hp
+                if lost > F.REPL_EPSILON then spare[t.unit:unit_key()] = (spare[t.unit:unit_key()] or 0) + lost end
+            end
+            for _, t in ipairs(troops) do
                 local id = tostring(t.unit:command_queue_index())
                 local from = was[id] and was[id] / 100 or 100
+                local k = t.unit:unit_key()
+                local moved = math.min(spare[k] or 0, math.max(0, t.hp - from))
+                spare[k], from = (spare[k] or 0) - moved, from + moved
                 if t.hp > from + F.REPL_EPSILON then
                     local g = { unit = t.unit, id = id, from = from, to = t.hp, goods = 0, starving = starving }
                     if not starving and per > 0 then
@@ -4079,11 +4170,17 @@ function F.repl_turn(faction)
         end
         have[k] = c + got
     end
-    local paid, uncovered = {}, 0
+    local paid, uncovered, gold = {}, 0, 0
     if #short > 0 then
-        local _gold, _line
-        paid, _gold, _line, uncovered = F.recruit_short(faction, short, true)
-        -- what the currency covered, given to the shortfalls in bill order as F.recruit_short takes them
+        -- GOLD PAYS FOR REPLENISHING TOO (author, 2026-11-20, from Workshop reports: a race that makes none of the
+        -- goods its troops need could never replenish, Greenskins anywhere and Cathay at home): under "Gold pays for
+        -- recruits", and always for a computer faction, as a recruit's shortfall is paid. What the treasury cannot
+        -- cover is still taken back.
+        local no_gold = not r.recruit_gold and faction:is_human()
+        local _line, unpaid
+        paid, gold, _line, uncovered, unpaid = F.recruit_short(faction, short, no_gold)
+        if not no_gold then uncovered = unpaid end
+        -- what the currency and the gold covered, given to the shortfalls in bill order as F.recruit_short takes them
         local cover = -uncovered
         for _, s in ipairs(short) do cover = cover + s.n end
         for _, s in ipairs(short) do
@@ -4109,9 +4206,9 @@ function F.repl_turn(faction)
             held = held + 1
         end
     end
-    if F.is_human(fkey) and (spent > 0 or held > 0 or next(paid)) then
+    if F.is_human(fkey) and (spent > 0 or held > 0 or next(paid) or gold > 0) then
         local e = F.recruit_entry(fkey)
-        e.repl, e.repl_held = (e.repl or 0) + spent, (e.repl_held or 0) + held
+        e.repl, e.repl_held, e.gold = (e.repl or 0) + spent, (e.repl_held or 0) + held, e.gold + gold
         for w, n in pairs(paid) do e.paid[w] = (e.paid[w] or 0) + n end
     end
 end
@@ -5741,7 +5838,7 @@ F.EVENT_APPLY.grain_rot = function(faction, p, choice)
     F.move(r, nil, "grain", math.floor(F.held(r, "grain") * pct / 100), KIND.spoil, fkey, nil)
 end
 
--- The faction's convoys and shipments on the road.
+-- The faction's convoys, shipments and supply carts on the road.
 local function own_cargo(fkey)
     local out = {}
     for _, c in ipairs(F.convoys()) do
@@ -5749,6 +5846,9 @@ local function own_cargo(fkey)
     end
     for _, s in ipairs(F.ships()) do
         if s.f == fkey then out[#out + 1] = s end
+    end
+    for _, c in ipairs(F.supply_carts()) do
+        if c.f == fkey then out[#out + 1] = c end
     end
     return out
 end
@@ -6835,13 +6935,13 @@ function F.convoy_seize(c, captor)
     for stem, n in pairs(c.basket) do F.move(nil, F.nearest(captor, c.x, c.y), stem, n, KIND.raid, nil, captor:name()) end
 end
 
--- RETURNED: back to the exporter's settlement nearest the convoy, or its capital when the convoy has no position;
--- an exporter with no settlement loses it.
+-- RETURNED: back to the exporter's settlements nearest the convoy, each while it has room, or its capital when the
+-- convoy has no position; an exporter with no settlement loses it.
 function F.convoy_return(c)
     if not F.convoy_drop(c) then return end
-    local exporter, to = F.live(c.f), nil
-    if exporter and c.x then to = F.nearest(exporter, c.x, c.y) elseif exporter then to = F.capital(exporter) end
-    for stem, n in pairs(c.basket) do F.move(nil, to, stem, n, KIND.move, nil, c.f) end
+    local exporter, homes = F.live(c.f), {}
+    if exporter and c.x then homes = F.homes(exporter, nil, c.x, c.y) elseif exporter then homes = { F.capital(exporter) } end
+    for stem, n in pairs(c.basket) do F.store_home(homes, stem, n, KIND.move, c.f) end
 end
 
 -- ON THE ROAD: the point a share of the way along it, as F.ship_step reads a shipment's. No road, no move.
@@ -7032,20 +7132,22 @@ function F.supply_cart_drop(c)
     return false
 end
 
--- Transfer in goods order; a nil destination loses the cargo.
-local function supply_unload(c, to, kind, to_key)
+-- Transfer in goods order into `homes` (F.homes); an empty list loses the cargo.
+local function supply_unload(c, homes, kind, to_key)
     for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
         local n = c.basket[g.stem]
-        if n then F.move(nil, to, g.stem, n, kind, nil, to_key) end
+        if n then F.store_home(homes, g.stem, n, kind, to_key) end
     end
 end
 
--- Return to the source if still owned, otherwise the nearest owned settlement; landless factions lose the cargo.
+-- Return to the source if still owned, then the settlements nearest it; with the source lost, the settlements
+-- nearest the cart. Landless factions lose the cargo.
 local function supply_home(c)
     local f = F.live(c.f)
     local to = f and F.owned(f, c.from)
-    if f and not to then to = F.nearest(f, c.x, c.y) end
-    supply_unload(c, to, KIND.move, c.f)
+    local x, y = c.x, c.y
+    if to then x, y = to:settlement():logical_position_x(), to:settlement():logical_position_y() end
+    supply_unload(c, f and F.homes(f, to, x, y) or {}, KIND.move, c.f)
 end
 
 function F.supply_cart_return(c)
@@ -7055,7 +7157,7 @@ end
 
 function F.supply_cart_seize(c, captor)
     if not F.supply_cart_drop(c) then return end
-    supply_unload(c, F.nearest(captor, c.x, c.y), KIND.raid, captor:name())
+    supply_unload(c, { F.nearest(captor, c.x, c.y) }, KIND.raid, captor:name())
 end
 
 -- Return any cargo that no longer fits in the army.
@@ -7441,7 +7543,9 @@ function F.init()
         function(context) F.enemy_cache, F.enemy_cache_ui = {}, {}; F.guard(F.supply_turn, context:faction()) end, true)
     -- every faction's: the replenishment bill reads the armies at both ends of the turn (F.repl_turn)
     core:add_listener("derpy_mr_flows_repl_end", "FactionTurnEnd", true,
-        function(context) F.guard(F.repl_turn, context:faction()) end, true)
+        function(context) F.guard(F.repl_turn_end, context:faction()) end, true)
+    core:add_listener("derpy_mr_flows_merged", "UnitMergedAndDestroyed", true,
+        function(context) F.guard(F.on_unit_merged, context) end, true)
     F.guard(F.provision_seed_all)
 end
 

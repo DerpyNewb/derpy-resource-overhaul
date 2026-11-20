@@ -57,9 +57,9 @@ RULES = [
     ("grain", lambda g: True,
      "Working farms grow staples, including farms outside their culture's homeland."),
     ("warhorses", lambda g: g["climate"] in ("climate_temperate", "climate_savannah", "climate_desert")
-     and (g["areas"] & {"bretonnia", "kislev", "araby"}) or g["origin"] in ("hef", "emp", "def"),
+     and (g["areas"] & {"bretonnia", "kislev", "araby"}) or g["origin"] in ("hef", "emp", "def", "cth", "chs"),
      "Bretonnian destriers, Kislevite steppe horses, Arabyan horses; Ellyrion's steeds, Averland's "
-     "herds and the Druchii's Dark Steeds."),
+     "herds and the Druchii's Dark Steeds; Cathay's corrals and the Chaos tribes' horse barns."),
     ("pipeweed", R("the_moot"),
      "Halfling pipeweed comes from the Moot and nowhere else."),
     ("books", R("altdorf", "nuln", "middenheim", "talabheim", "marienburg", "white_tower_of_hoeth"),
@@ -96,9 +96,9 @@ RULES = [
      or (g["areas"] & {"darklands", "northern_darklands", "southern_darklands"} and "res_rom_iron" in g["deposits"]),
      "Hashut's metal, cast in the Chaos Dwarf forges; copper from the Copper Landing."),
     ("blackpowder", lambda g: ("res_rom_lead" in g["deposits"] and g["origin"] in ("dwf", "emp", "chd", "cth"))
-     or g["tail"] == "nuln" or g["origin"] == "dwf",
+     or g["tail"] == "nuln" or g["origin"] in ("dwf", "cth"),
      "Saltpetre from salt pans, worked by the gunpowder races; Nuln's Imperial Gunnery School; "
-     "the Dwarf Engineers' Guilds."),
+     "the Dwarf Engineers' Guilds; Cathay's forges and alchemists."),
     # Ulthuan is climate_island throughout (30 of 34), never mountain - so ore, not terrain.
     ("ithilmar", lambda g: g["areas"] & {"ulthuan"} and g["deposits"] & (MINED | {"res_rom_marble"})
      or g["tail"] == "vauls_anvil_ulthuan",
@@ -175,8 +175,10 @@ CA_RULES = [
      "Every marble quarry cuts stone, the Chaos Dwarfs' included."),
     ("timber", lambda g: "res_rom_timber" in g["deposits"],
      "Every logging camp fells timber, the Chaos Dwarfs' included."),
-    ("animals", lambda g: "res_animals" in g["deposits"],
-     "Beasts are penned wherever the wild ones are caught, the Greenskins' pens included."),
+    # 2026-11-20: and wherever a Greenskin beast pen or a Manticore Den stands (KIND_CHAINS "pens")
+    ("animals", lambda g: True,
+     "Beasts are penned wherever the wild ones are caught, and the Greenskins keep wolves, boars, squigs and "
+     "spiders in pens wherever they live."),
 ]
 
 

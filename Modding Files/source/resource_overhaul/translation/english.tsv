@@ -890,6 +890,11 @@ event_feed_strings_text_derpy_mr_army_food_secondary_hard	Open Resource Vault > 
 event_feed_strings_text_derpy_mr_road_loss_title	Cargo robbed on the road	false
 event_feed_strings_text_derpy_mr_road_loss_primary	Bandits took part of a cargo bound for you.	false
 event_feed_strings_text_derpy_mr_road_loss_secondary	Open Resource Vault > Trade to see what arrived.	false
+event_feed_strings_text_derpy_mr_road_cart_title	Trouble on a supply road	false
+event_feed_strings_text_derpy_mr_road_cart_ambush_primary	Bandits robbed a supply cart on its way to your army. Half of its food was lost.	false
+event_feed_strings_text_derpy_mr_road_cart_highwaymen_primary	Highwaymen stopped a supply cart on its way to your army. It paid a fifth of its value in gold to pass.	false
+event_feed_strings_text_derpy_mr_road_cart_washout_primary	A washed-out road held up a supply cart on its way to your army. It will arrive a turn late.	false
+event_feed_strings_text_derpy_mr_road_cart_secondary	Open Resource Vault > Spending to check army provisions. Road guards on the Trade tab make trouble half as likely.	false
 effect_bundles_localised_title_derpy_mr_rc_army_ammo	Ammunition Train	false
 effect_bundles_localised_description_derpy_mr_rc_army_ammo	Paid for from your stores: ammunition +20% (5 turns).	false
 effect_bundles_localised_title_derpy_mr_rc_army_forge	Field Forge	false
@@ -1073,7 +1078,8 @@ ancillaries_onscreen_name_derpy_mr_anc_wyvern_scale_armour	Wyvern-Scale Armour	f
 ancillaries_colour_text_derpy_mr_anc_wyvern_scale_armour	Scales prised from a wyvern of the Badlands, still hard as iron.	false
 derpy_mr_ui_9287bbc6af	Nothing is stored here yet.	false
 derpy_mr_ui_34a9352977	You hold no settlements and so have no stores.	false
-derpy_mr_ui_949cb9d51e	Its buildings make no goods yet. It grows its own food, and other goods come by trade.	false
+derpy_mr_ui_81533d7374	Its buildings make no goods. It grows its own food, and other goods come by trade.	false
+derpy_mr_ui_025260d0a0	Its buildings make no goods. Goods come here by trade.	false
 derpy_mr_ui_92f77f56ea	This store is full and anything more made here is lost.	false
 derpy_mr_ui_726c1d67bc	The history starts next turn.	false
 derpy_mr_ui_2f0091807b	{1} [[col:red]]Full[[/col]]	false
@@ -1108,6 +1114,7 @@ derpy_mr_ui_d1119e4d98	Refuse every resource your trade partners send.\nYour own
 derpy_mr_ui_84871287aa	sent {1} and received {2}	false
 derpy_mr_ui_4c58cb4a29	Recruits last turn	false
 derpy_mr_ui_3e18f60438	Guards ride with every cart and convoy you send.\nThey cost 5% of the cargo's value when it leaves.\nThey make trouble on the road half as likely.	false
+derpy_mr_ui_56cc641acf	Road guards ride with each supply cart.\nThey cost 5% of its value when it leaves.	false
 derpy_mr_ui_8f57993ed3	Nothing moves between you and these partners.	false
 derpy_mr_ui_eded1a9e96	The road takes more than {1}, crosses hostile lands or has an enemy army on it.	false
 derpy_mr_ui_8f63d54d46	1 turn	false
@@ -1835,7 +1842,7 @@ mct_derpy_more_resources_tolls_text	Tolls and blockades	false
 mct_derpy_more_resources_tolls_tooltip	Trade agreements and partner contracts pay tolls to the factions whose lands their roads cross. An army at war with either side standing within 3 hexes of the road stops that agreement's trade for the turn. Off: no tolls and no blockades.	false
 mct_derpy_more_resources_bandits_text	Bandits on the roads	false
 mct_derpy_more_resources_bandits_tooltip	Bandits, highwaymen and washed-out roads can meet your cargo on the road. Dangerous lands meet them more often. You choose what to do, and some choices lead to a battle. Guards on the Trade tab make it less likely. Off: the roads are safe.	false
-mct_derpy_more_resources_army_supply_section_text	Army supply lines	false
+mct_derpy_more_resources_army_supply_section_text	Army supply	false
 mct_derpy_more_resources_vanilla_supply_lines_text	Vanilla supply lines	false
 mct_derpy_more_resources_vanilla_supply_lines_tooltip	Ticked: the game's own supply lines stay. Each army after your first makes every army cost more upkeep. This mod's roads still carry food to your armies but add no upkeep. Unticked: this mod's supply lines replace them. Races whose armies carry no food keep the game's own rule. So does every race when Army provisions or Army supply lines is off. You can change this during a campaign. In multiplayer it is always unticked.	false
 mct_derpy_more_resources_supply_lines_text	Army supply lines	false

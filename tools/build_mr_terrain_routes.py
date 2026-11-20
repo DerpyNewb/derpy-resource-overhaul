@@ -54,11 +54,15 @@ OWNER_COLOURS = tuple(rgb for *_text, rgb4 in COLOUR_SETS for rgb in rgb4)   # t
 # colour-blind view: the grey from the Pale set's cream, the orange from the Default set's gold, the magenta from the
 # colour-blind set's own magenta. Each moved the least that clears SUPPLY_APART (0.05, 0.13 and 0.03 in RGB).
 SUPPLY_STATES = ('supplied', 'stretched', 'cut')
-SUPPLY_COLOURS = ((0.88, 0.92, 0.94), (0.87, 0.61, 0.0), (0.91, 0.10, 0.87))
+SUPPLY_COLOURS = ((0.82, 0.94, 1.0), (0.87, 0.61, 0.0), (0.91, 0.10, 0.87))
 # Delta E (CIE76, the same four views as the sets) a supply ink keeps from every owner colour of every set, then the
 # three states from one another. 10 is as far as sixteen owner colours leave room for: the orange cannot reach 12
 # without turning yellow, and nothing within 0.2 of the grey or the magenta reaches 18. The states sit 37 apart.
 SUPPLY_APART, SUPPLY_STATES_APART = 10, 30
+# The supplied ink alone has room to spare (deferred minor, 2026-11-09: the grey sat 10.3 from the Bright set). A
+# search over light inks (0.6-1.0 a channel, 0.02 steps) found the cool whites with more blue the furthest: 16.5 at
+# 0.82/0.94/1.0, a step from the grey, against 17.1 for an outright ice blue.
+SUPPLIED_APART = 15
 COLOURS = OWNER_COLOURS + SUPPLY_COLOURS   # the palette: terrain_routes.lua R.ink hands out the first sixteen
 # key, label, tooltip, the wrapper's scale on the dash, then on the cargo marker. Small, the default, halved its
 # dashes to 0.35 (author, 2026-11-03) and kept the marker at 0.7.
@@ -451,6 +455,9 @@ def selftest():
     assert among >= SUPPLY_STATES_APART, ('the supply states run together', among)
     near = {key: separation(SUPPLY_COLOURS, rgb4) for key, _l, _t, rgb4 in COLOUR_SETS}
     assert min(near.values()) >= SUPPLY_APART, ('a supply ink sits on an owner colour', near)
+    # the supplied ink, drawn under most armies most turns, keeps clear of every owner colour by more than the floor
+    supplied = separation(SUPPLY_COLOURS[:1], OWNER_COLOURS)
+    assert supplied >= SUPPLIED_APART, ('the supplied ink sits near an owner colour', supplied)
     # the map keeps each army's answer until R.epoch moves, and F.invalidate_reach is what moves it at a war or a capture
     flows = (OUT / 'flows.lua').read_text(encoding='utf-8')
     reach = re.search(r'^function F\.invalidate_reach\(\)\n(.*?)^end$', flows, re.M | re.S)

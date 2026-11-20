@@ -1121,7 +1121,7 @@ local MCT = {}
 local function option()
     local o = {}
     function o:set_text() end
-    function o:set_tooltip_text() end
+    function o:set_tooltip_text(t) self.tip = t end
     function o:slider_set_precision() end
     function o:slider_set_min_max() end
     function o:slider_set_step_size() end
@@ -1184,6 +1184,10 @@ for k, o in pairs(opt) do
     elseif k:match('^route_') then
         eq(o.locked,nil,'visibility stays editable in a campaign')
         eq(o.value,true,'route visuals default on')
+    elseif k == "recruit" or k == "recruit_gold" or k == "recruit_per" or k == "replenish_per" then
+        -- CHANGED IN A RUNNING CAMPAIGN (2026-11-20): open there, and the tooltip says so (flows.lua F.freeze_rates)
+        eq(o.locked, nil, "a campaign leaves " .. k .. " open")
+        eq((o.tip or ""):find("You can change this during a campaign", 1, true) ~= nil, true, k .. "'s tooltip says it can change")
     else
         eq(o.locked, true, "a campaign greys " .. k); eq(type(o.why) == "string" and #o.why > 0, true, "and says why")
     end
@@ -1228,6 +1232,26 @@ F.state.rates.army_provisions = false
 F.freeze_rates(); eq(F.rates().army_provisions, false, "existing campaign provisions stay off")
 F.state = { factions = {} }; F.on_faction_turn_start(faction("fz").iface)
 eq(F.state.rates and F.state.rates.raid, 40, "a turn start freezes too (a save from before first tick froze)")
+-- CHANGED IN A RUNNING CAMPAIGN (Workshop reports 2026-11-20: armies that could not replenish, and no way out but a new
+-- campaign): the recruit and replenish settings are what the MCT shows, read again at every turn start
+do
+    local live = {}
+    for k in pairs(DERPY_MR_FLOWS_LIVE) do live[#live + 1] = k end
+    table.sort(live)
+    eq(table.concat(live, ","), "recruit,recruit_gold,recruit_per,replenish_per", "the four live settings")
+    F.state = { factions = {}, rates = F.read_rates() }
+    F.state.rates.replenish_per, F.state.rates.recruit_gold = 0, false   -- as an older save froze them
+    opt.replenish_per.value, opt.recruit_gold.value, opt.raid.value = 50, true, 12
+    F.freeze_rates()
+    eq(F.rates().replenish_per, 50, "the MCT's replenishment cost reaches a running campaign at the next turn start")
+    eq(F.rates().recruit_gold, true, "and its gold box, as the page shows it")
+    eq(F.rates().raid, 40, "the other settings stay frozen")
+    opt.replenish_per.value = 49.6; F.freeze_rates()
+    eq(F.rates().replenish_per, 50, "a slider's value is whole in the save")
+    MP = true; F.freeze_rates()
+    eq(F.rates().replenish_per, 100, "multiplayer takes the default, the same on every machine")
+    MP = false; opt.replenish_per.value, opt.raid.value = 100, 40
+end
 -- AT FIRST TICK: a new campaign fires no FactionTurnStart until turn 1 ends. F.init again, its
 -- listeners dropped after, so nothing below fires twice
 do local n_listeners = #LISTENERS
@@ -4749,9 +4773,10 @@ end)()
     F.state = { factions = {}, rates = F.read_rates() }
     local R = F.state.rates
     eq(R.hunger_men, true, "new campaigns: hunger weakens armies")
-    eq(R.recruit_gold, false, "new campaigns: gold does not pay for recruits")
+    eq(R.recruit_gold, true, "new campaigns: gold pays for troops (since 2026-11-20)")
     eq(R.replenish_per, 100, "new campaigns: replenishing costs its recruit's resources")
-    R.army_provisions, R.ai, R.recruit_per = true, true, 1
+    -- the bill below with gold off: a shortfall is taken back (gold for replenishing is tested after it)
+    R.army_provisions, R.ai, R.recruit_per, R.recruit_gold = true, true, 1, false
     local f = faction("hg", { human = true })
     local r = region("hg_home", 43000, 0, 2000, { coal = 0 }); own(f, r, true)
     local forces = {}
@@ -4911,6 +4936,37 @@ end)()
     eq(ar.held.coal, 50, "a computer faction regains for free with its stores switch off")
     R.ai = true; q.hp = 20; F.repl_turn(ai.iface); q.hp = 100; F.repl_turn(ai.iface)
     eq(ar.held.coal, 46, "and pays with it on")
+    -- GOLD PAYS FOR REPLENISHING TOO (Workshop reports 2026-11-20: Greenskins make none of the goods their troops need,
+    -- so their armies never replenished). A 500-gold unit regaining 80% owes 4 goods; none held, it pays in gold at a
+    -- recruit's price and keeps the strength. A treasury too small keeps only what it paid for.
+    local war = F.cheapest(F.bulk("war"))
+    local due4 = math.ceil(4 * war * F.RECRUIT.gold_x)
+    R.recruit_gold = true
+    local gf = faction("hg_gold", { human = true, gold = 0 }); own(gf, region("hg_gold1", 43400, 0, 2000, { coal = 0 }), true)
+    TREASURY.hg_gold = 1000
+    local w1 = soldier({ key = "hg_w1", hp = 20 }); force(971, { w1 }, gf)
+    F.repl_turn(gf.iface); w1.hp = 100; F.repl_turn(gf.iface)
+    eq(w1.hp, 100, "nothing in store, Gold pays for troops: the regained strength stays")
+    eq(gf.iface:treasury(), 1000 - due4, "and the 4 goods owed are paid in gold")
+    eq(F.recruit_entry("hg_gold").gold, due4, "the ledger counts that gold")
+    local hf = faction("hg_half", { human = true, gold = 0 }); own(hf, region("hg_half1", 43500, 0, 2000, { coal = 0 }), true)
+    TREASURY.hg_half = due4 / 2
+    local w2 = soldier({ key = "hg_w2", hp = 20 }); force(972, { w2 }, hf)
+    F.repl_turn(hf.iface); w2.hp = 100; F.repl_turn(hf.iface)
+    eq(hf.iface:treasury(), 0, "a treasury of half the gold gives all it has")
+    eq(w2.hp, 60, "and keeps half the gain")
+    R.recruit_gold = false
+    local gai = faction("hg_gai", { gold = 0 }); own(gai, region("hg_gai1", 43600, 0, 2000, { coal = 0 }), true)
+    TREASURY.hg_gai = 1000
+    local w3 = soldier({ key = "hg_w3", hp = 20 }); force(973, { w3 }, gai)
+    F.repl_turn(gai.iface); w3.hp = 100; F.repl_turn(gai.iface)
+    eq(w3.hp, 100, "a computer faction pays in gold with the box unticked, as for its recruits")
+    eq(gai.iface:treasury(), 1000 - due4, "the same price")
+    local nf = faction("hg_nogold", { human = true, gold = 0 }); own(nf, region("hg_nogold1", 43700, 0, 2000, { coal = 0 }), true)
+    TREASURY.hg_nogold = 1000
+    local w4 = soldier({ key = "hg_w4", hp = 20 }); force(974, { w4 }, nf)
+    F.repl_turn(nf.iface); w4.hp = 100; F.repl_turn(nf.iface)
+    eq(w4.hp, 20, "a player with the box unticked loses the gain"); eq(nf.iface:treasury(), 1000, "and pays no gold")
     -- THE UNDEAD REGAIN FOR NOTHING, as they recruit (author, 2026-11-19)
     local vf = faction("hg_vmp", { human = true, sc = "wh_main_sc_vmp_vampire_counts" })
     local vr = region("hg_vmp1", 43300, 0, 2000, { coal = 50 }); own(vf, vr, true)
@@ -4919,6 +4975,30 @@ end)()
     eq(z.hp, 100, "a Vampire Counts unit keeps what it regained"); eq(vr.held.coal, 50, "and pays none of the war goods held")
     vr.held.coal = 0; z.hp = 50; F.repl_turn(vf.iface); z.hp = 90; F.repl_turn(vf.iface)
     eq(z.hp, 90, "with none held, it still keeps it")
+    -- MERGED, NOT REGAINED (Workshop report 2026-11-19): two 10% recruits merged into one, nothing in store
+    f.armies = {}; r.held.coal = 0
+    local m1, m2 = soldier({ key = "hg_m", hp = 10 }), soldier({ key = "hg_m", hp = 10 })
+    m1.faction = function() return f.iface end
+    local mf = force(961, { m1, m2 }); F.repl_turn(f.iface)
+    m1.hp, mf.units = 20, { m1 }
+    fire("UnitMergedAndDestroyed", { unit = function() return m2 end, new_unit = function() return m1 end })
+    fire("FactionTurnEnd", { faction = function() return f.iface end })
+    eq(m1.hp, 20, "a merge that empties a unit is not billed: the entities that came over stay")
+    eq(F.state.repl_h.hg[tostring(m2.cqi)], nil, "and the unit that went is no longer kept")
+    m1.hp = 27.5; F.repl_turn(f.iface)
+    eq(m1.hp, 20, "a regain after it is billed from the merged strength")
+    -- a merge that leaves both standing fires nothing: at the turn end the twin's loss pays for the gain
+    f.armies = {}; r.held.coal = 5
+    local q1, q2 = soldier({ key = "hg_q", hp = 60 }), soldier({ key = "hg_q", hp = 60 })
+    force(962, { q1, q2 }); F.repl_turn(f.iface)
+    q1.hp, q2.hp = 100, 20
+    fire("FactionTurnEnd", { faction = function() return f.iface end })
+    eq(r.held.coal, 5, "a merge that leaves both standing costs nothing")
+    eq(q1.hp, 100, "and keeps what came over"); eq(q2.hp, 20, "the twin keeps the rest")
+    -- the turn start: a loss in the computers' turns pays for no twin's regain
+    q1.hp = 50; F.repl_turn(f.iface)
+    r.held.coal = 0; q1.hp, q2.hp = 57.5, 10; F.repl_turn(f.iface)
+    eq(q1.hp, 50, "at the turn start a twin's loss in battle pays for no regain")
     -- A SAVE FROM BEFORE the harder rules keeps the old ones (MCT is locked in a running campaign)
     F.state.rates = { army_provisions = true }
     local o = F.rates()
@@ -6766,6 +6846,15 @@ end)()
     F.set_pending("e3P", { key = "caravan_master" }); answer(P, EV.caravan_master.dilemma, "FIRST")
     eq(tostring(TREASURY.e3P) .. "," .. tostring((F.state.road_safe or {}).e3P), "nil,nil", "no gold, no caravan master")
     F.convoy_drop(c); F.convoy_drop(pc)
+    -- A SUPPLY CART IS CARGO TOO (deferred minor, 2026-11-09 ledger: the caravan master ignored carts)
+    F.state.supply_carts = { { id = "derpy_mr_supply_1", f = "e3H", army = "1", basket = { coal = 100 }, threat = 40,
+                               x = 24, y = Y } }
+    local co = F.caravan_offer(H.iface)
+    eq(co and co.key, "caravan_master", "a supply cart on a dangerous road brings him")
+    local cart_fee, t_before = math.floor(F.cargo_value_base(F.state.supply_carts[1]) * 5 / 100), TREASURY.e3H or 0
+    F.set_pending("e3H", co or { key = "caravan_master" }); answer(H, EV.caravan_master.dilemma, "FIRST")
+    eq(tostring(cart_fee > 0) .. "/" .. (TREASURY.e3H or 0) - t_before, "true/" .. -cart_fee, "and his fee counts the cart")
+    F.state.supply_carts = nil
     F.state.road_safe = { e3H = 5, x = "bad", [7] = 3 }; F.sanitize_road()
     eq(F.state.road_safe.e3H .. "," .. tostring(F.state.road_safe.x), "5,nil", "a saved safe turn keeps only a number")
     -- TOLL DISPUTE: a neighbour that paid 50 in tolls last turn; 49 is not enough
@@ -7681,6 +7770,27 @@ end)()
     eq(#carts() .. "/" .. src.held.grain .. "/" .. oth.held.grain .. "/" .. (xr.held.grain or 0), "0/" .. held,
        "no settlement left: the cart is lost and nothing is moved")
     own(P, src, true); P.armies = { a.iface }
+    -- A FULL STORE AT HOME (deferred minor, 2026-11-09 ledger): what the source has no room for goes on to the
+    -- faction's other settlements, nearest the source first; only what fits nowhere is lost
+    do
+        own(P, oth)
+        local s_before, o_before = src.held.grain, oth.held.grain or 0
+        send({ grain = 5 })
+        local load = s_before - src.held.grain
+        src.held.grain = 995                       -- room for 5 of the cart's 15
+        P.armies = {}
+        TURN = 32; F.supply_carts_turn(P.iface)
+        eq(load .. "/" .. #carts() .. "/" .. src.held.grain .. "/" .. (oth.held.grain or 0) - o_before, "15/0/1000/10",
+           "a cart home to a full store: the source fills, the next settlement takes the rest")
+        -- a convoy coming home does the same, from the settlement nearest it
+        local cv = { id = "derpy_mr_cv_9902", f = "scP", buyer = "scX", basket = { grain = 12 }, at = 1, due = 9, x = 2, y = Y }
+        F.state.convoys = { cv }
+        F.convoy_return(cv)
+        eq(src.held.grain .. "/" .. (oth.held.grain or 0) - o_before, "1000/22", "a convoy home to a full store spills over too")
+        src.held.grain, oth.held.grain = s_before, o_before
+        F.state.convoys = nil
+        lose(P, oth); P.armies = { a.iface }
+    end
 
     -- THE CART TRIES THE NEXT SETTLEMENT (Basilevs, 2026-11-15: armies starved while the nearest settlement had no food
     -- to spare): c_two stands 180 hexes from the army, c_src 160. With nothing to spare at c_src the cart comes from c_two
@@ -7730,13 +7840,29 @@ end)()
     -- the washout needs no bandits, so a dilemma offered here would be offered, not crash: the third roll is the
     -- region an offer would name
     BANDITRY, ROLLQ, F.state.road_cool = function(keys) return 60 * #keys end, { 1, 3, 1 }, nil
+    -- ...BUT NEVER IN SILENCE (deferred minor, 2026-11-09 ledger): with no dilemma the player is told what happened
+    local told = {}
+    cm.show_message_event = function(_, fk, _t, primary) told[#told + 1] = fk .. "|" .. primary end
     local asked, due = #DILEMMAS, c.due
     F.road_event(P.iface, "supply", c, { 0, Y })
     eq(c.due - due .. "/" .. #DILEMMAS - asked, "1/0", "single player: a washout costs the cart a turn, settled with no dilemma")
     eq(F.state.road_cool.scP, nil, "and the faction's encounter cooldown is not kept")
+    eq(told[1], "scP|event_feed_strings_text_derpy_mr_road_cart_washout_primary", "the player hears the cart is a turn late")
     ROLLQ = { 1, 1 }
     F.road_event(P.iface, "supply", c, { 0, Y })
     eq(c.basket.grain .. "/" .. #DILEMMAS - asked, "5/0", "the ambush takes half, with no dilemma either")
+    eq(told[2], "scP|event_feed_strings_text_derpy_mr_road_cart_ambush_primary", "the player hears the cart was robbed")
+    local gold0 = TREASURY.scP or 0
+    ROLLQ = { 1, 2 }
+    F.road_event(P.iface, "supply", c, { 0, Y })
+    eq(tostring((TREASURY.scP or 0) < gold0) .. "/" .. tostring(told[3]),
+       "true/scP|event_feed_strings_text_derpy_mr_road_cart_highwaymen_primary", "highwaymen: the cart pays and the player hears it")
+    TREASURY.scP = -100000   -- an empty treasury: nothing is paid, so there is nothing to tell
+    ROLLQ = { 1, 2 }
+    F.road_event(P.iface, "supply", c, { 0, Y })
+    eq(#told, 3, "highwaymen paid nothing: the player is told nothing")
+    TREASURY.scP = gold0
+    cm.show_message_event = function() end
     -- a convoy that turn still meets the washout, as a dilemma: the cart used up no cooldown. The convoy's own encounter
     -- IS kept, so a second one that turn, with the other two already met, meets nothing
     local cv = { id = "derpy_mr_cv_9901", f = "scP", basket = { grain = 4 }, at = TURN, due = TURN + 3, x = 0, y = Y,

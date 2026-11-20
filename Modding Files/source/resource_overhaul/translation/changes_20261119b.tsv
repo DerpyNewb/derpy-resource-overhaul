@@ -1,0 +1,10 @@
+change	key	english	old_key	old_english
+edited	mct_derpy_more_resources_army_supply_section_text	Army supply	mct_derpy_more_resources_army_supply_section_text	Army supply lines
+new	event_feed_strings_text_derpy_mr_road_cart_title	Trouble on a supply road		
+new	event_feed_strings_text_derpy_mr_road_cart_ambush_primary	Bandits robbed a supply cart on its way to your army. Half of its food was lost.		
+new	event_feed_strings_text_derpy_mr_road_cart_highwaymen_primary	Highwaymen stopped a supply cart on its way to your army. It paid a fifth of its value in gold to pass.		
+new	event_feed_strings_text_derpy_mr_road_cart_washout_primary	A washed-out road held up a supply cart on its way to your army. It will arrive a turn late.		
+new	event_feed_strings_text_derpy_mr_road_cart_secondary	Open Resource Vault > Spending to check army provisions. Road guards on the Trade tab make trouble half as likely.		
+reworded	derpy_mr_ui_81533d7374	Its buildings make no goods. It grows its own food, and other goods come by trade.	derpy_mr_ui_949cb9d51e	Its buildings make no goods yet. It grows its own food, and other goods come by trade.
+new	derpy_mr_ui_025260d0a0	Its buildings make no goods. Goods come here by trade.		
+new	derpy_mr_ui_56cc641acf	Road guards ride with each supply cart.\nThey cost 5% of its value when it leaves.		

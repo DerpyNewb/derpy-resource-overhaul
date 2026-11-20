@@ -170,7 +170,8 @@ GOODS = {
              "Averland's herds and the Druchii's Dark Steeds, bred for war.",
         sources=[("stables", ANY(ALL(CLIM("climate_temperate", "climate_savannah", "climate_desert"),
                                      AREA("bretonnia", "kislev", "araby")), ORIGIN("hef", "emp"))),
-                 ("darksteeds", ORIGIN("def"))]),
+                 ("darksteeds", ORIGIN("def")),
+                 ("corral", ORIGIN("cth", "chs"))]),   # 2026-11-20: Cathay's and the Chaos tribes' own herds
     "pipeweed": dict(
         unit="bundle", price=14.0, name="Pipeweed", scale=2.0,
         desc="Halfling leaf from the Moot, smoked in every tavern from Altdorf to Marienburg.",
@@ -241,7 +242,8 @@ GOODS = {
              "know the secret.",
         sources=[(("mine", "res_rom_lead"), ORIGIN("dwf", "emp", "chd", "cth")),
                  ("settlement", REG("nuln")),
-                 ("engineer", ORIGIN("dwf"))]),
+                 ("engineer", ORIGIN("dwf")),
+                 ("powder", ORIGIN("cth"))]),   # 2026-11-20: Cathay's gunpowder, in its own lands
     "ithilmar": dict(
         unit="ingot", price=20.0, name="Ithilmar", scale=0.5,
         desc="The light, bright metal of the elves, found only in the rock of Ulthuan.",
@@ -332,13 +334,13 @@ GOODS.update({
         sources=[]),
     "leather": dict(unit="bundle", price=12.0, name="Leather",
         desc="Cured hides for boots, harness, armour straps and stretcher slings.",
-        sources=[("hunt", None), (PASTURES, None)]),
+        sources=[("hunt", None), (PASTURES, None), ("pens", None), ("warband", None)]),   # pens, warband: 2026-11-20
     "cloth": dict(unit="derpy_bolts", price=12.0, name="Cloth",
         desc="Plain woven cloth for tents, work clothes and clean dressings. A necessity rather than a courtly luxury.",
         sources=[("craft", None)]),
     "tools": dict(unit="derpy_crates", price=14.0, name="Tools",
         desc="Hammers, tongs, chisels and saws. Every work gang needs them; every campaign wears them out.",
-        sources=[("forge", None)]),
+        sources=[("forge", None), ("toolbox", None)]),   # toolbox: 2026-11-20
 })
 
 
@@ -370,7 +372,7 @@ CA_GOODS = {
     "timber": dict(res="res_rom_timber", effect="wh_main_effect_region_resource_timber_production",
                    sources=[(("mine", "res_rom_timber"), None)]),
     "animals": dict(res="res_animals", effect="wh_main_effect_region_resource_animals_production",
-                    sources=[(("mine", "res_animals"), None)]),
+                    sources=[(("mine", "res_animals"), None), ("pens", None)]),   # pens: 2026-11-20
 }
 
 
@@ -1745,7 +1747,7 @@ def n_loc():
             + 2 * len(SUPPLY) + 2 + len(MINT_FX) + 2 + 2 * len(store_stems())   # Exports held; the hidden markers
             + 2 * len(WORK_UPGRADES) + 2 * sum(1 for w in WORK_ITEMS if not w[3])
             + 2   # Recruits
-            + 2 * (len(provision_bundles()) + len(fed_bundles()) + len(supply_bundles())) + 5 + 3 + 2 * len(recipe_bundles()) + 3 * sum(1 for w in works() if w["kind"] == "trait") + 2)   # recipes; 3 + 3: the army food and road loss messages
+            + 2 * (len(provision_bundles()) + len(fed_bundles()) + len(supply_bundles())) + 5 + 3 + 5 + 2 * len(recipe_bundles()) + 3 * sum(1 for w in works() if w["kind"] == "trait") + 2)   # recipes; 5 + 3 + 5: the army food, road loss and supply cart road messages
 
 # Owners with no living people to make or eat a good: daemons, the dead, and beasts with no towns
 # to sell in. Matched on the CHAIN key, so a special variant for one of them goes too. Not Norsca's god altars
@@ -1763,7 +1765,8 @@ SETTLE_SKIP = re.compile(r"ruin|prologue|dummy|endgame|horde")
 TABLES = {"provisioning": [8, 12, 16, 20, 24], "port": [6, 8, 12], "mine": [6, 8, 12], "settlement": [4, 6, 8, 10, 12],
           **{k: [6, 8, 12] for k in ("farm", "hunt", "teahouse", "inn", "craft", "forge", "dig",
                                      "stables", "eyrie", "vineyard", "deep", "toolmaker", "engineer",
-                                     "furstash", "coppermine", "darksteeds")}}
+                                     "furstash", "coppermine", "darksteeds",
+                                     "pens", "toolbox", "corral", "powder", "warband")}}
 
 # The economy buildings of each kind, by culture - the "green" buildings. Listed rather than
 # matched, because the naming is per DLC (Cathay's growth/income yin and yang, the Chaos Dwarf
@@ -1806,6 +1809,21 @@ KIND_CHAINS = {
     "furstash": ["wh3_main_chs_slaves"],            # Fur Stash: "Mutant pelts ... do not come cheap"
     "coppermine": ["wh2_main_special_copper_mountain_skv"],   # "exploit its massive copper ore deposits"
     "darksteeds": ["wh2_main_def_riders"],          # Plateau of Dark Steeds: Naggaroth's horses
+    # RACES THAT MADE NONE OF THEIR TROOPS' GOODS (author, 2026-11-20, from Workshop reports of armies that never
+    # replenished; docs/TRADE_RESOURCES.md section 78 has the count). Greenskins could make no war good, mount or
+    # building good in any of their own regions, Cathay and the Warriors of Chaos almost none. Each by CA's own name.
+    # The beast pens: the Wolf Den (Boar Sty from level 2, Skarsnik's own too), the Savage Orcs' Boar Sty, Squig Cages,
+    # Gloomy Hollowz (the spiders), and the Warriors of Chaos' Manticore Den: beasts, and the hides off them
+    "pens": ["wh_main_GREENSKIN_boars", "wh_dlc06_GREENSKIN_boars_skarsnik", "wh_main_SAVAGEORC_boars",
+             "wh_dlc06_GREENSKIN_squigs", "wh_main_GREENSKIN_forest_beasts", "wh3_dlc20_woc_dark_fortress_large_monsters"],
+    "toolbox": ["wh_main_GREENSKIN_workshop"],      # Goblin Toolbox
+    # Cathay's Corral (its horse cavalry) and the Warriors of Chaos' Horse Barn (the Chaos Knights' steeds)
+    "corral": ["wh3_main_cth_cavalry", "wh3_dlc20_woc_dark_fortress_knights"],
+    # Cathay's Nan-Gau Forge (Iron Hail gunners) and Alchemist Tower (rockets and cannon): Cathay's own gunpowder
+    "powder": ["wh3_main_cth_gunners", "wh3_main_cth_artillery"],
+    # the Warriors of Chaos' Warband Camp (a Chaos Altar's) and Tribal Garrison (a Dark Fortress's): the northern
+    # tribes' hides
+    "warband": ["wh3_dlc20_woc_chaos_altar_garrison", "wh3_dlc20_woc_dark_fortress_marauder"],
 }   # (the Barley Field's grain is an ORIGIN("dwf") branch of grain's farm rule)
 FOREIGN_KINDS = {"deep": "wh3_main_set_dwarf_foreign_economy"}   # kind -> the foreign-slot set it lives in
 # A chain's race, from the tag in its key - CA's culture variants leave 80 settlement chains
@@ -2573,6 +2591,16 @@ def _bundles(add, loc):
     loc += [("event_feed_strings_text_derpy_mr_road_loss_title", "Cargo robbed on the road"),
             ("event_feed_strings_text_derpy_mr_road_loss_primary", "Bandits took part of a cargo bound for you."),
             ("event_feed_strings_text_derpy_mr_road_loss_secondary", "Open Resource Vault > Trade to see what arrived.")]
+    # ...and a player's own supply cart, which meets its encounters with no dilemma (flows.lua cart_told)
+    loc += [("event_feed_strings_text_derpy_mr_road_cart_title", "Trouble on a supply road"),
+            ("event_feed_strings_text_derpy_mr_road_cart_ambush_primary",
+             "Bandits robbed a supply cart on its way to your army. Half of its food was lost."),
+            ("event_feed_strings_text_derpy_mr_road_cart_highwaymen_primary",
+             "Highwaymen stopped a supply cart on its way to your army. It paid a fifth of its value in gold to pass."),
+            ("event_feed_strings_text_derpy_mr_road_cart_washout_primary",
+             "A washed-out road held up a supply cart on its way to your army. It will arrive a turn late."),
+            ("event_feed_strings_text_derpy_mr_road_cart_secondary",
+             "Open Resource Vault > Spending to check army provisions. Road guards on the Trade tab make trouble half as likely.")]
     for target, key, icon_, fx in recipe_bundles():
         w = next(x for x in works() if x.get("bundle") == key)
         said = w["detail"] if w["kind"] == "lasting" else w["gives"]   # a lasting work's detail says Permanent
@@ -3766,7 +3794,7 @@ def check_submod_reach(name):
     ca_areas = {a for g in _signals().values() for a in g["areas"]}
     # Common staples are intentionally ungated; origin still discriminates specialized goods.
     plain = {good for good in list(GOODS) + list(CA_GOODS)
-             if good not in {"grain", "salted_meat", "leather", "cloth", "tools"} and not any(c is not None and ("climate_" in render(c) or "IsOriginatingSubculture" in render(c))
+             if good not in {"grain", "salted_meat", "leather", "cloth", "tools", "animals"} and not any(c is not None and ("climate_" in render(c) or "IsOriginatingSubculture" in render(c))
                         for _p, c in good_spec(good)["sources"])}
     bad = ["%s: %s in all %d regions" % (a, good, n)
            for a, (n, goods) in submod_reach(name).items() if n >= 10 and a not in ca_areas

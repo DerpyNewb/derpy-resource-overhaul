@@ -5,7 +5,8 @@ Two files in this folder:
 - `english.tsv` has every line of text in the mod: the panels, tooltips, buildings, goods, effects and the MCT
   settings page. It is ready to import into RPFM.
 - `changes_YYYYMMDD.tsv` lists what changed in that update, compared with the update before it. There is one
-  file for each update.
+  file for each update. When two updates come out on the same day, the second file gets a letter:
+  `changes_20261119b.tsv` came after `changes_20261119.tsv`.
 
 Translations are welcome as separate mods that require this one.
 

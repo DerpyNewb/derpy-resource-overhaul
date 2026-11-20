@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-19, third update
+
+- Merged understrength units no longer drop back to their old size a turn later.
+
+## 2026-11-19, second update
+
+- Supply carts send a message when bandits, highwaymen or a washed-out road stop them.
+- Goods coming home to a full store go on to the next nearest settlement.
+- The Caravan Master also protects supply carts.
+- Army supply tooltips show the road guards' fee.
+- No Supply cart row when army supply lines are off.
+- Supplied army roads draw in a brighter colour on the map.
+- The MCT section is renamed Army supply.
+- Settlements of factions that need no food no longer say they grow their own.
+- Workshop rows show their own icons.
+
 ## 2026-11-19
 
 - Vampire Counts and Vampire Coast recruits, Raise Dead included, no longer cost resources.

@@ -69,7 +69,9 @@ S.CCO = 'BuildingSlotList.JoinString(BuildingContext.EffectList.Filter(EffectKey
 S.NOTHING = S.T("Nothing is stored here yet.")
 S.NO_REALM = S.T("You hold no settlements and so have no stores.")
 -- a settlement whose main building makes none of our goods (flows.lua F.charted, 2026-11-11)
-S.UNCHARTED = S.T("Its buildings make no goods yet. It grows its own food, and other goods come by trade.")
+S.UNCHARTED = S.T("Its buildings make no goods. It grows its own food, and other goods come by trade.")
+-- ...for an owner that eats nothing, which grows no food there either (flows.lua F.grow_food)
+S.UNCHARTED_UNDEAD = S.T("Its buildings make no goods. Goods come here by trade.")
 S.FULL_TIP = S.T("This store is full and anything more made here is lost.")
 S.NO_HISTORY = S.T("The history starts next turn.")
 S.view, S.focus = "goods", nil
@@ -416,6 +418,7 @@ S.CUT_ICON = "ui/campaign ui/effect_bundles/trade_agreement.png"
 -- ROAD GUARDS (Part D 7.4): a sword, for armed men riding with the cargo (CA's shield icon draws as a blank disc)
 S.GUARD_ICON = "ui/campaign ui/effect_bundles/attribute_unyielding_assault.png"
 S.GUARDS_TIP = S.T("Guards ride with every cart and convoy you send.\nThey cost 5% of the cargo's value when it leaves.\nThey make trouble on the road half as likely.")
+S.GUARD_CART = S.T("Road guards ride with each supply cart.\nThey cost 5% of its value when it leaves.")
 function S.cut_tip(cut, turns)
     local lines = { S.T("Nothing moves between you and these partners."),
         S.T("The road takes more than {1}, crosses hostile lands or has an enemy army on it.", (turns == 1 and S.T("1 turn") or S.T("{1} turns", turns))) }
@@ -1129,7 +1132,9 @@ function S.view_model(realm)
                 tip = add_line(tip, S.T("It eats {1}{2} a turn, {3} for each settlement level.", S.num(meals),
                     (meals == 1 and S.T(" provision") or S.T(" provisions")), S.num(S.ask("need", f:name()) or 0)))
             end
-            if S.ask("charted", r.key) == false then tip = add_line(tip, S.UNCHARTED) end
+            if S.ask("charted", r.key) == false then
+                tip = add_line(tip, f and S.ask("eats", f) == false and S.UNCHARTED_UNDEAD or S.UNCHARTED)
+            end
             v.rows[#v.rows + 1] = { r.name, tostring(r.level), #icons > 0 and "" or "-", tostring(r.goods),
                                     fullest, open = r.key, icons = r.icons, using = icons, tip = tip }
         end
@@ -1394,7 +1399,8 @@ S.ARMY_HUNGER_HARD = S.T("After two missed meals the army's units lose 5% of the
 function S.rate(key)
     local rates = S.flows("rates")
     local ok, r = pcall(rates or function() return nil end)
-    return ok and type(r) == "table" and r[key] or nil
+    if ok and type(r) == "table" then return r[key] end   -- a switch that is off reads false, not nil
+    return nil
 end
 function S.army_hunger()
     return S.rate("hunger_men") and S.ARMY_HUNGER_HARD or S.ARMY_HUNGER
@@ -1436,7 +1442,10 @@ function S.army_view(v)
     v.heads = { S.T("Action"), S.T("Held"), S.T("Per turn"), S.T("Lasts"), "" }
     v.hint = S.T("Unload before you merge this army or its provisions are lost.")
     local here = row.source and S.place(row.source:name())
-    local auto = S.ARMY_AUTO .. "\n" .. row.reason
+    -- SUPPLY CARTS, by hand or by Auto, only with the campaign's supply lines on; each pays the guards' fee when they ride
+    local carts = S.rate("supply_lines") ~= false
+    local guarded = carts and S.ask("guards_on", f:name()) == true
+    local auto = S.ARMY_AUTO .. "\n" .. row.reason .. (guarded and "\n" .. S.GUARD_CART or "")
     local load = (row.mobile and S.ARMY_BUY or (here and (S.T("Fill the army to 10 turns of provisions from {1}.\nIts reserve is not touched.", here))
         or S.T("This army cannot load here."))) .. "\n" .. row.reason
     local unload = here and (S.T("Put the provisions back into {1} and pause Auto.", here))
@@ -1464,9 +1473,11 @@ function S.army_view(v)
             .. "\n" .. S.T("Produce more food there or send it some.")
     end
     local supply = why or S.T("Send a cart of provisions from {1}.\nIt arrives in {2}.\nAn army at war with you can seize it.",
-        S.place(note.cart_source), turns(note.cart_turns))
-    v.rows[#v.rows + 1] = { S.T("Supply cart"), note and note.cart_source and S.place(note.cart_source) or "-", "", "", provisions = "send",
-        army = id, tip = supply, send = { label = S.T("Send supplies"), off = why ~= nil or not S.actions_on(), tip = supply } }
+        S.place(note.cart_source), turns(note.cart_turns)) .. (guarded and "\n" .. S.GUARD_CART or "")
+    if carts then
+        v.rows[#v.rows + 1] = { S.T("Supply cart"), note and note.cart_source and S.place(note.cart_source) or "-", "", "", provisions = "send",
+            army = id, tip = supply, send = { label = S.T("Send supplies"), off = why ~= nil or not S.actions_on(), tip = supply } }
+    end
     v.rows[#v.rows + 1] = { S.T("Unload here"), S.T("Pauses refill"), "", "", provisions = "unload", army = id, tip = unload,
         send = { label = S.T("Unload"), off = not row.source or row.held == 0 or not S.actions_on(), tip = unload } }
     v.rows[#v.rows + 1] = { S.T("Missed meals"), S.num(row.short), "", "", "", tip = S.army_hunger() }

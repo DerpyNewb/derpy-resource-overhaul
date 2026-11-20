@@ -19,7 +19,7 @@ end
 local m = mct:register_mod("derpy_more_resources")
 m:set_title("Derpy Resource Overhaul")
 m:set_author("_D3rpyN3wb_")
-m:set_description("How goods move between settlement stores. These are fixed for the life of a campaign: change them from the main menu before starting a new one. In a multiplayer campaign they are ignored and every value is the default on every machine. The trade route lines and the Vanilla supply lines box can be changed at any time.")
+m:set_description("How goods move between settlement stores. These are fixed for the life of a campaign: change them from the main menu before starting a new one. In a multiplayer campaign they are ignored and every value is the default on every machine. The recruitment and replenishment settings, the trade route lines and the Vanilla supply lines box can be changed at any time.")
 m:add_new_section("stores", "Stores")
 
 local o_raid = m:add_new_option("raid", "slider")
@@ -94,23 +94,21 @@ if IN_CAMPAIGN then o_ships:set_locked(true, LOCK_REASON) end
 
 local o_recruit_per = m:add_new_option("recruit_per", "slider")
 o_recruit_per:set_text("Resources per 100 gold of a recruit")
-o_recruit_per:set_tooltip_text("How many resources a recruit takes from your stores for each 100 gold it is worth. 0 turns this off.")
+o_recruit_per:set_tooltip_text("How many resources a recruit takes from your stores for each 100 gold it is worth. 0 turns this off. You can change this during a campaign. The change applies from your next turn.")
 o_recruit_per:slider_set_precision(0)
 o_recruit_per:slider_set_min_max(0, 5)
 o_recruit_per:slider_set_step_size(1, 0)
 o_recruit_per:set_default_value(1)
 o_recruit_per:set_assigned_section("stores")
-if IN_CAMPAIGN then o_recruit_per:set_locked(true, LOCK_REASON) end
 
 local o_replenish_per = m:add_new_option("replenish_per", "slider")
 o_replenish_per:set_text("Replenishment cost")
-o_replenish_per:set_tooltip_text("Strength a unit regains takes resources from your stores, as a share of what recruiting it takes: at 100, a unit that regains half its strength takes half its recruit's resources. Strength your stores cannot pay for is lost again. 0 turns this off.")
+o_replenish_per:set_tooltip_text("Strength a unit regains takes resources from your stores, as a share of what recruiting it takes: at 100, a unit that regains half its strength takes half its recruit's resources. What your stores cannot pay for is paid in gold when Gold pays for troops is ticked, and is lost again when it is not. 0 turns this off. You can change this during a campaign. The change applies from your next turn.")
 o_replenish_per:slider_set_precision(0)
 o_replenish_per:slider_set_min_max(0, 200)
 o_replenish_per:slider_set_step_size(1, 0)
 o_replenish_per:set_default_value(100)
 o_replenish_per:set_assigned_section("stores")
-if IN_CAMPAIGN then o_replenish_per:set_locked(true, LOCK_REASON) end
 
 local o_toll = m:add_new_option("toll", "slider")
 o_toll:set_text("Tolls")
@@ -241,17 +239,15 @@ if IN_CAMPAIGN then o_supply:set_locked(true, LOCK_REASON) end
 
 local o_recruit = m:add_new_option("recruit", "checkbox")
 o_recruit:set_text("Recruits use the stores")
-o_recruit:set_tooltip_text("Every unit you recruit takes resources from your stores by its type and worth (cavalry and monsters take mounts, infantry and war machines take war materials, the finest also take your rare resource). What the stores lack is paid in your race's own currency where it has one. A recruit whose resources are still short arrives understrength, unless Gold pays for recruits is ticked. Vampire Counts and Vampire Coast recruits take nothing. Off: recruiting takes nothing.")
+o_recruit:set_tooltip_text("Every unit you recruit takes resources from your stores by its type and worth (cavalry and monsters take mounts, infantry and war machines take war materials, the finest also take your rare resource). What the stores lack is paid in your race's own currency where it has one. A recruit whose resources are still short arrives understrength, unless Gold pays for troops is ticked. Vampire Counts and Vampire Coast recruits take nothing. Off: recruiting takes nothing. You can change this during a campaign. The change applies from your next turn.")
 o_recruit:set_default_value(true)
 o_recruit:set_assigned_section("using")
-if IN_CAMPAIGN then o_recruit:set_locked(true, LOCK_REASON) end
 
 local o_recruit_gold = m:add_new_option("recruit_gold", "checkbox")
-o_recruit_gold:set_text("Gold pays for recruits")
-o_recruit_gold:set_tooltip_text("What a recruit's resources and your race's currency do not cover is paid in gold, as before. Off: the recruit arrives understrength instead, and must regain the rest by replenishing. A faction no player controls always pays in gold.")
-o_recruit_gold:set_default_value(false)
+o_recruit_gold:set_text("Gold pays for troops")
+o_recruit_gold:set_tooltip_text("What your stores and your race's currency cannot cover is paid in gold, for recruits and for replenishing alike. Off: a recruit arrives understrength instead and must regain the rest by replenishing, and strength a unit regains that your stores cannot pay for is lost again. A faction no player controls always pays in gold. You can change this during a campaign. The change applies from your next turn.")
+o_recruit_gold:set_default_value(true)
 o_recruit_gold:set_assigned_section("using")
-if IN_CAMPAIGN then o_recruit_gold:set_locked(true, LOCK_REASON) end
 
 local o_hunger_men = m:add_new_option("hunger_men", "checkbox")
 o_hunger_men:set_text("Hunger weakens armies")
@@ -289,7 +285,7 @@ o_bandits:set_assigned_section("using")
 if IN_CAMPAIGN then o_bandits:set_locked(true, LOCK_REASON) end
 
 -- NEVER LOCKED, NEVER FROZEN: flows.lua F.vanilla_supply reads it on every call (single player only).
-m:add_new_section("army_supply", "Army supply lines")
+m:add_new_section("army_supply", "Army supply")
 local o_vanilla_supply_lines = m:add_new_option("vanilla_supply_lines", "checkbox")
 o_vanilla_supply_lines:set_text("Vanilla supply lines")
 o_vanilla_supply_lines:set_tooltip_text("Ticked: the game's own supply lines stay. Each army after your first makes every army cost more upkeep. This mod's roads still carry food to your armies but add no upkeep. Unticked: this mod's supply lines replace them. Races whose armies carry no food keep the game's own rule. So does every race when Army provisions or Army supply lines is off. You can change this during a campaign. In multiplayer it is always unticked.")

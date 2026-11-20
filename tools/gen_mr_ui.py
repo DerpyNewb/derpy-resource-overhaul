@@ -103,8 +103,9 @@ RATES = (
     # REPLENISHMENT COSTS GOODS (Workshop feedback 2026-11-16): a share of the recruit's own bill for what it regains
     ("replenish_per", "Replenishment cost",
      "Strength a unit regains takes resources from your stores, as a share of what recruiting it takes: at 100, a "
-     "unit that regains half its strength takes half its recruit's resources. Strength your stores cannot pay for "
-     "is lost again. 0 turns this off.", 0, 200, 100),
+     "unit that regains half its strength takes half its recruit's resources. What your stores cannot pay for is "
+     "paid in gold when Gold pays for troops is ticked, and is lost again when it is not. 0 turns this off.",
+     0, 200, 100),
     # TOLLS (design 2026-11-01, Part C 6.1): each toll-taker's share of a cargo's value, TOLL_MAX_PCT in all
     ("toll", "Tolls",
      "Each turn, trade that crosses another faction's lands pays that faction this share of the value of the "
@@ -154,14 +155,21 @@ RECRUIT_SWITCH = ("recruit", "Recruits use the stores",
                   "(cavalry and monsters take mounts, infantry and war machines take war materials, "
                   "the finest also take your rare resource). What the stores lack is paid in your "
                   "race's own currency where it has one. A recruit whose resources are still short arrives "
-                  "understrength, unless Gold pays for recruits is ticked. Vampire Counts and Vampire Coast "
+                  "understrength, unless Gold pays for troops is ticked. Vampire Counts and Vampire Coast "
                   "recruits take nothing. Off: recruiting takes nothing.", True)
 # HARDER SUPPLY (Workshop feedback 2026-11-16: a priest's replenishment and a lord's movement cancelled the old
-# percentage penalties). Both are frozen into the save; a save from before them keeps the old rules (F.rates).
-RECRUIT_GOLD_SWITCH = ("recruit_gold", "Gold pays for recruits",
-    "What a recruit's resources and your race's currency do not cover is paid in gold, as before. Off: the "
-    "recruit arrives understrength instead, and must regain the rest by replenishing. A faction no player controls "
-    "always pays in gold.", False)
+# percentage penalties). Frozen into the save; a save from before them keeps the old rules (F.rates).
+# ON BY DEFAULT AND PAYING FOR REPLENISHING TOO (author, 2026-11-20, from Workshop reports: Greenskins make none of the
+# goods their troops need anywhere, Cathay almost none at home, so their armies could never replenish).
+RECRUIT_GOLD_SWITCH = ("recruit_gold", "Gold pays for troops",
+    "What your stores and your race's currency cannot cover is paid in gold, for recruits and for "
+    "replenishing alike. Off: a recruit arrives understrength instead and must regain the rest by replenishing, "
+    "and strength a unit regains that your stores cannot pay for is lost again. A faction no player controls "
+    "always pays in gold.", True)
+# CHANGED IN A RUNNING CAMPAIGN (author, 2026-11-20): these follow the MCT in single player, never greyed (flows.lua
+# F.freeze_rates). The rest stay fixed for the life of a campaign.
+LIVE_RATES = ("recruit", "recruit_gold", "recruit_per", "replenish_per")
+LIVE_NOTE = " You can change this during a campaign. The change applies from your next turn."
 HUNGER_SWITCH = ("hunger_men", "Hunger weakens armies",
     "After two missed meals an army's units lose 5% of their strength each turn. After three they lose 10% and "
     "regain nothing. After five, one unit deserts each turn. A full meal ends this. An army that still carries 5 "
@@ -1414,6 +1422,45 @@ def bare_text(source):
     return out
 
 
+@functools.lru_cache(None)
+def work_icons():
+    """{work key: the Workshop row's own picture} (deferred minor, 2026-10-07: every row drew its rare good's, which
+    its price beside it already shows). An item: CA's icon by its key, else its category's, as the skill panel
+    draws items. A unit: its group's icon, as CA's unit cards draw it. An upgrade or a recipe: its bundle's icon. A
+    currency: the currency's own. A rank: CA's experience icon. Anything CA ships no picture for keeps the good's."""
+    import gen_resource_overhaul as G
+    import gen_mr_emitter as E
+    have = E._game_assets()
+    anc = {r["key"]: r["category"] for r in G.db("ancillaries_tables")[1]}
+    item_cat = {"item_" + stem: anc[ca or donor] for stem, _r, _x, ca, _n, donor, *_ in G.WORK_ITEMS}
+    group = {r["unit"]: r["ui_unit_group_land"] for r in G.db("main_units_tables")[1]}
+    group_icon = {r["key"]: r["icon"] for r in G.db("ui_unit_groupings_tables")[1]}
+    upgrade = {"up_" + rare: icon for rare, _t, _w, icon, *_ in G.WORK_UPGRADES}
+    currency = {r["key"]: r["optional_icon_path"] for r in G.db("pooled_resources_tables")[1]}
+    skins = {p.rsplit("/", 1)[-1]: p for p in sorted(have, reverse=True) if p.startswith("ui/skins/")}
+    icon_of = {s: i for s, _r, i in goods()}
+    out = {}
+    for w in G.works():
+        k, want = w["key"], []
+        if w["kind"] == "item":
+            want = ["ui/campaign ui/ancillaries/%s.png" % w["grant"], "ui/campaign ui/skills/item_%s.png" % item_cat[k]]
+        elif w["kind"] == "unit":
+            want = ["ui/common ui/unit_category_icons/%s.png" % group_icon.get(group.get(w["grant"]), "")]
+        elif k in upgrade:
+            want = ["ui/campaign ui/effect_bundles/" + upgrade[k]]
+        elif w.get("icon"):
+            want = ["ui/campaign ui/effect_bundles/" + w["icon"]]
+        elif w["kind"] == "convert":
+            want = [skins.get(currency.get(w.get("pool"), ""), "")]
+        elif w.get("rank"):
+            want = ["ui/campaign ui/effect_bundles/experience.png"]
+        elif w["kind"] == "research":
+            want = ["ui/campaign ui/effect_bundles/technology.png"]
+        first = w["rare"] or (w["goods"][0][0] if w.get("goods") else "books")
+        out[k] = next((p for p in want if p in have), icon_of[first])
+    return out
+
+
 def check_player_text():
     for path in (SRC, FLOWS_SRC):
         with io.open(path, encoding="utf-8") as fh:
@@ -1429,6 +1476,11 @@ def check_player_text():
         "a text the runtimes translate is missing from the loc"
     keys = [k for k, _v in ui_loc()]
     assert MCT_KEY + "raid_text" in keys and _dropdown_key("ui_size", "small", "text") in keys, "an MCT key is missing"
+    # A SECTION NAMED LIKE ONE OF ITS SWITCHES reads as one heading said twice (deferred minor, 2026-11-09)
+    rows = mct_loc()
+    sections = {v for k, v in rows if k.endswith("_section_text")}
+    labels = {v for k, v in rows if k.endswith("_text") and not k.endswith("_section_text")}
+    assert not sections & labels, "an MCT section shares a switch's name: %s" % sorted(sections & labels)
 
 
 def header():
@@ -1466,15 +1518,14 @@ def header():
     lines += ['    {key = "%s", label = "%s", use = "%s", what = "%s"},' % (k, l, u, w)
               for (k, l, u), w in zip(supply_buttons(), [s[5] for s in G.SUPPLY] + [""])]
     lines += ["}", "DERPY_MR_STORES_WORKS = {"]
-    icon_of = {s: i for s, _r, i in goods()}
+    icon_of, row_icon = {s: i for s, _r, i in goods()}, work_icons()
     for w in G.works():
         priced = _lua([(st, n, icon_of[st]) for st, n in w.get("goods", ())])
         # a general_to_force_own trait is a lord's alone (stage 2 final review)
         target = "lord" if w.get("lord") else {"army": "army", "trait": "character"}.get(w["kind"], "")
-        first = w["rare"] or (w["goods"][0][0] if w.get("goods") else "books")
         lines.append('    {key = "%s", kind = "%s", rare = "%s", use = "%s", name = "%s", gives = "%s", detail = "%s", '
                      'icon = "%s", pool = "%s", goods = %s, target = "%s"},'
-                     % (w["key"], w["kind"], w["rare"], w["use"], w["name"], w["gives"], w["detail"], icon_of[first],
+                     % (w["key"], w["kind"], w["rare"], w["use"], w["name"], w["gives"], w["detail"], row_icon[w["key"]],
                         w.get("pool", ""), priced, target))
     lines += ["}", "DERPY_MR_STORES_USE_ICON = {"]
     lines += ['    %s = "ui/campaign ui/effect_bundles/%s",' % kv for kv in sorted(USE_ICON.items())]
@@ -1564,7 +1615,9 @@ def flows_header():
              "DERPY_MR_FLOWS_DEFAULTS = {"]
     lines += ["    %s = %d," % (k, d) for k, _l, _t, _lo, _hi, d in RATES]
     lines += ["    %s = %s," % (k, "true" if d else "false") for k, _l, _t, d in SWITCHES]
-    lines += ["}", "DERPY_MR_FLOWS_KIND = {"]
+    assert set(LIVE_RATES) <= {r[0] for r in RATES} | {s[0] for s in SWITCHES}, "a live setting that is not a rate"
+    lines += ["}", "DERPY_MR_FLOWS_LIVE = {%s}" % ", ".join("%s = true" % k for k in LIVE_RATES)]
+    lines += ["DERPY_MR_FLOWS_KIND = {"]
     lines += ['    %s = "%s",' % (k, FLOW_KIND[k]) for k in sorted(FLOW_KIND)]
     assert set(SPOIL_RATES) <= set(USES["provisions"]), "a spoiling good that is not a provision"
     lines += ["}", 'DERPY_MR_FLOWS_SPOIL = {rates = {%s}, safe = %d, granary = %d, granary_good = "%s", '
@@ -1681,8 +1734,9 @@ def flows_lua():
 MCT_TITLE = "Derpy Resource Overhaul"
 MCT_DESC = ("How goods move between settlement stores. These are fixed for the life of a campaign: "
             "change them from the main menu before starting a new one. In a multiplayer campaign "
-            "they are ignored and every value is the default on every machine. The trade route lines "
-            "and the Vanilla supply lines box can be changed at any time.")
+            "they are ignored and every value is the default on every machine. The recruitment and "
+            "replenishment settings, the trade route lines and the Vanilla supply lines box can be "
+            "changed at any time.")
 
 
 # Shown on a greyed setting in a campaign: the values are frozen into the save (flows.lua).
@@ -1744,18 +1798,23 @@ def mct_lua():
              'm:set_author("_D3rpyN3wb_")',
              'm:set_description("%s")' % MCT_DESC,
              'm:add_new_section("stores", "Stores")']
+    def lock(k):   # LIVE_RATES stay open in a campaign (flows.lua F.freeze_rates)
+        return [] if k in LIVE_RATES else ["if IN_CAMPAIGN then o_%s:set_locked(true, LOCK_REASON) end" % k]
+
+    def tip_of(k, tip):
+        return tip + (LIVE_NOTE if k in LIVE_RATES else "")
+
     def slider(row, section):
         k, label, tip, lo, hi, d = row
         return ["",
                 'local o_%s = m:add_new_option("%s", "slider")' % (k, k),
                 'o_%s:set_text("%s")' % (k, label),
-                'o_%s:set_tooltip_text("%s")' % (k, tip),
+                'o_%s:set_tooltip_text("%s")' % (k, tip_of(k, tip)),
                 "o_%s:slider_set_precision(0)" % k,
                 "o_%s:slider_set_min_max(%d, %d)" % (k, lo, hi),
                 "o_%s:slider_set_step_size(1, 0)" % k,
                 "o_%s:set_default_value(%d)" % (k, d),
-                'o_%s:set_assigned_section("%s")' % (k, section),
-                "if IN_CAMPAIGN then o_%s:set_locked(true, LOCK_REASON) end" % k]
+                'o_%s:set_assigned_section("%s")' % (k, section)] + lock(k)
     for row in RATES:
         if row not in SUPPLY_RATES:
             lines += slider(row, "stores")
@@ -1772,14 +1831,13 @@ def mct_lua():
         lines += ["",
                   'local o_%s = m:add_new_option("%s", "checkbox")' % (k, k),
                   'o_%s:set_text("%s")' % (k, label),
-                  'o_%s:set_tooltip_text("%s")' % (k, tip),
+                  'o_%s:set_tooltip_text("%s")' % (k, tip_of(k, tip)),
                   "o_%s:set_default_value(%s)" % (k, "true" if d else "false"),
-                  'o_%s:set_assigned_section("%s")' % (k, section),
-                  "if IN_CAMPAIGN then o_%s:set_locked(true, LOCK_REASON) end" % k]
+                  'o_%s:set_assigned_section("%s")' % (k, section)] + lock(k)
     k, label, tip, d = VANILLA_SUPPLY_OPTION
     lines += ["",
               "-- NEVER LOCKED, NEVER FROZEN: flows.lua F.vanilla_supply reads it on every call (single player only).",
-              'm:add_new_section("army_supply", "Army supply lines")',
+              'm:add_new_section("army_supply", "Army supply")',
               'local o_%s = m:add_new_option("%s", "checkbox")' % (k, k),
               'o_%s:set_text("%s")' % (k, label),
               'o_%s:set_tooltip_text("%s")' % (k, tip),
@@ -2092,16 +2150,37 @@ def check_provision_mutations():
         ("replenishment never taken back", '            cm:set_unit_hp_to_unary_of_maximum(g.unit, hp / 100)\n', ''),
         ("replenishment all or nothing", 'local hp = g.from + (g.to - g.from) * keep', 'local hp = g.from'),
         ("starving armies regain", 'local keep = g.starving and 0 or (g.goods > 0 and ratio or 1)', 'local keep = g.goods > 0 and ratio or 1'),
-        ("replenishment ignores Armaments", 'paid, _gold, _line, uncovered = F.recruit_short(faction, short, true)',
-         'uncovered = 0; for _, s in ipairs(short) do uncovered = uncovered + s.n end'),
+        ("replenishment ignores Armaments", 'paid, gold, _line, uncovered, unpaid = F.recruit_short(faction, short, no_gold)',
+         'uncovered = 0; for _, s in ipairs(short) do uncovered = uncovered + s.n end; unpaid = uncovered'),
         ("replenishment first sight billed", 'local from = was[id] and was[id] / 100 or 100',
          'local from = was[id] and was[id] / 100 or 0'),
         ("replenishment ignores the computer switch",
          'if (per <= 0 and not r.hunger_men) or not F.uses_stores(faction) or not (r.ai or faction:is_human()) then',
          'if (per <= 0 and not r.hunger_men) or not F.uses_stores(faction) then'),
-        ("no bill at the turn end", '        function(context) F.guard(F.repl_turn, context:faction()) end, true)',
+        ("no bill at the turn end", '        function(context) F.guard(F.repl_turn_end, context:faction()) end, true)',
          '        function() end, true)'),
+        # MERGED, NOT REGAINED (Workshop report 2026-11-19: an unpaid merge was taken back and its entities lost)
+        ("a merge billed as a regain", '        function(context) F.guard(F.on_unit_merged, context) end, true)',
+         '        function() end, true)'),
+        ("a merge noted no stronger", 'local sum = kept[id] + (kept[gone] or F.repl_pack(100))', 'local sum = kept[id]'),
+        ("a merge leaving both standing billed", 'spare[k], from = (spare[k] or 0) - moved, from + moved',
+         'spare[k] = (spare[k] or 0) - moved'),
+        ("the turn end read as a turn start", 'function F.repl_turn_end(faction) F.repl_turn(faction, true) end',
+         'function F.repl_turn_end(faction) F.repl_turn(faction) end'),
+        ("a battle loss pays for a regain at the turn start", 'for _, t in ipairs(ending and troops or {}) do',
+         'for _, t in ipairs(troops) do'),
         ("old saves take the new rules", 'for k2, v in pairs(F.OLD_SAVE_RATES) do if r[k2] == nil then out[k2] = v end end', ''),
+        # GOLD PAYS FOR REPLENISHING TOO, SETTINGS CHANGED IN A RUNNING CAMPAIGN (Workshop reports 2026-11-20)
+        ("replenishing never paid in gold", 'local no_gold = not r.recruit_gold and faction:is_human()', 'local no_gold = true'),
+        ("replenishing in gold with the box unticked", 'local no_gold = not r.recruit_gold and faction:is_human()',
+         'local no_gold = false'),
+        ("computer replenishing unpaid", 'local no_gold = not r.recruit_gold and faction:is_human()',
+         'local no_gold = not r.recruit_gold'),
+        ("a treasury's shortfall forgiven", 'if not no_gold then uncovered = unpaid end', 'if not no_gold then uncovered = 0 end'),
+        ("replenishing gold not booked", '(e.repl_held or 0) + held, e.gold + gold', '(e.repl_held or 0) + held, e.gold'),
+        ("the live settings frozen", '    for k, v in pairs(F.read_rates(DERPY_MR_FLOWS_LIVE)) do r[k] = v end\n', ''),
+        ("every setting live", 'for k, v in pairs(F.read_rates(DERPY_MR_FLOWS_LIVE)) do r[k] = v end',
+         'for k, v in pairs(F.read_rates()) do r[k] = v end'),
     )
     for label, before, after in mutations:
         assert subject.count(before) == 1, "stale provision mutation: " + label
@@ -2239,12 +2318,12 @@ def check_convoy_mutations():
         ("convoy treaty gone", "or not F.partners(faction, buyer) then F.convoy_return(c)", "then F.convoy_return(c)"),
         ("convoy landless buyer", "or not F.capital(buyer) or", "or"),
         ("convoy dead buyer", "if not buyer or not F.capital(buyer)", "if not F.capital(buyer)"),
-        ("return to the nearest", "to = F.nearest(exporter, c.x, c.y) elseif", "to = F.capital(exporter) elseif"),
-        ("return without a position", "elseif exporter then to = F.capital(exporter) end", "end"),
+        ("return to the nearest", "homes = F.homes(exporter, nil, c.x, c.y) elseif", "homes = { F.capital(exporter) } elseif"),
+        ("return without a position", "elseif exporter then homes = { F.capital(exporter) } end", "end"),
         ("arrival books traded", "F.move(nil, to, stem, n, KIND.trade, nil, c.buyer)", "F.move(nil, to, stem, n, KIND.move, nil, c.buyer)"),
         ("seizure books raided", "F.nearest(captor, c.x, c.y), stem, n, KIND.raid, nil, captor:name())",
          "F.nearest(captor, c.x, c.y), stem, n, KIND.move, nil, captor:name())"),
-        ("return books moved", "F.move(nil, to, stem, n, KIND.move, nil, c.f)", "F.move(nil, to, stem, n, KIND.move, nil, nil)"),
+        ("return books moved", "F.store_home(homes, stem, n, KIND.move, c.f)", "F.store_home(homes, stem, n, KIND.move, nil)"),
         ("arrival drops first",
          "    if not F.convoy_drop(c) then return end\n    local buyer = F.live(c.buyer)\n    local to = F.capital(buyer)\n    for stem, n in pairs(c.basket) do F.move(nil, to, stem, n, KIND.trade, nil, c.buyer) end",
          "    local buyer = F.live(c.buyer)\n    local to = F.capital(buyer)\n    for stem, n in pairs(c.basket) do F.move(nil, to, stem, n, KIND.trade, nil, c.buyer) end\n    F.convoy_drop(c)"),
@@ -2252,8 +2331,8 @@ def check_convoy_mutations():
          "    if not F.convoy_drop(c) then return end\n    for stem, n in pairs(c.basket) do F.move(nil, F.nearest(captor, c.x, c.y), stem, n, KIND.raid, nil, captor:name()) end",
          "    for stem, n in pairs(c.basket) do F.move(nil, F.nearest(captor, c.x, c.y), stem, n, KIND.raid, nil, captor:name()) end\n    F.convoy_drop(c)"),
         ("return drops first",
-         "    if not F.convoy_drop(c) then return end\n    local exporter, to = F.live(c.f), nil\n    if exporter and c.x then to = F.nearest(exporter, c.x, c.y) elseif exporter then to = F.capital(exporter) end\n    for stem, n in pairs(c.basket) do F.move(nil, to, stem, n, KIND.move, nil, c.f) end",
-         "    local exporter, to = F.live(c.f), nil\n    if exporter and c.x then to = F.nearest(exporter, c.x, c.y) elseif exporter then to = F.capital(exporter) end\n    for stem, n in pairs(c.basket) do F.move(nil, to, stem, n, KIND.move, nil, c.f) end\n    F.convoy_drop(c)"),
+         "    if not F.convoy_drop(c) then return end\n    local exporter, homes = F.live(c.f), {}\n    if exporter and c.x then homes = F.homes(exporter, nil, c.x, c.y) elseif exporter then homes = { F.capital(exporter) } end\n    for stem, n in pairs(c.basket) do F.store_home(homes, stem, n, KIND.move, c.f) end",
+         "    local exporter, homes = F.live(c.f), {}\n    if exporter and c.x then homes = F.homes(exporter, nil, c.x, c.y) elseif exporter then homes = { F.capital(exporter) } end\n    for stem, n in pairs(c.basket) do F.store_home(homes, stem, n, KIND.move, c.f) end\n    F.convoy_drop(c)"),
         ("arrival once", "    if not F.convoy_drop(c) then return end\n    local buyer = F.live(c.buyer)",
          "    F.convoy_drop(c)\n    local buyer = F.live(c.buyer)"),
         ("convoy follows the capital", "                c.to = F.capital(buyer):name()\n", ""),
@@ -2274,8 +2353,8 @@ def check_convoy_mutations():
         ("convoy keeps its point number", "local j = math.floor((#path - 1) * (i - 1) / math.max(1, #road - 1)) + 1",
          "local j = math.min(#path, i)"),
         ("the maps get no road", "x = c.x, y = c.y, road = c.road, stem", "x = c.x, y = c.y, stem"),
-        ("return needs a settlement", "if exporter and c.x then to = F.nearest(exporter, c.x, c.y) elseif exporter then",
-         "if exporter and c.x then to = F.nearest(exporter, c.x, c.y) or cm:get_region(c.from) elseif exporter then"),
+        ("return needs a settlement", "if exporter and c.x then homes = F.homes(exporter, nil, c.x, c.y) elseif exporter then",
+         "if exporter and c.x then homes = F.homes(exporter, nil, c.x, c.y); if #homes == 0 then homes = { cm:get_region(c.from) } end elseif exporter then"),
         ("destroyed force skipped", "if mf and not mf:is_null_interface() and f and not f:is_null_interface() then",
          "if f and not f:is_null_interface() then"),
         ("garrison is no army", "\n                if not mf:is_armed_citizenry() and mf:has_general() then",
@@ -2999,7 +3078,7 @@ def check_uncharted_mutations():
     ))
     # the Settlements list says why, and only when the flows script answers false; the stores harness must fail
     stores = stores_lua().replace("\r\n", "\n")
-    line = '            if S.ask("charted", r.key) == false then tip = add_line(tip, S.UNCHARTED) end\n'
+    line = '                tip = add_line(tip, f and S.ask("eats", f) == false and S.UNCHARTED_UNDEAD or S.UNCHARTED)\n'
     mutations = (
         ("the uncharted line never shown", line, ""),
         ("an old flows script reads as uncharted", 'if S.ask("charted", r.key) == false then',
@@ -3011,6 +3090,44 @@ def check_uncharted_mutations():
         assert code != 0 and "harness ok" not in out and "syntax" not in out, "survived: %s\n%s" % (label, out)
         print("  caught:", label)
     print("uncharted panel mutations: %d/%d caught" % (len(mutations), len(mutations)))
+
+
+def check_minor_mutations():
+    """The deferred minors fixed on 2026-11-19, each broken back the way it was; the harness of its file must fail."""
+    _flows_mutations("minor", (
+        ("the caravan master ignores supply carts",
+         "    for _, c in ipairs(F.supply_carts()) do\n        if c.f == fkey then out[#out + 1] = c end\n    end\n    return out",
+         "    return out"),
+        ("a cart home to a full store loses the rest", "supply_unload(c, f and F.homes(f, to, x, y) or {}, KIND.move, c.f)",
+         "supply_unload(c, { to or (f and F.nearest(f, c.x, c.y)) }, KIND.move, c.f)"),
+        ("a convoy home to a full store loses the rest", "if exporter and c.x then homes = F.homes(exporter, nil, c.x, c.y)",
+         "if exporter and c.x then homes = { F.nearest(exporter, c.x, c.y) }"),
+        ("goods never go past the first home", "    for _, e in ipairs(far) do out[#out + 1] = e.r end\n", ""),
+        ("a supply cart's encounters settled in silence",
+         '    if kind ~= "supply" or not faction:is_human() then return end\n    cm:show_message_event',
+         '    if true then return end\n    cm:show_message_event'),
+        ("highwaymen told of though nothing was paid",
+         "        if pay > 0 then\n            cm:treasury_mod(faction:name(), -pay)\n            cart_told(faction, kind, key)\n        end",
+         "        if pay > 0 then cm:treasury_mod(faction:name(), -pay) end\n        cart_told(faction, kind, key)"),
+    ))
+    stores = stores_lua().replace("\r\n", "\n")
+    mutations = (
+        ("Send supplies keeps the guards' fee quiet", 'turns(note.cart_turns)) .. (guarded and "\\n" .. S.GUARD_CART or "")',
+         "turns(note.cart_turns))"),
+        ("Auto keeps the guards' fee quiet", '.. row.reason .. (guarded and "\\n" .. S.GUARD_CART or "")', ".. row.reason"),
+        ("the cart row drawn with supply lines off", '    if carts then\n        v.rows[#v.rows + 1] = { S.T("Supply cart")',
+         '    if true then\n        v.rows[#v.rows + 1] = { S.T("Supply cart")'),
+        ("a switch that is off reads as unknown", '    if ok and type(r) == "table" then return r[key] end',
+         '    if ok and type(r) == "table" then return r[key] or nil end'),
+        ("an undead owner told it grows food", 'S.ask("eats", f) == false and S.UNCHARTED_UNDEAD or S.UNCHARTED',
+         "S.UNCHARTED"),
+    )
+    for label, before, after in mutations:
+        assert stores.count(before) == 1, "stale minor panel mutation: " + label
+        code, out = run_harness(HARNESS, stores_text=stores.replace(before, after, 1))
+        assert code != 0 and "harness ok" not in out and "syntax" not in out, "survived: %s\n%s" % (label, out)
+        print("  caught:", label)
+    print("minor panel mutations: %d/%d caught" % (len(mutations), len(mutations)))
 
 
 def check_turn_end_mutations():
@@ -3886,6 +4003,17 @@ def check_xml():
         assert ev.lower() in reg, "the %s purchase sound %s is not in CA's sound registry" % (kind, ev)
     for use, icon in USE_ICON.items():   # the Workshop's price cell
         assert "ui/campaign ui/effect_bundles/" + icon in have, "no icon for the %s price: %s" % (use, icon)
+    # A WORKSHOP ROW DRAWS WHAT IT BUYS, not the good its price already shows (deferred minor, 2026-10-07): read off
+    # the header the panel runs, every picture CA's, and only an item or trait with none of its own on a good's
+    import gen_resource_overhaul as G
+    drawn = dict(re.findall(r'\{key = "(\w+)", kind = "\w+", .*? icon = "([^"]+)"', header()))
+    good_icons = {i for _s, _r, i in goods()}
+    for w in G.works():
+        icon = drawn[w["key"]]
+        assert icon in have or os.path.isfile(os.path.join(ROOT, PACK_REL, *icon.split("/"))), \
+            "the %s row's icon is in no pack: %s" % (w["key"], icon)
+        assert w["kind"] in ("item", "trait") or icon not in good_icons, \
+            "the %s row draws a good's icon: %s" % (w["key"], icon)
     import gen_resource_overhaul as G
     for key, d in G.SERVICES.items():    # the Production tab's Gives, by the service's own bundle icon
         assert "ui/campaign ui/effect_bundles/" + d["icon"] in have, "no icon for the %s service: %s" % (key, d["icon"])
@@ -4017,6 +4145,7 @@ def selftest():
     check_race_mutations()
     check_race_identity_mutations()
     check_uncharted_mutations()
+    check_minor_mutations()
     check_turn_end_mutations()
     check_size_mutations()
     check_edict_mutations()

@@ -2,7 +2,8 @@ key	text	tooltip
 #Loc;1;text/db/derpy_mr_ui.loc
 derpy_mr_ui_9287bbc6af	Nothing is stored here yet.	false
 derpy_mr_ui_34a9352977	You hold no settlements and so have no stores.	false
-derpy_mr_ui_949cb9d51e	Its buildings make no goods yet. It grows its own food, and other goods come by trade.	false
+derpy_mr_ui_81533d7374	Its buildings make no goods. It grows its own food, and other goods come by trade.	false
+derpy_mr_ui_025260d0a0	Its buildings make no goods. Goods come here by trade.	false
 derpy_mr_ui_92f77f56ea	This store is full and anything more made here is lost.	false
 derpy_mr_ui_726c1d67bc	The history starts next turn.	false
 derpy_mr_ui_2f0091807b	{1} [[col:red]]Full[[/col]]	false
@@ -37,6 +38,7 @@ derpy_mr_ui_d1119e4d98	Refuse every resource your trade partners send.\nYour own
 derpy_mr_ui_84871287aa	sent {1} and received {2}	false
 derpy_mr_ui_4c58cb4a29	Recruits last turn	false
 derpy_mr_ui_3e18f60438	Guards ride with every cart and convoy you send.\nThey cost 5% of the cargo's value when it leaves.\nThey make trouble on the road half as likely.	false
+derpy_mr_ui_56cc641acf	Road guards ride with each supply cart.\nThey cost 5% of its value when it leaves.	false
 derpy_mr_ui_8f57993ed3	Nothing moves between you and these partners.	false
 derpy_mr_ui_eded1a9e96	The road takes more than {1}, crosses hostile lands or has an enemy army on it.	false
 derpy_mr_ui_8f63d54d46	1 turn	false
@@ -694,7 +696,7 @@ derpy_mr_ui_852a45c04f	Trade crossing your lands pays you tolls.	false
 derpy_mr_ui_03f4a47830	Closed	false
 derpy_mr_ui_3f6e486e32	Other factions' trade cannot cross your lands.\nControl +1 in every province.	false
 mct_derpy_more_resources_title	Derpy Resource Overhaul	false
-mct_derpy_more_resources_description	How goods move between settlement stores. These are fixed for the life of a campaign: change them from the main menu before starting a new one. In a multiplayer campaign they are ignored and every value is the default on every machine. The trade route lines and the Vanilla supply lines box can be changed at any time.	false
+mct_derpy_more_resources_description	How goods move between settlement stores. These are fixed for the life of a campaign: change them from the main menu before starting a new one. In a multiplayer campaign they are ignored and every value is the default on every machine. The recruitment and replenishment settings, the trade route lines and the Vanilla supply lines box can be changed at any time.	false
 mct_derpy_more_resources_lock_reason	Fixed when a campaign starts. Change it from the main menu before starting a new one.	false
 mct_derpy_more_resources_stores_section_text	Stores	false
 mct_derpy_more_resources_raid_text	Raid share per turn	false
@@ -712,9 +714,9 @@ mct_derpy_more_resources_reach_tooltip	Trade agreements move resources and impor
 mct_derpy_more_resources_ships_text	Shipments on the road	false
 mct_derpy_more_resources_ships_tooltip	How many shipments of yours can be on the road at once. Sending a resource between your settlements takes one to six turns, by the length of its road, and an army at war with you can seize it on the way. Other factions keep one.	false
 mct_derpy_more_resources_recruit_per_text	Resources per 100 gold of a recruit	false
-mct_derpy_more_resources_recruit_per_tooltip	How many resources a recruit takes from your stores for each 100 gold it is worth. 0 turns this off.	false
+mct_derpy_more_resources_recruit_per_tooltip	How many resources a recruit takes from your stores for each 100 gold it is worth. 0 turns this off. You can change this during a campaign. The change applies from your next turn.	false
 mct_derpy_more_resources_replenish_per_text	Replenishment cost	false
-mct_derpy_more_resources_replenish_per_tooltip	Strength a unit regains takes resources from your stores, as a share of what recruiting it takes: at 100, a unit that regains half its strength takes half its recruit's resources. Strength your stores cannot pay for is lost again. 0 turns this off.	false
+mct_derpy_more_resources_replenish_per_tooltip	Strength a unit regains takes resources from your stores, as a share of what recruiting it takes: at 100, a unit that regains half its strength takes half its recruit's resources. What your stores cannot pay for is paid in gold when Gold pays for troops is ticked, and is lost again when it is not. 0 turns this off. You can change this during a campaign. The change applies from your next turn.	false
 mct_derpy_more_resources_toll_text	Tolls	false
 mct_derpy_more_resources_toll_tooltip	Each turn, trade that crosses another faction's lands pays that faction this share of the value of the goods it carries. All the tolls on one cargo together are at most 15%. A faction whose Roads edict is Open charges nothing. Neither do your allies and vassals. 0 turns tolls off.	false
 mct_derpy_more_resources_road_danger_text	Road danger	false
@@ -751,9 +753,9 @@ mct_derpy_more_resources_random_off_tooltip	Stops the game's random dilemmas, th
 mct_derpy_more_resources_supply_text	Province supplies	false
 mct_derpy_more_resources_supply_tooltip	A province capital can pay from its stores each turn for Materials on hand, Stable stocked and Arms stocked in every settlement you hold in its province, and can send for resources from the province's other settlements. Off: no province supplies.	false
 mct_derpy_more_resources_recruit_text	Recruits use the stores	false
-mct_derpy_more_resources_recruit_tooltip	Every unit you recruit takes resources from your stores by its type and worth (cavalry and monsters take mounts, infantry and war machines take war materials, the finest also take your rare resource). What the stores lack is paid in your race's own currency where it has one. A recruit whose resources are still short arrives understrength, unless Gold pays for recruits is ticked. Vampire Counts and Vampire Coast recruits take nothing. Off: recruiting takes nothing.	false
-mct_derpy_more_resources_recruit_gold_text	Gold pays for recruits	false
-mct_derpy_more_resources_recruit_gold_tooltip	What a recruit's resources and your race's currency do not cover is paid in gold, as before. Off: the recruit arrives understrength instead, and must regain the rest by replenishing. A faction no player controls always pays in gold.	false
+mct_derpy_more_resources_recruit_tooltip	Every unit you recruit takes resources from your stores by its type and worth (cavalry and monsters take mounts, infantry and war machines take war materials, the finest also take your rare resource). What the stores lack is paid in your race's own currency where it has one. A recruit whose resources are still short arrives understrength, unless Gold pays for troops is ticked. Vampire Counts and Vampire Coast recruits take nothing. Off: recruiting takes nothing. You can change this during a campaign. The change applies from your next turn.	false
+mct_derpy_more_resources_recruit_gold_text	Gold pays for troops	false
+mct_derpy_more_resources_recruit_gold_tooltip	What your stores and your race's currency cannot cover is paid in gold, for recruits and for replenishing alike. Off: a recruit arrives understrength instead and must regain the rest by replenishing, and strength a unit regains that your stores cannot pay for is lost again. A faction no player controls always pays in gold. You can change this during a campaign. The change applies from your next turn.	false
 mct_derpy_more_resources_hunger_men_text	Hunger weakens armies	false
 mct_derpy_more_resources_hunger_men_tooltip	After two missed meals an army's units lose 5% of their strength each turn. After three they lose 10% and regain nothing. After five, one unit deserts each turn. A full meal ends this. An army that still carries 5 turns of provisions after eating is Well fed: leadership +4 and replenishment +5%. Off: missed meals slow the army and its replenishment instead, and no army is Well fed.	false
 mct_derpy_more_resources_escort_text	Escort battles	false
@@ -764,7 +766,7 @@ mct_derpy_more_resources_tolls_text	Tolls and blockades	false
 mct_derpy_more_resources_tolls_tooltip	Trade agreements and partner contracts pay tolls to the factions whose lands their roads cross. An army at war with either side standing within 3 hexes of the road stops that agreement's trade for the turn. Off: no tolls and no blockades.	false
 mct_derpy_more_resources_bandits_text	Bandits on the roads	false
 mct_derpy_more_resources_bandits_tooltip	Bandits, highwaymen and washed-out roads can meet your cargo on the road. Dangerous lands meet them more often. You choose what to do, and some choices lead to a battle. Guards on the Trade tab make it less likely. Off: the roads are safe.	false
-mct_derpy_more_resources_army_supply_section_text	Army supply lines	false
+mct_derpy_more_resources_army_supply_section_text	Army supply	false
 mct_derpy_more_resources_vanilla_supply_lines_text	Vanilla supply lines	false
 mct_derpy_more_resources_vanilla_supply_lines_tooltip	Ticked: the game's own supply lines stay. Each army after your first makes every army cost more upkeep. This mod's roads still carry food to your armies but add no upkeep. Unticked: this mod's supply lines replace them. Races whose armies carry no food keep the game's own rule. So does every race when Army provisions or Army supply lines is off. You can change this during a campaign. In multiplayer it is always unticked.	false
 mct_derpy_more_resources_supply_lines_text	Army supply lines	false
