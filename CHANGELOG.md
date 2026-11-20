@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-20
+
+- Gold now pays for replenishment as well as recruits when your stores run short. The MCT option is renamed "Gold pays for troops" and is on by default.
+- The recruitment and replenishment MCT options can now be changed during a campaign.
+- Greenskin beast pens now make Animals and Leather, and the Goblin Toolbox makes Tools.
+- Cathay's Corral now makes Warhorses, and the Nan-Gau Forge and Alchemist Tower make Blackpowder, in Cathay's own lands.
+- The Warriors of Chaos' Horse Barn now makes Warhorses in Warriors of Chaos lands, the Manticore Den makes Animals and Leather, and the Warband Camp and Tribal Garrison make Leather.
+
 ## 2026-11-19, third update
 
 - Merged understrength units no longer drop back to their old size a turn later.

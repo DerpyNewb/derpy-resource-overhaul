@@ -4058,7 +4058,7 @@ end
 -- does a recruit's, then gold as it does a recruit's (since 2026-11-20, below); what is still unpaid is taken back
 -- from every unit that gained, in proportion. An army starving
 -- under "hunger_men" (three missed meals or more) keeps nothing it gained. Losses are not billed: a lower reading is
--- simply kept.
+-- simply kept, and a battle's is taken when the battle ends (F.repl_after_battle).
 -- PAID BEFORE, NEVER OWED (author, 2026-11-19, from a Workshop report): the 11-18 build drew whole goods only once a
 -- carried DEBT reached one, so with empty stores a cheap army regained for free for a few turns, then lost a whole
 -- turn's gain when the debt came due (seen in game: Vampire Counts units +7.5%, then nothing). Now a gain draws the
@@ -4086,9 +4086,8 @@ F.REPL_FULL, F.REPL_EPSILON = 99.99, 0.01
 -- unit it went into is noted that much stronger (none kept for the one that went: it was full). A merge that leaves
 -- both standing fires nothing, so at the turn end what a unit lost pays for a gain of its own kind in its own army
 -- before any is billed. Only at the turn end: merges happen in the owner's turn and the engine's replenishment lands
--- before its start (2026-11-19, Thorgrim), so a battle lost in the computers' turns pays for no sibling's regain.
--- ponytail: a gain made in the owner's turn by something else (a post-battle replenish effect) is also paid by a
--- same-kind unit's loss in that battle; a merge event per unit pair would end that if one ever appears.
+-- before its start (2026-11-19, Thorgrim), so a battle lost in the computers' turns pays for no sibling's regain. A
+-- battle's own losses are noted when it ends (F.repl_after_battle), so they pay for nothing at the turn end either.
 function F.on_unit_merged(context)
     local into = context:new_unit()
     local faction = into:faction()
@@ -4101,6 +4100,30 @@ function F.on_unit_merged(context)
         kept[id] = sum < F.repl_pack(F.REPL_FULL) and sum or nil
     end
     kept[gone] = nil
+end
+
+-- A BATTLE IS READ WHEN IT ENDS (author, 2026-11-20, seen in game the same day: Gnashrak attacked Thorgrim in the
+-- computers' turns, and the next turn start billed nothing). The kept strength dated from before the battle, so what
+-- the engine gave back at the next turn start read as part of the battle's loss and went unbilled. On BattleCompleted
+-- every army in CA's pending battle cache (both sides and their reinforcements; it stays readable until the next
+-- battle, and an army destroyed in it is gone) has each unit's kept strength LOWERED to what it holds now, never
+-- raised: a heal during the battle above the old reading is still billed as a regain. A faction the bill skips is
+-- noted too, and its own next bill drops the note (F.repl_turn).
+-- ponytail: CA's "replenish_force_post_battle_win" heals on CharacterCompletedBattle; if that lands before this,
+-- its heal up to the pre-battle strength is free. Read the strength on PendingBattle too if that bonus ever matters.
+function F.repl_after_battle()
+    local function read(mf_cqi)
+        local force = mf_cqi and cm:get_military_force_by_cqi(mf_cqi)
+        if not force or force:is_null_interface() then return end
+        local faction = force:faction()
+        local kept = F.state.repl_h and F.state.repl_h[faction:name()] or {}
+        for _, t in ipairs(F.troops(force)) do
+            local w = kept[tostring(t.unit:command_queue_index())]
+            if t.hp < (w and w / 100 or 100) - F.REPL_EPSILON then F.repl_note(faction, t.unit, t.hp) end
+        end
+    end
+    for i = 1, cm:pending_battle_cache_num_attackers() do read(select(2, cm:pending_battle_cache_get_attacker(i))) end
+    for i = 1, cm:pending_battle_cache_num_defenders() do read(select(2, cm:pending_battle_cache_get_defender(i))) end
 end
 
 function F.repl_turn_end(faction) F.repl_turn(faction, true) end
@@ -7546,6 +7569,8 @@ function F.init()
         function(context) F.guard(F.repl_turn_end, context:faction()) end, true)
     core:add_listener("derpy_mr_flows_merged", "UnitMergedAndDestroyed", true,
         function(context) F.guard(F.on_unit_merged, context) end, true)
+    core:add_listener("derpy_mr_flows_repl_battle", "BattleCompleted", true,
+        function() F.guard(F.repl_after_battle) end, true)
     F.guard(F.provision_seed_all)
 end
 

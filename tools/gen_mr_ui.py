@@ -17,6 +17,8 @@ Modding Files/source/resource_overhaul/flows.lua behind DERPY_MR_FLOWS_DEFAULTS 
 and runs tools/_resource_overhaul_flows_harness.lua beside the panel's harness.
 """
 import collections
+import concurrent.futures
+import contextlib
 import functools
 import hashlib
 import io
@@ -1931,10 +1933,79 @@ def pack_paths():
     return [rel[len(PACK_REL):] for rel in files()]
 
 
+# MUTANTS ON EVERY CORE (author, 2026-11-20: "make the mutation suites run in parallel, use the cpu's max"; one
+# run took 40 minutes on two cores of twelve). The suites run twice (run_suites). The first pass only records the
+# harness runs each one asks for, answering a mutated script as caught and the unmutated one as passing, the stub
+# the anchor prechecks have always used. Those runs then go to every core at once, slowest harness first, and the
+# second pass, the real one, prints and asserts as before with each answer read from _DONE. A run the first pass
+# did not foresee simply runs when it is asked for. The unmutated harness most suites re-run at their end is one
+# run, not thirty: no suite writes a file, so its inputs cannot change within a selftest.
+_DONE, _WANT = {}, None
+SLOWEST_FIRST = {"stores": 0, "terrain": 1, "flows": 2}
+
+
+_UNFORESEEN = []
+
+
+def _answer(key, unmutated, run):
+    if _WANT is not None:
+        _WANT.setdefault(key, run)
+        return (0, "harness ok") if unmutated else (1, "in function: foreseen by the first pass")
+    if key in _DONE:
+        return _DONE[key]
+    _UNFORESEEN.append(key[0])
+    return run()
+
+
+def mutation_suites(*first):
+    """Every mutation suite, in the order the selftest runs them (after `first`)."""
+    return first + (
+        check_economy_mutations, check_provision_mutations, check_route_mutations, check_convoy_mutations,
+        check_map_road_mutations, check_cargo_view_mutations, check_reach_mutations, check_drag_mutations,
+        check_supply_map_mutations, check_map_cost_mutations, check_production_mutations, check_spoil_mutations,
+        check_keep_mutations, check_ai_meal_mutations, check_race_mutations, check_race_identity_mutations,
+        check_uncharted_mutations, check_minor_mutations, check_turn_end_mutations, check_size_mutations,
+        check_edict_mutations, check_toll_mutations, check_vanilla_supply_mutations, check_blockade_mutations,
+        check_supply_line_mutations, check_supply_upkeep_mutations, check_supply_cart_mutations,
+        check_road_mutations, check_event_mutations, check_kept_mutations, check_smooth_mutations)
+
+
+def run_suites(suites):
+    """The first pass fails at once on a stale anchor, before any harness runs: it doubles as the anchor
+    precheck. Every suite passes it with the stub (measured 2026-11-20), so a failure there is a real one."""
+    global _WANT
+    _WANT = {}
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            for suite in suites:
+                suite()
+        want = _WANT
+    finally:
+        _WANT = None
+    order = sorted(want, key=lambda k: SLOWEST_FIRST[k[0]])
+    with concurrent.futures.ThreadPoolExecutor(os.cpu_count()) as pool:
+        for key, got in zip(order, pool.map(lambda k: want[k](), order)):
+            _DONE[key] = got
+    del _UNFORESEEN[:]
+    try:
+        for suite in suites:
+            suite()
+    finally:
+        _DONE.clear()
+    print("mutation suites: %d harness runs on %d cores, %d not foreseen by the first pass"
+          % (len(order), os.cpu_count(), len(_UNFORESEEN)))
+
+
 def run_harness(harness=HARNESS, flows_text=None, stores_text=None):
     """A harness against the built files, from a temp folder: (returncode, output).
     __SCRIPT__ and __STORES__ are the stores script, __FLOWS__ the flows script, __MCT__ the MCT
     settings file and __UIDIR__ the folder the .twui.xml files are in."""
+    kind = "stores" if harness == HARNESS else "flows"
+    return _answer((kind, harness, flows_text, stores_text), flows_text is None and stores_text is None,
+                   lambda: _run_harness_now(harness, flows_text, stores_text))
+
+
+def _run_harness_now(harness, flows_text, stores_text):
     tmp = tempfile.mkdtemp()
     try:
         built = files()
@@ -2181,6 +2252,18 @@ def check_provision_mutations():
         ("the live settings frozen", '    for k, v in pairs(F.read_rates(DERPY_MR_FLOWS_LIVE)) do r[k] = v end\n', ''),
         ("every setting live", 'for k, v in pairs(F.read_rates(DERPY_MR_FLOWS_LIVE)) do r[k] = v end',
          'for k, v in pairs(F.read_rates()) do r[k] = v end'),
+        # A BATTLE IS READ WHEN IT ENDS (seen in game 2026-11-20: the regain after a battle went unbilled)
+        ("a battle never read", '        function() F.guard(F.repl_after_battle) end, true)', '        function() end, true)'),
+        ("a battle raises the kept strength", 'if t.hp < (w and w / 100 or 100) - F.REPL_EPSILON then F.repl_note',
+         'if true then F.repl_note'),
+        ("a battle's defenders not read",
+         '    for i = 1, cm:pending_battle_cache_num_defenders() do read(select(2, cm:pending_battle_cache_get_defender(i))) end\n', ''),
+        ("a battle's attackers not read",
+         '    for i = 1, cm:pending_battle_cache_num_attackers() do read(select(2, cm:pending_battle_cache_get_attacker(i))) end\n', ''),
+        ("an army destroyed in a battle read",
+         'cm:get_military_force_by_cqi(mf_cqi)\n        if not force or force:is_null_interface() then return end',
+         'cm:get_military_force_by_cqi(mf_cqi)\n        if false then return end'),
+        ("a battle's loss read against full", 'local w = kept[tostring(t.unit:command_queue_index())]', 'local w = nil'),
     )
     for label, before, after in mutations:
         assert subject.count(before) == 1, "stale provision mutation: " + label
@@ -2439,6 +2522,10 @@ TERRAIN_HARNESS = os.path.join(ROOT, "tools", "_resource_terrain_routes_harness.
 def run_terrain_harness(changed=None):
     """The 3D map's harness, from the workspace root: (returncode, output), against `changed` text
     in place of terrain_routes.lua when one is given."""
+    return _answer(("terrain", changed), changed is None, lambda: _run_terrain_now(changed))
+
+
+def _run_terrain_now(changed):
     tmp = tempfile.mkdtemp()
     try:
         with io.open(TERRAIN_HARNESS, encoding="utf-8", newline="") as fh:
@@ -4125,40 +4212,11 @@ def selftest():
     finally:
         shutil.rmtree(tmp)
     assert os.path.isfile(LUA_EXE), "lua.exe is required for the harness"
-    for h in (HARNESS, FLOWS_HARNESS):
-        code, out = run_harness(h)
-        assert code == 0 and "harness ok" in out, "%s:\n%s" % (os.path.basename(h), out)
-    check_economy_mutations()
-    check_provision_mutations()
-    check_route_mutations()
-    check_convoy_mutations()
-    check_map_road_mutations()
-    check_cargo_view_mutations()
-    check_reach_mutations()
-    check_drag_mutations()
-    check_supply_map_mutations()
-    check_map_cost_mutations()
-    check_production_mutations()
-    check_spoil_mutations()
-    check_keep_mutations()
-    check_ai_meal_mutations()
-    check_race_mutations()
-    check_race_identity_mutations()
-    check_uncharted_mutations()
-    check_minor_mutations()
-    check_turn_end_mutations()
-    check_size_mutations()
-    check_edict_mutations()
-    check_toll_mutations()
-    check_vanilla_supply_mutations()
-    check_blockade_mutations()
-    check_supply_line_mutations()
-    check_supply_upkeep_mutations()
-    check_supply_cart_mutations()
-    check_road_mutations()
-    check_event_mutations()
-    check_kept_mutations()
-    check_smooth_mutations()
+    def check_harnesses():
+        for h in (HARNESS, FLOWS_HARNESS):
+            code, out = run_harness(h)
+            assert code == 0 and "harness ok" in out, "%s:\n%s" % (os.path.basename(h), out)
+    run_suites(mutation_suites(check_harnesses))
     # the Lua builds derpy_mr_store_<stem>_<kind> from FLOW_KIND; those must be Task 2's junctions
     assert set(FLOW_KIND.values()) == {k for k, _p, _n in G.FLOW_FACTORS}, FLOW_KIND
     assert G.flow_junction("coal", "raided") == "derpy_mr_store_coal_raided"

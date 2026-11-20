@@ -244,6 +244,9 @@ cm = {
     get_local_faction_name = function() return LOCAL_FK or "hum" end,
     get_faction = function(_, k) return FACTIONS[k] and FACTIONS[k].iface or false end,
     get_region = function(_, k) return REGIONS[k] and REGIONS[k].iface or false end,
+    -- CA's pending battle cache: empty unless a case fills it (F.repl_after_battle reads it on every BattleCompleted)
+    pending_battle_cache_num_attackers = function() return 0 end,
+    pending_battle_cache_num_defenders = function() return 0 end,
     -- a force by its number, from every faction's armies (F.captor looks its force up again)
     get_military_force_by_cqi = function(_, n)
         for _, f in pairs(FACTIONS) do
@@ -4999,6 +5002,32 @@ end)()
     q1.hp = 50; F.repl_turn(f.iface)
     r.held.coal = 0; q1.hp, q2.hp = 57.5, 10; F.repl_turn(f.iface)
     eq(q1.hp, 50, "at the turn start a twin's loss in battle pays for no regain")
+    -- A BATTLE IS READ WHEN IT ENDS (seen in game 2026-11-20): the kept strength dated from before a battle, so what
+    -- the engine regained at the next turn start read as part of the battle's loss and went unbilled
+    f.armies = {}; r.held.coal = 0
+    local d1, d2, a1 = soldier({ key = "hg_bd1", hp = 80 }), soldier({ key = "hg_bd2" }), soldier({ key = "hg_ba1", hp = 90 })
+    force(963, { d1, d2 }); force(964, { a1 }); F.repl_turn(f.iface)
+    local na, nd = cm.pending_battle_cache_num_attackers, cm.pending_battle_cache_num_defenders
+    local cache = { attackers = { { 1, 99999, "gone" }, { 1, 964, "hg" } }, defenders = { { 1, 963, "hg" } } }
+    cm.pending_battle_cache_num_attackers = function() return #cache.attackers end
+    cm.pending_battle_cache_num_defenders = function() return #cache.defenders end
+    cm.pending_battle_cache_get_attacker = function(_, i) return unpack(cache.attackers[i]) end
+    cm.pending_battle_cache_get_defender = function(_, i) return unpack(cache.defenders[i]) end
+    d1.hp, d2.hp, a1.hp = 40, 60, 50
+    e0 = #ERRORS
+    fire("BattleCompleted", {})
+    eq(#ERRORS, e0, "an army destroyed in the battle is passed over: " .. table.concat(ERRORS, "; ", e0 + 1))
+    d1.hp, d2.hp, a1.hp = 48, 68, 58     -- the engine regains at the next turn start, with nothing in store
+    F.repl_turn(f.iface)
+    eq(d1.hp, 40, "a regain after a battle is billed from the battle's loss: nothing to pay, so it is taken back")
+    eq(d2.hp, 60, "for a unit that was full before the battle too")
+    eq(a1.hp, 50, "and for the attacking side")
+    d1.hp = 55; fire("BattleCompleted", {})
+    eq(F.state.repl_h.hg[tostring(d1.cqi)], 4000, "a heal during a battle never raises the kept strength")
+    F.repl_turn(f.iface)
+    eq(d1.hp, 40, "so the heal is billed as a regain")
+    cm.pending_battle_cache_num_attackers, cm.pending_battle_cache_num_defenders = na, nd
+    cm.pending_battle_cache_get_attacker, cm.pending_battle_cache_get_defender = nil, nil
     -- A SAVE FROM BEFORE the harder rules keeps the old ones (MCT is locked in a running campaign)
     F.state.rates = { army_provisions = true }
     local o = F.rates()
