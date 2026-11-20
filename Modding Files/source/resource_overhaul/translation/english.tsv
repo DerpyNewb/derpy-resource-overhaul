@@ -1537,7 +1537,7 @@ derpy_mr_ui_c869fd27de	This settlement is under siege.	false
 derpy_mr_ui_7260e1e2e7	This settlement was taken too recently to feed an army.	false
 derpy_mr_ui_53d78dcc3a	It refills from this settlement.	false
 derpy_mr_ui_f8ea19175a	This settlement has {1} provisions to spare.	false
-derpy_mr_ui_99d2999302	This settlement has no provisions to spare.\nA settlement keeps {1} turns of the food it eats and uses before it feeds an army.	false
+derpy_mr_ui_348ded02a8	This settlement has no provisions to spare.\nIt keeps one turn of the food it eats and uses before it feeds an army.	false
 derpy_mr_ui_a8f16cf995	You can buy {1} rations for {2} gold.	false
 derpy_mr_ui_bf90d57f02	The army cannot buy more rations this turn.	false
 derpy_mr_ui_8e6f48ab81	The seller or buyer is gone	false

@@ -2133,7 +2133,17 @@ def check_provision_mutations():
         ("army unload pauses", 'if op == "unload" then b.auto = false end', 'do end'),
         ("army garrison exclusion", 'or force:is_armed_citizenry()', ''),
         ("army demand", 'out.provisions = (out.provisions or 0) + army_need', 'out.provisions = out.provisions or 0'),
-        ("army reserve release", '- F.FED_TURNS * (v.recurring.army_need or 0)', '- 0'),
+        ("army reserve release", 'local own = math.max(0, (v.recurring.provisions or 0) - (v.recurring.army_need or 0))',
+         'local own = math.max(0, v.recurring.provisions or 0)'),
+        # Workshop report, 2026-11-20 (Viperarum): an army in its own settlement loads down to one turn, a cart does not
+        ("an army at home keeps five turns", 'v.auto_keep.provisions = (home and 1 or F.FED_TURNS) * own',
+         'v.auto_keep.provisions = F.FED_TURNS * own'),
+        ("a supply cart keeps one turn", 'v.auto_keep.provisions = (home and 1 or F.FED_TURNS) * own',
+         'v.auto_keep.provisions = own'),
+        ("a cart loads as if at home", 'cap = gap, cart = true }', 'cap = gap }'),
+        ("Load keeps a cart's five turns", 'F.provision_stock(faction, region, not row.cart)', 'F.provision_stock(faction, region)'),
+        ("the panel reckons a cart's spare", 'F.provision_spare(faction, source:name(), true)',
+         'F.provision_spare(faction, source:name())'),
         ("army paused demand", 'and (not b or b.auto ~= false) then', 'then'),
         ("army relief dispatch", 'local ship = F.ship(faction, source.region, dest.region, g.stem, fit.n)', 'local ship = nil'),
         ("army relief export hold", 'F.stopped(seller:name(), "export", stem)', 'false'),
@@ -2141,7 +2151,8 @@ def check_provision_mutations():
         # Workshop reports, 2026-11-05 and 11-06
         ("Load stops at Auto's 5 turns", 'local target = full and row.cap or 5 * row.need', 'local target = 5 * row.need'),
         ("Load not told it is a Load", 'op == "unload", op == "load")', 'op == "unload", false)'),
-        ("caravans eat", '        or F.NO_RATIONS[force:force_type():key()]\n', ''),
+        ("caravans eat", '        or F.no_rations(force)\n', ''),
+        ("a mod's caravan eats", 'return F.NO_RATIONS[key] or string.find(key, "CARAVAN") ~= nil', 'return F.NO_RATIONS[key]'),
         ("convoys eat", 'CARAVAN = true, CONVOY = true', 'CARAVAN = true'),
         # Workshop report, 2026-11-10: Thanquol's schemers; and Ogre camps, which CA's scripts count with the caravans
         ("Thanquol's schemers eat", 'CONVOY = true, CHAOTIC_PLAN_SCHEMERS = true', 'CONVOY = true'),
@@ -2249,6 +2260,8 @@ def check_provision_mutations():
          'local no_gold = not r.recruit_gold'),
         ("a treasury's shortfall forgiven", 'if not no_gold then uncovered = unpaid end', 'if not no_gold then uncovered = 0 end'),
         ("replenishing gold not booked", '(e.repl_held or 0) + held, e.gold + gold', '(e.repl_held or 0) + held, e.gold'),
+        ("a caravan billed for replenishing", 'not force:is_armed_citizenry() and not F.no_rations(force) then',
+         'not force:is_armed_citizenry() then'),
         ("the live settings frozen", '    for k, v in pairs(F.read_rates(DERPY_MR_FLOWS_LIVE)) do r[k] = v end\n', ''),
         ("every setting live", 'for k, v in pairs(F.read_rates(DERPY_MR_FLOWS_LIVE)) do r[k] = v end',
          'for k, v in pairs(F.read_rates()) do r[k] = v end'),
@@ -3688,9 +3701,9 @@ def check_supply_cart_mutations():
         ("goods taken before the road is packed",
          "    local packed, due = F.pack_road(road), turn + math.max(1, F.road_turns(road))\n"
          "    local load = { goods = {}, done = turn }\n"
-         "    F.provision_refill(faction, { source = source, need = row.need, cap = gap }, load, false, false)\n",
+         "    F.provision_refill(faction, { source = source, need = row.need, cap = gap, cart = true }, load, false, false)\n",
          "    local load = { goods = {}, done = turn }\n"
-         "    F.provision_refill(faction, { source = source, need = row.need, cap = gap }, load, false, false)\n"
+         "    F.provision_refill(faction, { source = source, need = row.need, cap = gap, cart = true }, load, false, false)\n"
          "    local packed, due = F.pack_road(road), turn + math.max(1, F.road_turns(road))\n"),
         # the fix wave (2026-11-09): a player's action reads the enemy armies as they stand
         ("an action reading the turn's old enemy list", "    F.enemy_cache, F.enemy_cache_ui = {}, {}\n    -- the map's cart goods",

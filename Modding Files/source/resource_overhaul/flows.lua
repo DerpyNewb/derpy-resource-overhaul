@@ -2868,7 +2868,7 @@ function F.repl_turn(faction, ending)
     local fs = faction:military_force_list()
     for i = 0, fs:num_items() - 1 do
         local force = fs:item_at(i)
-        if force:has_general() and not force:is_armed_citizenry() and not F.NO_RATIONS[force:force_type():key()] then
+        if force:has_general() and not force:is_armed_citizenry() and not F.no_rations(force) then
             local b = F.state.armies and F.state.armies[tostring(force:command_queue_index())]
             local starving = r.hunger_men and b and b.f == fkey and (b.short or 0) >= 3
             local troops, spare = F.troops(force), {}   -- spare: unit key -> strength its units gave up this turn
@@ -3244,11 +3244,19 @@ end
 -- scripts treat neither as an army (Workshop report, 2026-11-10).
 F.NO_RATIONS = { CARAVAN = true, CONVOY = true, CHAOTIC_PLAN_SCHEMERS = true, OGRE_CAMP = true }
 
+-- Any force type with CARAVAN in its key as well: mods add their own, such as Rhox's MAR_CARAVAN (Marienburg) and
+-- TORINUBAR_CARAVAN (Workshop report, 2026-11-20). A bare word and two arguments: the game's string.find breaks
+-- the string library for the whole game when given the plain flag.
+function F.no_rations(force)
+    local key = force:force_type():key()
+    return F.NO_RATIONS[key] or string.find(key, "CARAVAN") ~= nil
+end
+
 -- An army this mod feeds at all. F.provision_force also leaves out an army for the one fight it escorts.
 function F.fed_force(faction, force)
     return not (not force or force:is_null_interface() or not F.eats(faction)
         or not force:has_general() or force:is_armed_citizenry()
-        or F.NO_RATIONS[force:force_type():key()]
+        or F.no_rations(force)
         or force:faction():name() ~= faction:name())
 end
 
@@ -3295,11 +3303,13 @@ function F.provision_need(faction, region)
     return need, short
 end
 
-function F.provision_stock(faction, region)
+-- home: the army loads in the settlement it stands in, which keeps one turn of its own use instead of FED_TURNS (Workshop
+-- report, 2026-11-20: a settlement holding 5-10 food fed no army standing in it). A supply cart keeps all FED_TURNS.
+function F.provision_stock(faction, region, home)
     local v = F.stock_view(faction, region, F.provinces(faction))
     -- Loading may spend the army reserve, but retains settlement/named demand and explicit Keep.
-    v.auto_keep.provisions = math.max(0, (v.auto_keep.provisions or 0)
-        - F.FED_TURNS * (v.recurring.army_need or 0))
+    local own = math.max(0, (v.recurring.provisions or 0) - (v.recurring.army_need or 0))
+    v.auto_keep.provisions = (home and 1 or F.FED_TURNS) * own
     return v
 end
 
@@ -3313,10 +3323,10 @@ end
 
 -- The provisions a settlement of the faction can spare an army (Auto's reserve kept, F.provision_stock), as Load and a
 -- supply cart take them; 0 for a region that is not the faction's. The panel's Send supplies asks it of the line's source.
-function F.provision_spare(faction, rkey)
+function F.provision_spare(faction, rkey, home)
     local region = F.owned(faction, rkey)
     if not region then return 0 end
-    local view, available = F.provision_stock(faction, region), 0
+    local view, available = F.provision_stock(faction, region, home), 0
     for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
         if F.bulk("provisions")(g) then
             local n = F.available_stock(view, g.stem)
@@ -3341,9 +3351,9 @@ function F.provision_rows(faction)
             local need = math.max(1, math.ceil(force:unit_list():num_items() / 4))
             local source, reason = F.provision_source(faction, force)
             if source then
-                local available = F.provision_spare(faction, source:name())
+                local available = F.provision_spare(faction, source:name(), true)
                 reason = available > 0 and F.T("This settlement has {1} provisions to spare.", available)
-                    or F.T("This settlement has no provisions to spare.\nA settlement keeps {1} turns of the food it eats and uses before it feeds an army.", F.FED_TURNS)
+                    or F.T("This settlement has no provisions to spare.\nIt keeps one turn of the food it eats and uses before it feeds an army.")
             end
             -- RATIONS ABROAD (MCT, on by default): an army no player controls buys them anywhere away from home
             local row = { id = id, force = force, need = need, cap = 10 * need,
@@ -3439,7 +3449,7 @@ function F.provision_refill(faction, row, b, unload, full)
         if not unload then F.provision_buy(faction, row, b) end
         return
     end
-    local view = F.provision_stock(faction, region)
+    local view = F.provision_stock(faction, region, not row.cart)
     local target = full and row.cap or 5 * row.need
     if b.done ~= cm:model():turn_number() then target = target + row.need end
     local left = math.max(0, math.min(row.cap, target) - F.provision_total(b))
@@ -5836,7 +5846,7 @@ function F.supply_send(faction, row, b, auto)
     -- Pack the road before debiting stores so a packing error cannot lose food.
     local packed, due = F.pack_road(road), turn + math.max(1, F.road_turns(road))
     local load = { goods = {}, done = turn }
-    F.provision_refill(faction, { source = source, need = row.need, cap = gap }, load, false, false)
+    F.provision_refill(faction, { source = source, need = row.need, cap = gap, cart = true }, load, false, false)
     for stem, n in pairs(load.goods) do
         if n <= 0 then load.goods[stem] = nil end   -- a 0 never stays in a basket: a saved one fails F.supply_cart_sound
     end

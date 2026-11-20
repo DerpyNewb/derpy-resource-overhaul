@@ -4439,18 +4439,19 @@ end)()
     a.sea=false
     eq(#F.provision_rows(f.iface),1,"army preview finds force")
     eq(F.state.armies,nil,"army preview does not migrate")
-    -- NOTHING TO SPARE SAYS WHY (Gidwelion, 2026-11-11): the settlement's own reserve, in turns
+    -- NOTHING TO SPARE SAYS WHY (Gidwelion, 2026-11-11), and AN ARMY AT HOME LOADS DOWN TO ONE TURN (Workshop report,
+    -- 2026-11-20: a settlement holding 5-10 food fed no army standing in it): one turn of the settlement's 2 meals
     local held_before=r.held.grain
+    r.held.grain=2
+    eq(F.provision_rows(f.iface)[1].reason,"This settlement has no provisions to spare.\nIt keeps one turn of the food it eats and uses before it feeds an army.","an army told why it gets nothing")
     r.held.grain=10
-    eq(F.provision_rows(f.iface)[1].reason,"This settlement has no provisions to spare.\nA settlement keeps 5 turns of the food it eats and uses before it feeds an army.","an army told why it gets nothing")
-    F.FED_TURNS=4; r.held.grain=0
-    eq(F.provision_rows(f.iface)[1].reason,"This settlement has no provisions to spare.\nA settlement keeps 4 turns of the food it eats and uses before it feeds an army.","the turns are F.FED_TURNS")
-    F.FED_TURNS=5
+    eq(F.provision_rows(f.iface)[1].reason,"This settlement has 8 provisions to spare.","10 held: an army standing there may take all but one turn")
+    eq(F.provision_spare(f.iface,"army_food_home"),0,"a supply cart still leaves the settlement five turns")
     r.held.grain=held_before
     r.held.grain=35
     F.provision_action(f.iface,"801","load")
-    eq(F.provision_total(F.state.armies["801"]),25,"loading releases army reserve but retains essential ten")
-    eq(r.held.grain,10,"loading retains essential reserve")
+    eq(F.provision_total(F.state.armies["801"]),33,"loading releases army reserve and all but one turn of the settlement's")
+    eq(r.held.grain,2,"loading retains one turn of the settlement's meals")
     r.held.grain=100; F.state.armies=nil
     F.set_stock_policy(f.name,"grain","keep",90)
     F.provision_action(f.iface,"801","load")
@@ -4462,8 +4463,8 @@ end)()
     F.economy_named=function() return {grain=12} end
     r.held.grain=90
     F.provision_action(f.iface,"801","load")
-    eq(F.provision_total(F.state.armies["801"]),20,"loading retains enabled named-input reserve")
-    eq(r.held.grain,70,"settlement and named demand remain protected")
+    eq(F.provision_total(F.state.armies["801"]),30,"loading retains enabled named-input reserve")
+    eq(r.held.grain,60,"five turns of named demand remain protected at home")
     F.economy_named=economy_named
     r.held.grain=100; F.state.armies=nil
     F.provisions_turn(f.iface)
@@ -4606,7 +4607,8 @@ end)()
     local fed=F.provision_need(f.iface,r.iface)
     -- CARAVANS AND CONVOYS CARRY NO RATIONS (Workshop report, 2026-11-06): they live on foreign roads
     -- and Thanquol's schemers and Ogre camps (2026-11-11): CA's own scripts count neither as an army
-    for _, kind in ipairs({"CARAVAN","CONVOY","CHAOTIC_PLAN_SCHEMERS","OGRE_CAMP"}) do
+    -- and any type with CARAVAN in its key (Workshop report, 2026-11-20): Rhox's Marienburg and TORINUBAR caravans
+    for _, kind in ipairs({"CARAVAN","CONVOY","CHAOTIC_PLAN_SCHEMERS","OGRE_CAMP","MAR_CARAVAN","TORINUBAR_CARAVAN"}) do
         d.type=kind
         eq(#F.provision_rows(f.iface),1,kind.." excluded")
         eq(F.provision_need(f.iface,r.iface),fed-1,kind.." asks its settlement for no meal")
@@ -4792,7 +4794,7 @@ end)()
         a.iface = { is_null_interface = function() return false end, command_queue_index = function() return id end,
             faction = function() return owner.iface end, has_general = function() return true end,
             is_armed_citizenry = function() return false end, general_character = function() return ch end,
-            force_type = function() return { key = function() return "ARMY" end } end,
+            force_type = function() return { key = function() return a.type or "ARMY" end } end,
             unit_list = function() return list(a.units) end }
         forces[id] = a; owner.armies[#owner.armies + 1] = a.iface
         F.state.army_issued = F.state.army_issued or {}; F.state.army_issued[tostring(id)] = true
@@ -4939,6 +4941,11 @@ end)()
     eq(ar.held.coal, 50, "a computer faction regains for free with its stores switch off")
     R.ai = true; q.hp = 20; F.repl_turn(ai.iface); q.hp = 100; F.repl_turn(ai.iface)
     eq(ar.held.coal, 46, "and pays with it on")
+    -- A CARAVAN IS NEVER BILLED, a mod's own caravan type too (Workshop report, 2026-11-20: Rhox's MAR_CARAVAN)
+    local kf = faction("hg_kar", { human = true }); local kr = region("hg_kar1", 43800, 0, 2000, { coal = 50 }); own(kf, kr, true)
+    local k = soldier({ key = "hg_k", hp = 20 }); force(981, { k }, kf).type = "MAR_CARAVAN"
+    F.repl_turn(kf.iface); k.hp = 100; F.repl_turn(kf.iface)
+    eq(k.hp .. "," .. kr.held.coal, "100,50", "a modded caravan regains for nothing and pays nothing")
     -- GOLD PAYS FOR REPLENISHING TOO (Workshop reports 2026-11-20: Greenskins make none of the goods their troops need,
     -- so their armies never replenished). A 500-gold unit regaining 80% owes 4 goods; none held, it pays in gold at a
     -- recruit's price and keeps the strength. A treasury too small keeps only what it paid for.
@@ -7837,6 +7844,12 @@ end)()
            "the panel's note names the cart's settlement apart from the road's")
         eq(F.supply_note(P.iface, "8801").cart_source, nil, "and only when asked: the army button's poll reads no stores")
         F.supply_cart_return(c)
+        -- a cart leaves its settlement five turns of its meals; only an army standing there loads down to one (2026-11-20)
+        two.held.grain = 12
+        c = send({ grain = 5 })
+        eq(tostring(c and c.basket.grain) .. "/" .. two.held.grain, "2/10", "a cart takes only what is past five turns")
+        eq(F.provision_spare(P.iface, "c_two", true), 8, "where an army standing there could load 8")
+        if c then F.supply_cart_return(c) end
         two.held.grain = 0
         eq(tostring(send({ grain = 5 })) .. "/" .. F.supply_note(P.iface, "8801", true).cart_source, "nil/c_src",
            "nobody has food to spare: no cart, and the panel names the nearest")

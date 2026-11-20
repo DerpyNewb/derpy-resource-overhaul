@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-20, fourth update
+
+- Caravans from other mods, such as Marienburg's, no longer need provisions or pay for replenishment.
+- An army in one of your settlements can now load its food down to one turn's worth, instead of five.
+
 ## 2026-11-20, third update
 
 - Settlements now show the food and other goods they use whenever another of your settlements holds some, so you can Send here or set up a regular supply.
