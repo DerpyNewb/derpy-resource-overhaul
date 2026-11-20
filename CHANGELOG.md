@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-20, second update
+
+- Units no longer replenish for free on the turn after a battle.
+
 ## 2026-11-20
 
 - Gold now pays for replenishment as well as recruits when your stores run short. The MCT option is renamed "Gold pays for troops" and is on by default.
