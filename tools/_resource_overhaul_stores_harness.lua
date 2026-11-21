@@ -1504,7 +1504,7 @@ do
     -- Toolmaking: only Alpha can run it; it is on and short of iron
     eq(D[4][1], "Alpha", "where it runs"); eq(D[4][2], "8 Tools", "what it gives"); eq(D[4][4], "Short", "on, short")
     eq(D[4].price[1].text, "[[col:red]]6[[/col]]", "iron is red"); eq(D[4].price[2].text, "2", "timber is not")
-    eq(D[4].price[1].icon, S.icon_of("iron"), "each input after its icon")
+    eq(D[4].price[1].icon, good_icon("iron"), "each input after its icon")
     eq(string.find(D[4].tip, "It needs 6 Iron and Alpha has 3 to spare.", 1, true) ~= nil, true, "the tooltip says how short")
     eq(string.find(D[4].tip, "Short of", 1, true), nil, "and does not say it twice")
     eq(D[4].send.label, "Pause", "it can be paused"); eq(D[4].send.off, false, "live")
@@ -1526,9 +1526,9 @@ do
     eq(find_uicomponent(r4, "pn1").text, "[[col:red]]6[[/col]]", "the short amount on screen")
     -- GIVES AFTER ITS ICON: the slot after the inputs', at column 2, the text moved past it
     local g4, g14 = find_uicomponent(r4, "use3"), find_uicomponent(r14, "use4")
-    eq((D[4].lead or {})[2], S.icon_of("tools"), "a good's own icon")
+    eq((D[4].lead or {})[2], good_icon("tools"), "a good's own icon")
     eq((D[6].lead or {})[2], "ui/campaign ui/effect_bundles/construction.png", "a service's, its bundle's")
-    eq(g4.visible and g4.x == r4.x + PC[2][1] and g4.image == S.icon_of("tools"), true, "Tools' icon before 8 Tools")
+    eq(g4.visible and g4.x == r4.x + PC[2][1] and g4.image == good_icon("tools"), true, "Tools' icon before 8 Tools")
     eq(find_uicomponent(r4, "pn3").visible, false, "and no amount after it")
     eq(find_uicomponent(r4, "c2").x, r4.x + PC[2][1] + LL.ICON_PITCH, "the text after the icon")
     eq(find_uicomponent(r14, "use3").visible and find_uicomponent(r14, "use3").x == r14.x + PC[3][1] + 2 * LL.PRICE_PITCH,
@@ -2343,7 +2343,7 @@ press(act("derpy_mr_sell")); eq(#REQ, 2, "a greyed Sell asks for nothing")
     eq(sendb(1).disabled, false, "live")
     eq(string.find(sendb(1).tip, "no building slot here normally takes it", 1, true) ~= nil, true,
        "the tooltip says why it is here")
-    eq(S.data[1].icon, S.icon_of("dragon_bone"), "the good's own icon")
+    eq(S.data[1].icon, good_icon("dragon_bone"), "the good's own icon")
     eq(S.data[2].stem ~= nil, true, "the goods follow it")
     dump("found")
     press(sendb(1)); eq(REQ[1], "fac_a|found|reg_a", "a click founds it")

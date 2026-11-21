@@ -802,22 +802,44 @@ effect_bundles_localised_title_derpy_mr_comforts	Comforts	false
 effect_bundles_localised_description_derpy_mr_comforts	Luxuries fill at least a quarter of one store's space in this settlement.	false
 effect_bundles_localised_title_derpy_mr_well_fed_chd	Well fed	false
 effect_bundles_localised_description_derpy_mr_well_fed_chd	After eating, this settlement's stores still hold five turns of provisions, and its fed slaves are quieter.	false
+effect_bundles_localised_title_derpy_mr_service_altars	Altars of the Dark Gods	false
+effect_bundles_localised_description_derpy_mr_service_altars	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_archives	Scholars' halls	false
 effect_bundles_localised_description_derpy_mr_service_archives	Paid each turn from this province capital's stores. Province growth +5.	false
 effect_bundles_localised_title_derpy_mr_service_builders	Builders' yards	false
 effect_bundles_localised_description_derpy_mr_service_builders	Paid each turn from this province capital's stores. Province construction cost -5%.	false
+effect_bundles_localised_title_derpy_mr_service_crypts	Crypt rites	false
+effect_bundles_localised_description_derpy_mr_service_crypts	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_feasts	Village feasts	false
 effect_bundles_localised_description_derpy_mr_service_feasts	Paid each turn from this province capital's stores. Province control +2.	false
+effect_bundles_localised_title_derpy_mr_service_grog	Grog shops	false
+effect_bundles_localised_description_derpy_mr_service_grog	Paid each turn from this province capital's stores. Province control +2.	false
+effect_bundles_localised_title_derpy_mr_service_gut	Gut feasts	false
+effect_bundles_localised_description_derpy_mr_service_gut	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_halls	Drinking halls	false
 effect_bundles_localised_description_derpy_mr_service_halls	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_hospital	Field hospitals	false
 effect_bundles_localised_description_derpy_mr_service_hospital	Paid each turn from this province capital's stores. Own armies in the province: replenishment +3%.	false
+effect_bundles_localised_title_derpy_mr_service_khaine	Shrines of Khaine	false
+effect_bundles_localised_description_derpy_mr_service_khaine	Paid each turn from this province capital's stores. Province control +2.	false
+effect_bundles_localised_title_derpy_mr_service_meadhall	Mead-hall feasts	false
+effect_bundles_localised_description_derpy_mr_service_meadhall	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_mess	Factory mess	false
 effect_bundles_localised_description_derpy_mr_service_mess	Paid each turn from this province capital's stores. Province control +2.	false
+effect_bundles_localised_title_derpy_mr_service_pits	Fight pits	false
+effect_bundles_localised_description_derpy_mr_service_pits	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_records	Civic records	false
 effect_bundles_localised_description_derpy_mr_service_records	Paid each turn from this province capital's stores. Province growth +5.	false
+effect_bundles_localised_title_derpy_mr_service_revels	Seasonal revels	false
+effect_bundles_localised_description_derpy_mr_service_revels	Paid each turn from this province capital's stores. Province growth +5.	false
+effect_bundles_localised_title_derpy_mr_service_shrines	Shrine offerings	false
+effect_bundles_localised_description_derpy_mr_service_shrines	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_tea	Tea houses	false
 effect_bundles_localised_description_derpy_mr_service_tea	Paid each turn from this province capital's stores. Province control +2.	false
+effect_bundles_localised_title_derpy_mr_service_tribute	Temple tribute	false
+effect_bundles_localised_description_derpy_mr_service_tribute	Paid each turn from this province capital's stores. Province growth +5.	false
+effect_bundles_localised_title_derpy_mr_service_warrens	Breeding warrens	false
+effect_bundles_localised_description_derpy_mr_service_warrens	Paid each turn from this province capital's stores. Province growth +5.	false
 effect_bundles_localised_title_derpy_mr_event_feast	Feast	false
 effect_bundles_localised_description_derpy_mr_event_feast	A feast paid for from this settlement's stores: public order and growth are up.	false
 effect_bundles_localised_title_derpy_mr_event_siege	Siege Stores	false
@@ -923,6 +945,24 @@ effect_bundles_localised_title_derpy_mr_rc_last_pens	Beast Pens	false
 effect_bundles_localised_description_derpy_mr_rc_last_pens	Paid for from your stores: monster recruitment cost -20%. Permanent.	false
 effect_bundles_localised_title_derpy_mr_rc_last_boneyard	Bone Yard	false
 effect_bundles_localised_description_derpy_mr_rc_last_boneyard	Paid for from your stores: monster recruitment cost -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_ursun	Ursun's Dens	false
+effect_bundles_localised_description_derpy_mr_rc_last_ursun	Paid for from your stores: war Bear Riders and Elemental Bears upkeep -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_gunnery	Gunnery School	false
+effect_bundles_localised_description_derpy_mr_rc_last_gunnery	Paid for from your stores: artillery recruitment cost -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_grail	Grail Chapels	false
+effect_bundles_localised_description_derpy_mr_rc_last_grail	Paid for from your stores: knights of the Realm and Questing Knights upkeep -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_lothern	Lothern Sea Charter	false
+effect_bundles_localised_description_derpy_mr_rc_last_lothern	Paid for from your stores: diplomatic relations +15. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_jade	Jade Workshops	false
+effect_bundles_localised_description_derpy_mr_rc_last_jade	Paid for from your stores: jade Warriors and Jade Warrior Crossbows upkeep -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_trapping	Trapping Grounds	false
+effect_bundles_localised_description_derpy_mr_rc_last_trapping	Paid for from your stores: gorgers, Sabretusk Packs, Yhetees, Blood Vultures, Thundertusks and Stonehorns recruitment cost -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_spawning	Tended Spawning Pools	false
+effect_bundles_localised_description_derpy_mr_rc_last_spawning	Paid for from your stores: monster recruitment cost -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_hellforged	Hellforged Plate	false
+effect_bundles_localised_description_derpy_mr_rc_last_hellforged	Paid for from your stores: chaos Warriors, Chosen, Chaos Knights and Skullcrushers upkeep -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_barrows	Grave Barrows	false
+effect_bundles_localised_description_derpy_mr_rc_last_barrows	Paid for from your stores: skeleton Warriors and Skeleton Spearmen upkeep -20%. Permanent.	false
 effect_bundles_localised_title_derpy_mr_exports_held	Exports held	false
 effect_bundles_localised_description_derpy_mr_exports_held	You are holding some resources back from your trade agreements (the Resource Vault's Trade tab). Your regions make none of them for trade, so they earn you no trade income. Your stores still fill.	false
 dilemmas_localised_title_derpy_mr_dil_feast	A Feast	false

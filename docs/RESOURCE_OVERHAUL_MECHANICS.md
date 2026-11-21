@@ -84,6 +84,8 @@ The eight rare goods also have dedicated three-level production chains. Availabi
 
 The Vault's eligible-location view is the practical source for a particular campaign. A regional name alone does not bypass culture, building or slot requirements. Rare-building levels cost **1,000 / 2,000 / 3,000 gold**, requiring settlement tier **1 / 2 / 3** respectively. These production buildings are separate from paid Workshop settlement upgrades.
 
+A settlement holds one building for each rare good. When you capture a settlement that already has another race's building for that good, you can't add your own beside it. Since 2026-11-21 the same rule applies to computer factions, which used to build a second one.
+
 Main campaign support includes Immortal Empires and Realm of Chaos; `_iee` and `_oldworld` companion packs supply their map-specific compatibility data.
 
 ### Storage and culture eligibility
@@ -317,6 +319,8 @@ Seen in game 2026-11-03 (the Ogre bandits on Chaos Dwarf land, [§69](TRADE_RESO
 
 Default plunder rates are **10% for a raid turn**, **50% for a sack** and **50% for a raze**. These take individual goods, including rare goods. A positive rate can take at least one unit from a nonempty holding.
 
+**Norsca's raiders' share (2026-11-21).** Norscan raids, sacks and razes take half as much again: 15%, 75% and 75% at the default rates, and never more than the whole store (`F.RAIDERS_SHARE`, `F.plunder_pct` in `flows.lua`). The army's raid plate and the capture panel show the raised amount, the same number the take then moves. When Norscan and other armies raid one settlement, each plate counts every raider before it at that raider's own rate, so the plates still add up to what the round takes. This is Norsca's race work, a rule rather than a recipe, because Norsca's own currency (Spoils of War) is earned by pillage and goods must not buy it.
+
 Loot is delivered to the attacker's nearest owned settlement. Excess that cannot fit is lost; there is no automatic realm-wide redistribution. Ordinary occupation instead changes ownership of the remaining local pools. Siege-battle snapshots preserve the pre-destruction stock information needed by sack/raze handling.
 
 ## Settlement consumption and spending
@@ -422,7 +426,7 @@ Paid pool recruits receive one resource-charge exemption when recruited later, a
 
 ### Named recipes
 
-There are **24 named recipes**, in addition to the rare purchases above. Exact ingredients matter; unrelated goods in the same category cannot substitute.
+There are **36 named recipes**, in addition to the rare purchases above. Exact ingredients matter; unrelated goods in the same category cannot substitute.
 
 | Recipe | Inputs | Result |
 |---|---|---|
@@ -450,6 +454,18 @@ There are **24 named recipes**, in addition to the rare purchases above. Exact i
 | Engineers' Yard (Dwarfs) | 150 each Timber, Iron, Tools, Brass | Permanent -20% artillery recruitment cost |
 | Beast Pens (Skaven) | 150 each Animals, Salted Meat, Leather, Timber | Permanent -20% monster recruitment cost |
 | Bone Yard (Vampire Coast) | 150 each Tusks, Timber, Salt, Whale Oil | Permanent -20% monster recruitment cost |
+| Scrap (Greenskins) | 20 Tools +20 Leather +20 Animals | 5 Scrap |
+| Amber (Wood Elves) | 30 Trinkets +30 Furs | 1 Amber (CA's pool holds at most 10) |
+| Slave Market (Dark Elves) | 30 Pearls +30 Silk | 80 Slaves |
+| Ursun's Dens (Kislev) | 150 each Kvas, Furs, Salted Fish, Warhorses | Permanent -20% upkeep for War Bear Riders and Elemental Bears |
+| Gunnery School (Empire) | 150 each Blackpowder, Coal, Iron, Timber | Permanent -20% artillery recruitment cost |
+| Grail Chapels (Bretonnia) | 150 each Wine, Incense, Silver, Warhorses | Permanent -20% upkeep for Knights of the Realm and Questing Knights |
+| Lothern Sea Charter (High Elves) | 120 each Books, Pearls, Glassware, Timber | Permanent +15 diplomatic relations |
+| Jade Workshops (Cathay) | 150 each Jade, Porcelain, Leather, Iron | Permanent -20% upkeep for Jade Warriors and Jade Warrior Crossbows |
+| Trapping Grounds (Ogres) | 150 each Animals, Rhinox Hides, Leather, Marble | Permanent -20% recruitment cost for Gorgers, Sabretusk Packs, Yhetees, Blood Vultures, Thundertusks and Stonehorns |
+| Tended Spawning Pools (Lizardmen) | 150 each Salted Fish, Lustrian Plumes, Gold Idols, Pearls | Permanent -20% monster recruitment cost |
+| Hellforged Plate (Warriors of Chaos) | 150 each Iron, Brimstone, Coal, Gems | Permanent -20% upkeep for Chaos Warriors, Chosen, Chaos Knights and Skullcrushers |
+| Grave Barrows (Vampire Counts) | 150 each Timber, Iron, Leather, Gems | Permanent -20% upkeep for Skeleton Warriors and Skeleton Spearmen |
 
 **Faction-specific works (2026-11-01).** A race is never offered a work, stores bonus, event or supply that does nothing for it; where the general one would, it gets its own. Growth does nothing for Chaos Dwarfs (author's rule; not one of their vanilla buildings grants growth), Greenskins cannot trade (CA's `factions_without_trade` set), and Dwarfs, Skaven and Vampire Coast have no cavalry. `gen_resource_overhaul.check_reach()` checks every row against CA's tables on each build: each race reached must get at least one working effect, and no Chaos Dwarf row may carry growth. The Chaos Dwarfs' Well fed and Full Rations give control (+3, and +10 for five turns) and not CA's Labour-loss effect. That effect is a display dummy: CA's `wh3_dlc23_labour_loss.lua` takes 3% of a province's Labour a turn at control 50 and up and 5 to 20% below it. Both were seen in game on 2026-11-01.
 
@@ -503,19 +519,21 @@ The engine replenishes before the turn-start listeners (measured 2026-11-17), so
 
 Processing adds optional batches on top of passive production. The global setting defaults on; individual player recipes must be enabled in the settlement view.
 
-The current catalog has nine recipes and eight province services.
+The current catalog has eleven recipes and nineteen province services.
 
 | Recipe | Eligible producer | One batch |
 |---|---|---|
 | Brewing | Dwarf taverns, Empire basic industry, Bretonnian extra farm chain | 12 Grain → 8 Beer |
 | Preservation | Ogre hunting/farm chain | 8 Animals +4 Salt → 8 Salted Meat |
-| Powder | Eligible Dwarf/Chaos Dwarf industry, furnace or assembly buildings | 8 Coal +4 Brimstone → 8 Blackpowder |
+| Powder | Eligible Dwarf/Chaos Dwarf industry, furnace or assembly buildings; Skaven engineers' and weapon teams' chains | 8 Coal +4 Brimstone → 8 Blackpowder |
 | Printing | Empire basic industry | 8 Timber +4 Dyes → 8 Books |
 | Carpet weaving | Cathay Yin income chain | 8 Wool +4 Dyes → 8 Arabyan Carpets |
 | Campaign biscuits | Eligible Dwarf, human and elf farms; Chaos Dwarf living quarters | 8 Grain +2 Salt → 12 Hardtack |
-| Hide curing | Eligible human/elf crafts and Lizardmen, Wood Elf or Ogre farms/hunts | 6 Animals +2 Salt → 8 Leather |
+| Hide curing | Eligible human/elf crafts and Lizardmen, Wood Elf or Ogre farms/hunts; Norsca's Fur Stash and Beast Tanner, and its kennels | 6 Animals +2 Salt → 8 Leather |
 | Plain weaving | Eligible human, High Elf, Dark Elf and Lizardmen craft chains | 8 Wool → 8 Cloth |
 | Toolmaking | Eligible Dwarf/Chaos Dwarf, Empire and Cathay industry | 6 Iron +2 Timber → 8 Tools |
+| Kvas brewing | Kislev's farmstead chain (`wh3_main_ksl_growth_xp`) | 10 Grain → 8 Kvas |
+| Obsidian knapping | Lizardmen industry (Skink Favelas and up) | 8 Obsidian → 8 Tools |
 
 Each enabled recipe runs at most once per owner turn. The settlement must still be owned, culture-eligible and have a fully healthy eligible building. All inputs must be available locally above Keep, and the entire output must fit. A blocked batch charges nothing. Ownership changes clear the local orders; eligibility is checked again before execution.
 
@@ -537,12 +555,49 @@ Services are enabled at an owned province capital, with **one selected service p
 | Village feasts | Bretonnia | 3 Wine +2 Salted Meat | +2 province control |
 | Scholars' halls | High Elves | 2 Books +1 Trinkets | +5 province growth |
 | Factory mess | Chaos Dwarfs | 3 Salted Meat +2 Beer | +2 province control |
+| Grog shops | Vampire Coast | 3 Rum +1 Salted Fish | +2 province control |
+| Breeding warrens | Skaven | 4 Salted Meat | +5 province growth |
+| Fight pits | Greenskins | 3 Salted Meat +1 Animals | +2 province control |
+| Shrine offerings | Kislev | 3 Kvas +1 Amber | +2 province control |
+| Seasonal revels | Wood Elves | 3 Wine +1 Trinkets | +5 province growth |
+| Shrines of Khaine | Dark Elves | 3 Wine +1 Dyes | +2 province control |
+| Gut feasts | Ogres | 3 Salted Meat +2 Spices | +2 province control |
+| Temple tribute | Lizardmen | 2 Gold Idols +1 Lustrian Plumes | +5 province growth |
+| Mead-hall feasts | Norsca | 3 Mead +2 Salted Meat | +2 province control |
+| Altars of the Dark Gods | Warriors of Chaos | 3 Gems | +2 province control |
+| Crypt rites | Vampire Counts | 3 Timber | +2 province control |
 | Builders' yards | All fifteen supported living store cultures | 2 Tools +1 Cloth | -5% own-province construction cost |
 | Field hospitals | All fifteen supported living store cultures | 2 Cloth +1 Leather +1 Medicine | +3% replenishment for own armies in the province |
 
 Services preserve five turns of base essential/province-supply demand when deciding whether payment is safe. They do not enforce the player's explicit Keep as an absolute payment floor. A missing basket removes the bonus but **leaves the service enabled**, so it can resume when goods arrive. Disabling the service or losing eligibility removes its effect.
 
 Services, province supplies and stock-holding bonuses can coexist. They have distinct costs and shortage behaviour.
+
+### The race kit (2026-11-21)
+
+Every race that keeps stores has exactly one race service and exactly one race work, and both are priced only in goods that race's own buildings make in its home regions. `gen_resource_overhaul.check_race_kit()` asserts this on every build. `race_makes()` counts a good for a race when three things hold. A chain of the race carries a production row for it, CA's or this pack's. A region the race starts in on Immortal Empires has a slot template that permits that chain. For this pack's rows, the row's own source must also fire in that region: its port, its deposit and its regional condition. Home means the starting regions on Immortal Empires only, so Ogre tusks do not count (none of the 22 Ogre regions there has ivory). Five older rows are known exceptions (`KIT_IMPORTED`). The Factory mess needs Beer, which no Chaos Dwarf building brews. The Armaments conversion needs Iron, which Chaos Dwarfs get only from the Zharr Exchange's grant. The Skaven Food conversion needs Grain, because Skaven have no farm, and Salted Fish, because no Skaven home region has a harbour. The Drinking halls need Pipeweed, which the Dwarfs buy from the Moot. Each of these has to come in by trade or plunder. Crafts are not held to this floor, because one craft is one recipe for every race that has it. Two of the race kit's crafts take imported goods: Skaven powder mixing needs Brimstone, and Norsca's hide curing needs Animals and Salt, which Norsca can raid for. The race work is a currency recipe where CA gives every faction of the race the pool, which was measured on the bridge on 2026-11-21. Otherwise it is a permanent work at the shared works' strength: -20% for one unit class, -10% army-wide upkeep, or +15 for anything else (`lasting_band`). Kislev's Devotion is held by none of the six living Kislev factions, so Kislev's work is Ursun's Dens. Every other currency recipe costs 60 goods in all, once a turn (`CURRENCY_BAND`); Chaos Dwarf Armaments and Skaven Food are priced at the rate a recruitment shortfall charges instead. Norsca's race work is the raiders' share above, and the build checks that `flows.lua` still carries it (`check_kit_rules`).
+
+| Race | Race service | Race work | Crafts added |
+|---|---|---|---|
+| Dwarfs | Drinking halls | Oathgold | - |
+| Chaos Dwarfs | Factory mess | Armaments | - |
+| Vampire Coast | Grog shops | Infamy | - |
+| Skaven | Breeding warrens | Food | Powder at Clan Skryre's chains |
+| Greenskins | Fight pits | Scrap | - |
+| Kislev | Shrine offerings | Ursun's Dens | Kvas brewing |
+| Wood Elves | Seasonal revels | Amber | - |
+| Dark Elves | Shrines of Khaine | Slave Market | - |
+| Empire | Civic records | Gunnery School | - |
+| Bretonnia | Village feasts | Grail Chapels | - |
+| High Elves | Scholars' halls | Lothern Sea Charter | - |
+| Cathay | Tea houses | Jade Workshops | - |
+| Ogres | Gut feasts | Trapping Grounds | - |
+| Lizardmen | Temple tribute | Tended Spawning Pools | Obsidian knapping |
+| Norsca | Mead-hall feasts | Raiders' share (a rule) | Hide curing |
+| Warriors of Chaos | Altars of the Dark Gods | Hellforged Plate | - |
+| Vampire Counts | Crypt rites | Grave Barrows | - |
+
+Tomb Kings keep no stores yet; their kit is the design's Phase 3.
 
 ## Army provisions
 

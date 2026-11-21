@@ -472,8 +472,7 @@ def selftest():
     files = assets()
     assert 'composite_scene/derpy_mr_route_cart.csc' in files, 'moving traffic needs its minecart scene'
     count = len(scenes())
-    import gen_mr_ui as G
-    assert count == len(SIZES) * (len(COLOURS) * ANGLES * 5 + 1) and len(files) == 2 * count + 21 + len(G.goods())*18 + len(vehicle_config()['models'])*9
+    assert count ==len(SIZES) * (len(COLOURS) * ANGLES * 5 + 1) and len(files) == 2 * count + 21 + len(G.goods())*18 + len(vehicle_config()['models'])*9
     boat,triangles=low_poly_boat()
     assert files[BOAT_MODEL]==boat and triangles==688 and len(boat)<40000
     assert struct.unpack_from('<I',boat,8)[0]==1 and struct.unpack_from('<I',boat,152)[0]==168

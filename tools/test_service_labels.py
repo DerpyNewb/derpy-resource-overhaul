@@ -14,7 +14,11 @@ def check():
     definitions=goods.economy_definitions()
     expected={'halls':'+2 control','records':'+5 growth','tea':'+2 control',
         'feasts':'+2 control','archives':'+5 growth','mess':'+2 control',
-        'builders':'-5% cost','hospital':'+3% healing'}
+        'builders':'-5% cost','hospital':'+3% healing',
+        # the race kit (2026-11-21)
+        'grog':'+2 control','warrens':'+5 growth','pits':'+2 control','shrines':'+2 control',
+        'revels':'+5 growth','khaine':'+2 control','gut':'+2 control','tribute':'+5 growth',
+        'meadhall':'+2 control','altars':'+2 control','crypts':'+2 control'}
     assert set(expected)==set(goods.SERVICES),'Add the new service to the label check'
     states=[dict(key=k,definition=definitions[k],on=True,paid=True,open=True) for k in sorted(expected)]
     code='local states='+ui._lua(states)+'\n'
@@ -32,7 +36,7 @@ def check():
     assert actual==expected,(actual,expected)
     width=ui.L['VIEWS']['focus'][3][1]
     assert all(len(label)*ui.CHAR_W<=width for label in actual.values()),actual
-    print('service labels: all eight effects/signs correct; fit the benefit column')
+    print('service labels: all %d effects/signs correct; fit the benefit column' % len(expected))
 
 
 if __name__=='__main__':

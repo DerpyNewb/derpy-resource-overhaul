@@ -598,6 +598,51 @@ decide("occupation_decision_raze_without_occupy", a1, hum, "ai1")
 eq(#LOG, n, "a raze of unreadable stores moves nothing")
 eq(#ERRORS, 1, "and says so once"); ERRORS = {}
 a1.readable = true
+
+-- NORSCA'S RAIDERS' SHARE (race kit 2026-11-21): Norscan raids, sacks and razes take half as much again, capped at
+-- the whole store, and every plate shows what the take then moves
+do
+    local nor = faction("nor_raider", { human = true, sc = "wh_dlc08_sc_nor_norsca", culture = "wh_dlc08_nor_norsca" })
+    local nh = region("nor_home", 400, 400, 1000, {}); own(nor, nh, true)
+    local v = region("nor_victim", 410, 400, 400, { grain = 40 }); own(ai1, v)
+    eq(F.plunder_pct(nor.iface, 10), 15, "a Norscan raid takes 15%")
+    eq(F.plunder_pct(nor.iface, 50), 75, "a Norscan sack or raze 75%")
+    eq(F.plunder_pct(nor.iface, 80), 100, "and never more than the whole store")
+    eq(F.plunder_pct(hum.iface, 10), 10, "anyone else takes the rate")
+    local na = army(nor, v, 410, 400); v.chars = { na }
+    eq(F.raid_preview(na).total, 6, "the Norscan raider's plate: 15% of 40 grain")
+    raid(na)
+    eq(40 - v.held.grain, 6, "and the raid takes what the plate said")
+    v.held = { grain = 40 }
+    eq(F.capture_preview(v.iface, nor.iface, "sack").total, 30, "a Norscan sack's preview: 75% of 40")
+    eq(F.capture_preview(v.iface, nor.iface, "raze").total, 30, "and a raze's")
+    decide("occupation_decision_sack", v, nor, "ai1")
+    eq(40 - v.held.grain, 30, "and the sack takes it")
+    v.held = { grain = 40 }
+    local ha = army(hum, v, 410, 400); v.chars = { ha }
+    eq(F.raid_preview(ha).total, 4, "anyone else's plate over the same store: 10% of 40")
+    raid(ha)
+    eq(40 - v.held.grain, 4, "and its raid takes 4")
+    v.held = { grain = 40 }
+    eq(F.capture_preview(v.iface, hum.iface, "sack").total, 20, "and its sack's preview half")
+    decide("occupation_decision_sack", v, hum, "ai1")
+    eq(40 - v.held.grain, 20, "and its sack takes it")
+    -- A MIXED ROUND (final review minor, 2026-11-21): each raider before this one takes at its own rate, so a plate
+    -- behind a Norscan reads what the Norscan's 15% left, and a Norscan plate behind anyone else what their 10% left
+    for _, first_nor in ipairs({ true, false }) do
+        v.held = { grain = 200 }
+        local a, b
+        if first_nor then a = army(nor, v, 410, 400); b = army(hum, v, 410, 400)
+        else a = army(hum, v, 410, 400); b = army(nor, v, 410, 400) end
+        v.chars = { b, a }
+        local pa, pb = F.raid_preview(a).total, F.raid_preview(b).total
+        eq(pb, first_nor and 17 or 27, first_nor and "behind a Norscan: 10% of the 170 its 30 left"
+                                                  or "a Norscan behind anyone else: 15% of the 180 their 20 left")
+        raid(a); local before = v.held.grain; raid(b)
+        eq(200 - before, pa, "the first raider takes what its plate said")
+        eq(before - v.held.grain, pb, "and the second too")
+    end
+end
 -- A RAZE READS THE STORES AS THEY WERE AT THE BATTLE: measured 2026-10-02, the engine drops a razed
 -- region's pools before the decision fires (Venom Glade). CA's Bloodgrounds caches the same way.
 local function battle_at(r)
@@ -5567,6 +5612,12 @@ end)()
     eq(F.work_open(chd.iface, W.last_granary), false, "but not the Chaos Dwarfs': growth does nothing for them")
     eq(F.work_open(chd.iface, W.last_granary_chd), true, "theirs feeds the captives")
     eq(F.work_open(emp.iface, W.last_granary_chd), false, "and is theirs alone")
+    -- THE RACE KIT (2026-11-21): a race's own work shows to that race only
+    local ksl = faction("race_ksl", { human = true, sc = "wh3_main_sc_ksl_kislev", culture = "wh3_main_ksl_kislev" })
+    eq(F.work_open(ksl.iface, W.last_ursun), true, "Kislev's Workshop lists Ursun's Dens")
+    eq(F.work_open(ksl.iface, W.last_gunnery), false, "and not the Empire's Gunnery School")
+    eq(F.work_open(emp.iface, W.last_gunnery), true, "the Empire's lists the Gunnery School")
+    eq(F.work_open(emp.iface, W.last_ursun), false, "and not Ursun's Dens")
     F.works_book(chd.name).lasting = { last_granary_chd = 1 }
     eq(F.spoil_safe(chd.name, "grain"), F.SPOIL.granary, "and keeps grain to half, like the other")
     -- Well fed: the race's own bundle, never both
@@ -7188,6 +7239,14 @@ end)()
     lose(P, far); changed(far)
     eq(F.state.taken.s_far, nil, "an abandoned region keeps no record")
     own(P, far); changed(far)
+    -- ...MADE BEFORE ANYTHING THAT CAN THROW: a throw clearing the region's economy keeps the record, since a missing
+    -- record reads as settled (supply-lines ledger, Task 2 minor)
+    local real_clear, n1 = F.economy_clear, #ERRORS
+    F.economy_clear = function() error("clear failed") end
+    F.state.taken.s_far = nil; changed(far)
+    F.economy_clear = real_clear
+    eq(F.state.taken.s_far and F.state.taken.s_far.at, 9, "a throw after the capture keeps its record")
+    eq(#ERRORS, n1 + 1, "and the throw is logged"); ERRORS[#ERRORS] = nil
     TURN = 10
     eq(F.settled(new.iface, "slP"), false, "land taken two turns ago is not settled")
     eq(F.settled(old.iface, "slP"), true, "land with no record of its taking is settled")
@@ -7304,12 +7363,19 @@ end)()
     l = line(far, 170); eq(l.state .. l.turns, "stretched5", "past half the reach the road is stretched")
     l = line(far, 210)
     eq(l.state, "cut", "past the reach the road is cut"); eq(l.source, nil, "a cut road has no source")
+    -- THE REACH'S EDGE (supply-lines ledger, Task 2 minor): a road of exactly reach x 40 hexes arrives, one more does not
+    l = line(far, 200); eq(l.state .. l.turns, "stretched5", "a road of exactly the reach is stretched")
+    l = line(far, 201); eq(l.state, "cut", "one hex past the reach is cut")
     l = line(ally, 20)
     eq(l.state .. l.source, "supplieds_old", "an allied region is never the source, nor home")
     -- THE ARMY'S OWN GROUND IS NEVER A WALL (controller ruling 2): enemy land next to its own is supplied; a second
     -- enemy region between it and its own land cuts it
     l = line(e1, -60)
     eq(l.state .. tostring(l.source) .. l.turns, "supplieds_old2", "an army in enemy land next to its own is supplied")
+    -- ...and keeps that road on the same hex: its own ground, filed as no wall, is not judged again against the kept
+    -- road (supply-lines ledger, Task 2 minor)
+    local s1 = starts
+    l = line(e1, -60); eq(starts - s1, 0, "an army in enemy land on the same hex searches nothing")
     l = line(e2, -120)
     eq(l.state, "cut", "an army two enemy regions deep is cut")
     -- A REGION SETTLED SINCE THE LAST CALL is a source at once: the sources are read again, only the searches kept
@@ -7965,6 +8031,17 @@ end)()
     eq(#F.state.supply_carts .. F.state.supply_carts[1].id .. F.state.supply_seq, "1" .. c.id .. seq,
        "the load keeps the sound cart and drops one whose army is a number, one with no road and an empty lot")
     eq(F.supply_cart_sound(F.state.supply_carts[1]) ~= nil, true, "a cart F.supply_send made is sound")
+    -- TWO CARTS FOR ONE ARMY in a save (F.supply_cart_of allows one): the second's goods ride on in the first, so the
+    -- rule holds after a load and no food is lost (supply-lines ledger, Task 5 minor; fixed 2026-11-21)
+    local k0 = F.state.supply_carts[1]
+    local g0 = k0.basket.grain or 0
+    F.state.supply_carts[2] = { id = "derpy_mr_supply_80", f = "scP", army = k0.army, from = "c_src",
+                                basket = { grain = 3, salted_fish = 2 }, at = 1, due = 2, x = 0, y = Y, road = "0:" .. Y }
+    SAVED = {}; cm.saving_game_callbacks[1]({}); F.state = {}; cm.loading_game_callbacks[1]({})
+    local k1 = F.state.supply_carts[1]
+    eq(#F.state.supply_carts .. " " .. k1.id .. " " .. k1.basket.grain .. " " .. tostring(k1.basket.salted_fish),
+       "1 " .. k0.id .. " " .. (g0 + 3) .. " 2", "a second cart for one army hands its goods to the first on load")
+    eq(F.state.supply_seq, 80, "and its number is not handed out again")
     P.dead = true; F.sweep(); P.dead = false
     eq(#F.state.supply_carts, 0, "a dead faction's carts are swept")
 

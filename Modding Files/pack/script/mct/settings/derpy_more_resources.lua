@@ -24,7 +24,7 @@ m:add_new_section("stores", "Stores")
 
 local o_raid = m:add_new_option("raid", "slider")
 o_raid:set_text("Raid share per turn")
-o_raid:set_tooltip_text("Each turn an army raids a settlement, it carries off this share of every resource the settlement keeps, into its own nearest settlement as far as that has room. 0 turns this off.")
+o_raid:set_tooltip_text("Each turn an army raids a settlement, it carries off this share of every resource the settlement keeps, into its own nearest settlement as far as that has room. Norscan raiders take half as much again. 0 turns this off.")
 o_raid:slider_set_precision(0)
 o_raid:slider_set_min_max(0, 50)
 o_raid:slider_set_step_size(1, 0)
@@ -34,7 +34,7 @@ if IN_CAMPAIGN then o_raid:set_locked(true, LOCK_REASON) end
 
 local o_sack = m:add_new_option("sack", "slider")
 o_sack:set_text("Sack share")
-o_sack:set_tooltip_text("Sacking a settlement carries off this share of every resource it keeps, into the sacker's nearest settlement as far as that has room. 0 turns this off.")
+o_sack:set_tooltip_text("Sacking a settlement carries off this share of every resource it keeps, into the sacker's nearest settlement as far as that has room. Norscan raiders take half as much again. 0 turns this off.")
 o_sack:slider_set_precision(0)
 o_sack:slider_set_min_max(0, 100)
 o_sack:slider_set_step_size(1, 0)
@@ -44,7 +44,7 @@ if IN_CAMPAIGN then o_sack:set_locked(true, LOCK_REASON) end
 
 local o_raze = m:add_new_option("raze", "slider")
 o_raze:set_text("Raze share")
-o_raze:set_tooltip_text("Razing a settlement carries off this share of every resource it keeps before it burns. 0 turns this off.")
+o_raze:set_tooltip_text("Razing a settlement carries off this share of every resource it keeps before it burns. Norscan raiders take half as much again. 0 turns this off.")
 o_raze:slider_set_precision(0)
 o_raze:slider_set_min_max(0, 100)
 o_raze:slider_set_step_size(1, 0)

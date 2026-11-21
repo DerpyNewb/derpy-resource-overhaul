@@ -136,7 +136,7 @@ DERPY_MR_FLOWS_GOODS = {
     {stem = "spices", res = "res_spices", use = "provisions", rare = false, value = 9},
     {stem = "trinkets", res = "res_trinkets", use = "luxuries", rare = false, value = 9},
 }
-DERPY_MR_FLOWS_ECONOMY = {archives = {benefit = "Province growth +5", bundle = "derpy_mr_service_archives", cost = {books = 2, trinkets = 1}, effect = "wh_main_effect_province_growth_events", icon = "growth.png", kind = "services", label = "Scholars' halls", races = {"hef"}, value = 5}, bake = {chains = {"wh_main_DWARFS_farm", "wh_main_EMPIRE_farm_basic", "wh_main_BRETONNIA_farm_extra", "wh2_main_hef_farm", "wh2_main_def_farm", "wh3_main_ksl_growth_xp", "wh3_main_cth_income_yin", "wh3_dlc23_chd_tower_living_quaters"}, cost = {grain = 8, salt = 2}, kind = "processing", label = "Campaign biscuits", levels = {wh2_main_def_farm_1 = true, wh2_main_def_farm_2 = true, wh2_main_def_farm_3 = true, wh2_main_hef_farm_1 = true, wh2_main_hef_farm_2 = true, wh2_main_hef_farm_3 = true, wh3_dlc23_chd_tower_living_quaters_1 = true, wh3_dlc23_chd_tower_living_quaters_2 = true, wh3_dlc23_chd_tower_living_quaters_3 = true, wh3_dlc23_chd_tower_living_quaters_4 = true, wh3_main_cth_income_yin_1 = true, wh3_main_cth_income_yin_2 = true, wh3_main_cth_income_yin_3 = true, wh3_main_ksl_growth_xp_1 = true, wh3_main_ksl_growth_xp_2 = true, wh3_main_ksl_growth_xp_3 = true, wh_main_brt_farm_extra_1 = true, wh_main_brt_farm_extra_2 = true, wh_main_dwf_farm_1 = true, wh_main_dwf_farm_2 = true, wh_main_dwf_farm_3 = true, wh_main_emp_farm_basic_1 = true, wh_main_emp_farm_basic_2 = true, wh_main_emp_farm_basic_3 = true}, output = {"hardtack", 12}, races = {"dwf", "emp", "brt", "hef", "def", "ksl", "cth", "chd"}}, brew = {chains = {"wh_main_DWARFS_tavern", "wh_main_EMPIRE_industry_basic", "wh_main_BRETONNIA_farm_extra"}, cost = {grain = 12}, kind = "processing", label = "Brewing", levels = {wh_main_brt_farm_extra_1 = true, wh_main_brt_farm_extra_2 = true, wh_main_dwf_tavern_1 = true, wh_main_dwf_tavern_2 = true, wh_main_dwf_tavern_3 = true, wh_main_emp_industry_basic_1 = true, wh_main_emp_industry_basic_2 = true, wh_main_emp_industry_basic_3 = true}, output = {"beer", 8}, races = {"dwf", "emp", "brt"}}, builders = {benefit = "Province construction cost -5%", bundle = "derpy_mr_service_builders", cost = {cloth = 1, tools = 2}, effect = "wh_main_effect_building_construction_cost_mod_all", icon = "construction.png", kind = "services", label = "Builders' yards", races = {"dwf", "hef", "def", "wef", "brt", "emp", "grn", "ogr", "skv", "lzd", "cth", "ksl", "chd", "nor", "chs"}, scope = "region_to_region_own_provincewide", value = -5}, cloth = {chains = {"wh_main_EMPIRE_industry_basic", "wh_main_BRETONNIA_industry_basic", "wh2_main_hef_industry", "wh2_main_def_industry", "wh3_main_cth_income_yin", "wh3_main_ksl_trade_order", "wh2_main_lzd_industry"}, cost = {wool = 8}, kind = "processing", label = "Plain weaving", levels = {wh2_main_def_industry_1 = true, wh2_main_def_industry_2 = true, wh2_main_def_industry_3 = true, wh2_main_hef_industry_1 = true, wh2_main_hef_industry_2 = true, wh2_main_hef_industry_3 = true, wh2_main_lzd_industry_1 = true, wh2_main_lzd_industry_2 = true, wh2_main_lzd_industry_3 = true, wh3_main_cth_income_yin_1 = true, wh3_main_cth_income_yin_2 = true, wh3_main_cth_income_yin_3 = true, wh3_main_ksl_trade_order_1 = true, wh3_main_ksl_trade_order_2 = true, wh3_main_ksl_trade_order_3 = true, wh3_main_ksl_trade_order_4 = true, wh3_main_ksl_trade_order_5 = true, wh_main_brt_industry_basic_1 = true, wh_main_brt_industry_basic_2 = true, wh_main_brt_industry_basic_3 = true, wh_main_emp_industry_basic_1 = true, wh_main_emp_industry_basic_2 = true, wh_main_emp_industry_basic_3 = true}, output = {"cloth", 8}, races = {"emp", "brt", "hef", "def", "cth", "ksl", "lzd"}}, feasts = {benefit = "Province control +2", bundle = "derpy_mr_service_feasts", cost = {salted_meat = 2, wine = 3}, effect = "wh_main_effect_public_order_events", icon = "public_order_happy.png", kind = "services", label = "Village feasts", races = {"brt"}, value = 2}, halls = {benefit = "Province control +2", bundle = "derpy_mr_service_halls", cost = {beer = 4, pipeweed = 1}, effect = "wh_main_effect_public_order_events", icon = "public_order_happy.png", kind = "services", label = "Drinking halls", races = {"dwf"}, value = 2}, hospital = {benefit = "Own armies in the province: replenishment +3%", bundle = "derpy_mr_service_hospital", cost = {cloth = 2, leather = 1, medicine = 1}, effect = "wh_main_effect_force_all_campaign_replenishment_rate", icon = "replenishment.png", kind = "services", label = "Field hospitals", races = {"dwf", "hef", "def", "wef", "brt", "emp", "grn", "ogr", "skv", "lzd", "cth", "ksl", "chd", "nor", "chs"}, scope = "region_to_force_own_provincewide", value = 3}, mess = {benefit = "Province control +2", bundle = "derpy_mr_service_mess", cost = {beer = 2, salted_meat = 3}, effect = "wh_main_effect_public_order_events", icon = "public_order_happy.png", kind = "services", label = "Factory mess", races = {"chd"}, value = 2}, powder = {chains = {"wh_main_DWARFS_industry", "wh3_dlc23_chd_tower_furnace", "wh3_dlc23_chd_factory_assembly_line"}, cost = {brimstone = 4, coal = 8}, kind = "processing", label = "Powder mixing", levels = {wh3_dlc23_chd_factory_assembly_line_1 = true, wh3_dlc23_chd_factory_assembly_line_2 = true, wh3_dlc23_chd_factory_assembly_line_3 = true, wh3_dlc23_chd_tower_furnace_1 = true, wh3_dlc23_chd_tower_furnace_2 = true, wh_main_dwf_industry_1 = true, wh_main_dwf_industry_2 = true, wh_main_dwf_industry_3 = true, wh_main_dwf_industry_4 = true, wh_main_dwf_industry_5 = true}, output = {"blackpowder", 8}, races = {"dwf", "chd"}}, preserve = {chains = {"wh3_main_ogr_farm"}, cost = {animals = 8, salt = 4}, kind = "processing", label = "Meat preservation", levels = {wh3_main_ogr_farm_1 = true, wh3_main_ogr_farm_2 = true, wh3_main_ogr_farm_3 = true}, output = {"salted_meat", 8}, races = {"ogr"}}, print = {chains = {"wh_main_EMPIRE_industry_basic"}, cost = {dyes = 4, timber = 8}, kind = "processing", label = "Printing", levels = {wh_main_emp_industry_basic_1 = true, wh_main_emp_industry_basic_2 = true, wh_main_emp_industry_basic_3 = true}, output = {"books", 8}, races = {"emp"}}, records = {benefit = "Province growth +5", bundle = "derpy_mr_service_records", cost = {books = 2, glassware = 1}, effect = "wh_main_effect_province_growth_events", icon = "growth.png", kind = "services", label = "Civic records", races = {"emp"}, value = 5}, tan = {chains = {"wh2_main_lzd_farm", "wh_dlc05_wef_growth", "wh3_main_ogr_farm", "wh_main_EMPIRE_industry_basic", "wh_main_BRETONNIA_industry_basic", "wh2_main_hef_industry", "wh2_main_def_industry", "wh3_main_cth_income_yin", "wh3_main_ksl_trade_order"}, cost = {animals = 6, salt = 2}, kind = "processing", label = "Hide curing", levels = {wh2_main_def_industry_1 = true, wh2_main_def_industry_2 = true, wh2_main_def_industry_3 = true, wh2_main_hef_industry_1 = true, wh2_main_hef_industry_2 = true, wh2_main_hef_industry_3 = true, wh2_main_lzd_farm_1 = true, wh2_main_lzd_farm_2 = true, wh2_main_lzd_farm_3 = true, wh3_main_cth_income_yin_1 = true, wh3_main_cth_income_yin_2 = true, wh3_main_cth_income_yin_3 = true, wh3_main_ksl_trade_order_1 = true, wh3_main_ksl_trade_order_2 = true, wh3_main_ksl_trade_order_3 = true, wh3_main_ksl_trade_order_4 = true, wh3_main_ksl_trade_order_5 = true, wh3_main_ogr_farm_1 = true, wh3_main_ogr_farm_2 = true, wh3_main_ogr_farm_3 = true, wh_dlc05_wef_growth_1 = true, wh_dlc05_wef_growth_2 = true, wh_dlc05_wef_growth_3 = true, wh_main_brt_industry_basic_1 = true, wh_main_brt_industry_basic_2 = true, wh_main_brt_industry_basic_3 = true, wh_main_emp_industry_basic_1 = true, wh_main_emp_industry_basic_2 = true, wh_main_emp_industry_basic_3 = true}, output = {"leather", 8}, races = {"lzd", "wef", "ogr", "emp", "brt", "hef", "def", "cth", "ksl"}}, tea = {benefit = "Province control +2", bundle = "derpy_mr_service_tea", cost = {porcelain = 1, tea = 3}, effect = "wh_main_effect_public_order_events", icon = "public_order_happy.png", kind = "services", label = "Tea houses", races = {"cth"}, value = 2}, toolmaking = {chains = {"wh_main_DWARFS_industry", "wh3_dlc23_chd_tower_furnace", "wh3_dlc23_chd_factory_assembly_line", "wh_main_EMPIRE_industry_basic", "wh3_main_cth_income_yang"}, cost = {iron = 6, timber = 2}, kind = "processing", label = "Toolmaking", levels = {wh3_dlc23_chd_factory_assembly_line_1 = true, wh3_dlc23_chd_factory_assembly_line_2 = true, wh3_dlc23_chd_factory_assembly_line_3 = true, wh3_dlc23_chd_tower_furnace_1 = true, wh3_dlc23_chd_tower_furnace_2 = true, wh3_main_cth_income_yang_1 = true, wh3_main_cth_income_yang_2 = true, wh3_main_cth_income_yang_3 = true, wh_main_dwf_industry_1 = true, wh_main_dwf_industry_2 = true, wh_main_dwf_industry_3 = true, wh_main_dwf_industry_4 = true, wh_main_dwf_industry_5 = true, wh_main_emp_industry_basic_1 = true, wh_main_emp_industry_basic_2 = true, wh_main_emp_industry_basic_3 = true}, output = {"tools", 8}, races = {"dwf", "chd", "emp", "cth"}}, weave = {chains = {"wh3_main_cth_income_yin"}, cost = {dyes = 4, wool = 8}, kind = "processing", label = "Carpet weaving", levels = {wh3_main_cth_income_yin_1 = true, wh3_main_cth_income_yin_2 = true, wh3_main_cth_income_yin_3 = true}, output = {"carpets", 8}, races = {"cth"}}}
+DERPY_MR_FLOWS_ECONOMY = {altars = {benefit = "Province control +2", bundle = "derpy_mr_service_altars", cost = {gems = 3}, effect = "wh_main_effect_public_order_events", icon = "public_order_happy.png", kind = "services", label = "Altars of the Dark Gods", races = {"chs"}, value = 2}, archives = {benefit = "Province growth +5", bundle = "derpy_mr_service_archives", cost = {books = 2, trinkets = 1}, effect = "wh_main_effect_province_growth_events", icon = "growth.png", kind = "services", label = "Scholars' halls", races = {"hef"}, value = 5}, bake = {chains = {"wh_main_DWARFS_farm", "wh_main_EMPIRE_farm_basic", "wh_main_BRETONNIA_farm_extra", "wh2_main_hef_farm", "wh2_main_def_farm", "wh3_main_ksl_growth_xp", "wh3_main_cth_income_yin", "wh3_dlc23_chd_tower_living_quaters"}, cost = {grain = 8, salt = 2}, kind = "processing", label = "Campaign biscuits", levels = {wh2_main_def_farm_1 = true, wh2_main_def_farm_2 = true, wh2_main_def_farm_3 = true, wh2_main_hef_farm_1 = true, wh2_main_hef_farm_2 = true, wh2_main_hef_farm_3 = true, wh3_dlc23_chd_tower_living_quaters_1 = true, wh3_dlc23_chd_tower_living_quaters_2 = true, wh3_dlc23_chd_tower_living_quaters_3 = true, wh3_dlc23_chd_tower_living_quaters_4 = true, wh3_main_cth_income_yin_1 = true, wh3_main_cth_income_yin_2 = true, wh3_main_cth_income_yin_3 = true, wh3_main_ksl_growth_xp_1 = true, wh3_main_ksl_growth_xp_2 = true, wh3_main_ksl_growth_xp_3 = true, wh_main_brt_farm_extra_1 = true, wh_main_brt_farm_extra_2 = true, wh_main_dwf_farm_1 = true, wh_main_dwf_farm_2 = true, wh_main_dwf_farm_3 = true, wh_main_emp_farm_basic_1 = true, wh_main_emp_farm_basic_2 = true, wh_main_emp_farm_basic_3 = true}, output = {"hardtack", 12}, races = {"dwf", "emp", "brt", "hef", "def", "ksl", "cth", "chd"}}, brew = {chains = {"wh_main_DWARFS_tavern", "wh_main_EMPIRE_industry_basic", "wh_main_BRETONNIA_farm_extra"}, cost = {grain = 12}, kind = "processing", label = "Brewing", levels = {wh_main_brt_farm_extra_1 = true, wh_main_brt_farm_extra_2 = true, wh_main_dwf_tavern_1 = true, wh_main_dwf_tavern_2 = true, wh_main_dwf_tavern_3 = true, wh_main_emp_industry_basic_1 = true, wh_main_emp_industry_basic_2 = true, wh_main_emp_industry_basic_3 = true}, output = {"beer", 8}, races = {"dwf", "emp", "brt"}}, builders = {benefit = "Province construction cost -5%", bundle = "derpy_mr_service_builders", cost = {cloth = 1, tools = 2}, effect = "wh_main_effect_building_construction_cost_mod_all", icon = "construction.png", kind = "services", label = "Builders' yards", races = {"dwf", "hef", "def", "wef", "brt", "emp", "grn", "ogr", "skv", "lzd", "cth", "ksl", "chd", "nor", "chs"}, scope = "region_to_region_own_provincewide", value = -5}, cloth = {chains = {"wh_main_EMPIRE_industry_basic", "wh_main_BRETONNIA_industry_basic", "wh2_main_hef_industry", "wh2_main_def_industry", "wh3_main_cth_income_yin", "wh3_main_ksl_trade_order", "wh2_main_lzd_industry"}, cost = {wool = 8}, kind = "processing", label = "Plain weaving", levels = {wh2_main_def_industry_1 = true, wh2_main_def_industry_2 = true, wh2_main_def_industry_3 = true, wh2_main_hef_industry_1 = true, wh2_main_hef_industry_2 = true, wh2_main_hef_industry_3 = true, wh2_main_lzd_industry_1 = true, wh2_main_lzd_industry_2 = true, wh2_main_lzd_industry_3 = true, wh3_main_cth_income_yin_1 = true, wh3_main_cth_income_yin_2 = true, wh3_main_cth_income_yin_3 = true, wh3_main_ksl_trade_order_1 = true, wh3_main_ksl_trade_order_2 = true, wh3_main_ksl_trade_order_3 = true, wh3_main_ksl_trade_order_4 = true, wh3_main_ksl_trade_order_5 = true, wh_main_brt_industry_basic_1 = true, wh_main_brt_industry_basic_2 = true, wh_main_brt_industry_basic_3 = true, wh_main_emp_industry_basic_1 = true, wh_main_emp_industry_basic_2 = true, wh_main_emp_industry_basic_3 = true}, output = {"cloth", 8}, races = {"emp", "brt", "hef", "def", "cth", "ksl", "lzd"}}, crypts = {benefit = "Province control +2", bundle = "derpy_mr_service_crypts", cost = {timber = 3}, effect = "wh_main_effect_public_order_events", icon = "public_order_happy.png", kind = "services", label = "Crypt rites", races = {"vmp"}, value = 2}, feasts = {benefit = "Province control +2", bundle = "derpy_mr_service_feasts", cost = {salted_meat = 2, wine = 3}, effect = "wh_main_effect_public_order_events", icon = "public_order_happy.png", kind = "services", label = "Village feasts", races = {"brt"}, value = 2}, grog = {benefit = "Province control +2", bundle = "derpy_mr_service_grog", cost = {rum = 3, salted_fish = 1}, effect = "wh_main_effect_public_order_events", icon = "public_order_happy.png", kind = "services", label = "Grog shops", races = {"cst"}, value = 2}, gut = {benefit = "Province control +2", bundle = "derpy_mr_service_gut", cost = {salted_meat = 3, spices = 2}, effect = "wh_main_effect_public_order_events", icon = "public_order_happy.png", kind = "services", label = "Gut feasts", races = {"ogr"}, value = 2}, halls = {benefit = "Province control +2", bundle = "derpy_mr_service_halls", cost = {beer = 4, pipeweed = 1}, effect = "wh_main_effect_public_order_events", icon = "public_order_happy.png", kind = "services", label = "Drinking halls", races = {"dwf"}, value = 2}, hospital = {benefit = "Own armies in the province: replenishment +3%", bundle = "derpy_mr_service_hospital", cost = {cloth = 2, leather = 1, medicine = 1}, effect = "wh_main_effect_force_all_campaign_replenishment_rate", icon = "replenishment.png", kind = "services", label = "Field hospitals", races = {"dwf", "hef", "def", "wef", "brt", "emp", "grn", "ogr", "skv", "lzd", "cth", "ksl", "chd", "nor", "chs"}, scope = "region_to_force_own_provincewide", value = 3}, khaine = {benefit = "Province control +2", bundle = "derpy_mr_service_khaine", cost = {dyes = 1, wine = 3}, effect = "wh_main_effect_public_order_events", icon = "public_order_happy.png", kind = "services", label = "Shrines of Khaine", races = {"def"}, value = 2}, knap = {chains = {"wh2_main_lzd_industry"}, cost = {obsidian = 8}, kind = "processing", label = "Obsidian knapping", levels = {wh2_main_lzd_industry_1 = true, wh2_main_lzd_industry_2 = true, wh2_main_lzd_industry_3 = true}, output = {"tools", 8}, races = {"lzd"}}, kvas = {chains = {"wh3_main_ksl_growth_xp"}, cost = {grain = 10}, kind = "processing", label = "Kvas brewing", levels = {wh3_main_ksl_growth_xp_1 = true, wh3_main_ksl_growth_xp_2 = true, wh3_main_ksl_growth_xp_3 = true}, output = {"kvas", 8}, races = {"ksl"}}, meadhall = {benefit = "Province control +2", bundle = "derpy_mr_service_meadhall", cost = {mead = 3, salted_meat = 2}, effect = "wh_main_effect_public_order_events", icon = "public_order_happy.png", kind = "services", label = "Mead-hall feasts", races = {"nor"}, value = 2}, mess = {benefit = "Province control +2", bundle = "derpy_mr_service_mess", cost = {beer = 2, salted_meat = 3}, effect = "wh_main_effect_public_order_events", icon = "public_order_happy.png", kind = "services", label = "Factory mess", races = {"chd"}, value = 2}, pits = {benefit = "Province control +2", bundle = "derpy_mr_service_pits", cost = {animals = 1, salted_meat = 3}, effect = "wh_main_effect_public_order_events", icon = "public_order_happy.png", kind = "services", label = "Fight pits", races = {"grn"}, value = 2}, powder = {chains = {"wh_main_DWARFS_industry", "wh3_dlc23_chd_tower_furnace", "wh3_dlc23_chd_factory_assembly_line", "wh2_main_skv_engineers", "wh2_main_skv_weaponteams"}, cost = {brimstone = 4, coal = 8}, kind = "processing", label = "Powder mixing", levels = {wh2_dlc14_skv_weaponteams_1 = true, wh2_main_skv_engineers_1 = true, wh2_main_skv_engineers_2 = true, wh2_main_skv_engineers_3 = true, wh2_main_skv_weaponteams_1 = true, wh2_main_skv_weaponteams_2 = true, wh3_dlc23_chd_factory_assembly_line_1 = true, wh3_dlc23_chd_factory_assembly_line_2 = true, wh3_dlc23_chd_factory_assembly_line_3 = true, wh3_dlc23_chd_tower_furnace_1 = true, wh3_dlc23_chd_tower_furnace_2 = true, wh_main_dwf_industry_1 = true, wh_main_dwf_industry_2 = true, wh_main_dwf_industry_3 = true, wh_main_dwf_industry_4 = true, wh_main_dwf_industry_5 = true}, output = {"blackpowder", 8}, races = {"dwf", "chd", "skv"}}, preserve = {chains = {"wh3_main_ogr_farm"}, cost = {animals = 8, salt = 4}, kind = "processing", label = "Meat preservation", levels = {wh3_main_ogr_farm_1 = true, wh3_main_ogr_farm_2 = true, wh3_main_ogr_farm_3 = true}, output = {"salted_meat", 8}, races = {"ogr"}}, print = {chains = {"wh_main_EMPIRE_industry_basic"}, cost = {dyes = 4, timber = 8}, kind = "processing", label = "Printing", levels = {wh_main_emp_industry_basic_1 = true, wh_main_emp_industry_basic_2 = true, wh_main_emp_industry_basic_3 = true}, output = {"books", 8}, races = {"emp"}}, records = {benefit = "Province growth +5", bundle = "derpy_mr_service_records", cost = {books = 2, glassware = 1}, effect = "wh_main_effect_province_growth_events", icon = "growth.png", kind = "services", label = "Civic records", races = {"emp"}, value = 5}, revels = {benefit = "Province growth +5", bundle = "derpy_mr_service_revels", cost = {trinkets = 1, wine = 3}, effect = "wh_main_effect_province_growth_events", icon = "growth.png", kind = "services", label = "Seasonal revels", races = {"wef"}, value = 5}, shrines = {benefit = "Province control +2", bundle = "derpy_mr_service_shrines", cost = {amber = 1, kvas = 3}, effect = "wh_main_effect_public_order_events", icon = "public_order_happy.png", kind = "services", label = "Shrine offerings", races = {"ksl"}, value = 2}, tan = {chains = {"wh2_main_lzd_farm", "wh_dlc05_wef_growth", "wh3_main_ogr_farm", "wh_main_EMPIRE_industry_basic", "wh_main_BRETONNIA_industry_basic", "wh2_main_hef_industry", "wh2_main_def_industry", "wh3_main_cth_income_yin", "wh3_main_ksl_trade_order", "wh_main_NORSCA_slaves", "wh_main_NORSCA_beasts"}, cost = {animals = 6, salt = 2}, kind = "processing", label = "Hide curing", levels = {wh2_main_def_industry_1 = true, wh2_main_def_industry_2 = true, wh2_main_def_industry_3 = true, wh2_main_hef_industry_1 = true, wh2_main_hef_industry_2 = true, wh2_main_hef_industry_3 = true, wh2_main_lzd_farm_1 = true, wh2_main_lzd_farm_2 = true, wh2_main_lzd_farm_3 = true, wh3_dlc27_nor_slaves_4 = true, wh3_main_cth_income_yin_1 = true, wh3_main_cth_income_yin_2 = true, wh3_main_cth_income_yin_3 = true, wh3_main_ksl_trade_order_1 = true, wh3_main_ksl_trade_order_2 = true, wh3_main_ksl_trade_order_3 = true, wh3_main_ksl_trade_order_4 = true, wh3_main_ksl_trade_order_5 = true, wh3_main_ogr_farm_1 = true, wh3_main_ogr_farm_2 = true, wh3_main_ogr_farm_3 = true, wh_dlc05_wef_growth_1 = true, wh_dlc05_wef_growth_2 = true, wh_dlc05_wef_growth_3 = true, wh_main_brt_industry_basic_1 = true, wh_main_brt_industry_basic_2 = true, wh_main_brt_industry_basic_3 = true, wh_main_emp_industry_basic_1 = true, wh_main_emp_industry_basic_2 = true, wh_main_emp_industry_basic_3 = true, wh_main_nor_beasts_1 = true, wh_main_nor_beasts_2 = true, wh_main_nor_beasts_3 = true, wh_main_nor_slaves_1 = true, wh_main_nor_slaves_2 = true, wh_main_nor_slaves_3 = true}, output = {"leather", 8}, races = {"lzd", "wef", "ogr", "emp", "brt", "hef", "def", "cth", "ksl", "nor"}}, tea = {benefit = "Province control +2", bundle = "derpy_mr_service_tea", cost = {porcelain = 1, tea = 3}, effect = "wh_main_effect_public_order_events", icon = "public_order_happy.png", kind = "services", label = "Tea houses", races = {"cth"}, value = 2}, toolmaking = {chains = {"wh_main_DWARFS_industry", "wh3_dlc23_chd_tower_furnace", "wh3_dlc23_chd_factory_assembly_line", "wh_main_EMPIRE_industry_basic", "wh3_main_cth_income_yang"}, cost = {iron = 6, timber = 2}, kind = "processing", label = "Toolmaking", levels = {wh3_dlc23_chd_factory_assembly_line_1 = true, wh3_dlc23_chd_factory_assembly_line_2 = true, wh3_dlc23_chd_factory_assembly_line_3 = true, wh3_dlc23_chd_tower_furnace_1 = true, wh3_dlc23_chd_tower_furnace_2 = true, wh3_main_cth_income_yang_1 = true, wh3_main_cth_income_yang_2 = true, wh3_main_cth_income_yang_3 = true, wh_main_dwf_industry_1 = true, wh_main_dwf_industry_2 = true, wh_main_dwf_industry_3 = true, wh_main_dwf_industry_4 = true, wh_main_dwf_industry_5 = true, wh_main_emp_industry_basic_1 = true, wh_main_emp_industry_basic_2 = true, wh_main_emp_industry_basic_3 = true}, output = {"tools", 8}, races = {"dwf", "chd", "emp", "cth"}}, tribute = {benefit = "Province growth +5", bundle = "derpy_mr_service_tribute", cost = {gold_idols = 2, lustrian_plumes = 1}, effect = "wh_main_effect_province_growth_events", icon = "growth.png", kind = "services", label = "Temple tribute", races = {"lzd"}, value = 5}, warrens = {benefit = "Province growth +5", bundle = "derpy_mr_service_warrens", cost = {salted_meat = 4}, effect = "wh_main_effect_province_growth_events", icon = "growth.png", kind = "services", label = "Breeding warrens", races = {"skv"}, value = 5}, weave = {chains = {"wh3_main_cth_income_yin"}, cost = {dyes = 4, wool = 8}, kind = "processing", label = "Carpet weaving", levels = {wh3_main_cth_income_yin_1 = true, wh3_main_cth_income_yin_2 = true, wh3_main_cth_income_yin_3 = true}, output = {"carpets", 8}, races = {"cth"}}}
 DERPY_MR_FLOWS_ORDERS = {
     festival = {use = "luxuries", bundle = "derpy_mr_order_festival"},
     muster = {use = "war", bundle = "derpy_mr_order_muster"},
@@ -555,6 +555,18 @@ DERPY_MR_FLOWS_WORKS = {
     {key = "last_engineers", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"dwf"}, grant = "", group = "", pool = "", goods = {{"timber", 150}, {"iron", 150}, {"tools", 150}, {"brass", 150}}, bundle = "derpy_mr_rc_last_engineers", turns = 0, wait = 0},
     {key = "last_pens", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"skv"}, grant = "", group = "", pool = "", goods = {{"animals", 150}, {"salted_meat", 150}, {"leather", 150}, {"timber", 150}}, bundle = "derpy_mr_rc_last_pens", turns = 0, wait = 0},
     {key = "last_boneyard", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"cst"}, grant = "", group = "", pool = "", goods = {{"tusks", 150}, {"timber", 150}, {"salt", 150}, {"whale_oil", 150}}, bundle = "derpy_mr_rc_last_boneyard", turns = 0, wait = 0},
+    {key = "conv_scrap", kind = "convert", rare = "", rare_n = 0, use = "", use_n = 0, races = {"grn"}, grant = "", group = "", pool = "grn_salvage", goods = {{"tools", 20}, {"leather", 20}, {"animals", 20}}, amount = 5, wait = 1},
+    {key = "conv_amber", kind = "convert", rare = "", rare_n = 0, use = "", use_n = 0, races = {"wef"}, grant = "", group = "", pool = "wef_amber", goods = {{"trinkets", 30}, {"furs", 30}}, amount = 1, wait = 1},
+    {key = "conv_slaves", kind = "convert", rare = "", rare_n = 0, use = "", use_n = 0, races = {"def"}, grant = "", group = "", pool = "def_slaves", goods = {{"pearls", 30}, {"silk", 30}}, amount = 80, wait = 1},
+    {key = "last_ursun", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"ksl"}, grant = "", group = "", pool = "", goods = {{"kvas", 150}, {"furs", 150}, {"salted_fish", 150}, {"warhorses", 150}}, bundle = "derpy_mr_rc_last_ursun", turns = 0, wait = 0},
+    {key = "last_gunnery", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"emp"}, grant = "", group = "", pool = "", goods = {{"blackpowder", 150}, {"coal", 150}, {"iron", 150}, {"timber", 150}}, bundle = "derpy_mr_rc_last_gunnery", turns = 0, wait = 0},
+    {key = "last_grail", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"brt"}, grant = "", group = "", pool = "", goods = {{"wine", 150}, {"incense", 150}, {"silver", 150}, {"warhorses", 150}}, bundle = "derpy_mr_rc_last_grail", turns = 0, wait = 0},
+    {key = "last_lothern", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"hef"}, grant = "", group = "", pool = "", goods = {{"books", 120}, {"pearls", 120}, {"glassware", 120}, {"timber", 120}}, bundle = "derpy_mr_rc_last_lothern", turns = 0, wait = 0},
+    {key = "last_jade", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"cth"}, grant = "", group = "", pool = "", goods = {{"jade", 150}, {"porcelain", 150}, {"leather", 150}, {"iron", 150}}, bundle = "derpy_mr_rc_last_jade", turns = 0, wait = 0},
+    {key = "last_trapping", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"ogr"}, grant = "", group = "", pool = "", goods = {{"animals", 150}, {"rhinox_hides", 150}, {"leather", 150}, {"marble", 150}}, bundle = "derpy_mr_rc_last_trapping", turns = 0, wait = 0},
+    {key = "last_spawning", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"lzd"}, grant = "", group = "", pool = "", goods = {{"salted_fish", 150}, {"lustrian_plumes", 150}, {"gold_idols", 150}, {"pearls", 150}}, bundle = "derpy_mr_rc_last_spawning", turns = 0, wait = 0},
+    {key = "last_hellforged", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"chs"}, grant = "", group = "", pool = "", goods = {{"iron", 150}, {"brimstone", 150}, {"coal", 150}, {"gems", 150}}, bundle = "derpy_mr_rc_last_hellforged", turns = 0, wait = 0},
+    {key = "last_barrows", kind = "lasting", rare = "", rare_n = 0, use = "", use_n = 0, races = {"vmp"}, grant = "", group = "", pool = "", goods = {{"timber", 150}, {"iron", 150}, {"leather", 150}, {"gems", 150}}, bundle = "derpy_mr_rc_last_barrows", turns = 0, wait = 0},
     {key = "research", kind = "research", rare = "", rare_n = 0, use = "luxuries", use_n = 300, races = {"all"}, grant = "", group = "", pool = ""},
 }
 DERPY_MR_FLOWS_WORK = {ai_pct = 20, research_points = 400, research_wait = 10, unit_max = 2}
@@ -1197,32 +1209,64 @@ DERPY_MR_LOC_KEYS = {
     ["Attrition -25%"] = "derpy_mr_ui_3383d0027a",
     ["A trait for the selected lord: their army suffers 25% less attrition"] = "derpy_mr_ui_0fdb742ca1",
     ["Great Granary"] = "derpy_mr_ui_2d61ec260f",
-    ["Growth +15 Permanent"] = "derpy_mr_ui_61be484d03",
+    ["Growth +15"] = "derpy_mr_ui_bad52e0eaa",
     ["Growth +15 in every province. Grain is safe from spoiling up to half of each store. Permanent"] = "derpy_mr_ui_b8ff2b6b78",
-    ["Battle Labour +15% Permanent"] = "derpy_mr_ui_43572e848c",
+    ["Battle Labour +15%"] = "derpy_mr_ui_e7c3793710",
     ["Labour taken after battles +15%. Grain is safe from spoiling up to half of each store. Permanent"] = "derpy_mr_ui_bb7f95a0c8",
     ["Hall of Records"] = "derpy_mr_ui_4ab91fe114",
-    ["Research +15% Permanent"] = "derpy_mr_ui_9b24cdc976",
+    ["Research +15%"] = "derpy_mr_ui_dafb63d198",
     ["Research rate +15%. Permanent"] = "derpy_mr_ui_0f8f70fc5e",
     ["Grand Bazaar"] = "derpy_mr_ui_f2bce8752a",
-    ["Trade income +15% Permanent"] = "derpy_mr_ui_270e808e60",
+    ["Trade income +15%"] = "derpy_mr_ui_a4263c2917",
     ["Trade income +15%. Permanent"] = "derpy_mr_ui_a3f4672985",
     ["Loot Hoard"] = "derpy_mr_ui_463e693ed9",
-    ["Loot income +15% Permanent"] = "derpy_mr_ui_aa6c156740",
+    ["Loot income +15%"] = "derpy_mr_ui_cb1826a7d4",
     ["Income from sacking and looting settlements +15%. Permanent"] = "derpy_mr_ui_5b1488b35f",
     ["Arsenal"] = "derpy_mr_ui_4fc9baf210",
-    ["Upkeep -10% Permanent"] = "derpy_mr_ui_b526767a45",
+    ["Upkeep -10%"] = "derpy_mr_ui_d67e83a408",
     ["Army upkeep -10%. Permanent"] = "derpy_mr_ui_f2dba5d873",
     ["Royal Stables"] = "derpy_mr_ui_92dafabe1c",
-    ["Cavalry cost -20% Permanent"] = "derpy_mr_ui_22fc3259a9",
+    ["Cavalry cost -20%"] = "derpy_mr_ui_2971f2464a",
     ["Cavalry recruitment cost -20%. Permanent"] = "derpy_mr_ui_e0f93a14a1",
     ["Engineers' Yard"] = "derpy_mr_ui_712acc597b",
-    ["Artillery -20% Permanent"] = "derpy_mr_ui_87dca18a0d",
+    ["Artillery cost -20%"] = "derpy_mr_ui_e1d47a61bd",
     ["Artillery recruitment cost -20%. Permanent"] = "derpy_mr_ui_ecc13fc21f",
     ["Beast Pens"] = "derpy_mr_ui_53ba9051ca",
-    ["Monster cost -20% Permanent"] = "derpy_mr_ui_f7b145ee2b",
+    ["Monster cost -20%"] = "derpy_mr_ui_dbc16a8cd7",
     ["Monster recruitment cost -20%. Permanent"] = "derpy_mr_ui_84c4f586f4",
     ["Bone Yard"] = "derpy_mr_ui_a726f67005",
+    ["Scrap"] = "derpy_mr_ui_c5ab7d0672",
+    ["5 Scrap"] = "derpy_mr_ui_5f36649003",
+    ["Makes 5 Scrap from your stores once a turn"] = "derpy_mr_ui_f11a602246",
+    ["Amber"] = "derpy_mr_ui_88068e33c7",
+    ["1 Amber"] = "derpy_mr_ui_ad38f1ce9a",
+    ["Makes 1 Amber from your stores once a turn"] = "derpy_mr_ui_73e1addf04",
+    ["Slave Market"] = "derpy_mr_ui_729e7366d4",
+    ["80 Slaves"] = "derpy_mr_ui_9b777117d6",
+    ["Trades goods from your stores for 80 Slaves once a turn"] = "derpy_mr_ui_548212e6d0",
+    ["Ursun's Dens"] = "derpy_mr_ui_36dd5f1972",
+    ["Bear upkeep -20%"] = "derpy_mr_ui_9f161efc99",
+    ["War Bear Riders and Elemental Bears upkeep -20%. Permanent"] = "derpy_mr_ui_94ac9185ba",
+    ["Gunnery School"] = "derpy_mr_ui_f68487a42e",
+    ["Grail Chapels"] = "derpy_mr_ui_a194fadd3a",
+    ["Knight upkeep -20%"] = "derpy_mr_ui_d12a0ec4be",
+    ["Knights of the Realm and Questing Knights upkeep -20%. Permanent"] = "derpy_mr_ui_52c52a023d",
+    ["Lothern Sea Charter"] = "derpy_mr_ui_459f5c8a38",
+    ["Diplomacy +15"] = "derpy_mr_ui_bef3021a8b",
+    ["Diplomatic relations +15. Permanent"] = "derpy_mr_ui_b6fcc4ed36",
+    ["Jade Workshops"] = "derpy_mr_ui_bf53723f20",
+    ["Jade upkeep -20%"] = "derpy_mr_ui_b1f881f488",
+    ["Jade Warriors and Jade Warrior Crossbows upkeep -20%. Permanent"] = "derpy_mr_ui_4d7dc2d887",
+    ["Trapping Grounds"] = "derpy_mr_ui_281f841829",
+    ["Beast cost -20%"] = "derpy_mr_ui_bc12d0fd85",
+    ["Gorgers, Sabretusk Packs, Yhetees, Blood Vultures, Thundertusks and Stonehorns recruitment cost -20%. Permanent"] = "derpy_mr_ui_8858211437",
+    ["Tended Spawning Pools"] = "derpy_mr_ui_19d8387ba0",
+    ["Hellforged Plate"] = "derpy_mr_ui_b3599e7d76",
+    ["Chaos Warrior upkeep -20%"] = "derpy_mr_ui_530faf72ce",
+    ["Chaos Warriors, Chosen, Chaos Knights and Skullcrushers upkeep -20%. Permanent"] = "derpy_mr_ui_eaca3d091f",
+    ["Grave Barrows"] = "derpy_mr_ui_5618f1fc99",
+    ["Skeleton upkeep -20%"] = "derpy_mr_ui_6416716b06",
+    ["Skeleton Warriors and Skeleton Spearmen upkeep -20%. Permanent"] = "derpy_mr_ui_17b8bb60bf",
     ["400 research points"] = "derpy_mr_ui_83d611872d",
     ["400 research points at once"] = "derpy_mr_ui_11b63ab3c7",
     ["Lotus Gatherers"] = "derpy_mr_ui_2c272532be",
@@ -1581,11 +1625,24 @@ function F.store_home(homes, stem, n, kind, key)
     end
 end
 
+-- NORSCA'S RAIDERS' SHARE (faction flavour design 2026-11-11, section 4; race kit 2026-11-21): a race whose race work
+-- is a rule plunders at this percent of each frozen rate. Norsca takes half as much again, never more than the store.
+F.RAIDERS_SHARE = { nor = 150 }
+
+-- The rate `taker` plunders at, from the frozen rate `pct`: the take and every plate read it here, so a plate shows
+-- what the take then moves.
+function F.plunder_pct(taker, pct)
+    local share = F.RAIDERS_SHARE[F.race(taker)]
+    if not share then return pct end
+    return math.min(100, pct * share / 100)
+end
+
 -- Every good in `region` with stock: pct of it to the taker's settlement nearest (x, y), the
 -- taking army's position (plan deviation 3: the settlement may already be null at a raze).
 -- `held` (stem -> n) is the battle's reading when the region's pools are gone.
 function F.take(region, victim_key, taker, pct, kind, x, y, held)
     if pct <= 0 then return 0 end
+    pct = F.plunder_pct(taker, pct)
     local to = F.nearest(taker, x, y)
     local from = not held and region or nil
     local taken = 0
@@ -1627,14 +1684,15 @@ function F.on_character_turn_start(character)
 end
 
 -- WHAT F.take WOULD TAKE from `region` at `pct`: {total, parts = {{stem, n}}}, most first, or nil
--- when nothing. Read only - the plates' number, by the same F.share the move uses. `nth` (default 1):
--- the nth take in a row, each from what the ones before it left.
-function F.preview(region, pct, nth)
+-- when nothing. Read only - the plates' number, by the same F.share the move uses. `pct` may be a list:
+-- the last of #pct takes in a row, the ith at pct[i], each from what the ones before it left.
+function F.preview(region, pct)
     local parts, total = {}, 0
+    local rates = type(pct) == "table" and pct or { pct }
     for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
         local held, n = F.held(region, g.stem), 0
-        for _ = 1, nth or 1 do
-            n = F.share(held, pct)
+        for _, p in ipairs(rates) do
+            n = F.share(held, p)
             held = held - n
         end
         if n > 0 then
@@ -1650,16 +1708,20 @@ function F.preview(region, pct, nth)
     return { total = total, parts = parts }
 end
 
--- Every army raiding `region`, as character cqis in order.
+-- Every army raiding `region`, as character cqis in order, and each one's faction by cqi.
 function F.raiders(region)
-    local out = {}
+    local out, takers = {}, {}
     local chars = region:characters_in_region()
     for i = 0, chars:num_items() - 1 do
         local ch = chars:item_at(i)
-        if F.raid_target(ch) then out[#out + 1] = ch:command_queue_index() end
+        local r, _, taker = F.raid_target(ch)
+        if r then
+            out[#out + 1] = ch:command_queue_index()
+            takers[out[#out]] = taker
+        end
     end
     table.sort(out)
-    return out
+    return out, takers
 end
 
 -- WHAT THE RAID TAKES NEXT TURN, for the army's plate: F.preview plus `to`, the region key it
@@ -1668,17 +1730,20 @@ end
 -- SEVERAL RAIDERS (Xoatl, 2026-11-12): each raid takes its share of what the ones before it left,
 -- but every plate read the whole store, so three plates promised 3 each of 30 and the round took
 -- 3, 2 and 2. A plate now shows its place in cqi order, so the plates add up to what the round takes.
+-- Each raider before it takes at its own rate (a Norscan's share, F.plunder_pct), not this plate's.
 function F.raid_preview(character)
     local rates = F.state.rates
     if not rates or (rates.raid or 0) <= 0 then return nil end
     local region, _, taker = F.raid_target(character)
     if not region then return nil end
-    local raiders, nth = F.raiders(region), 1
-    if #raiders > 1 then
-        local me = character:command_queue_index()
-        for i, cqi in ipairs(raiders) do if cqi == me then nth = i end end
+    local raiders, takers = F.raiders(region)
+    local me, pcts = character:command_queue_index(), {}
+    for _, cqi in ipairs(raiders) do
+        pcts[#pcts + 1] = F.plunder_pct(takers[cqi], rates.raid)
+        if cqi == me then break end
     end
-    local pv = F.preview(region, rates.raid, nth)
+    if raiders[#pcts] ~= me then pcts = { F.plunder_pct(taker, rates.raid) } end
+    local pv = F.preview(region, pcts)
     if not pv then return nil end
     pv.raiders = math.max(1, #raiders)
     local to = F.nearest(taker, character:logical_position_x(), character:logical_position_y())
@@ -1704,7 +1769,7 @@ function F.capture_preview(region, taker, kind)
     end
     if not pct or pct <= 0 then return nil end
     if not F.victim(region, taker) then return nil end
-    local pv = F.preview(region, pct)
+    local pv = F.preview(region, F.plunder_pct(taker, pct))
     if pv then pv.lost = taker:region_list():num_items() == 0 end
     return pv
 end
@@ -7147,10 +7212,17 @@ function F.supply_cart_sound(c)
 end
 
 function F.sanitize_supply_carts()
-    local list, clean, max_id = F.state.supply_carts, {}, 0
+    local list, clean, max_id, first = F.state.supply_carts, {}, 0, {}
     for _, c in ipairs(type(list) == "table" and list or {}) do
         local n = F.supply_cart_sound(c)
-        if n then max_id = math.max(max_id, n); clean[#clean + 1] = c end
+        if n then
+            max_id = math.max(max_id, n)
+            -- one cart rides to an army (F.supply_cart_of): a second one in a save hands its goods to the first
+            local k = first[c.army]
+            if k then
+                for stem, m in pairs(c.basket) do k.basket[stem] = (k.basket[stem] or 0) + m end
+            else first[c.army] = c; clean[#clean + 1] = c end
+        end
     end
     F.state.supply_carts = type(list) == "table" and clean or nil
     F.state.supply_seq = math.max(max_id, F.stock_number(F.state.supply_seq) and F.state.supply_seq or 0)

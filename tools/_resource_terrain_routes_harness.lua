@@ -256,6 +256,10 @@ do
     local one = R.avoider_for({ 'trader' }, filed)
     assert(one(2, 2) == true and one(0, 0) == false, 'a one-party avoider must wall land at war with its party')
     assert(filed.enemy_land == true and filed.open_land == false, 'a one-party avoider files its verdicts by region')
+    -- A VERDICT FILED BEFORE THE SEARCH STANDS: F.supply_road files the army's own ground as no wall (supply-lines
+    -- ledger, Task 2 minor)
+    local pre = R.avoider_for({ 'trader' }, { enemy_land = false })
+    assert(pre(2, 2) == false, 'a one-party avoider judged again a region filed before the search')
     local two = R.avoider(settled(1, 4), settled(3, 4), {})
     for _, q in ipairs({ { 2, 2 }, { 0, 0 }, { 2, 4 }, { 4, 4 } }) do
         assert(two(q[1], q[2]) == one(q[1], q[2]), 'the two-region avoider judged a hex differently at ' .. q[1] .. ',' .. q[2])
@@ -1383,6 +1387,13 @@ do
         end
     end
     for slot = 0, R.SUPPLY_SLOTS - 1 do assert(per[slot] == 201, 'slot ' .. slot .. ' was swept ' .. tostring(per[slot]) .. ' times, not for each of its 201 hexes') end
+    -- THE SWEEP COMES BEFORE THE FIRST PLACEMENT (supply-lines ledger, Task 4 minor): a living army's dashes, drawn by
+    -- the load's first refresh, are still standing once R.init is done
+    armies = { army(9) }
+    R.scenes, R.drawn, R.supply_kept, R.supply_epoch, R.traffic, R.started = {}, nil, {}, nil, {}, nil
+    R.init()
+    assert(#live() > 0, 'a loaded game swept away the dashes its first refresh drew for a living army')
+    R.clear(); armies = {}
     -- a multiplayer game draws nothing, but its saves can hold these scenes as well: swept all the same, and no listener
     local sp_listeners = listeners
     listeners, removes, R.started = {}, {}, nil

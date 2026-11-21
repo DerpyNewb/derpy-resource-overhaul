@@ -307,11 +307,24 @@ function F.store_home(homes, stem, n, kind, key)
     end
 end
 
+-- NORSCA'S RAIDERS' SHARE (faction flavour design 2026-11-11, section 4; race kit 2026-11-21): a race whose race work
+-- is a rule plunders at this percent of each frozen rate. Norsca takes half as much again, never more than the store.
+F.RAIDERS_SHARE = { nor = 150 }
+
+-- The rate `taker` plunders at, from the frozen rate `pct`: the take and every plate read it here, so a plate shows
+-- what the take then moves.
+function F.plunder_pct(taker, pct)
+    local share = F.RAIDERS_SHARE[F.race(taker)]
+    if not share then return pct end
+    return math.min(100, pct * share / 100)
+end
+
 -- Every good in `region` with stock: pct of it to the taker's settlement nearest (x, y), the
 -- taking army's position (plan deviation 3: the settlement may already be null at a raze).
 -- `held` (stem -> n) is the battle's reading when the region's pools are gone.
 function F.take(region, victim_key, taker, pct, kind, x, y, held)
     if pct <= 0 then return 0 end
+    pct = F.plunder_pct(taker, pct)
     local to = F.nearest(taker, x, y)
     local from = not held and region or nil
     local taken = 0
@@ -353,14 +366,15 @@ function F.on_character_turn_start(character)
 end
 
 -- WHAT F.take WOULD TAKE from `region` at `pct`: {total, parts = {{stem, n}}}, most first, or nil
--- when nothing. Read only - the plates' number, by the same F.share the move uses. `nth` (default 1):
--- the nth take in a row, each from what the ones before it left.
-function F.preview(region, pct, nth)
+-- when nothing. Read only - the plates' number, by the same F.share the move uses. `pct` may be a list:
+-- the last of #pct takes in a row, the ith at pct[i], each from what the ones before it left.
+function F.preview(region, pct)
     local parts, total = {}, 0
+    local rates = type(pct) == "table" and pct or { pct }
     for _, g in ipairs(DERPY_MR_FLOWS_GOODS) do
         local held, n = F.held(region, g.stem), 0
-        for _ = 1, nth or 1 do
-            n = F.share(held, pct)
+        for _, p in ipairs(rates) do
+            n = F.share(held, p)
             held = held - n
         end
         if n > 0 then
@@ -376,16 +390,20 @@ function F.preview(region, pct, nth)
     return { total = total, parts = parts }
 end
 
--- Every army raiding `region`, as character cqis in order.
+-- Every army raiding `region`, as character cqis in order, and each one's faction by cqi.
 function F.raiders(region)
-    local out = {}
+    local out, takers = {}, {}
     local chars = region:characters_in_region()
     for i = 0, chars:num_items() - 1 do
         local ch = chars:item_at(i)
-        if F.raid_target(ch) then out[#out + 1] = ch:command_queue_index() end
+        local r, _, taker = F.raid_target(ch)
+        if r then
+            out[#out + 1] = ch:command_queue_index()
+            takers[out[#out]] = taker
+        end
     end
     table.sort(out)
-    return out
+    return out, takers
 end
 
 -- WHAT THE RAID TAKES NEXT TURN, for the army's plate: F.preview plus `to`, the region key it
@@ -394,17 +412,20 @@ end
 -- SEVERAL RAIDERS (Xoatl, 2026-11-12): each raid takes its share of what the ones before it left,
 -- but every plate read the whole store, so three plates promised 3 each of 30 and the round took
 -- 3, 2 and 2. A plate now shows its place in cqi order, so the plates add up to what the round takes.
+-- Each raider before it takes at its own rate (a Norscan's share, F.plunder_pct), not this plate's.
 function F.raid_preview(character)
     local rates = F.state.rates
     if not rates or (rates.raid or 0) <= 0 then return nil end
     local region, _, taker = F.raid_target(character)
     if not region then return nil end
-    local raiders, nth = F.raiders(region), 1
-    if #raiders > 1 then
-        local me = character:command_queue_index()
-        for i, cqi in ipairs(raiders) do if cqi == me then nth = i end end
+    local raiders, takers = F.raiders(region)
+    local me, pcts = character:command_queue_index(), {}
+    for _, cqi in ipairs(raiders) do
+        pcts[#pcts + 1] = F.plunder_pct(takers[cqi], rates.raid)
+        if cqi == me then break end
     end
-    local pv = F.preview(region, rates.raid, nth)
+    if raiders[#pcts] ~= me then pcts = { F.plunder_pct(taker, rates.raid) } end
+    local pv = F.preview(region, pcts)
     if not pv then return nil end
     pv.raiders = math.max(1, #raiders)
     local to = F.nearest(taker, character:logical_position_x(), character:logical_position_y())
@@ -430,7 +451,7 @@ function F.capture_preview(region, taker, kind)
     end
     if not pct or pct <= 0 then return nil end
     if not F.victim(region, taker) then return nil end
-    local pv = F.preview(region, pct)
+    local pv = F.preview(region, F.plunder_pct(taker, pct))
     if pv then pv.lost = taker:region_list():num_items() == 0 end
     return pv
 end
@@ -5873,10 +5894,17 @@ function F.supply_cart_sound(c)
 end
 
 function F.sanitize_supply_carts()
-    local list, clean, max_id = F.state.supply_carts, {}, 0
+    local list, clean, max_id, first = F.state.supply_carts, {}, 0, {}
     for _, c in ipairs(type(list) == "table" and list or {}) do
         local n = F.supply_cart_sound(c)
-        if n then max_id = math.max(max_id, n); clean[#clean + 1] = c end
+        if n then
+            max_id = math.max(max_id, n)
+            -- one cart rides to an army (F.supply_cart_of): a second one in a save hands its goods to the first
+            local k = first[c.army]
+            if k then
+                for stem, m in pairs(c.basket) do k.basket[stem] = (k.basket[stem] or 0) + m end
+            else first[c.army] = c; clean[#clean + 1] = c end
+        end
     end
     F.state.supply_carts = type(list) == "table" and clean or nil
     F.state.supply_seq = math.max(max_id, F.stock_number(F.state.supply_seq) and F.state.supply_seq or 0)

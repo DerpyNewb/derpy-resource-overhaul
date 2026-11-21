@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-11-21
+
+- Every race now has its own settlement service and its own Workshop work.
+- Vampire Coast gets Grog shops.
+- Skaven get Breeding warrens, and Powder mixing at Clan Skryre's buildings.
+- Greenskins get Fight pits and a Scrap recipe.
+- Kislev gets Shrine offerings, Ursun's Dens (cheaper bear upkeep) and Kvas brewing at the farmstead.
+- Wood Elves get Seasonal revels and an Amber recipe.
+- Dark Elves get Shrines of Khaine and the Slave Market.
+- The Empire gets the Gunnery School (cheaper artillery).
+- Bretonnia gets Grail Chapels (cheaper knight upkeep).
+- High Elves get the Lothern Sea Charter (better relations).
+- Cathay gets Jade Workshops (cheaper Jade Warrior upkeep).
+- Ogres get Gut feasts and Trapping Grounds (cheaper hunters' beasts).
+- Lizardmen get Temple tribute, Tended Spawning Pools (cheaper monsters) and Obsidian knapping.
+- Norsca gets Mead-hall feasts and Hide curing, and Norscan raids, sacks and razes take half as much again.
+- Warriors of Chaos get Altars of the Dark Gods and Hellforged Plate (cheaper Chaos Warrior upkeep).
+- Vampire Counts get Crypt rites and Grave Barrows (cheaper skeleton upkeep).
+- Permanent works no longer say "Permanent" on every row; their section already does.
+- Computer factions no longer build a second building for a rare good in a settlement that already makes it.
+- An army with two supply carts in an old save now gets one cart with all their goods.
+
 ## 2026-11-20, fifth update
 
 - The army provisions, processing and services options in MCT now show under Using stores.

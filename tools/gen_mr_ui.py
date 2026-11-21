@@ -70,13 +70,15 @@ SUPPLY_LINES_SWITCH = ("supply_lines", "Army supply lines",
 RATES = (
     ("raid", "Raid share per turn",
      "Each turn an army raids a settlement, it carries off this share of every resource the settlement "
-     "keeps, into its own nearest settlement as far as that has room. 0 turns this off.", 0, 50, 10),
+     "keeps, into its own nearest settlement as far as that has room. Norscan raiders take half as much again. "
+     "0 turns this off.", 0, 50, 10),
     ("sack", "Sack share",
      "Sacking a settlement carries off this share of every resource it keeps, into the sacker's "
-     "nearest settlement as far as that has room. 0 turns this off.", 0, 100, 50),
+     "nearest settlement as far as that has room. Norscan raiders take half as much again. 0 turns this off.",
+     0, 100, 50),
     ("raze", "Raze share",
      "Razing a settlement carries off this share of every resource it keeps before it burns. "
-     "0 turns this off.", 0, 100, 50),
+     "Norscan raiders take half as much again. 0 turns this off.", 0, 100, 50),
     ("trade", "Trade share per turn",
      "Each turn, trade partners receive this share of removable surplus toward their capital import targets. "
      "Keep reserves and cargo already on the road are respected. The goods travel the road between the two "
@@ -382,22 +384,24 @@ def culture_tables():
         sc = r["subculture"]
         seen[r["culture"]].add("excluded" if any("_%s_" % t in sc for t in NO_STORES)
                                else "undead" if any("_%s_" % t in sc for t in UNDEAD) else "living")
-    family = {c: f.pop() for c, f in seen.items() if len(f) == 1 and f != {"living"}}
+    # a culture of two families would ship as neither, so a CA patch could make Mixu's vampires eat again unnoticed
+    mixed = {c: sorted(f) for c, f in seen.items() if len(f) > 1}
+    assert not mixed, "a culture whose subcultures are of more than one family: %s" % mixed
+    family = {c: f.pop() for c, f in seen.items() if f != {"living"}}
     return token, family
 
 
 @functools.lru_cache(None)
 def charted_chains():
     """The main-settlement chains our packs give production rows (faction flavour design 2026-11-11, section 7): the
-    main pack's settlement pool and each installed map submod's own. A settlement whose main building is none of them
-    grows its own meals (flows.lua F.charted). A chain string for a map mod that is not loaded is harmless in Lua."""
+    main pack's settlement pool and each map submod's own. A settlement whose main building is none of them grows its
+    own meals (flows.lua F.charted). A chain string for a map mod that is not loaded is harmless in Lua. The map packs
+    must be installed, as check_submod() requires: without one, the shipped Lua would leave its chains out."""
     import gen_resource_overhaul as G
     out = set(G.pool_chains("settlement"))
     for name in sorted(G.SUBMODS):
-        if os.path.isfile(G.SUBMODS[name]["pack"]):
-            out |= set(G.submod_pool_chains(name, "settlement"))
-        else:
-            print("charted_chains: %s not installed, its own chains left out" % name)
+        assert os.path.isfile(G.SUBMODS[name]["pack"]), "%s not installed: %s" % (name, G.SUBMODS[name]["pack"])
+        out |= set(G.submod_pool_chains(name, "settlement"))
     return tuple(sorted(out))
 
 
@@ -423,6 +427,77 @@ def check_races():
     named = sorted(r["key"] for r in G.db("building_chains_tables")[1]
                    if G.EXCLUDE.search(r["key"]) and any("_%s_" % t in r["key"] for t in G.CULTURES))
     assert not named, "EXCLUDE drops %d chains named for a race that keeps stores: %s" % (len(named), named[:4])
+
+
+def prove_race_asserts():
+    """culture_tables() refuses a culture of two families, and charted_chains() a map pack that is not installed."""
+    import gen_resource_overhaul as G
+    real, pack = G.db, G.SUBMODS["iee"]["pack"]
+
+    def mixed(name):
+        h, rows = real(name)[:2]
+        if name == "cultures_subcultures_tables":   # a living subculture under the Vampire Counts
+            rows = list(rows) + [dict(rows[0], culture="wh_main_vmp_vampire_counts", subculture="mixer_living_test")]
+        return h, rows
+    for plant, call, what in ((lambda: setattr(G, "db", mixed), culture_tables, "a culture of two families"),
+                              (lambda: G.SUBMODS["iee"].update(pack=pack + ".missing"), charted_chains, "a missing map pack")):
+        charted_chains.cache_clear()
+        plant()
+        try:
+            call()
+        except AssertionError:
+            continue
+        finally:
+            G.db = real
+            G.SUBMODS["iee"]["pack"] = pack
+            charted_chains.cache_clear()
+        raise AssertionError("selftest: %s passed" % what)
+    # THE RACE KIT (faction flavour Phase 2, 2026-11-21): a race service priced in a good the race makes nowhere
+    # would show a dead row. Greenskins weave no silk anywhere. The Empire's mines make brass, but only on the
+    # Darklands' iron (final review 2026-11-21), and no Empire home region has that, so brass is made abroad.
+    t, _loc = G.build()
+    real_services = G.SERVICES
+    for tok, good in (("grn", "silk"), ("emp", "brass")):
+        G.SERVICES = {k: s for k, s in real_services.items() if tuple(s["races"]) != (tok,)}
+        G.SERVICES["planted_" + good] = dict(real_services["halls"], label="Planted", races=(tok,), cost={good: 3})
+        try:
+            G.check_race_kit(t)
+        except AssertionError as e:
+            assert "service planted_%s costs ['%s']" % (good, good) in str(e), \
+                "selftest: the race kit failed elsewhere: %s" % e
+        else:
+            raise AssertionError("selftest: a %s service costing %s passed" % (tok, good))
+        finally:
+            G.SERVICES = real_services
+    # an exemption for a good the race does make (Chaos Dwarf salted meat) is stale, and must say so
+    G.KIT_IMPORTED[("mess", "salted_meat")] = "planted"
+    try:
+        G.check_race_kit(t)
+    except AssertionError as e:
+        assert "(mess, salted_meat) is stale" in str(e), "selftest: the race kit failed elsewhere: %s" % e
+    else:
+        raise AssertionError("selftest: a stale KIT_IMPORTED entry passed")
+    finally:
+        del G.KIT_IMPORTED[("mess", "salted_meat")]
+    # A RULE STANDS IN FOR A RACE WORK only while flows.lua carries it: Norsca's share taken out of the Lua table,
+    # and a rule name nothing in flows.lua spells
+    flows = flows_lua().replace("\r\n", "\n")
+    real_rules = dict(G.KIT_RULES)
+    for what, text, rules, said in (
+            ("Norsca left out of F.RAIDERS_SHARE", flows.replace("F.RAIDERS_SHARE = { nor = 150 }", "F.RAIDERS_SHARE = { }"),
+             real_rules, "no nor in F.RAIDERS_SHARE"),
+            ("a misspelt rule", flows, {"nor": "raider_share"}, "no F.RAIDER_SHARE")):
+        assert text.count("F.RAIDERS_SHARE = {") == 1, "selftest: stale KIT_RULES anchor"
+        G.KIT_RULES.clear(); G.KIT_RULES.update(rules)
+        try:
+            G.check_kit_rules(text)
+        except AssertionError as e:
+            assert said in str(e), "selftest: %s failed elsewhere: %s" % (what, e)
+        else:
+            raise AssertionError("selftest: %s passed" % what)
+        finally:
+            G.KIT_RULES.clear(); G.KIT_RULES.update(real_rules)
+    G.check_kit_rules(flows)
 # Which factor each kind of move books to: the junction is derpy_mr_store_<stem>_<kind>.
 FLOW_KIND = {"process": "processed", "raid": "raided", "sack": "plundered", "raze": "plundered", "trade": "traded", "eat": "eaten",
              "move": "moved", "spend": "spent", "sell": "sold", "spoil": "spoiled"}
@@ -1972,6 +2047,7 @@ def mutation_suites(*first):
         check_map_road_mutations, check_cargo_view_mutations, check_reach_mutations, check_drag_mutations,
         check_supply_map_mutations, check_map_cost_mutations, check_production_mutations, check_spoil_mutations,
         check_keep_mutations, check_ai_meal_mutations, check_race_mutations, check_race_identity_mutations,
+        check_raiders_share_mutations,
         check_uncharted_mutations, check_minor_mutations, check_turn_end_mutations, check_size_mutations,
         check_edict_mutations, check_toll_mutations, check_vanilla_supply_mutations, check_blockade_mutations,
         check_supply_line_mutations, check_supply_upkeep_mutations, check_supply_cart_mutations,
@@ -2760,6 +2836,12 @@ def check_supply_map_mutations():
     inks = "R.SUPPLY_INK = { supplied = 16, stretched = 17, cut = 18 }"
     mutations = (
         ("every refresh asks again", asks, "if true then"),
+        # supply-lines ledger Task 4 minor: the load's sweep runs before its first refresh places anything
+        ("the load's sweep after its first placement",
+         "    R.hide_supply()\n    if cm:is_multiplayer() then return end\n    R.grid = R.grids[cm:model():campaign_name_key()]\n"
+         "    if not R.grid then return end\n    R.refresh()\n",
+         "    if cm:is_multiplayer() then R.hide_supply() return end\n    R.grid = R.grids[cm:model():campaign_name_key()]\n"
+         "    if not R.grid then R.hide_supply() return end\n    R.refresh()\n    R.hide_supply()\n"),
         ("a moved army not asked again", asks, "if not kept then"),
         ("only one axis of the hex compared", asks, "if not (kept and kept.x == x) then"),
         ("the answers outlive a turn start", "    if R.supply_epoch ~= R.epoch then R.supply_kept, R.supply_epoch = {}, R.epoch end\n", ""),
@@ -2826,6 +2908,10 @@ def check_map_cost_mutations():
         ("a finished search keeps nothing",
          "        if j.regions then R.kept[j.key] = { path = path or false, regions = j.regions, data = j.g.data } end\n", ""),
         ("a search records no verdicts", "local avoid = R.avoider(a, b, regions)", "local avoid = R.avoider(a, b)"),
+        # supply-lines ledger Task 2 minor: a region filed before the search (the army's own ground) is not judged again
+        ("a verdict filed before the search judged again",
+         "        if regions[key] == nil then regions[key] = judge(region) end\n",
+         "        regions[key] = judge(region)\n"),
         ("every event bundles the network again", "if not cached or #cached.raw~=#links then same=false end",
          "same=false"),
         ("the player's turn keeps the old network", "R.epoch, R.dirty, R.network_cache, R.bundled = R.epoch + 1, true, nil, {}",
@@ -3172,6 +3258,24 @@ def check_race_identity_mutations():
     ))
 
 
+def check_raiders_share_mutations():
+    """Norsca's raiders' share (race kit 2026-11-21): Norscan raids, sacks and razes take half as much again,
+    capped at the whole store, and every plate shows what the take moves. Each rule broken the way somebody would, in
+    the shipped flows script; the flows harness must fail on every one."""
+    _flows_mutations("raiders' share", (
+        ("the share never asked", "    pct = F.plunder_pct(taker, pct)\n", ""),
+        ("the share applied to everyone", "local share = F.RAIDERS_SHARE[F.race(taker)]", "local share = 150"),
+        ("no cap", "return math.min(100, pct * share / 100)", "return pct * share / 100"),
+        ("the raid plate not routed through the share", "pcts[#pcts + 1] = F.plunder_pct(takers[cqi], rates.raid)",
+         "pcts[#pcts + 1] = rates.raid"),
+        # final review minor 2026-11-21: a mixed round read every raider before this one at this plate's rate
+        ("the raiders before a plate at its own rate", "pcts[#pcts + 1] = F.plunder_pct(takers[cqi], rates.raid)",
+         "pcts[#pcts + 1] = F.plunder_pct(taker, rates.raid)"),
+        ("the capture plate not routed through the share", "F.preview(region, F.plunder_pct(taker, pct))",
+         "F.preview(region, pct)"),
+    ))
+
+
 def check_uncharted_mutations():
     """A settlement whose main building makes none of our goods grows its own meals (faction flavour design
     2026-11-11, section 7): each rule broken in the shipped flows script; the flows harness must fail on every one."""
@@ -3217,6 +3321,10 @@ def check_minor_mutations():
         ("highwaymen told of though nothing was paid",
          "        if pay > 0 then\n            cm:treasury_mod(faction:name(), -pay)\n            cart_told(faction, kind, key)\n        end",
          "        if pay > 0 then cm:treasury_mod(faction:name(), -pay) end\n        cart_told(faction, kind, key)"),
+        # 2026-11-21: one cart an army after a load, its goods kept
+        ("a save's second cart for one army kept", "            local k = first[c.army]\n", "            local k = nil\n"),
+        ("a save's second cart for one army dropped with its goods",
+         "                for stem, m in pairs(c.basket) do k.basket[stem] = (k.basket[stem] or 0) + m end\n", ""),
     ))
     stores = stores_lua().replace("\r\n", "\n")
     mutations = (
@@ -3539,10 +3647,15 @@ def check_supply_line_mutations():
          "if r:is_null_interface() or r:is_abandoned() or r:owning_faction():name() ~= faction:name() then",
          "if r:is_null_interface() or r:is_abandoned() then"),
         ("stretched at half rather than past half", "turns > math.ceil(reach / 2)", "turns >= math.ceil(reach / 2)"),
+        # supply-lines ledger Task 2 minor: the reach's edge, 200 hexes arrive and 201 do not
+        ("one hex past the reach arriving", "    j.wall, j.max = true, max\n", "    j.wall, j.max = true, max + 1\n"),
         ("the enemy radius one hex wider", "if dx * dx + dy * dy <= near * near then",
          "if dx * dx + dy * dy <= (near + 1) * (near + 1) then"),
         ("the memo ignoring a move", "if not (kept and kept.x == x and kept.y == y) then", "if not kept then"),
         ("the capture recorded after the early return", record + early, early + record),
+        # supply-lines ledger Task 2 minor: a throw clearing the economy must not skip the record
+        ("the capture recorded after the economy is cleared", record + "    F.economy_clear(region)\n",
+         "    F.economy_clear(region)\n" + record),
         ("the farthest source first", "        if p.d ~= q.d then return p.d < q.d end\n",
          "        if p.d ~= q.d then return p.d > q.d end\n"),
         ("a tie decided by the list, not the key", "        return p.key < q.key\n", "        return false\n"),
@@ -3550,6 +3663,9 @@ def check_supply_line_mutations():
          "for i = 1, math.min(1, #found) do"),
         ("every source searched", "for i = 1, math.min(F.SUPPLY_TRIES, #found) do", "for i = 1, #found do"),
         ("the army's own ground a wall", "    if stand then filed[stand] = false end\n", ""),
+        # supply-lines ledger Task 2 minor: the kept road's check passes over the army's own ground
+        ("the army's own ground judged against the kept road", "            if key ~= stand then\n",
+         "            if true then\n"),
         ("a kept road outliving a change of verdict",
          "if not r or r:is_null_interface() or judge(r) ~= was then memo = nil; break end",
          "if not r or r:is_null_interface() then memo = nil; break end"),
@@ -3648,6 +3764,10 @@ def check_supply_upkeep_mutations():
          "        local ok, e = pcall(F.supply_force, faction, forces:item_at(i))\n        if not ok then F.say(e) end\n",
          "        F.supply_force(faction, forces:item_at(i))\n"),
         ("a throw not logged", "forces:item_at(i))\n        if not ok then F.say(e) end\n", "forces:item_at(i))\n"),
+        # supply-lines ledger Task 1 (the harness asserted it, no mutant did): the first-tick pass asks CA's own rule
+        ("the first-tick pass skipping CA's own rule",
+         'if faction and (type(upkeep_penalty_condition) ~= "function" or upkeep_penalty_condition(faction)) then',
+         "if faction then"),
     )
     _run_mutants("supply upkeep rules", flows, rules_m, "", (), "", ())
     wiring_m = (
@@ -4225,6 +4345,7 @@ def selftest():
     check_capture_kinds()
     check_uses()
     check_races()
+    prove_race_asserts()
     check_recruit()
     check_escorts()
     import gen_resource_overhaul as G

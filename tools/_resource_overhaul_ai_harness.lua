@@ -152,5 +152,27 @@ local broken = faction("broken", "wh_main_dwf_dwarfs", 100000, { lore })
 broken.region_list = function() error("boom") end
 for t = 1, MR_AI.PACE do TURN = t; MR_AI.turn(broken) end
 
-print(string.format("harness ok: built %d, upgraded %d; reserve, tier, not placed, no slot, wrong race, human, pace, prefix and error cases",
+-- 11. A captured region that already holds another race's building of the good gets no second one beside it
+--     (founding spec Ruling 5, which the player's Vault keeps; deferred 2026-10-09, fixed 2026-11-21).
+local D1
+do
+    local ks = {}
+    for k in pairs(MR_AI.REGIONS.dragon_bone) do if not MR_AI.REGIONS.gromril[k] then ks[#ks + 1] = k end end
+    table.sort(ks)
+    D1 = ks[1]
+end
+assert(D1, "the data has no dragon bone region outside the gromril ones")
+local taken = region(D1, 3, { MR_AI.CHAIN.dragon_bone.wh_main_emp_empire .. "_2" })
+local captor = faction("dwf_captor", "wh_main_dwf_dwarfs", 100000, { taken })
+FACTIONS.dwf_captor = captor
+nb = #BUILT
+did = MR_AI.act(captor)
+assert(did == nil and empty(taken) and #BUILT == nb and captor.gold == 100000,
+    "built a second dragon bone building beside another race's: " .. tostring(did))
+-- and with the Empire's building gone, the same captor builds its own there
+taken.slots[2].name_ = "a_tavern_1"
+did = MR_AI.act(captor)
+assert(did == "build " .. MR_AI.CHAIN.dragon_bone.wh_main_dwf_dwarfs .. "_1 " .. D1, "the captor's own: " .. tostring(did))
+
+print(string.format("harness ok: built %d, upgraded %d; reserve, tier, not placed, no slot, wrong race, human, pace, prefix, error and another race's building cases",
     #BUILT, #UPGRADED))

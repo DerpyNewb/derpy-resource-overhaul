@@ -458,9 +458,11 @@ PROCESSING = {
                  chains=("wh_main_DWARFS_tavern", "wh_main_EMPIRE_industry_basic", "wh_main_BRETONNIA_farm_extra")),
     "preserve": dict(label="Meat preservation", races=("ogr",), cost={"animals": 8, "salt": 4},
                      output=("salted_meat", 8), chains=("wh3_main_ogr_farm",)),
-    "powder": dict(label="Powder mixing", races=("dwf", "chd"), cost={"coal": 8, "brimstone": 4},
+    # Skaven: Clan Skryre's warp-powder, at the engineers' and weapon teams' chains (race kit 2026-11-21)
+    "powder": dict(label="Powder mixing", races=("dwf", "chd", "skv"), cost={"coal": 8, "brimstone": 4},
                    output=("blackpowder", 8), chains=("wh_main_DWARFS_industry",
-                   "wh3_dlc23_chd_tower_furnace", "wh3_dlc23_chd_factory_assembly_line")),
+                   "wh3_dlc23_chd_tower_furnace", "wh3_dlc23_chd_factory_assembly_line",
+                   "wh2_main_skv_engineers", "wh2_main_skv_weaponteams")),
     "print": dict(label="Printing", races=("emp",), cost={"timber": 8, "dyes": 4},
                   output=("books", 8), chains=("wh_main_EMPIRE_industry_basic",)),
     "weave": dict(label="Carpet weaving", races=("cth",), cost={"wool": 8, "dyes": 4},
@@ -472,11 +474,13 @@ PROCESSING.update({
         chains=("wh_main_DWARFS_farm", "wh_main_EMPIRE_farm_basic", "wh_main_BRETONNIA_farm_extra",
                 "wh2_main_hef_farm", "wh2_main_def_farm", "wh3_main_ksl_growth_xp",
                 "wh3_main_cth_income_yin", "wh3_dlc23_chd_tower_living_quaters")),
-    "tan": dict(label="Hide curing", races=("lzd", "wef", "ogr", "emp", "brt", "hef", "def", "cth", "ksl"),
+    "tan": dict(label="Hide curing", races=("lzd", "wef", "ogr", "emp", "brt", "hef", "def", "cth", "ksl", "nor"),
         cost={"animals": 6, "salt": 2}, output=("leather", 8),
         chains=("wh2_main_lzd_farm", "wh_dlc05_wef_growth", "wh3_main_ogr_farm",
                 "wh_main_EMPIRE_industry_basic", "wh_main_BRETONNIA_industry_basic", "wh2_main_hef_industry",
-                "wh2_main_def_industry", "wh3_main_cth_income_yin", "wh3_main_ksl_trade_order")),
+                "wh2_main_def_industry", "wh3_main_cth_income_yin", "wh3_main_ksl_trade_order",
+                # Norsca: CA's own Fur Stash and Beast Tanner, and the hunters' kennels (race kit 2026-11-21)
+                "wh_main_NORSCA_slaves", "wh_main_NORSCA_beasts")),
     "cloth": dict(label="Plain weaving", races=("emp", "brt", "hef", "def", "cth", "ksl", "lzd"),
         cost={"wool": 8}, output=("cloth", 8), chains=("wh_main_EMPIRE_industry_basic",
         "wh_main_BRETONNIA_industry_basic", "wh2_main_hef_industry", "wh2_main_def_industry",
@@ -485,6 +489,11 @@ PROCESSING.update({
         cost={"iron": 6, "timber": 2}, output=("tools", 8), chains=("wh_main_DWARFS_industry",
         "wh3_dlc23_chd_tower_furnace", "wh3_dlc23_chd_factory_assembly_line",
         "wh_main_EMPIRE_industry_basic", "wh3_main_cth_income_yang")),
+    # the race kit (2026-11-21): Kislev's kvas at the farmstead, Lizardmen obsidian blades
+    "kvas": dict(label="Kvas brewing", races=("ksl",), cost={"grain": 10}, output=("kvas", 8),
+                 chains=("wh3_main_ksl_growth_xp",)),
+    "knap": dict(label="Obsidian knapping", races=("lzd",), cost={"obsidian": 8}, output=("tools", 8),
+                 chains=("wh2_main_lzd_industry",)),
 })
 ESSENTIAL_RACES = ("dwf", "hef", "def", "wef", "brt", "emp", "grn", "ogr", "skv", "lzd", "cth", "ksl", "chd", "nor", "chs")
 
@@ -508,6 +517,26 @@ SERVICES = {
                  benefit="Province control +2", effect="wh_main_effect_public_order_events", value=2,
                  icon="public_order_happy.png"),
 }
+# THE RACE KIT (faction flavour Phase 2, 2026-11-21): one race service for each race that had none, 3-5 goods a
+# turn for control +2 or growth +5, priced only in goods the race's own buildings make at home (check_race_kit).
+# Goods the design picked that the race makes only abroad were swapped for one of the same use (the plan ledger's
+# rulings).
+_CONTROL = dict(benefit="Province control +2", effect="wh_main_effect_public_order_events", value=2,
+                icon="public_order_happy.png")
+_GROWTH = dict(benefit="Province growth +5", effect="wh_main_effect_province_growth_events", value=5, icon="growth.png")
+SERVICES.update({
+    "grog": dict(label="Grog shops", races=("cst",), cost={"rum": 3, "salted_fish": 1}, **_CONTROL),
+    "warrens": dict(label="Breeding warrens", races=("skv",), cost={"salted_meat": 4}, **_GROWTH),
+    "pits": dict(label="Fight pits", races=("grn",), cost={"salted_meat": 3, "animals": 1}, **_CONTROL),
+    "shrines": dict(label="Shrine offerings", races=("ksl",), cost={"kvas": 3, "amber": 1}, **_CONTROL),
+    "revels": dict(label="Seasonal revels", races=("wef",), cost={"wine": 3, "trinkets": 1}, **_GROWTH),
+    "khaine": dict(label="Shrines of Khaine", races=("def",), cost={"wine": 3, "dyes": 1}, **_CONTROL),
+    "gut": dict(label="Gut feasts", races=("ogr",), cost={"salted_meat": 3, "spices": 2}, **_CONTROL),
+    "tribute": dict(label="Temple tribute", races=("lzd",), cost={"gold_idols": 2, "lustrian_plumes": 1}, **_GROWTH),
+    "meadhall": dict(label="Mead-hall feasts", races=("nor",), cost={"mead": 3, "salted_meat": 2}, **_CONTROL),
+    "altars": dict(label="Altars of the Dark Gods", races=("chs",), cost={"gems": 3}, **_CONTROL),
+    "crypts": dict(label="Crypt rites", races=("vmp",), cost={"timber": 3}, **_CONTROL),
+})
 
 SERVICES.update({
     "builders": dict(label="Builders' yards", races=ESSENTIAL_RACES, cost={"tools": 2, "cloth": 1},
@@ -1019,7 +1048,7 @@ WORK_RECIPES = (
      {"fx": [("wh_main_effect_force_army_campaign_attrition_all_resistance", "general_to_force_own", -25)],
       "flavour": "Fur-lined boots and wool cloaks for every soldier, whatever the weather.", "lord": True}),
     ("last_granary", "lasting", ("all",), [("grain", 120), ("salt", 120), ("salted_meat", 120), ("pottery", 120)],
-     "Great Granary", "Growth +15 Permanent",
+     "Great Granary", "Growth +15",
      "Growth +15 in every province. Grain is safe from spoiling up to half of each store. Permanent",
      {"fx": [("wh_main_effect_province_growth_events", "faction_to_province_own", 15)], "icon": "growth.png",
       "not_races": ("chd",)}),
@@ -1027,43 +1056,89 @@ WORK_RECIPES = (
     # its own, on CA's own effect at the scope CA uses it (check_reach). Chaos Dwarfs have no growth:
     # the granary feeds the captives, and keeps the grain like the Great Granary (F.SPOIL)
     ("last_granary_chd", "lasting", ("chd",), [("grain", 120), ("salt", 120), ("salted_meat", 120), ("pottery", 120)],
-     "Great Granary", "Battle Labour +15% Permanent",
+     "Great Granary", "Battle Labour +15%",
      "Labour taken after battles +15%. Grain is safe from spoiling up to half of each store. Permanent",
      {"fx": [("wh3_dlc23_effect_force_chd_campaign_post_battle_labour", "faction_to_force_own", 15)],
       "icon": "chd_labour.png"}),
     ("last_records", "lasting", ("all",), [("books", 150), ("glassware", 150), ("silver", 150)],
-     "Hall of Records", "Research +15% Permanent", "Research rate +15%. Permanent",
+     "Hall of Records", "Research +15%", "Research rate +15%. Permanent",
      {"fx": [("wh_main_effect_technology_research_points", "faction_to_faction_own_unseen", 15)],
       "icon": "technology.png"}),
     ("last_bazaar", "lasting", ("all",), [("silk", 120), ("carpets", 120), ("dyes", 120), ("spices", 120)],
-     "Grand Bazaar", "Trade income +15% Permanent", "Trade income +15%. Permanent",
+     "Grand Bazaar", "Trade income +15%", "Trade income +15%. Permanent",
      {"fx": [("wh_main_effect_economy_trade_tariff_mod", "faction_to_faction_own", 15)], "icon": "trade_agreement.png",
       "not_races": ("grn",)}),
     # Greenskins cannot trade (CA's factions_without_trade): they take it
     ("last_loot", "lasting", ("grn",), [("trinkets", 120), ("silver", 120), ("gems", 120), ("gold_idols", 120)],
-     "Loot Hoard", "Loot income +15% Permanent", "Income from sacking and looting settlements +15%. Permanent",
+     "Loot Hoard", "Loot income +15%", "Income from sacking and looting settlements +15%. Permanent",
      {"fx": [("wh2_main_effect_force_all_campaign_sacking_income", "faction_to_faction_own_unseen", 15)],
       "icon": "income.png"}),
     ("last_arsenal", "lasting", ("all",), [("iron", 150), ("coal", 150), ("brass", 150), ("blackpowder", 150)],
-     "Arsenal", "Upkeep -10% Permanent", "Army upkeep -10%. Permanent",
+     "Arsenal", "Upkeep -10%", "Army upkeep -10%. Permanent",
      {"fx": [("wh_main_effect_force_all_campaign_upkeep", "faction_to_force_own", -10)], "icon": "variable_upkeep.png"}),
     ("last_stables", "lasting", ("all",), [("warhorses", 150), ("furs", 150), ("tusks", 150), ("timber", 150)],
-     "Royal Stables", "Cavalry cost -20% Permanent", "Cavalry recruitment cost -20%. Permanent",
+     "Royal Stables", "Cavalry cost -20%", "Cavalry recruitment cost -20%. Permanent",
      {"fx": [("wh_main_effect_force_army_campaign_recruitment_cost_cavalry", "faction_to_force_own_unseen", -20)],
       "icon": "mount.png", "not_races": ("dwf", "skv", "cst")}),
     # no cavalry: Dwarf engineers, Clan Moulder's pens, the Vampire Coast's raised monsters
     ("last_engineers", "lasting", ("dwf",), [("timber", 150), ("iron", 150), ("tools", 150), ("brass", 150)],
-     "Engineers' Yard", "Artillery -20% Permanent", "Artillery recruitment cost -20%. Permanent",
+     "Engineers' Yard", "Artillery cost -20%", "Artillery recruitment cost -20%. Permanent",
      {"fx": [("wh_main_effect_force_army_campaign_recruitment_cost_artillery", "faction_to_force_own_unseen", -20)],
       "icon": "artillery.png"}),
     ("last_pens", "lasting", ("skv",), [("animals", 150), ("salted_meat", 150), ("leather", 150), ("timber", 150)],
-     "Beast Pens", "Monster cost -20% Permanent", "Monster recruitment cost -20%. Permanent",
+     "Beast Pens", "Monster cost -20%", "Monster recruitment cost -20%. Permanent",
      {"fx": [("wh3_main_effect_recruitment_cost_def_monsters", "faction_to_force_own_unseen", -20)],
       "icon": "moulder_reputation.png"}),
     ("last_boneyard", "lasting", ("cst",), [("tusks", 150), ("timber", 150), ("salt", 150), ("whale_oil", 150)],
-     "Bone Yard", "Monster cost -20% Permanent", "Monster recruitment cost -20%. Permanent",
+     "Bone Yard", "Monster cost -20%", "Monster recruitment cost -20%. Permanent",
      {"fx": [("wh3_main_effect_recruitment_cost_def_monsters", "faction_to_force_own_unseen", -20)],
       "icon": "cst_sea_monster.png"}),
+    # THE RACE KIT (faction flavour Phase 2, 2026-11-21): one race work for each race that had none, priced only in
+    # goods the race makes at home (check_race_kit). A currency recipe where CA gives every faction of the race the pool
+    # (measured on the bridge 2026-11-21), else a lasting work in the band (lasting_band). Kislev holds no Devotion,
+    # so its work is lasting. Norsca's is a rule (KIT_RULES). Effects at the scope of the shared work of their kind.
+    ("conv_scrap", "convert", ("grn",), [("tools", 20), ("leather", 20), ("animals", 20)], "Scrap", "5 Scrap",
+     "Makes 5 Scrap from your stores once a turn", {"pool": "grn_salvage", "amount": 5}),
+    ("conv_amber", "convert", ("wef",), [("trinkets", 30), ("furs", 30)], "Amber", "1 Amber",
+     "Makes 1 Amber from your stores once a turn", {"pool": "wef_amber", "amount": 1}),
+    ("conv_slaves", "convert", ("def",), [("pearls", 30), ("silk", 30)], "Slave Market", "80 Slaves",
+     "Trades goods from your stores for 80 Slaves once a turn", {"pool": "def_slaves", "amount": 80}),
+    ("last_ursun", "lasting", ("ksl",), [("kvas", 150), ("furs", 150), ("salted_fish", 150), ("warhorses", 150)],
+     "Ursun's Dens", "Bear upkeep -20%", "War Bear Riders and Elemental Bears upkeep -20%. Permanent",
+     {"fx": [("wh3_main_effect_upkeep_ksl_bears", "faction_to_force_own", -20)], "icon": "ksl_motherland_ursun.png"}),
+    ("last_gunnery", "lasting", ("emp",), [("blackpowder", 150), ("coal", 150), ("iron", 150), ("timber", 150)],
+     "Gunnery School", "Artillery cost -20%", "Artillery recruitment cost -20%. Permanent",
+     {"fx": [("wh_main_effect_force_army_campaign_recruitment_cost_artillery", "faction_to_force_own_unseen", -20)],
+      "icon": "artillery.png"}),
+    ("last_grail", "lasting", ("brt",), [("wine", 150), ("incense", 150), ("silver", 150), ("warhorses", 150)],
+     "Grail Chapels", "Knight upkeep -20%", "Knights of the Realm and Questing Knights upkeep -20%. Permanent",
+     {"fx": [("wh2_main_effect_skill_upkeep_cost_reduction_brt_knights_realm_questing_knights", "faction_to_force_own",
+              -20)], "icon": "vow_grail_positive.png"}),
+    ("last_lothern", "lasting", ("hef",), [("books", 120), ("pearls", 120), ("glassware", 120), ("timber", 120)],
+     "Lothern Sea Charter", "Diplomacy +15", "Diplomatic relations +15. Permanent",
+     {"fx": [("wh_main_faction_political_diplomacy_mod", "faction_to_faction_own", 15)], "icon": "diplomacy.png"}),
+    ("last_jade", "lasting", ("cth",), [("jade", 150), ("porcelain", 150), ("leather", 150), ("iron", 150)],
+     "Jade Workshops", "Jade upkeep -20%", "Jade Warriors and Jade Warrior Crossbows upkeep -20%. Permanent",
+     {"fx": [("wh3_cp1_effect_upkeep_cth_jade_warriors", "faction_to_force_own", -20)],
+      "icon": "edict_cth_the_jade_dragons_statute.png"}),
+    ("last_trapping", "lasting", ("ogr",), [("animals", 150), ("rhinox_hides", 150), ("leather", 150), ("marble", 150)],
+     "Trapping Grounds", "Beast cost -20%",
+     "Gorgers, Sabretusk Packs, Yhetees, Blood Vultures, Thundertusks and Stonehorns recruitment cost -20%. Permanent",
+     {"fx": [("wh3_dlc26_effect_recruitment_cost_ogr_hunters_beasts", "faction_to_force_own_unseen", -20)],
+      "icon": "monster_hunt.png"}),
+    ("last_spawning", "lasting", ("lzd",),
+     [("salted_fish", 150), ("lustrian_plumes", 150), ("gold_idols", 150), ("pearls", 150)],
+     "Tended Spawning Pools", "Monster cost -20%", "Monster recruitment cost -20%. Permanent",
+     {"fx": [("wh3_main_effect_tech_recruitment_cost_reduction_monsters", "faction_to_force_own_unseen", -20)],
+      "icon": "edict_lzd_alignment_of_spawning.png"}),
+    ("last_hellforged", "lasting", ("chs",), [("iron", 150), ("brimstone", 150), ("coal", 150), ("gems", 150)],
+     "Hellforged Plate", "Chaos Warrior upkeep -20%",
+     "Chaos Warriors, Chosen, Chaos Knights and Skullcrushers upkeep -20%. Permanent",
+     {"fx": [("wh3_dlc26_effect_upkeep_reduction_chs_warriors_chosen_chaos_knights_skullcrushers", "faction_to_force_own",
+              -20)], "icon": "armour.png"}),
+    ("last_barrows", "lasting", ("vmp",), [("timber", 150), ("iron", 150), ("leather", 150), ("gems", 150)],
+     "Grave Barrows", "Skeleton upkeep -20%", "Skeleton Warriors and Skeleton Spearmen upkeep -20%. Permanent",
+     {"fx": [("wh2_dlc11_effect_upkeep_cost_skeletons", "faction_to_force_own", -20)], "icon": "vmp_lair.png"}),
 )
 # the one deliberate downside: Spice-hardened is a trade-off trait (spec 4c)
 WORK_RECIPE_PENALTIES = {("trait_spice", "wh_main_effect_force_all_campaign_movement_range")}
@@ -1170,9 +1245,10 @@ def check_measured():
     assert RESEARCH_POINTS > 0, "RESEARCH_POINTS is unset: measure it in game (plan Task 1)"
 
 
-def check_works():
+def check_works(t=None):
     """Every grant exists; a CA item's faction set admits every race of its row; the races are real
-    subculture tokens; each unit is in main_units; prices are positive; keys are unique."""
+    subculture tokens; each unit is in main_units; prices are positive; keys are unique. Given the built tables,
+    also the race kit (check_race_kit), which needs them for what each race makes."""
     ws = works()
     anc = {r["key"]: r for r in db("ancillaries_tables")[1]}
     units = {r["unit"] for r in db("main_units_tables")[1]}
@@ -1211,6 +1287,19 @@ def check_works():
     assert len({w["key"] for w in ws}) == len(ws), "a catalogue key twice"
     check_recipes(ws)
     check_reach()
+    if t is not None:
+        check_race_kit(t)
+
+
+def lasting_band(effect):
+    """THE LASTING BAND (faction flavour design 2026-11-11, section 3; race kit 2026-11-21): the one value a permanent
+    work's effect may carry, the strength of the shared lasting works. Army-wide upkeep -10, one unit class's
+    recruitment cost or upkeep -20, and anything else (an income, growth, research, diplomacy) +15."""
+    if effect == "wh_main_effect_force_all_campaign_upkeep":
+        return -10
+    if "recruitment_cost" in effect or "upkeep" in effect:
+        return -20
+    return 15
 
 
 def check_recipes(ws):
@@ -1233,13 +1322,16 @@ def check_recipes(ws):
         if w["kind"] == "convert":
             p = pools.get(w["pool"])
             assert p and p["scope"] == "FACTION" and w["amount"] > 0, "%s: pool %s is no FACTION pool" % (w["key"], w["pool"])
-            # the same price both ways: a recipe buys the currency at the rate a recruitment shortfall charges it
+            # the same price both ways: a recipe buys the currency at the rate a recruitment shortfall charges it;
+            # a race with no shortfall rate pays the race kit's currency band (plan 2026-11-21, Global Constraints)
+            n = sum(k for _s, k in w["goods"])
             for race in w["races"]:
                 c = U.CURRENCY.get(race)
                 if c:
-                    n = sum(k for _s, k in w["goods"])
                     assert n == c["per"] * w["amount"], "%s: %d goods for %d, the shortfall takes %d a unit" % (
                         w["key"], n, w["amount"], c["per"])
+                else:
+                    assert n == CURRENCY_BAND, "%s: %d goods is outside the currency band (%d)" % (w["key"], n, CURRENCY_BAND)
         if w["kind"] in ("army", "lasting", "trait"):
             assert w.get("fx") or w.get("rank"), "%s gives nothing" % w["key"]
         for e, sc, v in w.get("fx", ()):
@@ -1247,6 +1339,138 @@ def check_recipes(ws):
             assert sc in scopes, "%s: no CA scope %s" % (w["key"], sc)
             assert (v > 0) == van_fx[e]["is_positive_value_good"] or (w["key"], e) in WORK_RECIPE_PENALTIES, \
                 "%s %s is a penalty" % (w["key"], e)
+        if w["kind"] == "lasting":
+            for e, _sc, v in w["fx"]:
+                assert v == lasting_band(e), "%s: %s %+d is outside the lasting band (%+d)" % (w["key"], e, v, lasting_band(e))
+            if tuple(w["races"]) != ("all",) and len(w["races"]) == 1:
+                assert len(w["goods"]) == 4 and all(120 <= n <= 150 for _s, n in w["goods"]) and len(w["fx"]) == 1, \
+                    "%s: a race's lasting work is 4 goods of 120-150 each and one effect" % w["key"]
+
+
+# THE RACE KIT (faction flavour design 2026-11-11, section 4; Phase 2 plan 2026-11-21): every race that keeps stores
+# has exactly one race service and one race work, priced in goods its own buildings make. A race whose race work is a
+# rule rather than a recipe is listed here (Norsca: flows.lua F.RAIDERS_SHARE). The replacement works stand in for a
+# shared work the race gets nothing from, so they are not its race work.
+KIT_RULES = {"nor": "raiders_share"}
+CURRENCY_BAND = 60   # common goods in all, once a turn, for a currency with no recruitment-shortfall rate
+KIT_REPLACEMENTS = ("last_granary_chd", "last_loot", "last_engineers", "last_pens", "last_boneyard")
+# Rows that shipped before the kit and that the design keeps ("has", design section 4), whose good the race's own
+# buildings do not make at home on this pack alone (race_makes, 2026-11-21). Each is fed by trade or plunder; a new
+# pick never goes here.
+KIT_IMPORTED = {
+    ("mess", "beer"): "no Chaos Dwarf building brews beer",
+    ("conv_armaments", "iron"): "Chaos Dwarf iron is the Zharr Exchange's CHD_TRADE_GRANT, not this pack's",
+    ("conv_food", "grain"): "grain comes from the farm pool and Skaven have no farm chain",
+    ("conv_food", "salted_fish"): "no Skaven home region has a harbour",
+    ("halls", "pipeweed"): "Dwarfs buy their pipeweed from the Moot; no Dwarf home region grows it",
+}
+
+
+def _rows(t, table):
+    """A table's rows in the built tables t, every part of it."""
+    return [r for k, (_v, _c, rows) in t.items() if k.split(":")[0] == table for r in rows]
+
+
+HOME_CAMPAIGN = "wh3_main_combi"   # every race of CULTURES starts on Immortal Empires
+
+
+def race_makes(t):
+    """{race token: set of common store goods} that the race makes AT HOME. A chain of the race carries a production
+    row for the good (CA's or this pack's, in the built tables t), and a region the race starts in on Immortal
+    Empires has a slot template permitting that chain. For this pack's row, a source of the good whose pool holds
+    the chain must also fire there, which means its port, its deposit and its regional condition. Final review
+    2026-11-21: counting a good wherever the race made it priced nine picks in goods made only abroad, such as
+    Empire brass, which comes from Darklands iron."""
+    stems ={res: stem for stem, (res, _e, _n) in store_stems().items() if stem not in RARE}
+    good_of = {r["effect"]: stems[r["resource"]]
+               for r in db("effect_bonus_value_resource_junction_tables")[1]
+               + _rows(t, "effect_bonus_value_resource_junction_tables")
+               if r["bonus_value_id"] == "production" and r["resource"] in stems}
+    chain_of = {r["level_name"]: r["chain"] for r in db("building_levels_tables")[1] + _rows(t, "building_levels_tables")}
+    # a chain whose key names no race (the Empire's wh_main_HUMAN_resource_*, wh_main_GREENSKINS_*, wh_main_CHAOS_port)
+    # is the races whose CA rosters list it; a landmark (_special_) is one place, not something a race makes
+    token = {c: r for r, c in CULTURES.items()}
+    culture_of = collections.defaultdict(set)
+    for r in db("building_chain_availabilities_tables")[1]:
+        if not r["campaign"] and r["culture"] in token:
+            culture_of[r["set_id"]].add(token[r["culture"]])
+    roster = collections.defaultdict(set)
+    for r in db("building_chain_availability_sets_tables")[1]:
+        roster[r["building_chain"]] |= culture_of.get(r["id"], set())
+    perm = srm.load()[1]
+    home = collections.defaultdict(list)
+    for (camp, _r), g in _signals().items():
+        if camp == HOME_CAMPAIGN:
+            home[g["origin"]].append(g)
+    pools = {}
+
+    def fires(good, chain, g):
+        for pool, cond in good_spec(good)["sources"]:
+            if repr(pool) not in pools:
+                pools[repr(pool)] = set(pool_chains(pool))
+            kind = _kind(pool)
+            if chain not in pools[repr(pool)] or (kind == "port" and not g["coastal"]) \
+                    or (kind == "mine" and not g["deposits"] & set(pool[1:])):
+                continue
+            if evaluate(cond, g):
+                return True
+        return False
+    out = collections.defaultdict(set)
+    for rows, ours in ((db("building_effects_junction_tables")[1], False),
+                       (_rows(t, "building_effects_junction_tables"), True)):
+        for r in rows:
+            good, chain = good_of.get(r["effect"]), chain_of.get(r["building"], "")
+            if not good:
+                continue
+            tok = race(chain)
+            for who in {tok} if tok else (set() if "_special_" in chain else roster[chain]):
+                if good not in out[who] and any(any(chain in perm.get(tp, ()) for tp in g["templates"])
+                                                and (not ours or fires(good, chain, g)) for g in home[who]):
+                    out[who].add(good)
+    return out
+
+
+def check_race_kit(t):
+    """Each race of CULTURES that keeps stores has exactly one race service and exactly one race work (a convert or
+    lasting recipe for that race alone, or a KIT_RULES rule), and every good either costs is made at home."""
+    import gen_mr_ui as U
+    makes = race_makes(t)
+    bad = []
+    for tok in sorted(set(CULTURES) - set(U.NO_STORES)):
+        svc = sorted(k for k, s in SERVICES.items() if tuple(s["races"]) == (tok,))
+        wk = [w for w in WORK_RECIPES if w[1] in ("convert", "lasting") and tuple(w[2]) == (tok,)
+              and w[0] not in KIT_REPLACEMENTS]
+        if len(svc) != 1:
+            bad.append("%s: %d race services %s" % (tok, len(svc), svc))
+        if len(wk) + (tok in KIT_RULES) != 1:
+            bad.append("%s: %d race works %s%s" % (tok, len(wk), [w[0] for w in wk],
+                                                  " and a rule" if tok in KIT_RULES else ""))
+        for k in svc:
+            miss = sorted(s for s in set(SERVICES[k]["cost"]) - makes[tok] if (k, s) not in KIT_IMPORTED)
+            if miss:
+                bad.append("%s: service %s costs %s, which the race makes nowhere at home" % (tok, k, miss))
+        for w in wk:
+            miss = sorted(s for s in {s for s, _n in w[3]} - makes[tok] if (w[0], s) not in KIT_IMPORTED)
+            if miss:
+                bad.append("%s: work %s costs %s, which the race makes nowhere at home" % (tok, w[0], miss))
+    # an exemption that no longer applies is stale: the row changed, or the race now makes the good
+    costs = {k: (s["races"], set(s["cost"])) for k, s in SERVICES.items()}
+    costs.update({w[0]: (w[2], {s for s, _n in w[3]}) for w in WORK_RECIPES})
+    for (k, good), _why in sorted(KIT_IMPORTED.items()):
+        races, goods = costs.get(k, ((), set()))
+        if good not in goods or any(good in makes[r] for r in races):
+            bad.append("KIT_IMPORTED (%s, %s) is stale" % (k, good))
+    assert not bad, "the race kit:\n  " + "\n  ".join(bad)
+    with open(os.path.join(OUT, "flows.lua"), encoding="utf-8") as fh:
+        check_kit_rules(fh.read())
+
+
+def check_kit_rules(flows):
+    """A KIT_RULES rule stands in for a race work only while flows.lua's F.<RULE> table carries the race."""
+    for tok, rule in sorted(KIT_RULES.items()):
+        m = re.search(r"^F\.%s = \{([^}]*)\}" % rule.upper(), flows, re.M)
+        assert m, "KIT_RULES %s: flows.lua has no F.%s" % (tok, rule.upper())
+        assert re.search(r"\b%s = \d+" % tok, m.group(1)), "KIT_RULES: no %s in F.%s" % (tok, rule.upper())
 
 
 # EVERY EFFECT REACHES ITS RACE (author 2026-11-01: "growth doesnt do anything for the chaos dwarf",
@@ -2971,6 +3195,15 @@ function MR_AI.find(region, chain)
     return nil, nil
 end
 
+-- Any race's building of this good in the region: one building of a good a region, as the player's
+-- Vault offers it (founding spec Ruling 5). A captor finds the old owner's standing there.
+function MR_AI.has_good(region, good)
+    for _, chain in pairs(MR_AI.CHAIN[good] or {}) do
+        if MR_AI.find(region, chain) then return true end
+    end
+    return false
+end
+
 -- An empty secondary slot, or nil.
 function MR_AI.free(region)
     local slots = region:slot_list()
@@ -3022,7 +3255,7 @@ function MR_AI.act(faction)
         end
     end
     for _, o in ipairs(opts) do
-        local free = not MR_AI.find(o[3], o[2]) and MR_AI.free(o[3])
+        local free = not MR_AI.has_good(o[3], o[1]) and MR_AI.free(o[3])
         if free and MR_AI.tier(o[3]) >= MR_AI.REQ[1] and afford(MR_AI.COST[1]) then
             local want = o[2] .. "_1"
             cm:instantly_upgrade_building_in_region(free, want)
@@ -3261,7 +3494,7 @@ def check(t, loc):
     check_holds(t, loc)
     check_dilemmas(t, loc)
     check_shipments(t, loc)
-    check_works()
+    check_works(t)
     check_work_rows(t, loc)
     check_recipe_rows(t, loc)
     import guess_region_commodities as grc
@@ -3855,6 +4088,15 @@ def selftest():
     t, loc = build()
     check(t, loc)
     print(check_ai(ai_script()).strip().splitlines()[-1])
+    if os.path.isfile(LUA_EXE):   # one building of a good a region (harness case 11): the old own-chain test must fail
+        bad = ai_script().replace("not MR_AI.has_good(o[3], o[1])", "not MR_AI.find(o[3], o[2])")
+        assert bad != ai_script(), "stale mutant anchor: MR_AI.has_good"
+        try:
+            check_ai(bad)
+        except AssertionError:
+            pass
+        else:
+            raise SystemExit("selftest: the AI built beside another race's building and check_ai() passed")
     for breakit in (lambda t, l: t["effect_bundles_to_effects_junctions_tables"][2][0].update(value=-10.0),
                     lambda t, l: t["effect_bundles_to_effects_junctions_tables"][2][0].update(effect_scope="nowhere"),
                     lambda t, l: next(b for b in t["effect_bundles_tables"][2]
@@ -4115,8 +4357,16 @@ def selftest():
             # a currency recipe at its race's recruitment-shortfall rate (faction flavour design 2026-11-11, section 6)
             (lambda: next(x for x in WORKS if x["key"] == "conv_food").update(goods=[("grain", 30), ("salted_fish", 30)]),
              "the shortfall takes 5 a unit"),
+            # the currency band (race kit 2026-11-21): a race with no shortfall rate pays 60 common goods in all
+            (lambda: next(x for x in WORKS if x["key"] == "conv_scrap").update(
+                goods=[("tools", 20), ("leather", 20), ("animals", 30)]), "outside the currency band"),
             (lambda: first("lasting").update(fx=[("wh_main_effect_force_all_campaign_upkeep", "faction_to_force_own", 10)]),
              "is a penalty"),
+            # the lasting band (race kit 2026-11-21): army-wide upkeep is -10, and a race's own work is 4 goods
+            (lambda: next(x for x in WORKS if x["key"] == "last_arsenal").update(
+                fx=[("wh_main_effect_force_all_campaign_upkeep", "faction_to_force_own", -25)]), "outside the lasting band"),
+            (lambda: next(x for x in WORKS if x["key"] == "last_engineers").update(
+                goods=[("timber", 150), ("iron", 150), ("tools", 150)]), "a race's lasting work is 4 goods"),
             (lambda: first("army").update(fx=[], rank=None), "gives nothing"),
             (lambda: next(x for x in WORKS if x["grant"] == "wh2_main_anc_armour_dragonscale_shield")
              .update(races=("grn",)), "cannot equip"),

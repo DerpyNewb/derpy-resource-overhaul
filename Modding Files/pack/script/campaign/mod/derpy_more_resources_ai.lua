@@ -291,6 +291,15 @@ function MR_AI.find(region, chain)
     return nil, nil
 end
 
+-- Any race's building of this good in the region: one building of a good a region, as the player's
+-- Vault offers it (founding spec Ruling 5). A captor finds the old owner's standing there.
+function MR_AI.has_good(region, good)
+    for _, chain in pairs(MR_AI.CHAIN[good] or {}) do
+        if MR_AI.find(region, chain) then return true end
+    end
+    return false
+end
+
 -- An empty secondary slot, or nil.
 function MR_AI.free(region)
     local slots = region:slot_list()
@@ -342,7 +351,7 @@ function MR_AI.act(faction)
         end
     end
     for _, o in ipairs(opts) do
-        local free = not MR_AI.find(o[3], o[2]) and MR_AI.free(o[3])
+        local free = not MR_AI.has_good(o[3], o[1]) and MR_AI.free(o[3])
         if free and MR_AI.tier(o[3]) >= MR_AI.REQ[1] and afford(MR_AI.COST[1]) then
             local want = o[2] .. "_1"
             cm:instantly_upgrade_building_in_region(free, want)
