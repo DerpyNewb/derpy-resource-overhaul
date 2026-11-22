@@ -291,6 +291,10 @@ building_culture_variants_name_derpy_mr_bld_dragon_bone_skv_1	Bone Pickers	false
 building_culture_variants_name_derpy_mr_bld_dragon_bone_skv_2	Dragon Bone Digs	false
 building_culture_variants_name_derpy_mr_bld_dragon_bone_skv_3	Dragon Graveyard Excavation	false
 building_chains_chain_tooltip_derpy_mr_bld_dragon_bone_skv	Dragon Bone	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_tmb_1	Bone Pickers	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_tmb_2	Dragon Bone Digs	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_tmb_3	Dragon Graveyard Excavation	false
+building_chains_chain_tooltip_derpy_mr_bld_dragon_bone_tmb	Dragon Bone	false
 building_culture_variants_name_derpy_mr_bld_dragon_bone_vmp_1	Bone Pickers	false
 building_culture_variants_name_derpy_mr_bld_dragon_bone_vmp_2	Dragon Bone Digs	false
 building_culture_variants_name_derpy_mr_bld_dragon_bone_vmp_3	Dragon Graveyard Excavation	false
@@ -806,12 +810,16 @@ effect_bundles_localised_title_derpy_mr_service_altars	Altars of the Dark Gods	f
 effect_bundles_localised_description_derpy_mr_service_altars	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_archives	Scholars' halls	false
 effect_bundles_localised_description_derpy_mr_service_archives	Paid each turn from this province capital's stores. Province growth +5.	false
+effect_bundles_localised_title_derpy_mr_service_banquets	Directorate banquets	false
+effect_bundles_localised_description_derpy_mr_service_banquets	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_builders	Builders' yards	false
 effect_bundles_localised_description_derpy_mr_service_builders	Paid each turn from this province capital's stores. Province construction cost -5%.	false
 effect_bundles_localised_title_derpy_mr_service_crypts	Crypt rites	false
 effect_bundles_localised_description_derpy_mr_service_crypts	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_feasts	Village feasts	false
 effect_bundles_localised_description_derpy_mr_service_feasts	Paid each turn from this province capital's stores. Province control +2.	false
+effect_bundles_localised_title_derpy_mr_service_festas	Vineyard festas	false
+effect_bundles_localised_description_derpy_mr_service_festas	Paid each turn from this province capital's stores. Province growth +5.	false
 effect_bundles_localised_title_derpy_mr_service_grog	Grog shops	false
 effect_bundles_localised_description_derpy_mr_service_grog	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_gut	Gut feasts	false
@@ -820,20 +828,34 @@ effect_bundles_localised_title_derpy_mr_service_halls	Drinking halls	false
 effect_bundles_localised_description_derpy_mr_service_halls	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_hospital	Field hospitals	false
 effect_bundles_localised_description_derpy_mr_service_hospital	Paid each turn from this province capital's stores. Own armies in the province: replenishment +3%.	false
+effect_bundles_localised_title_derpy_mr_service_jade_rites	Jade tomb rites	false
+effect_bundles_localised_description_derpy_mr_service_jade_rites	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_khaine	Shrines of Khaine	false
 effect_bundles_localised_description_derpy_mr_service_khaine	Paid each turn from this province capital's stores. Province control +2.	false
+effect_bundles_localised_title_derpy_mr_service_kurultai	Kurultai feasts	false
+effect_bundles_localised_description_derpy_mr_service_kurultai	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_meadhall	Mead-hall feasts	false
 effect_bundles_localised_description_derpy_mr_service_meadhall	Paid each turn from this province capital's stores. Province control +2.	false
+effect_bundles_localised_title_derpy_mr_service_meargh	Meargh's rites	false
+effect_bundles_localised_description_derpy_mr_service_meargh	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_mess	Factory mess	false
 effect_bundles_localised_description_derpy_mr_service_mess	Paid each turn from this province capital's stores. Province control +2.	false
+effect_bundles_localised_title_derpy_mr_service_moots	Truthsayers' moots	false
+effect_bundles_localised_description_derpy_mr_service_moots	Paid each turn from this province capital's stores. Province control +2.	false
+effect_bundles_localised_title_derpy_mr_service_mortuary	Mortuary rites	false
+effect_bundles_localised_description_derpy_mr_service_mortuary	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_pits	Fight pits	false
 effect_bundles_localised_description_derpy_mr_service_pits	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_records	Civic records	false
 effect_bundles_localised_description_derpy_mr_service_records	Paid each turn from this province capital's stores. Province growth +5.	false
 effect_bundles_localised_title_derpy_mr_service_revels	Seasonal revels	false
 effect_bundles_localised_description_derpy_mr_service_revels	Paid each turn from this province capital's stores. Province growth +5.	false
+effect_bundles_localised_title_derpy_mr_service_scavengers	Scavenger feasts	false
+effect_bundles_localised_description_derpy_mr_service_scavengers	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_shrines	Shrine offerings	false
 effect_bundles_localised_description_derpy_mr_service_shrines	Paid each turn from this province capital's stores. Province control +2.	false
+effect_bundles_localised_title_derpy_mr_service_souks	Spice souks	false
+effect_bundles_localised_description_derpy_mr_service_souks	Paid each turn from this province capital's stores. Province growth +5.	false
 effect_bundles_localised_title_derpy_mr_service_tea	Tea houses	false
 effect_bundles_localised_description_derpy_mr_service_tea	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_tribute	Temple tribute	false
@@ -963,6 +985,14 @@ effect_bundles_localised_title_derpy_mr_rc_last_hellforged	Hellforged Plate	fals
 effect_bundles_localised_description_derpy_mr_rc_last_hellforged	Paid for from your stores: chaos Warriors, Chosen, Chaos Knights and Skullcrushers upkeep -20%. Permanent.	false
 effect_bundles_localised_title_derpy_mr_rc_last_barrows	Grave Barrows	false
 effect_bundles_localised_description_derpy_mr_rc_last_barrows	Paid for from your stores: skeleton Warriors and Skeleton Spearmen upkeep -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_condottieri	Condottieri Contracts	false
+effect_bundles_localised_description_derpy_mr_rc_last_condottieri	Paid for from your stores: melee infantry recruitment cost -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_harbour	Harbour Dues	false
+effect_bundles_localised_description_derpy_mr_rc_last_harbour	Paid for from your stores: income from ports +15%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_studs	Arabian Studs	false
+effect_bundles_localised_description_derpy_mr_rc_last_studs	Paid for from your stores: cavalry upkeep -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_jade_court	Masks of the Jade Court	false
+effect_bundles_localised_description_derpy_mr_rc_last_jade_court	Paid for from your stores: diplomatic relations +15. Permanent.	false
 effect_bundles_localised_title_derpy_mr_exports_held	Exports held	false
 effect_bundles_localised_description_derpy_mr_exports_held	You are holding some resources back from your trade agreements (the Resource Vault's Trade tab). Your regions make none of them for trade, so they earn you no trade income. Your stores still fill.	false
 dilemmas_localised_title_derpy_mr_dil_feast	A Feast	false

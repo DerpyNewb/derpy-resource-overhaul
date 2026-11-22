@@ -309,13 +309,15 @@ end
 
 -- NORSCA'S RAIDERS' SHARE (faction flavour design 2026-11-11, section 4; race kit 2026-11-21): a race whose race work
 -- is a rule plunders at this percent of each frozen rate. Norsca takes half as much again, never more than the store.
-F.RAIDERS_SHARE = { nor = 150 }
+-- The Fimir raid for captives and the Hung live by plunder: the same share (race mods, Phase 4b, 2026-11-22).
+F.RAIDERS_SHARE = { nor = 150, fim = 150, hng = 150 }
 
 -- The rate `taker` plunders at, from the frozen rate `pct`: the take and every plate read it here, so a plate shows
--- what the take then moves.
+-- what the take then moves. A taker with no settlement (a horde) has nowhere to carry the extra and F.move would
+-- destroy it, so it takes the rate (final review 2026-11-22).
 function F.plunder_pct(taker, pct)
     local share = F.RAIDERS_SHARE[F.race(taker)]
-    if not share then return pct end
+    if not share or taker:region_list():num_items() == 0 then return pct end
     return math.min(100, pct * share / 100)
 end
 
@@ -910,7 +912,8 @@ F.STOCKED_PCT = 25       -- Garrison stocked and Comforts: this share of one sto
 -- before growth is counted, and one the pass no longer reaches (the mod removed) still lapses.
 F.BUNDLE_TURNS = 2
 
--- Daemons, the undead and Beastmen: their buildings make nothing, so they keep nothing to use.
+-- Daemons, Nagash and Beastmen keep nothing to use. The undead (Vampire Counts, Vampire Coast, Tomb Kings) keep stores
+-- and trade but eat nothing.
 -- WHO KEEPS STORES AND WHO EATS (2026-11-11): the culture first - other mods' subcultures sit under CA's cultures
 -- (Mixu's vampires under the Vampire Counts) - then the subculture's name. A subculture belongs to one culture.
 F.FAMILY_OF = {}
@@ -2389,10 +2392,16 @@ F.WORK_CFG = DERPY_MR_FLOWS_WORK
 F.WORK_FACTOR = "derpy_mr_workshop"   -- gen_resource_overhaul.WORK_FACTOR: a conversion's gain-only factor
 
 -- the race token: wh_main_sc_dwf_dwarfs -> dwf; a subculture with no token takes its culture's, and an
--- unknown one keeps its own key, so two unknown races never share one (2026-11-11)
+-- unknown one keeps its own key, so two unknown races never share one (2026-11-11). A race mod's subculture is
+-- read first (Phase 4b, 2026-11-22): MIXER re-declares other mods' subcultures under CA cultures, so the culture
+-- depends on load order, and the Jade-Blooded's wh_main_sc_vmp_jade_vampires would read as the Vampire Counts.
 function F.race(faction)
     local sc = faction:subculture()
-    return string.match(sc, "_sc_(%a+)_") or DERPY_MR_FLOWS_CULTURE_TOKEN[faction:culture()] or sc
+    -- RHOX'S MARIENBURG keeps its campaign houses on the Empire's subculture and lists them in its own global
+    -- RHOX_MAR_FACTIONS, which exists only when that mod is loaded; vanilla Marienburg stays the Empire (author, 2026-11-22)
+    if sc == "wh_main_sc_emp_empire" and RHOX_MAR_FACTIONS and RHOX_MAR_FACTIONS[faction:name()] then return "mar" end
+    return DERPY_MR_FLOWS_SUBCULTURE_TOKEN[sc] or string.match(sc, "_sc_(%a+)_")
+        or DERPY_MR_FLOWS_CULTURE_TOKEN[faction:culture()] or sc
 end
 
 -- A work or an event is open to its races ("all" for every one), less its not_races: a race gets its
@@ -2604,7 +2613,8 @@ function F.work_grant(faction, w, region_key, cqi)
         cm:apply_effect_bundle_to_region(w.grant, region_key, 0)
         F.upgrades_of(region_key)[w.key] = fkey
     elseif w.kind == "convert" then
-        cm:faction_add_pooled_resource(fkey, w.pool, F.WORK_FACTOR, w.amount)
+        -- a race mod's pool through that mod's own factor (w.factor, Phase 4b): our factor's DB row would name it
+        cm:faction_add_pooled_resource(fkey, w.pool, w.factor or F.WORK_FACTOR, w.amount)
         wb.convert = wb.convert or {}
         wb.convert[w.key] = turn
     elseif w.kind == "army" then
@@ -2652,8 +2662,22 @@ function F.work(faction, key, region_key, cqi)
     if (w.kind == "army" or w.kind == "trait") ~= (cqi ~= nil) then return false end
     local st = F.work_state(faction, key, region_key, cqi)
     if not (st and st.ok) then return false end
-    F.work_pay(faction, w, st)
-    F.work_grant(faction, w, region_key, cqi)
+    if w.factor then
+        -- ANOTHER MOD'S FACTOR (final review 2026-11-22): the engine books nothing under a factor it does not know, so
+        -- a race mod that renames or drops it would take the goods for nothing. Grant first; pay only when it landed.
+        local p = faction:pooled_resource_manager():resource(w.pool)
+        local before = p:value()
+        F.work_grant(faction, w, region_key, cqi)
+        if faction:pooled_resource_manager():resource(w.pool):value() == before then
+            F.works_book(faction:name()).convert[key] = nil
+            F.say("work " .. key .. ": " .. w.pool .. " did not move under factor " .. w.factor .. "; nothing taken")
+            return false
+        end
+        F.work_pay(faction, w, st)
+    else
+        F.work_pay(faction, w, st)
+        F.work_grant(faction, w, region_key, cqi)
+    end
     -- A SOUND, on the buyer's own machine only: sound changes nothing in the model, so it is
     -- multiplayer-safe there (docs/SOUNDS.md)
     if faction:name() == cm:get_local_faction_name(true) then
@@ -3060,7 +3084,7 @@ end
 -- A SETTLEMENT CHANGES HANDS: an upgrade works for the faction that bought it and for nobody
 -- else, and comes back when its buyer takes the settlement back.
 -- THE KEPT BUNDLES GO WITH THE OLD OWNER (F.keep_bundle): they no longer lapse on their own, and a new owner
--- with no stores (Tomb Kings, Khorne) never runs the upkeep that would take them off. Its own next turn start
+-- with no stores (Khorne, Nagash) never runs the upkeep that would take them off. Its own next turn start
 -- puts back whatever it has the stores for.
 function F.drop_bundles(region)
     local keys = {}

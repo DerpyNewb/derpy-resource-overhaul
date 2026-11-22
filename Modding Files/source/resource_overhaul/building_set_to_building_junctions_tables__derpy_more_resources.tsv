@@ -17,6 +17,7 @@ derpy_mr_bld_dragon_bone_lzd		wh2_main_set_resource	false
 derpy_mr_bld_dragon_bone_nor		wh2_main_set_resource	false
 derpy_mr_bld_dragon_bone_ogr		wh2_main_set_resource	false
 derpy_mr_bld_dragon_bone_skv		wh2_main_set_resource	false
+derpy_mr_bld_dragon_bone_tmb		wh2_main_set_resource	false
 derpy_mr_bld_dragon_bone_vmp		wh2_main_set_resource	false
 derpy_mr_bld_dragon_bone_wef		wh2_main_set_resource	false
 derpy_mr_bld_sea_dragon_hide		wh2_main_set_resource	false

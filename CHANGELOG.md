@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-22
+
+- Tomb Kings now keep stores and trade. Like the other undead, they eat nothing and pay nothing for troops.
+- Tomb Kings get Mortuary rites and Embalming (Canopic Jars from salt, cloth and incense).
+- The Tomb Kings' Charnel Plaza makes cloth and runs Plain weaving, and their Mortuary House makes incense where incense grows.
+- Tomb Kings ports, mines and settlements now make goods, and so do their versions of landmark ports.
+- Tomb Kings can now build the Dragon Bone building.
+- Race mods: Southern Realms, Marienburg, Fimir, Araby, Albion, Jade-Blooded Vampires, Gnoblars and Hung each get their own service and Workshop work when installed. Rhox's Marienburg houses are read by faction key, and only while that mod is loaded.
+- Tilea, Estalia, the Border Princes, Sartosa, Sudenburg and the New World Colonies get the Southern Realms service and work, plus Builders' yards and Field hospitals.
+- Albion gets Woad Dyeing, and the Gnoblars get Scrap Heaps.
+- The Fimir and the Hung take Norsca's raiders' share.
+- Old World submod: Tomb Kings buildings on the Old World map now make goods, and the Tomb Kings can build the Dragon Bone building there.
+
 ## 2026-11-21
 
 - Every race now has its own settlement service and its own Workshop work.

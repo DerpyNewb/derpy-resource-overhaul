@@ -159,8 +159,8 @@ RECRUIT_SWITCH = ("recruit", "Recruits use the stores",
                   "(cavalry and monsters take mounts, infantry and war machines take war materials, "
                   "the finest also take your rare resource). What the stores lack is paid in your "
                   "race's own currency where it has one. A recruit whose resources are still short arrives "
-                  "understrength, unless Gold pays for troops is ticked. Vampire Counts and Vampire Coast "
-                  "recruits take nothing. Off: recruiting takes nothing.", True)
+                  "understrength, unless Gold pays for troops is ticked. Vampire Counts, Vampire Coast and "
+                  "Tomb Kings recruits take nothing. Off: recruiting takes nothing.", True)
 # HARDER SUPPLY (Workshop feedback 2026-11-16: a priest's replenishment and a lord's movement cancelled the old
 # percentage penalties). Frozen into the save; a save from before them keeps the old rules (F.rates).
 # ON BY DEFAULT AND PAYING FOR REPLENISHING TOO (author, 2026-11-20, from Workshop reports: Greenskins make none of the
@@ -332,9 +332,10 @@ RACE_RARE = {"dwf": "gromril", "hef": "ithilmar", "def": "sea_dragon_hide", "skv
              "ogr": "wyvern_scales", "chd": "dragon_bone"}
 RACE_RARE_INF = {"def": "black_lotus"}
 # the shortfall, in the race's own CA currency: `per` missing goods cost one of it, then gold at
-# RECRUIT_GOLD_X x CA's trade value. First values, tuned in game. Tomb Kings and Khorne are in
-# NO_STORES: they keep no stores, so they never draw, and a currency charge would be a tax with no
-# stores behind it. Ogre Meat is held per army (scope MILITARY_FORCE), out of
+# RECRUIT_GOLD_X x CA's trade value. First values, tuned in game. Khorne is in NO_STORES: it keeps no
+# stores, so it never draws, and a currency charge would be a tax with no stores behind it. The undead
+# (UNDEAD, Tomb Kings among them since 2026-11-22) pay nothing for troops (flows.lua F.equips), so a
+# Canopic Jar shortfall rate would never be read. Ogre Meat is held per army (scope MILITARY_FORCE), out of
 # cm:faction_add_pooled_resource's reach, so Ogres pay gold.
 CURRENCY = {
     "chd": {"pool": "wh3_dlc23_chd_armaments", "per": 2, "word": "Armaments",
@@ -366,9 +367,10 @@ WORK_SOUND = {"item": "UI_CLICK_Craft_Item", "unit": "UI_CAM_DWF_BookOfGrudges_P
               "trait": "UI_CLICK_Upgrade_Technology", "lasting": "UI_CLICK_Building_Upgrade"}
 # WHO HAS NO STORES TO USE: the subculture tokens whose buildings make nothing
 # (gen_resource_overhaul.EXCLUDE); check_uses() asserts the two lists agree.
-NO_STORES = ("dae", "kho", "nur", "sla", "tze", "tmb", "nag", "bst")
-# WHO KEEPS STORES BUT NEVER EATS: the undead (flows.lua F.family)
-UNDEAD = ("vmp", "cst")
+NO_STORES = ("dae", "kho", "nur", "sla", "tze", "nag", "bst")
+# WHO KEEPS STORES BUT NEVER EATS: the undead (flows.lua F.family). The Tomb Kings joined in faction flavour
+# Phase 3 (2026-11-22): Nehekhara traded, and its dead eat nothing.
+UNDEAD = ("vmp", "cst", "tmb")
 
 
 def culture_tables():
@@ -415,6 +417,12 @@ def check_races():
     assert set(UNDEAD) <= set(G.CULTURES) and set(UNDEAD).isdisjoint(NO_STORES), UNDEAD
     for t in UNDEAD:
         assert family.get(G.CULTURES[t]) == "undead", (t, family.get(G.CULTURES[t]))
+    # THE RECRUIT TOOLTIP NAMES EVERY UNDEAD RACE (Phase 3, 2026-11-22: it still named two after the Tomb Kings joined)
+    undead_names = {"vmp": "Vampire Counts", "cst": "Vampire Coast", "tmb": "Tomb Kings"}
+    assert set(undead_names) == set(UNDEAD), "name the new undead race here and in RECRUIT_SWITCH: %s" % (
+        set(undead_names) ^ set(UNDEAD))
+    missing = [n for n in undead_names.values() if n not in RECRUIT_SWITCH[2]]
+    assert not missing, "the recruit tooltip leaves out %s, whose recruits take nothing" % missing
     assert not {c for c in token if family.get(c) == "excluded"}, "a race of ours whose culture keeps no stores"
     charted = set(charted_chains())
     assert len(charted) >= 150, len(charted)
@@ -484,10 +492,12 @@ def prove_race_asserts():
     flows = flows_lua().replace("\r\n", "\n")
     real_rules = dict(G.KIT_RULES)
     for what, text, rules, said in (
-            ("Norsca left out of F.RAIDERS_SHARE", flows.replace("F.RAIDERS_SHARE = { nor = 150 }", "F.RAIDERS_SHARE = { }"),
+            ("Norsca left out of F.RAIDERS_SHARE", flows.replace("F.RAIDERS_SHARE = { nor = 150, fim = 150, hng = 150 }",
+                                                                 "F.RAIDERS_SHARE = { fim = 150, hng = 150 }"),
              real_rules, "no nor in F.RAIDERS_SHARE"),
             ("a misspelt rule", flows, {"nor": "raider_share"}, "no F.RAIDER_SHARE")):
         assert text.count("F.RAIDERS_SHARE = {") == 1, "selftest: stale KIT_RULES anchor"
+        assert what == "a misspelt rule" or text != flows, "selftest: stale KIT_RULES anchor (nothing replaced)"
         G.KIT_RULES.clear(); G.KIT_RULES.update(rules)
         try:
             G.check_kit_rules(text)
@@ -1250,7 +1260,7 @@ def check_capture_kinds():
 
 
 # what a named recipe carries into the flows header beyond a rare work's fields
-RECIPE_FIELDS = ("goods", "amount", "bundle", "turns", "trait", "rank", "wait", "lord", "not_races")
+RECIPE_FIELDS = ("goods", "amount", "bundle", "turns", "trait", "rank", "wait", "lord", "not_races", "factor")
 
 
 @functools.lru_cache(None)
@@ -1514,7 +1524,8 @@ def work_icons():
     group_icon = {r["key"]: r["icon"] for r in G.db("ui_unit_groupings_tables")[1]}
     upgrade = {"up_" + rare: icon for rare, _t, _w, icon, *_ in G.WORK_UPGRADES}
     currency = {r["key"]: r["optional_icon_path"] for r in G.db("pooled_resources_tables")[1]}
-    skins = {p.rsplit("/", 1)[-1]: p for p in sorted(have, reverse=True) if p.startswith("ui/skins/")}
+    # by lower-case name: CA's DB names some pool icons with capitals (icon_TK_canopic_jar.png), its packs never
+    skins = {p.rsplit("/", 1)[-1].lower(): p for p in sorted(have, reverse=True) if p.startswith("ui/skins/")}
     icon_of = {s: i for s, _r, i in goods()}
     out = {}
     for w in G.works():
@@ -1528,13 +1539,17 @@ def work_icons():
         elif w.get("icon"):
             want = ["ui/campaign ui/effect_bundles/" + w["icon"]]
         elif w["kind"] == "convert":
-            want = [skins.get(currency.get(w.get("pool"), ""), "")]
+            want = [skins.get(currency.get(w.get("pool"), "").lower(), "")]
         elif w.get("rank"):
             want = ["ui/campaign ui/effect_bundles/experience.png"]
         elif w["kind"] == "research":
             want = ["ui/campaign ui/effect_bundles/technology.png"]
         first = w["rare"] or (w["goods"][0][0] if w.get("goods") else "books")
         out[k] = next((p for p in want if p in have), icon_of[first])
+        # a race mod's currency draws the picture named in MOD_POOLS, which may sit in the race mod's own pack: the
+        # row is open only while that race is loaded (Phase 4b, check_xml)
+        if w.get("pool") in G.MOD_POOLS:
+            out[k] = G.MOD_POOLS[w["pool"]]["icon"]
     return out
 
 
@@ -1774,6 +1789,9 @@ def flows_header():
     lines += ["DERPY_MR_FLOWS_NO_STORES = {%s}" % ", ".join('"%s"' % t for t in NO_STORES),
               "DERPY_MR_FLOWS_UNDEAD = {%s}" % ", ".join('"%s"' % t for t in UNDEAD),
               "DERPY_MR_FLOWS_CULTURE_TOKEN = {%s}" % ", ".join('["%s"] = "%s"' % kv for kv in sorted(token.items())),
+              # the race mods' token by subculture, read first (gen_resource_overhaul.MOD_RACES, Phase 4b)
+              "DERPY_MR_FLOWS_SUBCULTURE_TOKEN = {%s}" % ", ".join('["%s"] = "%s"' % kv for kv in sorted(
+                  (sc, tok) for tok, m in G.MOD_RACES.items() for sc in m["subcultures"])),
               "DERPY_MR_FLOWS_CULTURE_FAMILY = {%s}" % ", ".join('["%s"] = "%s"' % kv for kv in sorted(family.items())),
               "DERPY_MR_FLOWS_CHARTED = {"]
     lines += ['    ["%s"] = true,' % c for c in charted_chains()]
@@ -3245,6 +3263,26 @@ def check_race_identity_mutations():
         ("excluded only by culture", "    if names_any(sc, DERPY_MR_FLOWS_NO_STORES) then", "    if false then"),
         ("an undead name ignored", '(names_any(sc, DERPY_MR_FLOWS_UNDEAD) and "undead") or "living"', '"living"'),
         ("the culture never names the race", 'or DERPY_MR_FLOWS_CULTURE_TOKEN[faction:culture()] or sc', 'or sc'),
+        ("the subculture map is ignored (Phase 4b)", 'return DERPY_MR_FLOWS_SUBCULTURE_TOKEN[sc] or string.match',
+         'return string.match'),
+        ("a race mod's currency through our own factor (Phase 4b)", "w.factor or F.WORK_FACTOR, w.amount",
+         "F.WORK_FACTOR, w.amount"),
+        # Rhox's Marienburg by faction key (author, 2026-11-22)
+        ("Rhox's Marienburg list ignored",
+         'if sc == "wh_main_sc_emp_empire" and RHOX_MAR_FACTIONS and RHOX_MAR_FACTIONS[faction:name()] then return "mar" end',
+         ""),
+        ("every Empire faction Marienburg when Rhox's mod is loaded",
+         'and RHOX_MAR_FACTIONS and RHOX_MAR_FACTIONS[faction:name()] then', "and RHOX_MAR_FACTIONS then"),
+        ("Rhox's High Elf clan read as Marienburg",
+         'if sc == "wh_main_sc_emp_empire" and RHOX_MAR_FACTIONS and', "if RHOX_MAR_FACTIONS and"),
+        ("vanilla Marienburg read as Marienburg without Rhox's mod",
+         'RHOX_MAR_FACTIONS and RHOX_MAR_FACTIONS[faction:name()] then',
+         'faction:name() == "wh_main_emp_marienburg" then'),
+        # final review 2026-11-22: a renamed or dropped factor books nothing
+        ("goods paid when another mod's factor booked nothing",
+         "if faction:pooled_resource_manager():resource(w.pool):value() == before then", "if false then"),
+        ("the turn spent on a grant that never landed", "            F.works_book(faction:name()).convert[key] = nil\n",
+         ""),
         ("unknown races share one token", 'DERPY_MR_FLOWS_CULTURE_TOKEN[faction:culture()] or sc',
          'DERPY_MR_FLOWS_CULTURE_TOKEN[faction:culture()] or ""'),
         ("stores ignore the family", 'return F.family(faction) ~= "excluded"', 'return true'),
@@ -3273,6 +3311,11 @@ def check_raiders_share_mutations():
          "pcts[#pcts + 1] = F.plunder_pct(taker, rates.raid)"),
         ("the capture plate not routed through the share", "F.preview(region, F.plunder_pct(taker, pct))",
          "F.preview(region, pct)"),
+        ("the Fimir and the Hung left out (Phase 4b)", "F.RAIDERS_SHARE = { nor = 150, fim = 150, hng = 150 }",
+         "F.RAIDERS_SHARE = { nor = 150 }"),
+        # final review 2026-11-22: a horde would only burn the victim's extra half
+        ("a horde takes the share it cannot carry home",
+         "if not share or taker:region_list():num_items() == 0 then return pct end", "if not share then return pct end"),
     ))
 
 
@@ -4247,10 +4290,23 @@ def check_xml():
     good_icons = {i for _s, _r, i in goods()}
     for w in G.works():
         icon = drawn[w["key"]]
-        assert icon in have or os.path.isfile(os.path.join(ROOT, PACK_REL, *icon.split("/"))), \
-            "the %s row's icon is in no pack: %s" % (w["key"], icon)
+        mod = G.MOD_POOLS.get(w.get("pool"))
+        if mod and icon not in have and G.mod_has(mod["race"], icon) is None:   # a race mod's art, mod not installed
+            print("not checked: the %s row's icon, %s's mod is not installed: %s" % (w["key"], mod["race"], icon))
+        else:
+            assert icon in have or os.path.isfile(os.path.join(ROOT, PACK_REL, *icon.split("/"))) or \
+                (mod and G.mod_has(mod["race"], icon)), "the %s row's icon is in no pack: %s" % (w["key"], icon)
         assert w["kind"] in ("item", "trait") or icon not in good_icons, \
             "the %s row draws a good's icon: %s" % (w["key"], icon)
+    # A CURRENCY RECIPE DRAWS ITS CURRENCY (Phase 3, 2026-11-22): CA's DB names some pool icons with capitals
+    # (icon_TK_canopic_jar.png) that its packs hold in lower case
+    pool_icon = {r["key"]: r["optional_icon_path"] for r in G.db("pooled_resources_tables")[1]}
+    for w in G.works():
+        if w["kind"] == "convert" and w["pool"] in G.MOD_POOLS:   # a race mod's: its MOD_POOLS picture (Phase 4b)
+            assert drawn[w["key"]] == G.MOD_POOLS[w["pool"]]["icon"], "the %s row: %s" % (w["key"], drawn[w["key"]])
+        elif w["kind"] == "convert":
+            assert drawn[w["key"]].endswith("/" + pool_icon[w["pool"]].lower()), \
+                "the %s row does not draw its currency: %s" % (w["key"], drawn[w["key"]])
     import gen_resource_overhaul as G
     for key, d in G.SERVICES.items():    # the Production tab's Gives, by the service's own bundle icon
         assert "ui/campaign ui/effect_bundles/" + d["icon"] in have, "no icon for the %s service: %s" % (key, d["icon"])
@@ -4341,6 +4397,21 @@ def selftest():
     check_button_faces()
     check_map_frame()
     check_xml()
+    # a race mod's art (the Woad row): not installed here is "not checked", installed without the art still fails
+    import gen_resource_overhaul as G
+    real = G.mod_pack_paths
+    try:
+        G.mod_pack_paths = lambda token: set()
+        check_xml()
+        G.mod_pack_paths = lambda token: {"ui/not_the_icon.png"}
+        try:
+            check_xml()
+        except AssertionError as e:
+            assert "conv_woad" in str(e), e
+        else:
+            raise AssertionError("check_xml passed a race mod's pack without the Woad icon")
+    finally:
+        G.mod_pack_paths = real
     check_sizes()
     check_capture_kinds()
     check_uses()

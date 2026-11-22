@@ -239,7 +239,7 @@ if IN_CAMPAIGN then o_supply:set_locked(true, LOCK_REASON) end
 
 local o_recruit = m:add_new_option("recruit", "checkbox")
 o_recruit:set_text("Recruits use the stores")
-o_recruit:set_tooltip_text("Every unit you recruit takes resources from your stores by its type and worth (cavalry and monsters take mounts, infantry and war machines take war materials, the finest also take your rare resource). What the stores lack is paid in your race's own currency where it has one. A recruit whose resources are still short arrives understrength, unless Gold pays for troops is ticked. Vampire Counts and Vampire Coast recruits take nothing. Off: recruiting takes nothing. You can change this during a campaign. The change applies from your next turn.")
+o_recruit:set_tooltip_text("Every unit you recruit takes resources from your stores by its type and worth (cavalry and monsters take mounts, infantry and war machines take war materials, the finest also take your rare resource). What the stores lack is paid in your race's own currency where it has one. A recruit whose resources are still short arrives understrength, unless Gold pays for troops is ticked. Vampire Counts, Vampire Coast and Tomb Kings recruits take nothing. Off: recruiting takes nothing. You can change this during a campaign. The change applies from your next turn.")
 o_recruit:set_default_value(true)
 o_recruit:set_assigned_section("using")
 

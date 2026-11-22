@@ -313,6 +313,7 @@ cm = {
         TREASURY[fk] = (TREASURY[fk] or 0) + n
     end,
     faction_add_pooled_resource = function(_, fk, pool, factor, n)
+        if REJECT_FACTOR and REJECT_FACTOR[factor] then return end   -- a factor the engine does not know
         FPOOL[fk] = FPOOL[fk] or {}
         FPOOL[fk][pool] = (FPOOL[fk][pool] or 0) + n
         FPOOL_FACTOR[#FPOOL_FACTOR + 1] = factor
@@ -609,6 +610,10 @@ do
     eq(F.plunder_pct(nor.iface, 50), 75, "a Norscan sack or raze 75%")
     eq(F.plunder_pct(nor.iface, 80), 100, "and never more than the whole store")
     eq(F.plunder_pct(hum.iface, 10), 10, "anyone else takes the rate")
+    -- a horde with no settlement has nowhere to carry the extra half, so it would only burn the victim's goods
+    -- (final review 2026-11-22: eight of the nine Hung factions are hordes)
+    local hh = faction("hng_horde", { human = true, sc = "mixer_sc_hng_hung", culture = "mixer_hng_hung" })
+    eq(F.plunder_pct(hh.iface, 10), 10, "a raider's race with no settlement takes only the rate")
     local na = army(nor, v, 410, 400); v.chars = { na }
     eq(F.raid_preview(na).total, 6, "the Norscan raider's plate: 15% of 40 grain")
     raid(na)
@@ -3827,6 +3832,68 @@ end)()
     F.state.rates, TURN = rates0, turn0
 end)()
 
+-- ---- THE RACE MODS' KITS (faction flavour Phase 4b, 2026-11-22): one service and one work each, theirs alone ----
+;(function()
+    local W, E = {}, DERPY_MR_FLOWS_ECONOMY
+    for _, w in ipairs(DERPY_MR_FLOWS_WORKS) do W[w.key] = w end
+    local rates0, turn0 = F.state.rates, TURN
+    F.state.rates = nil; F.freeze_rates(); F.state.rates.actions = true
+    TURN = 9600
+    local KIT = { teb = { "festas", "last_condottieri" }, mar = { "banquets", "last_harbour" }, fim = { "meargh" },
+        arb = { "souks", "last_studs" }, alb = { "moots", "conv_woad" }, jbv = { "jade_rites", "last_jade_court" },
+        gnob = { "scavengers", "conv_gnob_scrap" }, hng = { "kurultai" } }
+    local SC = { teb = "mixer_teb_southern_realms", mar = "rhox_sc_mar_marienburg", fim = "ovn_sc_fim_fimir",
+        arb = "ovn_sc_arb_araby", alb = "ovn_sc_alb_albion", jbv = "wh_main_sc_vmp_jade_vampires",
+        gnob = "mixer_gnob_gnoblar_horde", hng = "mixer_sc_hng_hung" }
+    local rmE = faction("rmE", { human = true, sc = "wh_main_sc_emp_empire" })
+    local eR = region("rmE1", 96000, 0, 2000, {}); own(rmE, eR, true)
+    local x, made = 96100, {}
+    for tok, kit in pairs(KIT) do
+        local mf = faction("rm_kit_" .. tok, { human = true, sc = SC[tok], culture = SC[tok] .. "_own_culture" })
+        local r = region("rm_kit_r_" .. tok, x, 0, 2000, {}); own(mf, r, true)
+        x = x + 10
+        made[tok] = { f = mf, r = r }
+        eq(E[kit[1]] ~= nil, true, kit[1] .. " is a service")
+        eq((F.economy_open(mf.iface, r.iface, E[kit[1]])), true, tok .. " holds " .. kit[1])
+        eq((F.economy_open(rmE.iface, eR.iface, E[kit[1]])), false, "the Empire does not hold " .. kit[1])
+        if kit[2] then
+            eq(W[kit[2]] ~= nil, true, kit[2] .. " is a work")
+            eq(F.work_open(mf.iface, W[kit[2]]), true, tok .. "'s Workshop lists " .. kit[2])
+            eq(F.work_open(rmE.iface, W[kit[2]]), false, "the Empire's does not list " .. kit[2])
+        end
+    end
+    eq((F.economy_open(made.jbv.f.iface, made.jbv.r.iface, E.crypts)), false, "the Jade-Blooded do not hold Crypt rites")
+    eq((F.economy_open(made.jbv.f.iface, made.jbv.r.iface, E.builders)), false, "nor the living's Builders' yards")
+    eq((F.economy_open(made.teb.f.iface, made.teb.r.iface, E.builders)), true, "Southern Realms keep Builders' yards")
+    eq((F.economy_open(made.teb.f.iface, made.teb.r.iface, E.hospital)), true, "and Field hospitals")
+    eq(F.work_open(made.teb.f.iface, W.last_gunnery), false, "but not the Empire's Gunnery School")
+    eq(F.RAIDERS_SHARE[F.race(made.fim.f.iface)], 150, "the Fimir take Norsca's raiders' share")
+    eq(F.RAIDERS_SHARE[F.race(made.hng.f.iface)], 150, "and so do the Hung")
+    eq(F.RAIDERS_SHARE[F.race(made.teb.f.iface)], nil, "but not the Southern Realms")
+    -- a currency into a race mod's pool is paid through the mod's own factor: no DB row of ours names their pool
+    local gP = faction("rm_gP", { human = true, sc = SC.gnob, pools = { gnob_scrap = 0 } })
+    local g1 = region("rm_g1", 96900, 0, 2000, { iron = 100, tools = 100, trinkets = 100 }); own(gP, g1, true)
+    F.request("rm_gP", "work", "conv_gnob_scrap")
+    eq(FPOOL.rm_gP.gnob_scrap, 40, "Scrap heaps make 40 Scrap")
+    eq(FPOOL_FACTOR[#FPOOL_FACTOR], "gnob_scrap_piles", "through the Gnoblars' own scrap factor")
+    local gN = faction("rm_gN", { human = true, sc = SC.gnob })
+    local gn1 = region("rm_gn1", 96950, 0, 2000, { iron = 100, tools = 100, trinkets = 100 }); own(gN, gn1, true)
+    eq(F.work_state(gN.iface, "conv_gnob_scrap").why, "no_pool", "no Scrap pool (a renamed or missing mod): refused")
+    F.request("rm_gN", "work", "conv_gnob_scrap"); eq(gn1.held.iron, 100, "and nothing is taken")
+    -- the mod renames or drops its FACTOR: the grant books nothing, so the goods must not go either (final review)
+    local gR = faction("rm_gR", { human = true, sc = SC.gnob, pools = { gnob_scrap = 0 } })
+    local gr1 = region("rm_gr1", 96975, 0, 2000, { iron = 100, tools = 100, trinkets = 100 }); own(gR, gr1, true)
+    local e0 = #ERRORS
+    REJECT_FACTOR = { gnob_scrap_piles = true }
+    F.request("rm_gR", "work", "conv_gnob_scrap")
+    REJECT_FACTOR = nil
+    eq(FPOOL.rm_gR.gnob_scrap, 0, "a factor the engine does not know: no Scrap")
+    eq(gr1.held.iron, 100, "and no goods taken for it")
+    eq(#ERRORS, e0 + 1, "and the script log says why"); ERRORS[#ERRORS] = nil
+    eq(F.work_state(gR.iface, "conv_gnob_scrap").why ~= "wait", true, "nor this turn's purchase spent")
+    F.state.rates, TURN = rates0, turn0
+end)()
+
 -- ---- STAGE 2 FINAL REVIEW (2026-10-08): a pool at its cap, a lord's trait on a hero ----
 ;(function()
     local W = {}
@@ -4046,7 +4113,7 @@ end)()
     F.state.rates.ai = false
     eq(next(F.recurring_use(computer.iface, cr.iface)), nil, "AI demand obeys other factions switch")
     F.state.rates.ai = true
-    local dead = faction("policy_dead", { human = true, sc = "wh2_dlc09_sc_tmb_tomb_kings" })
+    local dead = faction("policy_dead", { human = true, sc = "wh3_main_sc_kho_khorne" })
     local dr = region("policy_dead_r", 80200, 0, 400, { grain = 20 }); own(dead, dr, true)
     eq(next(F.recurring_use(dead.iface, dr.iface)), nil, "excluded faction has no recurring demand")
     -- The existing synchronized request door remains editable with actions off.
@@ -5618,6 +5685,48 @@ end)()
     eq(F.work_open(ksl.iface, W.last_gunnery), false, "and not the Empire's Gunnery School")
     eq(F.work_open(emp.iface, W.last_gunnery), true, "the Empire's lists the Gunnery School")
     eq(F.work_open(emp.iface, W.last_ursun), false, "and not Ursun's Dens")
+    -- THE TOMB KINGS (faction flavour Phase 3, 2026-11-22): their own work and service, and not the living's services
+    local tmb = faction("race_tmb", { human = true, sc = "wh2_dlc09_sc_tmb_tomb_kings", culture = "wh2_dlc09_tmb_tomb_kings" })
+    local grn = faction("race_grn", { human = true, sc = "wh_main_sc_grn_greenskins", culture = "wh_main_grn_greenskins" })
+    eq(W.conv_canopic ~= nil, true, "Embalming is a work")
+    eq(F.work_open(tmb.iface, W.conv_canopic), true, "the Tomb Kings' Workshop lists Embalming")
+    eq(F.work_open(tmb.iface, W.conv_scrap), false, "and not the Greenskins' Scrap")
+    eq(F.work_open(grn.iface, W.conv_scrap), true, "the Greenskins' lists Scrap")
+    eq(F.work_open(grn.iface, W.conv_canopic), false, "and not Embalming")
+    local E = DERPY_MR_FLOWS_ECONOMY
+    local tr = region("race_tr", 6, 0, 1000, {}); own(tmb, tr, true)
+    eq(E.mortuary ~= nil and (F.economy_open(tmb.iface, tr.iface, E.mortuary)), true, "the Tomb Kings hold Mortuary rites")
+    eq((F.economy_open(tmb.iface, tr.iface, E.builders)), false, "but not the living's Builders' yards")
+    eq((F.economy_open(tmb.iface, tr.iface, E.hospital)), false, "or Field hospitals")
+    eq((F.economy_open(tmb.iface, tr.iface, E.cloth)), false, "no Charnel Plaza, no Plain weaving")
+    tr.iface.slot_list = function() return list({ { has_building = function() return true end,
+        building = function() return { name = function() return "wh2_dlc09_tmb_income_1" end,
+            percent_health = function() return 100 end } end } }) end
+    eq((F.economy_open(tmb.iface, tr.iface, E.cloth)), true, "the Charnel Plaza runs Plain weaving")
+    -- THE RACE MODS (Phase 4b, 2026-11-22): the token is the subculture's, whichever culture declaration won (MIXER
+    -- re-declares other mods' subcultures under CA cultures)
+    for sc, tok in pairs({ mixer_teb_southern_realms = "teb", wh_main_teb_tilea_CB = "teb", wh_main_sc_teb_teb = "teb",
+            rhox_sc_mar_marienburg = "mar", ovn_sc_fim_fimir = "fim", ovn_sc_arb_araby = "arb", ovn_sc_alb_albion = "alb",
+            wh_main_sc_vmp_jade_vampires = "jbv", mixer_gnob_gnoblar_horde = "gnob", mixer_sc_hng_hung = "hng" }) do
+        for _, cu in ipairs({ "wh_main_emp_empire", "wh3_main_ogr_ogre_kingdoms", sc .. "_own_culture" }) do
+            eq(F.race(faction("rm_" .. sc .. cu, { sc = sc, culture = cu }).iface), tok, sc .. " under " .. cu)
+        end
+    end
+    eq(F.family(faction("rm_jbv", { sc = "wh_main_sc_vmp_jade_vampires", culture = "mixer_vmp_jade_vampires" }).iface),
+        "undead", "the Jade-Blooded stay undead")
+    eq(F.race(faction("rm_rot", { sc = "str_rotbloods_subcult", culture = "wh_dlc08_nor_norsca" }).iface), "nor",
+        "the Rotbloods keep Norsca's token")
+    -- RHOX'S MARIENBURG keeps its campaign houses on the Empire's subculture and lists them in RHOX_MAR_FACTIONS
+    -- (author, 2026-11-22: map them by faction key, only when that mod is loaded)
+    local mar = faction("wh_main_emp_marienburg", { sc = "wh_main_sc_emp_empire", culture = "wh_main_emp_empire" })
+    local lian = faction("cr_hef_clan_lianllach", { sc = "wh2_main_sc_hef_high_elves", culture = "wh2_main_hef_high_elves" })
+    eq(F.race(mar.iface), "emp", "without Rhox's mod, Marienburg is the Empire")
+    RHOX_MAR_FACTIONS = { wh_main_emp_marienburg = { empire = true, iee_only = false },
+                          cr_hef_clan_lianllach = { empire = false, iee_only = true } }
+    eq(F.race(mar.iface), "mar", "with it, Marienburg's houses read as Marienburg")
+    eq(F.race(emp.iface), "emp", "but no other Empire faction does")
+    eq(F.race(lian.iface), "hef", "and his High Elf clan stays High Elf")
+    RHOX_MAR_FACTIONS = nil
     F.works_book(chd.name).lasting = { last_granary_chd = 1 }
     eq(F.spoil_safe(chd.name, "grain"), F.SPOIL.granary, "and keeps grain to half, like the other")
     -- Well fed: the race's own bundle, never both
@@ -8103,7 +8212,11 @@ end)()
     eq(F.family(f("abc_kho_host", "abc_culture")), "excluded", "a Khorne name with no _sc_ keeps no stores")
     eq(F.family(f("abc_vmp_court", "abc_culture")), "undead", "an undead name under a modded culture eats nothing")
     eq(F.family(f("ovn_sc_arb_araby", "wh_main_emp_empire")), "living", "Araby eats")
-    eq(F.family(f("wh2_dlc09_sc_tmb_tomb_kings", "wh2_dlc09_tmb_tomb_kings")), "excluded", "Tomb Kings stay out (Phase 3)")
+    local tmb = f("wh2_dlc09_sc_tmb_tomb_kings", "wh2_dlc09_tmb_tomb_kings")
+    eq(F.family(tmb), "undead", "Tomb Kings keep stores and eat nothing (Phase 3)")
+    eq(F.uses_stores(tmb), true, "Tomb Kings keep stores")
+    eq(F.eats(tmb), false, "Tomb Kings are never fed")
+    eq(F.equips(tmb), false, "Tomb Kings pay nothing for troops")
     eq(F.eats(f("mixer_cou_vampires", "wh_main_vmp_vampire_counts")), false, "so they are never fed")
     eq(F.uses_stores(f("mixer_cou_vampires", "wh_main_vmp_vampire_counts")), true, "but they keep stores")
     local u = f("abc_three", "abc_culture")

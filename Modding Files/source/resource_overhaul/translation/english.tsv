@@ -291,6 +291,10 @@ building_culture_variants_name_derpy_mr_bld_dragon_bone_skv_1	Bone Pickers	false
 building_culture_variants_name_derpy_mr_bld_dragon_bone_skv_2	Dragon Bone Digs	false
 building_culture_variants_name_derpy_mr_bld_dragon_bone_skv_3	Dragon Graveyard Excavation	false
 building_chains_chain_tooltip_derpy_mr_bld_dragon_bone_skv	Dragon Bone	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_tmb_1	Bone Pickers	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_tmb_2	Dragon Bone Digs	false
+building_culture_variants_name_derpy_mr_bld_dragon_bone_tmb_3	Dragon Graveyard Excavation	false
+building_chains_chain_tooltip_derpy_mr_bld_dragon_bone_tmb	Dragon Bone	false
 building_culture_variants_name_derpy_mr_bld_dragon_bone_vmp_1	Bone Pickers	false
 building_culture_variants_name_derpy_mr_bld_dragon_bone_vmp_2	Dragon Bone Digs	false
 building_culture_variants_name_derpy_mr_bld_dragon_bone_vmp_3	Dragon Graveyard Excavation	false
@@ -802,22 +806,62 @@ effect_bundles_localised_title_derpy_mr_comforts	Comforts	false
 effect_bundles_localised_description_derpy_mr_comforts	Luxuries fill at least a quarter of one store's space in this settlement.	false
 effect_bundles_localised_title_derpy_mr_well_fed_chd	Well fed	false
 effect_bundles_localised_description_derpy_mr_well_fed_chd	After eating, this settlement's stores still hold five turns of provisions, and its fed slaves are quieter.	false
+effect_bundles_localised_title_derpy_mr_service_altars	Altars of the Dark Gods	false
+effect_bundles_localised_description_derpy_mr_service_altars	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_archives	Scholars' halls	false
 effect_bundles_localised_description_derpy_mr_service_archives	Paid each turn from this province capital's stores. Province growth +5.	false
+effect_bundles_localised_title_derpy_mr_service_banquets	Directorate banquets	false
+effect_bundles_localised_description_derpy_mr_service_banquets	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_builders	Builders' yards	false
 effect_bundles_localised_description_derpy_mr_service_builders	Paid each turn from this province capital's stores. Province construction cost -5%.	false
+effect_bundles_localised_title_derpy_mr_service_crypts	Crypt rites	false
+effect_bundles_localised_description_derpy_mr_service_crypts	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_feasts	Village feasts	false
 effect_bundles_localised_description_derpy_mr_service_feasts	Paid each turn from this province capital's stores. Province control +2.	false
+effect_bundles_localised_title_derpy_mr_service_festas	Vineyard festas	false
+effect_bundles_localised_description_derpy_mr_service_festas	Paid each turn from this province capital's stores. Province growth +5.	false
+effect_bundles_localised_title_derpy_mr_service_grog	Grog shops	false
+effect_bundles_localised_description_derpy_mr_service_grog	Paid each turn from this province capital's stores. Province control +2.	false
+effect_bundles_localised_title_derpy_mr_service_gut	Gut feasts	false
+effect_bundles_localised_description_derpy_mr_service_gut	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_halls	Drinking halls	false
 effect_bundles_localised_description_derpy_mr_service_halls	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_hospital	Field hospitals	false
 effect_bundles_localised_description_derpy_mr_service_hospital	Paid each turn from this province capital's stores. Own armies in the province: replenishment +3%.	false
+effect_bundles_localised_title_derpy_mr_service_jade_rites	Jade tomb rites	false
+effect_bundles_localised_description_derpy_mr_service_jade_rites	Paid each turn from this province capital's stores. Province control +2.	false
+effect_bundles_localised_title_derpy_mr_service_khaine	Shrines of Khaine	false
+effect_bundles_localised_description_derpy_mr_service_khaine	Paid each turn from this province capital's stores. Province control +2.	false
+effect_bundles_localised_title_derpy_mr_service_kurultai	Kurultai feasts	false
+effect_bundles_localised_description_derpy_mr_service_kurultai	Paid each turn from this province capital's stores. Province control +2.	false
+effect_bundles_localised_title_derpy_mr_service_meadhall	Mead-hall feasts	false
+effect_bundles_localised_description_derpy_mr_service_meadhall	Paid each turn from this province capital's stores. Province control +2.	false
+effect_bundles_localised_title_derpy_mr_service_meargh	Meargh's rites	false
+effect_bundles_localised_description_derpy_mr_service_meargh	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_mess	Factory mess	false
 effect_bundles_localised_description_derpy_mr_service_mess	Paid each turn from this province capital's stores. Province control +2.	false
+effect_bundles_localised_title_derpy_mr_service_moots	Truthsayers' moots	false
+effect_bundles_localised_description_derpy_mr_service_moots	Paid each turn from this province capital's stores. Province control +2.	false
+effect_bundles_localised_title_derpy_mr_service_mortuary	Mortuary rites	false
+effect_bundles_localised_description_derpy_mr_service_mortuary	Paid each turn from this province capital's stores. Province control +2.	false
+effect_bundles_localised_title_derpy_mr_service_pits	Fight pits	false
+effect_bundles_localised_description_derpy_mr_service_pits	Paid each turn from this province capital's stores. Province control +2.	false
 effect_bundles_localised_title_derpy_mr_service_records	Civic records	false
 effect_bundles_localised_description_derpy_mr_service_records	Paid each turn from this province capital's stores. Province growth +5.	false
+effect_bundles_localised_title_derpy_mr_service_revels	Seasonal revels	false
+effect_bundles_localised_description_derpy_mr_service_revels	Paid each turn from this province capital's stores. Province growth +5.	false
+effect_bundles_localised_title_derpy_mr_service_scavengers	Scavenger feasts	false
+effect_bundles_localised_description_derpy_mr_service_scavengers	Paid each turn from this province capital's stores. Province control +2.	false
+effect_bundles_localised_title_derpy_mr_service_shrines	Shrine offerings	false
+effect_bundles_localised_description_derpy_mr_service_shrines	Paid each turn from this province capital's stores. Province control +2.	false
+effect_bundles_localised_title_derpy_mr_service_souks	Spice souks	false
+effect_bundles_localised_description_derpy_mr_service_souks	Paid each turn from this province capital's stores. Province growth +5.	false
 effect_bundles_localised_title_derpy_mr_service_tea	Tea houses	false
 effect_bundles_localised_description_derpy_mr_service_tea	Paid each turn from this province capital's stores. Province control +2.	false
+effect_bundles_localised_title_derpy_mr_service_tribute	Temple tribute	false
+effect_bundles_localised_description_derpy_mr_service_tribute	Paid each turn from this province capital's stores. Province growth +5.	false
+effect_bundles_localised_title_derpy_mr_service_warrens	Breeding warrens	false
+effect_bundles_localised_description_derpy_mr_service_warrens	Paid each turn from this province capital's stores. Province growth +5.	false
 effect_bundles_localised_title_derpy_mr_event_feast	Feast	false
 effect_bundles_localised_description_derpy_mr_event_feast	A feast paid for from this settlement's stores: public order and growth are up.	false
 effect_bundles_localised_title_derpy_mr_event_siege	Siege Stores	false
@@ -923,6 +967,32 @@ effect_bundles_localised_title_derpy_mr_rc_last_pens	Beast Pens	false
 effect_bundles_localised_description_derpy_mr_rc_last_pens	Paid for from your stores: monster recruitment cost -20%. Permanent.	false
 effect_bundles_localised_title_derpy_mr_rc_last_boneyard	Bone Yard	false
 effect_bundles_localised_description_derpy_mr_rc_last_boneyard	Paid for from your stores: monster recruitment cost -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_ursun	Ursun's Dens	false
+effect_bundles_localised_description_derpy_mr_rc_last_ursun	Paid for from your stores: war Bear Riders and Elemental Bears upkeep -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_gunnery	Gunnery School	false
+effect_bundles_localised_description_derpy_mr_rc_last_gunnery	Paid for from your stores: artillery recruitment cost -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_grail	Grail Chapels	false
+effect_bundles_localised_description_derpy_mr_rc_last_grail	Paid for from your stores: knights of the Realm and Questing Knights upkeep -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_lothern	Lothern Sea Charter	false
+effect_bundles_localised_description_derpy_mr_rc_last_lothern	Paid for from your stores: diplomatic relations +15. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_jade	Jade Workshops	false
+effect_bundles_localised_description_derpy_mr_rc_last_jade	Paid for from your stores: jade Warriors and Jade Warrior Crossbows upkeep -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_trapping	Trapping Grounds	false
+effect_bundles_localised_description_derpy_mr_rc_last_trapping	Paid for from your stores: gorgers, Sabretusk Packs, Yhetees, Blood Vultures, Thundertusks and Stonehorns recruitment cost -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_spawning	Tended Spawning Pools	false
+effect_bundles_localised_description_derpy_mr_rc_last_spawning	Paid for from your stores: monster recruitment cost -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_hellforged	Hellforged Plate	false
+effect_bundles_localised_description_derpy_mr_rc_last_hellforged	Paid for from your stores: chaos Warriors, Chosen, Chaos Knights and Skullcrushers upkeep -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_barrows	Grave Barrows	false
+effect_bundles_localised_description_derpy_mr_rc_last_barrows	Paid for from your stores: skeleton Warriors and Skeleton Spearmen upkeep -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_condottieri	Condottieri Contracts	false
+effect_bundles_localised_description_derpy_mr_rc_last_condottieri	Paid for from your stores: melee infantry recruitment cost -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_harbour	Harbour Dues	false
+effect_bundles_localised_description_derpy_mr_rc_last_harbour	Paid for from your stores: income from ports +15%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_studs	Arabian Studs	false
+effect_bundles_localised_description_derpy_mr_rc_last_studs	Paid for from your stores: cavalry upkeep -20%. Permanent.	false
+effect_bundles_localised_title_derpy_mr_rc_last_jade_court	Masks of the Jade Court	false
+effect_bundles_localised_description_derpy_mr_rc_last_jade_court	Paid for from your stores: diplomatic relations +15. Permanent.	false
 effect_bundles_localised_title_derpy_mr_exports_held	Exports held	false
 effect_bundles_localised_description_derpy_mr_exports_held	You are holding some resources back from your trade agreements (the Resource Vault's Trade tab). Your regions make none of them for trade, so they earn you no trade income. Your stores still fill.	false
 dilemmas_localised_title_derpy_mr_dil_feast	A Feast	false
@@ -1697,32 +1767,83 @@ derpy_mr_ui_75da0bcd65	Furred and Booted	false
 derpy_mr_ui_3383d0027a	Attrition -25%	false
 derpy_mr_ui_0fdb742ca1	A trait for the selected lord: their army suffers 25% less attrition	false
 derpy_mr_ui_2d61ec260f	Great Granary	false
-derpy_mr_ui_61be484d03	Growth +15 Permanent	false
+derpy_mr_ui_bad52e0eaa	Growth +15	false
 derpy_mr_ui_b8ff2b6b78	Growth +15 in every province. Grain is safe from spoiling up to half of each store. Permanent	false
-derpy_mr_ui_43572e848c	Battle Labour +15% Permanent	false
+derpy_mr_ui_e7c3793710	Battle Labour +15%	false
 derpy_mr_ui_bb7f95a0c8	Labour taken after battles +15%. Grain is safe from spoiling up to half of each store. Permanent	false
 derpy_mr_ui_4ab91fe114	Hall of Records	false
-derpy_mr_ui_9b24cdc976	Research +15% Permanent	false
+derpy_mr_ui_dafb63d198	Research +15%	false
 derpy_mr_ui_0f8f70fc5e	Research rate +15%. Permanent	false
 derpy_mr_ui_f2bce8752a	Grand Bazaar	false
-derpy_mr_ui_270e808e60	Trade income +15% Permanent	false
+derpy_mr_ui_a4263c2917	Trade income +15%	false
 derpy_mr_ui_a3f4672985	Trade income +15%. Permanent	false
 derpy_mr_ui_463e693ed9	Loot Hoard	false
-derpy_mr_ui_aa6c156740	Loot income +15% Permanent	false
+derpy_mr_ui_cb1826a7d4	Loot income +15%	false
 derpy_mr_ui_5b1488b35f	Income from sacking and looting settlements +15%. Permanent	false
 derpy_mr_ui_4fc9baf210	Arsenal	false
-derpy_mr_ui_b526767a45	Upkeep -10% Permanent	false
+derpy_mr_ui_d67e83a408	Upkeep -10%	false
 derpy_mr_ui_f2dba5d873	Army upkeep -10%. Permanent	false
 derpy_mr_ui_92dafabe1c	Royal Stables	false
-derpy_mr_ui_22fc3259a9	Cavalry cost -20% Permanent	false
+derpy_mr_ui_2971f2464a	Cavalry cost -20%	false
 derpy_mr_ui_e0f93a14a1	Cavalry recruitment cost -20%. Permanent	false
 derpy_mr_ui_712acc597b	Engineers' Yard	false
-derpy_mr_ui_87dca18a0d	Artillery -20% Permanent	false
+derpy_mr_ui_e1d47a61bd	Artillery cost -20%	false
 derpy_mr_ui_ecc13fc21f	Artillery recruitment cost -20%. Permanent	false
 derpy_mr_ui_53ba9051ca	Beast Pens	false
-derpy_mr_ui_f7b145ee2b	Monster cost -20% Permanent	false
+derpy_mr_ui_dbc16a8cd7	Monster cost -20%	false
 derpy_mr_ui_84c4f586f4	Monster recruitment cost -20%. Permanent	false
 derpy_mr_ui_a726f67005	Bone Yard	false
+derpy_mr_ui_c5ab7d0672	Scrap	false
+derpy_mr_ui_5f36649003	5 Scrap	false
+derpy_mr_ui_f11a602246	Makes 5 Scrap from your stores once a turn	false
+derpy_mr_ui_88068e33c7	Amber	false
+derpy_mr_ui_ad38f1ce9a	1 Amber	false
+derpy_mr_ui_73e1addf04	Makes 1 Amber from your stores once a turn	false
+derpy_mr_ui_729e7366d4	Slave Market	false
+derpy_mr_ui_9b777117d6	80 Slaves	false
+derpy_mr_ui_548212e6d0	Trades goods from your stores for 80 Slaves once a turn	false
+derpy_mr_ui_88777c1b6e	Embalming	false
+derpy_mr_ui_56adbc048a	10 Canopic Jars	false
+derpy_mr_ui_132fe037ea	Makes 10 Canopic Jars from your stores once a turn	false
+derpy_mr_ui_05fda314d7	Woad Dyeing	false
+derpy_mr_ui_2710e8c96e	6 Woad	false
+derpy_mr_ui_6ca66ccbe0	Makes 6 Woad from your stores once a turn	false
+derpy_mr_ui_bc20379aa7	Scrap Heaps	false
+derpy_mr_ui_4a4f1859ec	40 Scrap	false
+derpy_mr_ui_c07dd06aad	Makes 40 Scrap from your stores once a turn	false
+derpy_mr_ui_36dd5f1972	Ursun's Dens	false
+derpy_mr_ui_9f161efc99	Bear upkeep -20%	false
+derpy_mr_ui_94ac9185ba	War Bear Riders and Elemental Bears upkeep -20%. Permanent	false
+derpy_mr_ui_f68487a42e	Gunnery School	false
+derpy_mr_ui_a194fadd3a	Grail Chapels	false
+derpy_mr_ui_d12a0ec4be	Knight upkeep -20%	false
+derpy_mr_ui_52c52a023d	Knights of the Realm and Questing Knights upkeep -20%. Permanent	false
+derpy_mr_ui_459f5c8a38	Lothern Sea Charter	false
+derpy_mr_ui_bef3021a8b	Diplomacy +15	false
+derpy_mr_ui_b6fcc4ed36	Diplomatic relations +15. Permanent	false
+derpy_mr_ui_bf53723f20	Jade Workshops	false
+derpy_mr_ui_b1f881f488	Jade upkeep -20%	false
+derpy_mr_ui_4d7dc2d887	Jade Warriors and Jade Warrior Crossbows upkeep -20%. Permanent	false
+derpy_mr_ui_281f841829	Trapping Grounds	false
+derpy_mr_ui_bc12d0fd85	Beast cost -20%	false
+derpy_mr_ui_8858211437	Gorgers, Sabretusk Packs, Yhetees, Blood Vultures, Thundertusks and Stonehorns recruitment cost -20%. Permanent	false
+derpy_mr_ui_19d8387ba0	Tended Spawning Pools	false
+derpy_mr_ui_b3599e7d76	Hellforged Plate	false
+derpy_mr_ui_530faf72ce	Chaos Warrior upkeep -20%	false
+derpy_mr_ui_eaca3d091f	Chaos Warriors, Chosen, Chaos Knights and Skullcrushers upkeep -20%. Permanent	false
+derpy_mr_ui_5618f1fc99	Grave Barrows	false
+derpy_mr_ui_6416716b06	Skeleton upkeep -20%	false
+derpy_mr_ui_17b8bb60bf	Skeleton Warriors and Skeleton Spearmen upkeep -20%. Permanent	false
+derpy_mr_ui_d8b1f936f1	Condottieri Contracts	false
+derpy_mr_ui_52007eeb07	Melee infantry cost -20%	false
+derpy_mr_ui_746e39a96b	Melee infantry recruitment cost -20%. Permanent	false
+derpy_mr_ui_c70b082b8d	Harbour Dues	false
+derpy_mr_ui_fcc621ddf1	Port income +15%	false
+derpy_mr_ui_66a4cad913	Income from ports +15%. Permanent	false
+derpy_mr_ui_30ad04917c	Arabian Studs	false
+derpy_mr_ui_c853d314a4	Cavalry upkeep -20%	false
+derpy_mr_ui_b28099933a	Cavalry upkeep -20%. Permanent	false
+derpy_mr_ui_5c62208820	Masks of the Jade Court	false
 derpy_mr_ui_83d611872d	400 research points	false
 derpy_mr_ui_11b63ab3c7	400 research points at once	false
 derpy_mr_ui_2c272532be	Lotus Gatherers	false
@@ -1776,11 +1897,11 @@ mct_derpy_more_resources_description	How goods move between settlement stores. T
 mct_derpy_more_resources_lock_reason	Fixed when a campaign starts. Change it from the main menu before starting a new one.	false
 mct_derpy_more_resources_stores_section_text	Stores	false
 mct_derpy_more_resources_raid_text	Raid share per turn	false
-mct_derpy_more_resources_raid_tooltip	Each turn an army raids a settlement, it carries off this share of every resource the settlement keeps, into its own nearest settlement as far as that has room. 0 turns this off.	false
+mct_derpy_more_resources_raid_tooltip	Each turn an army raids a settlement, it carries off this share of every resource the settlement keeps, into its own nearest settlement as far as that has room. Norscan raiders take half as much again. 0 turns this off.	false
 mct_derpy_more_resources_sack_text	Sack share	false
-mct_derpy_more_resources_sack_tooltip	Sacking a settlement carries off this share of every resource it keeps, into the sacker's nearest settlement as far as that has room. 0 turns this off.	false
+mct_derpy_more_resources_sack_tooltip	Sacking a settlement carries off this share of every resource it keeps, into the sacker's nearest settlement as far as that has room. Norscan raiders take half as much again. 0 turns this off.	false
 mct_derpy_more_resources_raze_text	Raze share	false
-mct_derpy_more_resources_raze_tooltip	Razing a settlement carries off this share of every resource it keeps before it burns. 0 turns this off.	false
+mct_derpy_more_resources_raze_tooltip	Razing a settlement carries off this share of every resource it keeps before it burns. Norscan raiders take half as much again. 0 turns this off.	false
 mct_derpy_more_resources_trade_text	Trade share per turn	false
 mct_derpy_more_resources_trade_tooltip	Each turn, trade partners receive this share of removable surplus toward their capital import targets. Keep reserves and cargo already on the road are respected. The goods travel the road between the two capitals, a turn for every 40 hexes, and an army at war with the sender can seize them on the way. 0 turns this off.	false
 mct_derpy_more_resources_duty_text	Import duty	false
@@ -1797,6 +1918,7 @@ mct_derpy_more_resources_toll_text	Tolls	false
 mct_derpy_more_resources_toll_tooltip	Each turn, trade that crosses another faction's lands pays that faction this share of the value of the goods it carries. All the tolls on one cargo together are at most 15%. A faction whose Roads edict is Open charges nothing. Neither do your allies and vassals. 0 turns tolls off.	false
 mct_derpy_more_resources_road_danger_text	Road danger	false
 mct_derpy_more_resources_road_danger_tooltip	How likely trouble on the road is on the most dangerous land, each turn. Half as dangerous land is half as likely. 0 turns road encounters off.	false
+mct_derpy_more_resources_using_section_text	Using stores	false
 mct_derpy_more_resources_army_provisions_text	Carried army provisions	false
 mct_derpy_more_resources_army_provisions_tooltip	Armies eat the provisions they carry once a turn. In your own settlements they refill from the stores, never below what a settlement keeps: Auto keeps 5 turns, and Load fills the army to 10. At sea, or with no settlements, Load buys two meals at 10 gold each, once a turn. Armies cannot refill in foreign lands. Missed meals hurt an army. Caravans and convoys carry none. This is fixed when a campaign starts: changing it later does nothing to a campaign already under way. In multiplayer it is always on.	false
 mct_derpy_more_resources_processing_text	Additional processing batches	false
@@ -1817,7 +1939,6 @@ mct_derpy_more_resources_ai_armoury_text	Other factions restock for recruits	fal
 mct_derpy_more_resources_ai_armoury_tooltip	Each settlement of a faction no player controls is topped up, every turn, with the resources its recruits and replenishment use: up to 6 war materials, 3 mounts and 2 building materials for each settlement level. Off: it has only what its buildings make and its trade brings.	false
 mct_derpy_more_resources_spoilage_text	Spoilage	false
 mct_derpy_more_resources_spoilage_tooltip	Each turn, grain loses 4% and beer and kvas 2% of what a store holds above a quarter of its space. With the Great Granary, grain is safe up to half. Hardtack, salted meat, salted fish, wine and every other good never spoil. Off: nothing spoils.	false
-mct_derpy_more_resources_using_section_text	Using stores	false
 mct_derpy_more_resources_upkeep_text	Settlements use their stores	false
 mct_derpy_more_resources_upkeep_tooltip	Each turn every settlement eats provisions from its stores. Five turns of provisions left make it Well fed; war materials and luxuries filling a quarter of one store's space give Garrison stocked and Comforts. Off: settlements eat nothing and give no bonuses. Spoilage has its own switch.	false
 mct_derpy_more_resources_actions_text	Resource Vault actions	false
@@ -1829,7 +1950,7 @@ mct_derpy_more_resources_random_off_tooltip	Stops the game's random dilemmas, th
 mct_derpy_more_resources_supply_text	Province supplies	false
 mct_derpy_more_resources_supply_tooltip	A province capital can pay from its stores each turn for Materials on hand, Stable stocked and Arms stocked in every settlement you hold in its province, and can send for resources from the province's other settlements. Off: no province supplies.	false
 mct_derpy_more_resources_recruit_text	Recruits use the stores	false
-mct_derpy_more_resources_recruit_tooltip	Every unit you recruit takes resources from your stores by its type and worth (cavalry and monsters take mounts, infantry and war machines take war materials, the finest also take your rare resource). What the stores lack is paid in your race's own currency where it has one. A recruit whose resources are still short arrives understrength, unless Gold pays for troops is ticked. Vampire Counts and Vampire Coast recruits take nothing. Off: recruiting takes nothing. You can change this during a campaign. The change applies from your next turn.	false
+mct_derpy_more_resources_recruit_tooltip	Every unit you recruit takes resources from your stores by its type and worth (cavalry and monsters take mounts, infantry and war machines take war materials, the finest also take your rare resource). What the stores lack is paid in your race's own currency where it has one. A recruit whose resources are still short arrives understrength, unless Gold pays for troops is ticked. Vampire Counts, Vampire Coast and Tomb Kings recruits take nothing. Off: recruiting takes nothing. You can change this during a campaign. The change applies from your next turn.	false
 mct_derpy_more_resources_recruit_gold_text	Gold pays for troops	false
 mct_derpy_more_resources_recruit_gold_tooltip	What your stores and your race's currency cannot cover is paid in gold, for recruits and for replenishing alike. Off: a recruit arrives understrength instead and must regain the rest by replenishing, and strength a unit regains that your stores cannot pay for is lost again. A faction no player controls always pays in gold. You can change this during a campaign. The change applies from your next turn.	false
 mct_derpy_more_resources_hunger_men_text	Hunger weakens armies	false

@@ -132,6 +132,9 @@ IEE_EAST = ("ind", "nippon")
 # CA's Pastures deposit ("Pastures", res_rom_oil) carries every race's herd chain (the Goat Farm), and CA gives
 # it no good: its herds make meat, leather and, under Wool's own rule, wool (the author, in game 2026-11-02)
 PASTURES = ("mine", "res_rom_oil")
+# where incense grows: one condition for every source of it, so the lore parity (check) sees one region set
+INCENSE_LANDS = ANY(ALL(CLIM("climate_desert"), AREA("araby", "nehekara")),
+                    ALL(AREA("ind"), CLIM("climate_desert", "climate_savannah", "climate_temperate")))
 
 GOODS = {
     "salted_fish": dict(
@@ -268,8 +271,7 @@ GOODS = {
     "incense": dict(
         unit="sacks", price=15.0, name="Incense",
         desc="Frankincense and myrrh from the deserts of Araby, burned in temples and tombs.",
-        sources=[("farm", ANY(ALL(CLIM("climate_desert"), AREA("araby", "nehekara")),
-                              ALL(AREA("ind"), CLIM("climate_desert", "climate_savannah", "climate_temperate"))))]),
+        sources=[("farm", INCENSE_LANDS), ("mortuary", INCENSE_LANDS)]),   # mortuary: the Tomb Kings, 2026-11-22
     "salted_meat": dict(
         unit="barrels", price=10.0, name="Salted Meat",
         desc="Hunting grounds, herds and settlement provisioners fill the barrels. Meat keeps; armies march on it.",
@@ -481,10 +483,11 @@ PROCESSING.update({
                 "wh2_main_def_industry", "wh3_main_cth_income_yin", "wh3_main_ksl_trade_order",
                 # Norsca: CA's own Fur Stash and Beast Tanner, and the hunters' kennels (race kit 2026-11-21)
                 "wh_main_NORSCA_slaves", "wh_main_NORSCA_beasts")),
-    "cloth": dict(label="Plain weaving", races=("emp", "brt", "hef", "def", "cth", "ksl", "lzd"),
+    # the Tomb Kings' linen weaving (faction flavour Phase 3, 2026-11-22) at the Charnel Plaza, on imported wool
+    "cloth": dict(label="Plain weaving", races=("emp", "brt", "hef", "def", "cth", "ksl", "lzd", "tmb"),
         cost={"wool": 8}, output=("cloth", 8), chains=("wh_main_EMPIRE_industry_basic",
         "wh_main_BRETONNIA_industry_basic", "wh2_main_hef_industry", "wh2_main_def_industry",
-        "wh3_main_cth_income_yin", "wh3_main_ksl_trade_order", "wh2_main_lzd_industry")),
+        "wh3_main_cth_income_yin", "wh3_main_ksl_trade_order", "wh2_main_lzd_industry", "wh2_dlc09_tmb_income")),
     "toolmaking": dict(label="Toolmaking", races=("dwf", "chd", "emp", "cth"),
         cost={"iron": 6, "timber": 2}, output=("tools", 8), chains=("wh_main_DWARFS_industry",
         "wh3_dlc23_chd_tower_furnace", "wh3_dlc23_chd_factory_assembly_line",
@@ -495,7 +498,12 @@ PROCESSING.update({
     "knap": dict(label="Obsidian knapping", races=("lzd",), cost={"obsidian": 8}, output=("tools", 8),
                  chains=("wh2_main_lzd_industry",)),
 })
-ESSENTIAL_RACES = ("dwf", "hef", "def", "wef", "brt", "emp", "grn", "ogr", "skv", "lzd", "cth", "ksl", "chd", "nor", "chs")
+ESSENTIAL_RACES = ("dwf", "hef", "def", "wef", "brt", "emp", "grn", "ogr", "skv", "lzd", "cth", "ksl", "chd", "nor", "chs",
+                   # the living race mods (MOD_RACES, Phase 4b): none had these before. teb is also CA's own
+                   # wh_main_sc_teb_teb (Tilea, Estalia, the Border Princes, Sartosa, Sudenburg, the New World
+                   # Colonies), so those vanilla factions gain them in every campaign (final review 2026-11-22);
+                   # the undead Jade-Blooded get only their own service
+                   "teb", "mar", "fim", "arb", "alb", "gnob", "hng")
 
 SERVICES = {
     "halls": dict(label="Drinking halls", races=("dwf",), cost={"beer": 4, "pipeweed": 1},
@@ -536,6 +544,17 @@ SERVICES.update({
     "meadhall": dict(label="Mead-hall feasts", races=("nor",), cost={"mead": 3, "salted_meat": 2}, **_CONTROL),
     "altars": dict(label="Altars of the Dark Gods", races=("chs",), cost={"gems": 3}, **_CONTROL),
     "crypts": dict(label="Crypt rites", races=("vmp",), cost={"timber": 3}, **_CONTROL),
+    # the Tomb Kings (faction flavour Phase 3, 2026-11-22): the Mortuary Cult's incense, and natron for the dead
+    "mortuary": dict(label="Mortuary rites", races=("tmb",), cost={"incense": 2, "salt": 1}, **_CONTROL),
+    # THE RACE MODS (Phase 4b, 2026-11-22, spec section 7 Layer C): MOD_RACES tokens, every good bought in by trade
+    "festas": dict(label="Vineyard festas", races=("teb",), cost={"wine": 3, "pottery": 1}, **_GROWTH),
+    "banquets": dict(label="Directorate banquets", races=("mar",), cost={"spices": 2, "wine": 1}, **_CONTROL),
+    "meargh": dict(label="Meargh's rites", races=("fim",), cost={"incense": 2, "animals": 1}, **_CONTROL),
+    "souks": dict(label="Spice souks", races=("arb",), cost={"spices": 3, "carpets": 1}, **_GROWTH),
+    "moots": dict(label="Truthsayers' moots", races=("alb",), cost={"mead": 3, "amber": 1}, **_CONTROL),
+    "jade_rites": dict(label="Jade tomb rites", races=("jbv",), cost={"jade": 2, "incense": 1}, **_CONTROL),
+    "scavengers": dict(label="Scavenger feasts", races=("gnob",), cost={"salted_meat": 3, "trinkets": 1}, **_CONTROL),
+    "kurultai": dict(label="Kurultai feasts", races=("hng",), cost={"salted_meat": 3, "animals": 1}, **_CONTROL),
 })
 
 SERVICES.update({
@@ -1103,6 +1122,17 @@ WORK_RECIPES = (
      "Makes 1 Amber from your stores once a turn", {"pool": "wef_amber", "amount": 1}),
     ("conv_slaves", "convert", ("def",), [("pearls", 30), ("silk", 30)], "Slave Market", "80 Slaves",
      "Trades goods from your stores for 80 Slaves once a turn", {"pool": "def_slaves", "amount": 80}),
+    # the Tomb Kings (Phase 3, 2026-11-22): natron, linen and incense, what the Mortuary Cult embalms with; 10 is
+    # one turn of the Royal Burial Chamber, CA's top Canopic Jar maker that every TK faction can build
+    ("conv_canopic", "convert", ("tmb",), [("salt", 20), ("cloth", 20), ("incense", 20)], "Embalming",
+     "10 Canopic Jars", "Makes 10 Canopic Jars from your stores once a turn", {"pool": "tmb_canopic_jars", "amount": 10}),
+    # A RACE MOD'S CURRENCY (Phase 4b, 2026-11-22): paid through a factor the race mod already junctions to its pool
+    # (MOD_POOLS), from Lua - a junction row of ours would name their pool and the game would refuse this whole pack
+    # whenever the race mod is not loaded. Amounts: one turn of the mod's top producer (plan ledger, Task 1)
+    ("conv_woad", "convert", ("alb",), [("dyes", 40), ("salt", 20)], "Woad Dyeing", "6 Woad",
+     "Makes 6 Woad from your stores once a turn", {"pool": "ovn_albion_woad_upgrade_woad", "amount": 6, "factor": "buildings"}),
+    ("conv_gnob_scrap", "convert", ("gnob",), [("iron", 20), ("tools", 20), ("trinkets", 20)], "Scrap Heaps", "40 Scrap",
+     "Makes 40 Scrap from your stores once a turn", {"pool": "gnob_scrap", "amount": 40, "factor": "gnob_scrap_piles"}),
     ("last_ursun", "lasting", ("ksl",), [("kvas", 150), ("furs", 150), ("salted_fish", 150), ("warhorses", 150)],
      "Ursun's Dens", "Bear upkeep -20%", "War Bear Riders and Elemental Bears upkeep -20%. Permanent",
      {"fx": [("wh3_main_effect_upkeep_ksl_bears", "faction_to_force_own", -20)], "icon": "ksl_motherland_ursun.png"}),
@@ -1139,6 +1169,21 @@ WORK_RECIPES = (
     ("last_barrows", "lasting", ("vmp",), [("timber", 150), ("iron", 150), ("leather", 150), ("gems", 150)],
      "Grave Barrows", "Skeleton upkeep -20%", "Skeleton Warriors and Skeleton Spearmen upkeep -20%. Permanent",
      {"fx": [("wh2_dlc11_effect_upkeep_cost_skeletons", "faction_to_force_own", -20)], "icon": "vmp_lair.png"}),
+    # THE RACE MODS (Phase 4b, 2026-11-22): unit sets defined by caste or class only, so a race mod's units are in them
+    # (dead_for); none repeats a shared lasting work's effect (the Arsenal, the Royal Stables)
+    ("last_condottieri", "lasting", ("teb",), [("silver", 150), ("iron", 150), ("leather", 150), ("wine", 150)],
+     "Condottieri Contracts", "Melee infantry cost -20%", "Melee infantry recruitment cost -20%. Permanent",
+     {"fx": [("wh_main_effect_force_army_campaign_recruitment_cost_melee_infantry", "faction_to_force_own_unseen", -20)],
+      "icon": "merc_contract.png"}),
+    ("last_harbour", "lasting", ("mar",), [("salted_fish", 120), ("timber", 120), ("cloth", 120), ("spices", 120)],
+     "Harbour Dues", "Port income +15%", "Income from ports +15%. Permanent",
+     {"fx": [("wh_main_effect_economy_gdp_mod_trade_sea", "faction_to_region_own", 15)], "icon": "icon_income_plus.png"}),
+    ("last_studs", "lasting", ("arb",), [("warhorses", 150), ("leather", 150), ("salted_meat", 150), ("spices", 150)],
+     "Arabian Studs", "Cavalry upkeep -20%", "Cavalry upkeep -20%. Permanent",
+     {"fx": [("wh_main_effect_force_army_campaign_upkeep_cost_cavalry", "faction_to_force_own", -20)], "icon": "mount.png"}),
+    ("last_jade_court", "lasting", ("jbv",), [("jade", 120), ("porcelain", 120), ("silk", 120), ("incense", 120)],
+     "Masks of the Jade Court", "Diplomacy +15", "Diplomatic relations +15. Permanent",
+     {"fx": [("wh_main_faction_political_diplomacy_mod", "faction_to_faction_own", 15)], "icon": "diplomacy.png"}),
 )
 # the one deliberate downside: Spice-hardened is a trade-off trait (spec 4c)
 WORK_RECIPE_PENALTIES = {("trait_spice", "wh_main_effect_force_all_campaign_movement_range")}
@@ -1253,7 +1298,7 @@ def check_works(t=None):
     anc = {r["key"]: r for r in db("ancillaries_tables")[1]}
     units = {r["unit"] for r in db("main_units_tables")[1]}
     tokens = {m.group(1) for r in db("cultures_subcultures_tables")[1]
-              for m in [re.search(r"_sc_([a-z]+)_", r["subculture"])] if m}
+              for m in [re.search(r"_sc_([a-z]+)_", r["subculture"])] if m} | set(MOD_RACES)
     ours = {work_item_key(s, None) for s, _r, _x, ca, *_ in WORK_ITEMS if not ca}
     pools = {r["key"] for r in db("mercenary_pools_tables")[1]}
     owners = pool_factions()
@@ -1320,7 +1365,12 @@ def check_recipes(ws):
             assert stem in stems and stem not in RARE and n > 0, "%s: %s is no common store good" % (w["key"], stem)
         assert not set(w["races"]) & set(U.NO_STORES), "%s: a race that keeps no stores" % w["key"]
         if w["kind"] == "convert":
-            p = pools.get(w["pool"])
+            # a race mod's pool (MOD_POOLS, measured FACTION scope in its pack) is paid through its own factor, and
+            # only a race mod's pool may name a factor
+            mod = MOD_POOLS.get(w["pool"])
+            p = {"scope": "FACTION"} if mod else pools.get(w["pool"])
+            assert w.get("factor") == (mod and mod["factor"]) and (not mod or tuple(w["races"]) == (mod["race"],)), \
+                "%s: factor %s for pool %s" % (w["key"], w.get("factor"), w["pool"])
             assert p and p["scope"] == "FACTION" and w["amount"] > 0, "%s: pool %s is no FACTION pool" % (w["key"], w["pool"])
             # the same price both ways: a recipe buys the currency at the rate a recruitment shortfall charges it;
             # a race with no shortfall rate pays the race kit's currency band (plan 2026-11-21, Global Constraints)
@@ -1351,7 +1401,8 @@ def check_recipes(ws):
 # has exactly one race service and one race work, priced in goods its own buildings make. A race whose race work is a
 # rule rather than a recipe is listed here (Norsca: flows.lua F.RAIDERS_SHARE). The replacement works stand in for a
 # shared work the race gets nothing from, so they are not its race work.
-KIT_RULES = {"nor": "raiders_share"}
+# the Fimir and the Hung take Norsca's share: raiders both (race mods, Phase 4b, 2026-11-22)
+KIT_RULES = {"nor": "raiders_share", "fim": "raiders_share", "hng": "raiders_share"}
 CURRENCY_BAND = 60   # common goods in all, once a turn, for a currency with no recruitment-shortfall rate
 KIT_REPLACEMENTS = ("last_granary_chd", "last_loot", "last_engineers", "last_pens", "last_boneyard")
 # Rows that shipped before the kit and that the design keeps ("has", design section 4), whose good the race's own
@@ -1431,12 +1482,14 @@ def race_makes(t):
 
 
 def check_race_kit(t):
-    """Each race of CULTURES that keeps stores has exactly one race service and exactly one race work (a convert or
-    lasting recipe for that race alone, or a KIT_RULES rule), and every good either costs is made at home."""
+    """Each race of CULTURES that keeps stores, and each race mod (MOD_RACES), has exactly one race service and exactly
+    one race work (a convert or lasting recipe for that race alone, or a KIT_RULES rule), and every good either costs
+    is made at home - except a race mod's, whose buildings make none of this pack's goods (MOD_RACES why_imported)."""
     import gen_mr_ui as U
     makes = race_makes(t)
+    makes.update({tok: set(store_stems()) for tok in MOD_RACES})   # every good: theirs all come by trade
     bad = []
-    for tok in sorted(set(CULTURES) - set(U.NO_STORES)):
+    for tok in sorted(set(CULTURES) - set(U.NO_STORES)) + sorted(MOD_RACES):
         svc = sorted(k for k, s in SERVICES.items() if tuple(s["races"]) == (tok,))
         wk = [w for w in WORK_RECIPES if w[1] in ("convert", "lasting") and tuple(w[2]) == (tok,)
               and w[0] not in KIT_REPLACEMENTS]
@@ -1531,10 +1584,18 @@ def _linked():
     return {r["effect"] for t in tables for _p, _v, rows in rvd.load(rvd.DB_PACK, t) for r in rows if "effect" in r}
 
 
+@functools.lru_cache(None)
+def _unit_listed_sets():
+    """Unit sets that name a unit record: a race mod's units are in none of them (Phase 4b). A set defined only by
+    caste, class or category takes a race mod's units like anyone's."""
+    return {r["unit_set"] for r in db("unit_set_to_unit_junctions_tables")[1] if r["unit_record"]}
+
+
 def dead_for(effect):
-    """The CULTURES races an effect does nothing for."""
+    """The CULTURES races and race mods (MOD_RACES) an effect does nothing for."""
+    mods = set(MOD_RACES)
     if effect not in _linked():
-        return set(CULTURES)
+        return set(CULTURES) | mods
     growth, trade, sets, owners, no_trade = _reach_data()
     dead = set()
     if effect in growth:
@@ -1543,8 +1604,10 @@ def dead_for(effect):
         dead |= no_trade
     if effect in sets:
         dead |= set(CULTURES) - set().union(*(owners.get(s, set()) for s in sets[effect]))
+        if sets[effect] & _unit_listed_sets():
+            dead |= mods
     if "_chd_" in effect:
-        dead |= set(CULTURES) - {"chd"}
+        dead |= set(CULTURES) - {"chd"} | mods
     return dead
 
 
@@ -1632,7 +1695,8 @@ def _recipe_rows(add, loc):
     add("pooled_resource_factors_tables", {"key": WORK_FACTOR, "is_hidden": False})
     loc += [("pooled_resource_factors_display_name_positive_" + WORK_FACTOR, "Workshop"),
             ("pooled_resource_factors_display_name_negative_" + WORK_FACTOR, "Workshop")]
-    for pool in sorted({w["pool"] for w in works() if w["kind"] == "convert"}):
+    # never a race mod's pool (MOD_POOLS): that row would name a key only the race mod defines (check_no_mod_keys)
+    for pool in sorted({w["pool"] for w in works() if w["kind"] == "convert"} - set(MOD_POOLS)):
         add("pooled_resource_factor_junctions_tables", {
             "unique_id": WORK_FACTOR + "_" + pool, "factor": WORK_FACTOR, "resource": pool,
             "minimum": 0, "maximum": 2147483647, "specific_faction_set": "", "sort_order": 0})
@@ -1663,7 +1727,8 @@ def check_recipe_rows(t, loc):
     assert {r["key"]: r for r in t["pooled_resource_factors_tables"][2]}.get(WORK_FACTOR) == \
         {"key": WORK_FACTOR, "is_hidden": False}, "no factor " + WORK_FACTOR
     js = {r["resource"]: r for r in t["pooled_resource_factor_junctions_tables"][2] if r["factor"] == WORK_FACTOR}
-    assert set(js) == {w["pool"] for w in works() if w["kind"] == "convert"}, set(js)
+    # every CA pool a conversion pays into, and never a race mod's (MOD_POOLS pays through the mod's own factor)
+    assert set(js) == {w["pool"] for w in works() if w["kind"] == "convert"} - set(MOD_POOLS), set(js)
     for j in js.values():
         assert j["minimum"] == 0 < j["maximum"] and j["unique_id"] == WORK_FACTOR + "_" + j["resource"], j
     for side in ("positive", "negative"):
@@ -1899,7 +1964,85 @@ CULTURES = {"dwf": "wh_main_dwf_dwarfs", "hef": "wh2_main_hef_high_elves", "def"
             "grn": "wh_main_grn_greenskins", "ogr": "wh3_main_ogr_ogre_kingdoms", "skv": "wh2_main_skv_skaven",
             "lzd": "wh2_main_lzd_lizardmen", "cth": "wh3_main_cth_cathay", "ksl": "wh3_main_ksl_kislev",
             "chd": "wh3_dlc23_chd_chaos_dwarfs", "nor": "wh_dlc08_nor_norsca",
-            "vmp": "wh_main_vmp_vampire_counts", "cst": "wh2_dlc11_cst_vampire_coast", "chs": "wh_main_chs_chaos"}
+            "vmp": "wh_main_vmp_vampire_counts", "cst": "wh2_dlc11_cst_vampire_coast", "chs": "wh_main_chs_chaos",
+            # faction flavour Phase 3 (2026-11-22): stores and trade, no meals, as the Vampire Counts (gen_mr_ui.UNDEAD)
+            "tmb": "wh2_dlc09_tmb_tomb_kings"}
+# THE RACE MODS (faction flavour Phase 4b, 2026-11-22, spec section 7 Layer C): a kit in this pack, no submod. The
+# token is read off the SUBCULTURE (gen_mr_ui emits DERPY_MR_FLOWS_SUBCULTURE_TOKEN, F.race reads it first): MIXER
+# re-declares other mods' subcultures under CA cultures, so a token read off the culture depends on load order.
+# Their own buildings make none of our goods (Layer A), so every good their kit costs comes by trade. Rotbloods keep
+# Norsca's kit, Primal Realms gets none, Van der Kraal keeps the Empire's (spec calls).
+_TRADED = "their own buildings make none of this pack's goods (spec section 7 Layer A); the kit is paid by trade"
+MOD_RACES = {
+    "teb": dict(name="Southern Realms", workshop="2927296206", why_imported=_TRADED,
+                subcultures=("mixer_teb_southern_realms", "wh_main_teb_tilea_CB", "wh_main_teb_estalia_CB",
+                             "wh_main_teb_border_princes_CB", "wh2_main_emp_new_world_colonies_CB", "wh_main_sc_teb_teb")),
+    # Rhox's campaign houses sit on the Empire's subculture; F.race maps them by faction key from his own global,
+    # RHOX_MAR_FACTIONS, at run time (author, 2026-11-22), so their keys are in no row and no header of ours
+    "mar": dict(name="Marienburg", workshop="3030996759", why_imported=_TRADED,
+                subcultures=("rhox_sc_mar_marienburg", "ovn_sc_mar_marienburg")),
+    "fim": dict(name="Fimir", workshop="2899955636", why_imported=_TRADED, subcultures=("ovn_sc_fim_fimir",)),
+    "arb": dict(name="Araby", workshop="3134922105", why_imported=_TRADED, subcultures=("ovn_sc_arb_araby",)),
+    "alb": dict(name="Albion", workshop="2873961274", why_imported=_TRADED, subcultures=("ovn_sc_alb_albion",)),
+    "jbv": dict(name="Jade-Blooded Vampires", workshop="2880515805", why_imported=_TRADED,
+                subcultures=("wh_main_sc_vmp_jade_vampires", "mixer_vmp_jade_vampires")),
+    "gnob": dict(name="Gnoblars", workshop="2825728189", why_imported=_TRADED, subcultures=("mixer_gnob_gnoblar_horde",)),
+    "hng": dict(name="Hung", workshop="3549697947", why_imported=_TRADED, subcultures=("mixer_sc_hng_hung",)),
+}
+
+
+# A race mod's own currency that a race work buys (plan 2026-11-22 Task 1): paid through `factor`, a factor the race
+# mod junctions to the pool itself, so no DB row of ours names the pool; `icon` is the picture the row draws (Albion's
+# pool icon is CA's Canopic Jar, a placeholder; its own woad picture is in ovn_albion.pack).
+MOD_POOLS = {
+    "gnob_scrap": dict(race="gnob", factor="gnob_scrap_piles", icon="ui/skins/default/icon_grn_scrap.png"),
+    "ovn_albion_woad_upgrade_woad": dict(race="alb", factor="buildings",
+                                         icon="ui/campaign ui/effect_bundles/icon_alb_woad_res.png"),
+}
+
+
+@functools.lru_cache(None)
+def mod_pack_paths(token):
+    """Every path in the installed pack(s) of a race mod (its Workshop folder), lower case; empty when the mod is not
+    subscribed on this machine."""
+    import glob
+    from read_pack_index import paths
+    folder = os.path.join(WORKSHOP, MOD_RACES[token]["workshop"])
+    return {p.lower() for pack in glob.glob(os.path.join(folder, "*.pack")) for p in paths(pack)}
+
+
+def mod_has(token, path):
+    """True when a race mod's installed pack holds `path`, False when it does not, None when the mod is not installed
+    here - the build cannot check that, and says so rather than fail for anyone without the mod (deferred minor,
+    2026-11-22)."""
+    have = mod_pack_paths(token)
+    return path.lower() in have if have else None
+
+
+def check_no_mod_keys(t):
+    """No built DB row names a key only a race mod defines - a race mod's subculture, its pool, or a factor CA does
+    not ship - or the game refuses this whole pack whenever that mod is not loaded (TRADE_RESOURCES.md, Map mods)."""
+    ca_sc = {r["subculture"] for r in db("cultures_subcultures_tables")[1]}
+    ca_factors = {r["key"] for r in db("pooled_resource_factors_tables")[1]}
+    banned = {sc for m in MOD_RACES.values() for sc in m["subcultures"]} - ca_sc
+    banned |= set(MOD_POOLS) | {p["factor"] for p in MOD_POOLS.values()} - ca_factors
+    bad = sorted({"%s: %s" % (k.split(":")[0], v) for k, (_v, _c, rows) in t.items() for r in rows
+                  for v in r.values() if isinstance(v, str) and v in banned})
+    assert not bad, "a DB row names a race mod's key:\n  " + "\n  ".join(bad)
+
+
+def check_mod_races():
+    """No subculture under two race-mod tokens, no race-mod token a CULTURES one, and no subculture CA ships except
+    the vanilla Southern Realms' own (wh_main_sc_teb_teb), which already reads teb."""
+    seen = {}
+    for tok, m in MOD_RACES.items():
+        assert tok not in CULTURES, "race mod token %s is a vanilla race's" % tok
+        for sc in m["subcultures"]:
+            assert seen.setdefault(sc, tok) == tok, "%s under %s and %s" % (sc, seen[sc], tok)
+    ca = {r["subculture"] for r in db("cultures_subcultures_tables")[1]}
+    assert ca & set(seen) == {"wh_main_sc_teb_teb"}, sorted(ca & set(seen))
+
+
 # race code -> the building set its economy chains sit in (building_set_to_building_junctions)
 ECON_SET = {"dwf": "wh_main_set_dwarf_economy", "hef": "wh2_main_set_highelf_infrastructure",
             "def": "wh2_main_set_darkelf_infrastructure", "wef": "wh_dlc05_set_woodelves_economy",
@@ -1909,7 +2052,7 @@ ECON_SET = {"dwf": "wh_main_set_dwarf_economy", "hef": "wh2_main_set_highelf_inf
             "cth": "wh3_main_set_cth_infrastructure", "ksl": "wh3_main_set_ksl_infrastructure",
             "chd": "wh3_dlc23_chd_factory_infrastructure", "nor": "wh_main_set_norsca_economy",
             "vmp": "wh_main_set_vampire_economy", "cst": "wh2_dlc11_set_vampire_coast_infrastructure",
-            "chs": "wh3_main_set_chaos_economy"}
+            "chs": "wh3_main_set_chaos_economy", "tmb": "wh2_dlc09_set_tomb_kings_infrastructure"}
 # The set a rare chain is filed under: CA's own resource-building set, which every race's mines
 # sit in (405 chains) - the construction menu's Special group. ECON_SET[race] is the fallback for
 # a race whose slots turn out not to list it (Chaos Dwarf slots listed only CHD sets, 2026-10-01).
@@ -1977,7 +2120,7 @@ def n_loc():
 # to sell in. Matched on the CHAIN key, so a special variant for one of them goes too. Not Norsca's god altars
 # (wh3_dlc27_settlement_nor_chaos_altar_kho and their buildings): Norsca's own, dedicated to a god (final review
 # 2026-11-11; gen_mr_ui.check_races asserts no chain named for a race that keeps stores is dropped).
-EXCLUDE = re.compile(r"(?<!chaos_altar)(^|_)(dae|kho|nur|sla|tze|tmb|nag|bst|beastmen|BEASTMEN)(_|$)")
+EXCLUDE = re.compile(r"(?<!chaos_altar)(^|_)(dae|kho|nur|sla|tze|nag|bst|beastmen|BEASTMEN)(_|$)")
 # Chains that stand in a port or deposit slot but are not a harbour or a mine, by their own names:
 # the Chaos Dwarf river sluice and irrigation qanat, Nakai's port temples; and the `_military`
 # smithies on an iron deposit (Arsenal, Black Orc Forge, Master Swordsmith's Forge), which CA
@@ -1990,7 +2133,7 @@ TABLES = {"provisioning": [8, 12, 16, 20, 24], "port": [6, 8, 12], "mine": [6, 8
           **{k: [6, 8, 12] for k in ("farm", "hunt", "teahouse", "inn", "craft", "forge", "dig",
                                      "stables", "eyrie", "vineyard", "deep", "toolmaker", "engineer",
                                      "furstash", "coppermine", "darksteeds",
-                                     "pens", "toolbox", "corral", "powder", "warband")}}
+                                     "pens", "toolbox", "corral", "powder", "warband", "mortuary")}}
 
 # The economy buildings of each kind, by culture - the "green" buildings. Listed rather than
 # matched, because the naming is per DLC (Cathay's growth/income yin and yang, the Chaos Dwarf
@@ -2007,10 +2150,14 @@ KIND_CHAINS = {
     "teahouse": ["wh3_main_cth_growth_yin"],                 # Tea Parlour / Contemplation Gardens
     "inn": ["wh3_main_ksl_growth_recruit_cost"],             # Roadhouse: "sell nothing but kvas"
     # Weaving House / Clothier, Elven Craftsman, Druchii Artisan's House, Cathay Wares Market and
-    # Goods Emporium, Kislev Market Square, Skink markets
+    # Goods Emporium, Kislev Market Square, Skink markets, and the Tomb Kings' Charnel Plaza / Funerary District:
+    # "the dead shuffle about their business as if nothing has changed" - Nehekhara's linen (2026-11-22)
     "craft": ["wh_main_EMPIRE_industry_basic", "wh_main_BRETONNIA_industry_basic", "wh2_main_hef_industry",
               "wh2_main_def_industry", "wh3_main_cth_income_yang", "wh3_main_cth_income_yin",
-              "wh3_main_ksl_trade_order", "wh2_main_lzd_industry"],
+              "wh3_main_ksl_trade_order", "wh2_main_lzd_industry", "wh2_dlc09_tmb_income"],
+    # the Tomb Kings' Mortuary House / Regnant Catacombs / Grand Ossuary, "the death houses of Nehekhara": the
+    # Mortuary Cult's embalming incense, where incense grows (2026-11-22)
+    "mortuary": ["wh2_dlc09_tmb_growth"],
     # Chaos Dwarf Cinerator / Grand Furnace and Gunsmith, Dwarf Toolmaker - metal cast and worked
     "forge": ["wh3_dlc23_chd_tower_furnace", "wh3_dlc23_chd_factory_assembly_line", "wh_main_DWARFS_industry"],
     # what is DUG: the Chaos Dwarf Miners' Workshop and the outpost Mineshaft
@@ -2053,7 +2200,7 @@ FOREIGN_KINDS = {"deep": "wh3_main_set_dwarf_foreign_economy"}   # kind -> the f
 # A chain's race, from the tag in its key - CA's culture variants leave 80 settlement chains
 # without a culture, so the key is the only reliable signal. Synonyms fold to one code.
 _RACE = re.compile(r"(?i)(?:^|_)(vampirecoast|cst|savageorc|greenskin|grn|norsca|nor|empire|emp|"
-                   r"bretonnia|brt|dwarfs?|dwf|vampires|vmp|def|hef|lzd|skv|ogr|cth|ksl|wef|chd|woc|chs|teb)(?=_|$)")
+                   r"bretonnia|brt|dwarfs?|dwf|vampires|vmp|def|hef|lzd|skv|ogr|cth|ksl|wef|chd|woc|chs|teb|tmb)(?=_|$)")
 _FOLD = {"vampirecoast": "cst", "savageorc": "grn", "greenskin": "grn", "norsca": "nor",
          "empire": "emp", "bretonnia": "brt", "dwarf": "dwf", "dwarfs": "dwf", "vampires": "vmp",
          "woc": "chs"}
@@ -3494,6 +3641,8 @@ def check(t, loc):
     check_holds(t, loc)
     check_dilemmas(t, loc)
     check_shipments(t, loc)
+    check_mod_races()
+    check_no_mod_keys(t)
     check_works(t)
     check_work_rows(t, loc)
     check_recipe_rows(t, loc)
@@ -3563,9 +3712,9 @@ def check(t, loc):
             good, len(diff), diff[:4])
     # the excluded owners really were in the pools, so the filter is doing something
     gone = sorted(c for c in port_chains() if EXCLUDE.search(c))
-    assert {"wh3_main_dae_port", "wh2_dlc09_tmb_port", "wh3_dlc29_nag_port"} <= set(gone), gone
+    assert {"wh3_main_dae_port", "wh3_dlc29_nag_port"} <= set(gone), gone
     assert {"wh_main_EMPIRE_port", "wh2_main_hef_port", "wh_main_special_marienburg_port",
-            "wh3_dlc23_chd_tower_port"} <= set(pool_chains("port")), "port pool lost a chain"
+            "wh3_dlc23_chd_tower_port", "wh2_dlc09_tmb_port"} <= set(pool_chains("port")), "port pool lost a chain"
     assert not {"wh3_dlc23_chd_factory_port", "wh3_dlc23_chd_outpost_port",
                 "wh2_dlc13_lzd_port_nakai_itzl"} & set(pool_chains("port")), "a non-harbour is fishing"
     assert "wh_main_DWARF_resource_iron_military" not in pool_chains(("mine", "res_rom_iron")), "a forge is mining"
@@ -4352,7 +4501,7 @@ def selftest():
             (lambda: first("item").update(grant="derpy_mr_anc_no_such"), "no such item"),
             # the named recipes (workshop expansion spec section 4)
             (lambda: first("convert").update(goods=[("gromril", 20), ("coal", 20)]), "no common store good"),
-            (lambda: first("convert").update(races=("tmb",)), "keeps no stores"),
+            (lambda: first("convert").update(races=("kho",)), "keeps no stores"),
             (lambda: first("convert").update(pool="wh3_main_ogr_meat"), "no FACTION pool"),
             # a currency recipe at its race's recruitment-shortfall rate (faction flavour design 2026-11-11, section 6)
             (lambda: next(x for x in WORKS if x["key"] == "conv_food").update(goods=[("grain", 30), ("salted_fish", 30)]),
@@ -4381,7 +4530,16 @@ def selftest():
             (lambda: next(x for x in WORKS if x["key"] == "last_stables").update(not_races=("dwf", "cst")),
              "last_stables gives skv nothing"),
             (lambda: next(x for x in WORKS if x["key"] == "last_granary_chd").update(races=("all",)),
-             "last_granary_chd gives dwf nothing")):
+             "last_granary_chd gives dwf nothing"),
+            # the race mods (Phase 4b, final review 2026-11-22): a race mod's pool through our factor, our pool through
+            # a modded one, and a race mod's work on a unit-listed set its units are in none of
+            (lambda: next(x for x in WORKS if x["key"] == "conv_gnob_scrap").update(factor=None),
+             "conv_gnob_scrap: factor None for pool gnob_scrap"),
+            (lambda: next(x for x in WORKS if x["key"] == "conv_canopic").update(factor="buildings"),
+             "conv_canopic: factor buildings for pool"),
+            (lambda: next(x for x in WORKS if x["key"] == "last_studs").update(
+                fx=[("wh2_dlc11_effect_upkeep_cost_skeletons", "faction_to_force_own", -20)]),
+             "last_studs gives arb nothing")):
         WORKS[:] = copy.deepcopy(good)
         mutate()
         try:
@@ -4392,6 +4550,54 @@ def selftest():
             raise SystemExit("selftest: check_works missed: " + want)
     WORKS[:] = good
     check_works()
+    # THE RACE MODS (Phase 4b, final review 2026-11-22): a DB row naming a race mod's key makes the game refuse the
+    # whole pack for everyone without that mod, so check_no_mod_keys is watched failing on each kind of key
+    def table(t, name):
+        return t[next(k for k in t if k.split(":")[0] == name)][2]
+    for breakit, want in (
+            (lambda t: table(t, "pooled_resource_factor_junctions_tables").append(
+                dict(table(t, "pooled_resource_factor_junctions_tables")[0], resource="gnob_scrap")), "gnob_scrap"),
+            (lambda t: table(t, "pooled_resource_factor_junctions_tables").append(
+                dict(table(t, "pooled_resource_factor_junctions_tables")[0], factor="gnob_scrap_piles")),
+             "gnob_scrap_piles"),
+            (lambda t: table(t, "effect_bundles_tables").append(
+                dict(table(t, "effect_bundles_tables")[0], key="ovn_sc_fim_fimir")), "ovn_sc_fim_fimir")):
+        bad, _bloc = build()
+        bad = copy_build(bad)
+        breakit(bad)
+        try:
+            check_no_mod_keys(bad)
+        except AssertionError as e:
+            assert want in str(e), (want, e)
+            continue
+        raise SystemExit("selftest: check_no_mod_keys missed: " + want)
+    # ... a subculture under two tokens or CA's own, and a race mod left without its race service
+    kept = copy.deepcopy(MOD_RACES)
+    for mutate, want in (
+            (lambda: MOD_RACES.update(alb=dict(MOD_RACES["alb"], subcultures=MOD_RACES["alb"]["subcultures"]
+                                               + ("ovn_sc_fim_fimir",))), "ovn_sc_fim_fimir under fim and alb"),
+            (lambda: MOD_RACES.update(fim=dict(MOD_RACES["fim"], subcultures=MOD_RACES["fim"]["subcultures"]
+                                               + ("wh_main_sc_emp_empire",))), "wh_main_sc_emp_empire")):
+        mutate()
+        try:
+            check_mod_races()
+        except AssertionError as e:
+            assert want in str(e), (want, e)
+        else:
+            raise SystemExit("selftest: check_mod_races missed: " + want)
+        finally:
+            MOD_RACES.clear(); MOD_RACES.update(copy.deepcopy(kept))
+    check_mod_races()
+    bad, _bloc = build()
+    souks = SERVICES.pop("souks")
+    try:
+        check_race_kit(bad)
+    except AssertionError as e:
+        assert "arb: 0 race services" in str(e), e
+    else:
+        raise SystemExit("selftest: check_race_kit missed a race mod without its service")
+    finally:
+        SERVICES["souks"] = souks
     # ... and the stores' race bundle, the race's own event, the supply's second unit set
     feast = next(e for e in EVENTS if e["key"] == "feast")
     saved = dict(feast), RACE_USE_BUNDLES, SUPPLY

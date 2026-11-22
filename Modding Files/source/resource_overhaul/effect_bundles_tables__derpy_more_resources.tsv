@@ -64,20 +64,29 @@ derpy_mr_comforts	Luxuries fill at least a quarter of one store's space in this 
 derpy_mr_well_fed_chd	After eating, this settlement's stores still hold five turns of provisions, and its fed slaves are quieter.	Well fed	region	1	public_order_happy.png	true	false	true
 derpy_mr_service_altars	Paid each turn from this province capital's stores. Province control +2.	Altars of the Dark Gods	region	1	public_order_happy.png	true	false	true
 derpy_mr_service_archives	Paid each turn from this province capital's stores. Province growth +5.	Scholars' halls	region	1	growth.png	true	false	true
+derpy_mr_service_banquets	Paid each turn from this province capital's stores. Province control +2.	Directorate banquets	region	1	public_order_happy.png	true	false	true
 derpy_mr_service_builders	Paid each turn from this province capital's stores. Province construction cost -5%.	Builders' yards	region	1	construction.png	true	false	true
 derpy_mr_service_crypts	Paid each turn from this province capital's stores. Province control +2.	Crypt rites	region	1	public_order_happy.png	true	false	true
 derpy_mr_service_feasts	Paid each turn from this province capital's stores. Province control +2.	Village feasts	region	1	public_order_happy.png	true	false	true
+derpy_mr_service_festas	Paid each turn from this province capital's stores. Province growth +5.	Vineyard festas	region	1	growth.png	true	false	true
 derpy_mr_service_grog	Paid each turn from this province capital's stores. Province control +2.	Grog shops	region	1	public_order_happy.png	true	false	true
 derpy_mr_service_gut	Paid each turn from this province capital's stores. Province control +2.	Gut feasts	region	1	public_order_happy.png	true	false	true
 derpy_mr_service_halls	Paid each turn from this province capital's stores. Province control +2.	Drinking halls	region	1	public_order_happy.png	true	false	true
 derpy_mr_service_hospital	Paid each turn from this province capital's stores. Own armies in the province: replenishment +3%.	Field hospitals	region	1	replenishment.png	true	false	true
+derpy_mr_service_jade_rites	Paid each turn from this province capital's stores. Province control +2.	Jade tomb rites	region	1	public_order_happy.png	true	false	true
 derpy_mr_service_khaine	Paid each turn from this province capital's stores. Province control +2.	Shrines of Khaine	region	1	public_order_happy.png	true	false	true
+derpy_mr_service_kurultai	Paid each turn from this province capital's stores. Province control +2.	Kurultai feasts	region	1	public_order_happy.png	true	false	true
 derpy_mr_service_meadhall	Paid each turn from this province capital's stores. Province control +2.	Mead-hall feasts	region	1	public_order_happy.png	true	false	true
+derpy_mr_service_meargh	Paid each turn from this province capital's stores. Province control +2.	Meargh's rites	region	1	public_order_happy.png	true	false	true
 derpy_mr_service_mess	Paid each turn from this province capital's stores. Province control +2.	Factory mess	region	1	public_order_happy.png	true	false	true
+derpy_mr_service_moots	Paid each turn from this province capital's stores. Province control +2.	Truthsayers' moots	region	1	public_order_happy.png	true	false	true
+derpy_mr_service_mortuary	Paid each turn from this province capital's stores. Province control +2.	Mortuary rites	region	1	public_order_happy.png	true	false	true
 derpy_mr_service_pits	Paid each turn from this province capital's stores. Province control +2.	Fight pits	region	1	public_order_happy.png	true	false	true
 derpy_mr_service_records	Paid each turn from this province capital's stores. Province growth +5.	Civic records	region	1	growth.png	true	false	true
 derpy_mr_service_revels	Paid each turn from this province capital's stores. Province growth +5.	Seasonal revels	region	1	growth.png	true	false	true
+derpy_mr_service_scavengers	Paid each turn from this province capital's stores. Province control +2.	Scavenger feasts	region	1	public_order_happy.png	true	false	true
 derpy_mr_service_shrines	Paid each turn from this province capital's stores. Province control +2.	Shrine offerings	region	1	public_order_happy.png	true	false	true
+derpy_mr_service_souks	Paid each turn from this province capital's stores. Province growth +5.	Spice souks	region	1	growth.png	true	false	true
 derpy_mr_service_tea	Paid each turn from this province capital's stores. Province control +2.	Tea houses	region	1	public_order_happy.png	true	false	true
 derpy_mr_service_tribute	Paid each turn from this province capital's stores. Province growth +5.	Temple tribute	region	1	growth.png	true	false	true
 derpy_mr_service_warrens	Paid each turn from this province capital's stores. Province growth +5.	Breeding warrens	region	1	growth.png	true	false	true
@@ -136,4 +145,8 @@ derpy_mr_rc_last_trapping	Paid for from your stores: gorgers, Sabretusk Packs, Y
 derpy_mr_rc_last_spawning	Paid for from your stores: monster recruitment cost -20%. Permanent.	Tended Spawning Pools	faction	1	edict_lzd_alignment_of_spawning.png	true	false	true
 derpy_mr_rc_last_hellforged	Paid for from your stores: chaos Warriors, Chosen, Chaos Knights and Skullcrushers upkeep -20%. Permanent.	Hellforged Plate	faction	1	armour.png	true	false	true
 derpy_mr_rc_last_barrows	Paid for from your stores: skeleton Warriors and Skeleton Spearmen upkeep -20%. Permanent.	Grave Barrows	faction	1	vmp_lair.png	true	false	true
+derpy_mr_rc_last_condottieri	Paid for from your stores: melee infantry recruitment cost -20%. Permanent.	Condottieri Contracts	faction	1	merc_contract.png	true	false	true
+derpy_mr_rc_last_harbour	Paid for from your stores: income from ports +15%. Permanent.	Harbour Dues	faction	1	icon_income_plus.png	true	false	true
+derpy_mr_rc_last_studs	Paid for from your stores: cavalry upkeep -20%. Permanent.	Arabian Studs	faction	1	mount.png	true	false	true
+derpy_mr_rc_last_jade_court	Paid for from your stores: diplomatic relations +15. Permanent.	Masks of the Jade Court	faction	1	diplomacy.png	true	false	true
 derpy_mr_exports_held	You are holding some resources back from your trade agreements (the Resource Vault's Trade tab). Your regions make none of them for trade, so they earn you no trade income. Your stores still fill.	Exports held	faction	1	trade_agreement.png	true	false	true

@@ -656,6 +656,15 @@ derpy_mr_ui_73e1addf04	Makes 1 Amber from your stores once a turn	false
 derpy_mr_ui_729e7366d4	Slave Market	false
 derpy_mr_ui_9b777117d6	80 Slaves	false
 derpy_mr_ui_548212e6d0	Trades goods from your stores for 80 Slaves once a turn	false
+derpy_mr_ui_88777c1b6e	Embalming	false
+derpy_mr_ui_56adbc048a	10 Canopic Jars	false
+derpy_mr_ui_132fe037ea	Makes 10 Canopic Jars from your stores once a turn	false
+derpy_mr_ui_05fda314d7	Woad Dyeing	false
+derpy_mr_ui_2710e8c96e	6 Woad	false
+derpy_mr_ui_6ca66ccbe0	Makes 6 Woad from your stores once a turn	false
+derpy_mr_ui_bc20379aa7	Scrap Heaps	false
+derpy_mr_ui_4a4f1859ec	40 Scrap	false
+derpy_mr_ui_c07dd06aad	Makes 40 Scrap from your stores once a turn	false
 derpy_mr_ui_36dd5f1972	Ursun's Dens	false
 derpy_mr_ui_9f161efc99	Bear upkeep -20%	false
 derpy_mr_ui_94ac9185ba	War Bear Riders and Elemental Bears upkeep -20%. Permanent	false
@@ -679,6 +688,16 @@ derpy_mr_ui_eaca3d091f	Chaos Warriors, Chosen, Chaos Knights and Skullcrushers u
 derpy_mr_ui_5618f1fc99	Grave Barrows	false
 derpy_mr_ui_6416716b06	Skeleton upkeep -20%	false
 derpy_mr_ui_17b8bb60bf	Skeleton Warriors and Skeleton Spearmen upkeep -20%. Permanent	false
+derpy_mr_ui_d8b1f936f1	Condottieri Contracts	false
+derpy_mr_ui_52007eeb07	Melee infantry cost -20%	false
+derpy_mr_ui_746e39a96b	Melee infantry recruitment cost -20%. Permanent	false
+derpy_mr_ui_c70b082b8d	Harbour Dues	false
+derpy_mr_ui_fcc621ddf1	Port income +15%	false
+derpy_mr_ui_66a4cad913	Income from ports +15%. Permanent	false
+derpy_mr_ui_30ad04917c	Arabian Studs	false
+derpy_mr_ui_c853d314a4	Cavalry upkeep -20%	false
+derpy_mr_ui_b28099933a	Cavalry upkeep -20%. Permanent	false
+derpy_mr_ui_5c62208820	Masks of the Jade Court	false
 derpy_mr_ui_83d611872d	400 research points	false
 derpy_mr_ui_11b63ab3c7	400 research points at once	false
 derpy_mr_ui_2c272532be	Lotus Gatherers	false
@@ -785,7 +804,7 @@ mct_derpy_more_resources_random_off_tooltip	Stops the game's random dilemmas, th
 mct_derpy_more_resources_supply_text	Province supplies	false
 mct_derpy_more_resources_supply_tooltip	A province capital can pay from its stores each turn for Materials on hand, Stable stocked and Arms stocked in every settlement you hold in its province, and can send for resources from the province's other settlements. Off: no province supplies.	false
 mct_derpy_more_resources_recruit_text	Recruits use the stores	false
-mct_derpy_more_resources_recruit_tooltip	Every unit you recruit takes resources from your stores by its type and worth (cavalry and monsters take mounts, infantry and war machines take war materials, the finest also take your rare resource). What the stores lack is paid in your race's own currency where it has one. A recruit whose resources are still short arrives understrength, unless Gold pays for troops is ticked. Vampire Counts and Vampire Coast recruits take nothing. Off: recruiting takes nothing. You can change this during a campaign. The change applies from your next turn.	false
+mct_derpy_more_resources_recruit_tooltip	Every unit you recruit takes resources from your stores by its type and worth (cavalry and monsters take mounts, infantry and war machines take war materials, the finest also take your rare resource). What the stores lack is paid in your race's own currency where it has one. A recruit whose resources are still short arrives understrength, unless Gold pays for troops is ticked. Vampire Counts, Vampire Coast and Tomb Kings recruits take nothing. Off: recruiting takes nothing. You can change this during a campaign. The change applies from your next turn.	false
 mct_derpy_more_resources_recruit_gold_text	Gold pays for troops	false
 mct_derpy_more_resources_recruit_gold_tooltip	What your stores and your race's currency cannot cover is paid in gold, for recruits and for replenishing alike. Off: a recruit arrives understrength instead and must regain the rest by replenishing, and strength a unit regains that your stores cannot pay for is lost again. A faction no player controls always pays in gold. You can change this during a campaign. The change applies from your next turn.	false
 mct_derpy_more_resources_hunger_men_text	Hunger weakens armies	false

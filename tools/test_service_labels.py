@@ -18,7 +18,12 @@ def check():
         # the race kit (2026-11-21)
         'grog':'+2 control','warrens':'+5 growth','pits':'+2 control','shrines':'+2 control',
         'revels':'+5 growth','khaine':'+2 control','gut':'+2 control','tribute':'+5 growth',
-        'meadhall':'+2 control','altars':'+2 control','crypts':'+2 control'}
+        'meadhall':'+2 control','altars':'+2 control','crypts':'+2 control',
+        # the Tomb Kings (2026-11-22)
+        'mortuary':'+2 control',
+        # the race mods (Phase 4b, 2026-11-22)
+        'festas':'+5 growth','banquets':'+2 control','meargh':'+2 control','souks':'+5 growth',
+        'moots':'+2 control','jade_rites':'+2 control','scavengers':'+2 control','kurultai':'+2 control'}
     assert set(expected)==set(goods.SERVICES),'Add the new service to the label check'
     states=[dict(key=k,definition=definitions[k],on=True,paid=True,open=True) for k in sorted(expected)]
     code='local states='+ui._lua(states)+'\n'

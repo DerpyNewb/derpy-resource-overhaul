@@ -1,0 +1,51 @@
+change	key	english	old_key	old_english
+edited	mct_derpy_more_resources_recruit_tooltip	Every unit you recruit takes resources from your stores by its type and worth (cavalry and monsters take mounts, infantry and war machines take war materials, the finest also take your rare resource). What the stores lack is paid in your race's own currency where it has one. A recruit whose resources are still short arrives understrength, unless Gold pays for troops is ticked. Vampire Counts, Vampire Coast and Tomb Kings recruits take nothing. Off: recruiting takes nothing. You can change this during a campaign. The change applies from your next turn.	mct_derpy_more_resources_recruit_tooltip	Every unit you recruit takes resources from your stores by its type and worth (cavalry and monsters take mounts, infantry and war machines take war materials, the finest also take your rare resource). What the stores lack is paid in your race's own currency where it has one. A recruit whose resources are still short arrives understrength, unless Gold pays for troops is ticked. Vampire Counts and Vampire Coast recruits take nothing. Off: recruiting takes nothing. You can change this during a campaign. The change applies from your next turn.
+new	building_culture_variants_name_derpy_mr_bld_dragon_bone_tmb_1	Bone Pickers		
+new	building_culture_variants_name_derpy_mr_bld_dragon_bone_tmb_2	Dragon Bone Digs		
+new	building_culture_variants_name_derpy_mr_bld_dragon_bone_tmb_3	Dragon Graveyard Excavation		
+new	building_chains_chain_tooltip_derpy_mr_bld_dragon_bone_tmb	Dragon Bone		
+new	effect_bundles_localised_title_derpy_mr_service_banquets	Directorate banquets		
+new	effect_bundles_localised_description_derpy_mr_service_banquets	Paid each turn from this province capital's stores. Province control +2.		
+new	effect_bundles_localised_title_derpy_mr_service_festas	Vineyard festas		
+new	effect_bundles_localised_description_derpy_mr_service_festas	Paid each turn from this province capital's stores. Province growth +5.		
+new	effect_bundles_localised_title_derpy_mr_service_jade_rites	Jade tomb rites		
+new	effect_bundles_localised_description_derpy_mr_service_jade_rites	Paid each turn from this province capital's stores. Province control +2.		
+new	effect_bundles_localised_title_derpy_mr_service_kurultai	Kurultai feasts		
+new	effect_bundles_localised_description_derpy_mr_service_kurultai	Paid each turn from this province capital's stores. Province control +2.		
+new	effect_bundles_localised_title_derpy_mr_service_meargh	Meargh's rites		
+new	effect_bundles_localised_description_derpy_mr_service_meargh	Paid each turn from this province capital's stores. Province control +2.		
+new	effect_bundles_localised_title_derpy_mr_service_moots	Truthsayers' moots		
+new	effect_bundles_localised_description_derpy_mr_service_moots	Paid each turn from this province capital's stores. Province control +2.		
+new	effect_bundles_localised_title_derpy_mr_service_mortuary	Mortuary rites		
+new	effect_bundles_localised_description_derpy_mr_service_mortuary	Paid each turn from this province capital's stores. Province control +2.		
+new	effect_bundles_localised_title_derpy_mr_service_scavengers	Scavenger feasts		
+new	effect_bundles_localised_description_derpy_mr_service_scavengers	Paid each turn from this province capital's stores. Province control +2.		
+new	effect_bundles_localised_title_derpy_mr_service_souks	Spice souks		
+new	effect_bundles_localised_description_derpy_mr_service_souks	Paid each turn from this province capital's stores. Province growth +5.		
+new	effect_bundles_localised_title_derpy_mr_rc_last_condottieri	Condottieri Contracts		
+new	effect_bundles_localised_description_derpy_mr_rc_last_condottieri	Paid for from your stores: melee infantry recruitment cost -20%. Permanent.		
+new	effect_bundles_localised_title_derpy_mr_rc_last_harbour	Harbour Dues		
+new	effect_bundles_localised_description_derpy_mr_rc_last_harbour	Paid for from your stores: income from ports +15%. Permanent.		
+new	effect_bundles_localised_title_derpy_mr_rc_last_studs	Arabian Studs		
+new	effect_bundles_localised_description_derpy_mr_rc_last_studs	Paid for from your stores: cavalry upkeep -20%. Permanent.		
+new	effect_bundles_localised_title_derpy_mr_rc_last_jade_court	Masks of the Jade Court		
+new	effect_bundles_localised_description_derpy_mr_rc_last_jade_court	Paid for from your stores: diplomatic relations +15. Permanent.		
+new	derpy_mr_ui_88777c1b6e	Embalming		
+new	derpy_mr_ui_56adbc048a	10 Canopic Jars		
+new	derpy_mr_ui_132fe037ea	Makes 10 Canopic Jars from your stores once a turn		
+new	derpy_mr_ui_05fda314d7	Woad Dyeing		
+new	derpy_mr_ui_2710e8c96e	6 Woad		
+new	derpy_mr_ui_6ca66ccbe0	Makes 6 Woad from your stores once a turn		
+new	derpy_mr_ui_bc20379aa7	Scrap Heaps		
+new	derpy_mr_ui_4a4f1859ec	40 Scrap		
+new	derpy_mr_ui_c07dd06aad	Makes 40 Scrap from your stores once a turn		
+new	derpy_mr_ui_d8b1f936f1	Condottieri Contracts		
+new	derpy_mr_ui_52007eeb07	Melee infantry cost -20%		
+new	derpy_mr_ui_746e39a96b	Melee infantry recruitment cost -20%. Permanent		
+new	derpy_mr_ui_c70b082b8d	Harbour Dues		
+new	derpy_mr_ui_fcc621ddf1	Port income +15%		
+new	derpy_mr_ui_66a4cad913	Income from ports +15%. Permanent		
+new	derpy_mr_ui_30ad04917c	Arabian Studs		
+new	derpy_mr_ui_c853d314a4	Cavalry upkeep -20%		
+new	derpy_mr_ui_b28099933a	Cavalry upkeep -20%. Permanent		
+new	derpy_mr_ui_5c62208820	Masks of the Jade Court		
