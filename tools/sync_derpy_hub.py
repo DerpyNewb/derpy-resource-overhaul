@@ -1,6 +1,6 @@
-"""The Derpy HUD hub: one source, five shipped copies.
+"""The Derpy HUD hub: one source, six shipped copies.
 
-    py tools/sync_derpy_hub.py             write the five Lua copies, ten .twui.xml and the
+    py tools/sync_derpy_hub.py             write the six Lua copies, twelve .twui.xml and the
                                            two baked .png (needs the game installed)
     py tools/sync_derpy_hub.py --check     exit 1 if a shipped file differs from the source
     py tools/sync_derpy_hub.py --selftest  run the hub harness on the source and the copies,
@@ -13,7 +13,7 @@ Edit only Modding Files/source/derpy_hub/derpy_hud_hub.lua. Each mod ships its o
 under its own path (derpy_hub_ic / _gg / _ex / _mr), so every installed copy loads, and the
 highest HUB_VERSION serves all of them at runtime. The fifth copy, _lb, is the LEFT BAR
 SUBMOD's (2026-10-11): it sets DERPY_HUB_LEFT_BAR and the hub moves into CA's top-left menu
-bar. The copies differ from the source in ONE line, `local HUB_TAG = "<tag>"`, which names
+bar. The sixth, _dr, ships in the Director (build_director.py packs it). The copies differ from the source in ONE line, `local HUB_TAG = "<tag>"`, which names
 that copy's own .twui.xml. Each .twui.xml has its own GUID prefix, because a GUID that
 collides with another file's is a silent non-draw.
 
