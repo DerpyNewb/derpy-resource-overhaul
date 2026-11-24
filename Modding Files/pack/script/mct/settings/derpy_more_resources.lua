@@ -243,11 +243,11 @@ o_recruit:set_tooltip_text("Every unit you recruit takes resources from your sto
 o_recruit:set_default_value(true)
 o_recruit:set_assigned_section("using")
 
-local o_recruit_gold = m:add_new_option("recruit_gold", "checkbox")
-o_recruit_gold:set_text("Gold pays for troops")
-o_recruit_gold:set_tooltip_text("What your stores and your race's currency cannot cover is paid in gold, for recruits and for replenishing alike. Off: a recruit arrives understrength instead and must regain the rest by replenishing, and strength a unit regains that your stores cannot pay for is lost again. A faction no player controls always pays in gold. You can change this during a campaign. The change applies from your next turn.")
-o_recruit_gold:set_default_value(true)
-o_recruit_gold:set_assigned_section("using")
+local o_gold_pays = m:add_new_option("gold_pays", "checkbox")
+o_gold_pays:set_text("Gold pays for troops")
+o_gold_pays:set_tooltip_text("What your stores and your race's currency cannot cover is paid in gold, for recruits and for replenishing alike. Off: a recruit arrives understrength instead and must regain the rest by replenishing, and strength a unit regains that your stores cannot pay for is lost again. A faction no player controls always pays in gold. You can change this during a campaign. The change applies from your next turn.")
+o_gold_pays:set_default_value(true)
+o_gold_pays:set_assigned_section("using")
 
 local o_hunger_men = m:add_new_option("hunger_men", "checkbox")
 o_hunger_men:set_text("Hunger weakens armies")
@@ -408,3 +408,11 @@ o_size:add_dropdown_value("large", "mct_derpy_more_resources_ui_size_large_text"
 o_size:set_default_value("medium")
 o_size:set_assigned_section("display")
 o_size:set_is_global(true)
+
+-- the settings a running campaign follows, opened again after MCT puts back a lock an older save holds
+core:add_listener("derpy_mr_mct_loaded", "MctInitialized", true, function()
+    for _, k in ipairs({"recruit", "gold_pays", "recruit_per", "replenish_per"}) do
+        local o = m:get_option_by_key(k)
+        if o then o:set_locked(false) end
+    end
+end, true)

@@ -420,9 +420,10 @@ local function fire(event, context)
     end
 end
 local function raid(ch) fire("CharacterTurnStart", { character = function() return ch end }) end
-local function decide(kind, r, taker, prev, ch)
+local function decide(kind, r, taker, prev, ch, option)
     fire("CharacterPerformsSettlementOccupationDecision", {
         occupation_decision_type = function() return kind end,
+        occupation_decision = function() return option or "0" end,   -- CA's option id, a string
         previous_owner = function() return prev end,
         garrison_residence = function() return { region = function() return r.iface end } end,
         character = function() return ch or army(taker, r, r.x, r.y) end,
@@ -599,6 +600,22 @@ decide("occupation_decision_raze_without_occupy", a1, hum, "ai1")
 eq(#LOG, n, "a raze of unreadable stores moves nothing")
 eq(#ERRORS, 1, "and says so once"); ERRORS = {}
 a1.readable = true
+
+-- A PIRATE COVE (author 2026-11-24, from Prime Strategus's Workshop report): CA's "Establish a Pirate Cove" is a foreign
+-- slot choice, not a sack, and CA loots it at half (building_loot_mod 0.5), so it takes half a sack's share. The
+-- Skaven's Expand Under-Empire loots nothing in vanilla (0), and the Changeling's cults are no sack at all.
+do
+    a1.held, h1.held = { coal = 100 }, {}
+    local cv = F.capture_preview(a1.iface, hum.iface, "cove")
+    eq(cv and cv.total, 25, "a Pirate Cove's preview: half a sack's 50%")
+    decide("occupation_decision_establish_foreign_slot", a1, hum, "ai1", nil, "615256079")
+    eq(a1.held.coal, 75, "a Pirate Cove takes a quarter"); eq(h1.held.coal, 25, "into the taker's nearest")
+    eq(LOG[#LOG][2], "derpy_mr_store_coal_plundered", "booked to plunder"); n = #LOG
+    decide("occupation_decision_establish_foreign_slot", a1, hum, "ai1", nil, "599999523")
+    eq(#LOG, n, "Expand Under-Empire takes nothing")
+    decide("occupation_decision_establish_foreign_slot", a1, hum, "ai1", nil, "912058518")
+    eq(#LOG, n, "nor the Changeling's cult")
+end
 
 -- NORSCA'S RAIDERS' SHARE (race kit 2026-11-21): Norscan raids, sacks and razes take half as much again, capped at
 -- the whole store, and every plate shows what the take then moves
@@ -1237,7 +1254,7 @@ for k, o in pairs(opt) do
     elseif k:match('^route_') then
         eq(o.locked,nil,'visibility stays editable in a campaign')
         eq(o.value,true,'route visuals default on')
-    elseif k == "recruit" or k == "recruit_gold" or k == "recruit_per" or k == "replenish_per" then
+    elseif k == "recruit" or k == "gold_pays" or k == "recruit_per" or k == "replenish_per" then
         -- CHANGED IN A RUNNING CAMPAIGN (2026-11-20): open there, and the tooltip says so (flows.lua F.freeze_rates)
         eq(o.locked, nil, "a campaign leaves " .. k .. " open")
         eq((o.tip or ""):find("You can change this during a campaign", 1, true) ~= nil, true, k .. "'s tooltip says it can change")
@@ -1291,19 +1308,41 @@ do
     local live = {}
     for k in pairs(DERPY_MR_FLOWS_LIVE) do live[#live + 1] = k end
     table.sort(live)
-    eq(table.concat(live, ","), "recruit,recruit_gold,recruit_per,replenish_per", "the four live settings")
+    eq(table.concat(live, ","), "gold_pays,recruit,recruit_per,replenish_per", "the four live settings")
     F.state = { factions = {}, rates = F.read_rates() }
-    F.state.rates.replenish_per, F.state.rates.recruit_gold = 0, false   -- as an older save froze them
-    opt.replenish_per.value, opt.recruit_gold.value, opt.raid.value = 50, true, 12
+    F.state.rates.replenish_per, F.state.rates.gold_pays = 0, false   -- as an older save froze them
+    opt.replenish_per.value, opt.gold_pays.value, opt.raid.value = 50, true, 12
     F.freeze_rates()
     eq(F.rates().replenish_per, 50, "the MCT's replenishment cost reaches a running campaign at the next turn start")
-    eq(F.rates().recruit_gold, true, "and its gold box, as the page shows it")
+    eq(F.rates().gold_pays, true, "and its gold box, as the page shows it")
     eq(F.rates().raid, 40, "the other settings stay frozen")
     opt.replenish_per.value = 49.6; F.freeze_rates()
     eq(F.rates().replenish_per, 50, "a slider's value is whole in the save")
     MP = true; F.freeze_rates()
     eq(F.rates().replenish_per, 100, "multiplayer takes the default, the same on every machine")
     MP = false; opt.replenish_per.value, opt.raid.value = 100, 40
+end
+-- A NEW KEY FOR "GOLD PAYS FOR TROOPS" (2026-11-24, Moonlit Rose's Workshop report): MCT writes every option's value at
+-- every launch and a stored value beats a new default, so a player who launched between the 11-18 upload (default off)
+-- and the 11-20 one (default on) kept "off" under recruit_gold. The option moved to gold_pays, where nothing is stored.
+do
+    eq(opt.recruit_gold, nil, "the page no longer offers the key MCT stored the old default under")
+    local stale = option(); stale.value = false; opt.recruit_gold = stale   -- what such a player's MCT still holds
+    F.state = { factions = {}, rates = F.read_rates() }
+    F.freeze_rates()
+    eq(F.rates().gold_pays, true, "a stale recruit_gold in MCT does not reach the campaign")
+    opt.recruit_gold = nil
+end
+-- A LOCK SAVED INTO A CAMPAIGN COMES BACK ON LOAD: MCT's Registry:load_game puts back every saved lock after this file
+-- ran and never clears one, so a campaign saved while the live settings were locked (before 2026-11-20) loads them
+-- greyed. MctInitialized fires right after load_game: the file opens the live four again there, and nothing else.
+do
+    local live = { "recruit", "gold_pays", "recruit_per", "replenish_per" }
+    for _, k in ipairs(live) do if opt[k] then opt[k]:set_locked(true, "saved") end end
+    opt.raid:set_locked(true, "frozen")
+    fire("MctInitialized", { is_multiplayer = function() return false end })
+    for _, k in ipairs(live) do eq(opt[k] and opt[k].locked, false, "a saved lock on " .. k .. " is lifted on load") end
+    eq(opt.raid.locked, true, "a frozen setting stays greyed")
 end
 -- AT FIRST TICK: a new campaign fires no FactionTurnStart until turn 1 ends. F.init again, its
 -- listeners dropped after, so nothing below fires twice
@@ -3511,7 +3550,7 @@ end
     F.state.rates = nil; F.freeze_rates()
     F.state.rates.recruit, F.state.rates.recruit_per, F.state.rates.ai = true, 1, true
     -- the shortfall in gold below is the "Gold pays for recruits" rule; the understrength one follows the block
-    F.state.rates.recruit_gold = true
+    F.state.rates.gold_pays = true
     local rcP = faction("rcP", { human = true, sc = "wh_main_sc_dwf_dwarfs" })
     local rc1 = region("rc1", 42000, 0, 2000, { coal = 50, gromril = 10, warhorses = 50 }); own(rcP, rc1, true)
     train(rcP, "modded_inf", "melee_infantry", 650)
@@ -3592,7 +3631,7 @@ end
     train(dmP, "modded_inf", "melee_infantry", 650); eq(dm1.held.coal, 50, "a race that keeps no stores pays nothing")
     eq(F.cost.recruit ~= nil, true, "REVIEW FOCUS 5: the handler counts its time")
     -- UNDERSTRENGTH (2026-11-17): with "Gold pays for recruits" off, what nothing paid for is strength
-    F.state.rates.recruit_gold = false
+    F.state.rates.gold_pays = false
     TURN = 9003
     rc1.held.coal = 3; local t1 = rcP.iface:treasury()
     local u = train(rcP, "modded_inf", "melee_infantry", 650)
@@ -4890,10 +4929,10 @@ end)()
     F.state = { factions = {}, rates = F.read_rates() }
     local R = F.state.rates
     eq(R.hunger_men, true, "new campaigns: hunger weakens armies")
-    eq(R.recruit_gold, true, "new campaigns: gold pays for troops (since 2026-11-20)")
+    eq(R.gold_pays, true, "new campaigns: gold pays for troops (since 2026-11-20)")
     eq(R.replenish_per, 100, "new campaigns: replenishing costs its recruit's resources")
     -- the bill below with gold off: a shortfall is taken back (gold for replenishing is tested after it)
-    R.army_provisions, R.ai, R.recruit_per, R.recruit_gold = true, true, 1, false
+    R.army_provisions, R.ai, R.recruit_per, R.gold_pays = true, true, 1, false
     local f = faction("hg", { human = true })
     local r = region("hg_home", 43000, 0, 2000, { coal = 0 }); own(f, r, true)
     local forces = {}
@@ -5063,7 +5102,7 @@ end)()
     -- recruit's price and keeps the strength. A treasury too small keeps only what it paid for.
     local war = F.cheapest(F.bulk("war"))
     local due4 = math.ceil(4 * war * F.RECRUIT.gold_x)
-    R.recruit_gold = true
+    R.gold_pays = true
     local gf = faction("hg_gold", { human = true, gold = 0 }); own(gf, region("hg_gold1", 43400, 0, 2000, { coal = 0 }), true)
     TREASURY.hg_gold = 1000
     local w1 = soldier({ key = "hg_w1", hp = 20 }); force(971, { w1 }, gf)
@@ -5077,7 +5116,7 @@ end)()
     F.repl_turn(hf.iface); w2.hp = 100; F.repl_turn(hf.iface)
     eq(hf.iface:treasury(), 0, "a treasury of half the gold gives all it has")
     eq(w2.hp, 60, "and keeps half the gain")
-    R.recruit_gold = false
+    R.gold_pays = false
     local gai = faction("hg_gai", { gold = 0 }); own(gai, region("hg_gai1", 43600, 0, 2000, { coal = 0 }), true)
     TREASURY.hg_gai = 1000
     local w3 = soldier({ key = "hg_w3", hp = 20 }); force(973, { w3 }, gai)
@@ -5150,7 +5189,7 @@ end)()
     -- A SAVE FROM BEFORE the harder rules keeps the old ones (MCT is locked in a running campaign)
     F.state.rates = { army_provisions = true }
     local o = F.rates()
-    eq(o.hunger_men, false, "an older save keeps the old hunger"); eq(o.recruit_gold, true, "and gold for recruits")
+    eq(o.hunger_men, false, "an older save keeps the old hunger"); eq(o.gold_pays, true, "and gold for recruits")
     eq(o.replenish_per, 0, "and free replenishment")
     cm.show_message_event, cm.remove_effect_bundle_from_force = message, remove
     F.state, TURN, cm.get_military_force_by_cqi = old, turn, lookup

@@ -121,7 +121,7 @@ end
 -- is frozen with the rest; the keys already frozen do not move.
 -- A READ, never a write: the panel calls it, and opening the panel before the first turn start
 -- froze the settings there (single player: the MCT then did nothing). F.freeze_rates writes.
-F.OLD_SAVE_RATES = { hunger_men = false, recruit_gold = true, replenish_per = 0, ai_armoury = false }
+F.OLD_SAVE_RATES = { hunger_men = false, gold_pays = true, replenish_per = 0, ai_armoury = false }
 function F.rates()
     local r = F.state.rates
     if not r then return F.read_rates() end
@@ -435,8 +435,16 @@ function F.raid_preview(character)
     return pv
 end
 
+-- THE SHARE A CAPTURE CHOICE TAKES, from the frozen rates: the take and the capture plate both read it here.
+-- A PIRATE COVE (author 2026-11-24, Prime Strategus's Workshop report) is a foreign slot, not a sack, and CA loots it
+-- at its own building_loot_mod, so it takes the sack's share scaled by that (DERPY_MR_FLOWS_COVE.pct, 50: half).
+function F.capture_rate(rates, kind)
+    if kind == "cove" then return (rates.sack or 0) * DERPY_MR_FLOWS_COVE.pct / 100 end
+    return rates[kind] or 0
+end
+
 -- WHAT A CAPTURE CHOICE DOES TO `region`'s STORES, for the capture panel: F.preview plus `lost`,
--- true when the taker holds no settlement to carry it to. "sack" and "raze" take their share
+-- true when the taker holds no settlement to carry it to. "sack", "raze" and "cove" take their share
 -- (nil for the cases F.on_occupation skips: rebels, its own settlement); "occupy" keeps the
 -- whole store, which stays with the settlement, rebels' included. nil for any other kind.
 function F.capture_preview(region, taker, kind)
@@ -448,8 +456,8 @@ function F.capture_preview(region, taker, kind)
         local pv = F.preview(region, 100)
         if pv then pv.lost = false end
         return pv
-    elseif kind == "sack" or kind == "raze" then
-        pct = rates[kind] or 0
+    elseif kind == "sack" or kind == "raze" or kind == "cove" then
+        pct = F.capture_rate(rates, kind)
     end
     if not pct or pct <= 0 then return nil end
     if not F.victim(region, taker) then return nil end
@@ -466,6 +474,8 @@ function F.on_occupation(context)
     if F.at_battle_turn[region:name()] ~= cm:model():turn_number() then at_battle = nil end   -- a failed siege's
     F.at_battle[region:name()], F.at_battle_turn[region:name()] = nil, nil
     local what = F.DECISION[context:occupation_decision_type()]
+    -- a foreign slot shares its decision type with the Changeling's cults: only CA's option id says it is a cove
+    if not what and DERPY_MR_FLOWS_COVE.ids[tonumber(context:occupation_decision())] then what = "cove" end
     if not what then return end
     local character = context:character()
     local taker = character:faction()
@@ -479,7 +489,7 @@ function F.on_occupation(context)
               .. " - nothing taken")
         return
     end
-    F.take(region, victim, taker, F.rates()[what], KIND[what],
+    F.take(region, victim, taker, F.capture_rate(F.rates(), what), KIND[what],
            character:logical_position_x(), character:logical_position_y(), at_battle)
 end
 
@@ -2786,7 +2796,7 @@ function F.on_unit_trained(context)
     end
     -- A COMPUTER FACTION ALWAYS PAYS IN GOLD (AI soak 2026-11-18: under the understrength rule 61% of its recruits
     -- arrived at about 14%; it plans for gold and knows nothing of the stores)
-    local paid, gold, line, uncovered = F.recruit_short(faction, short, not r.recruit_gold and faction:is_human())
+    local paid, gold, line, uncovered = F.recruit_short(faction, short, not r.gold_pays and faction:is_human())
     -- UNDERSTRENGTH (2026-11-17): what nothing paid for is strength the recruit does not have. It regains it by
     -- replenishing, which costs resources too (F.repl_turn).
     local weak = false
@@ -2970,7 +2980,7 @@ function F.repl_turn(faction, ending)
         -- goods its troops need could never replenish, Greenskins anywhere and Cathay at home): under "Gold pays for
         -- recruits", and always for a computer faction, as a recruit's shortfall is paid. What the treasury cannot
         -- cover is still taken back.
-        local no_gold = not r.recruit_gold and faction:is_human()
+        local no_gold = not r.gold_pays and faction:is_human()
         local _line, unpaid
         paid, gold, _line, uncovered, unpaid = F.recruit_short(faction, short, no_gold)
         if not no_gold then uncovered = unpaid end

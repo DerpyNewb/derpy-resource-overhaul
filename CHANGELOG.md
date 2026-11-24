@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-24
+
+- Establishing a Pirate Cove now plunders goods, half of what a sack takes.
+- "Gold pays for troops" is reset to on, because an older launch had kept it off. Untick it again if you want it off.
+- Recruits use the stores, Gold pays for troops, Recruitment rate and Replenishment cost can be changed in older saves again.
+
 ## 2026-11-22
 
 - Tomb Kings now keep stores and trade. Like the other undead, they eat nothing and pay nothing for troops.

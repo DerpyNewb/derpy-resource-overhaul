@@ -2680,6 +2680,8 @@ DERPY_MR_FLOWS = nil; REPEATS.derpy_mr_raid_plate(); eq(plate.visible, false, "w
 -- read in game 2026-10-02; the ids are CA's culture_settlement_occupation_options rows.
 eq(DERPY_MR_CAPTURE_KIND[1671725074], "sack", "the generated table knows the Chaos Dwarf sack")
 eq(DERPY_MR_CAPTURE_KIND[1992765694], "raze", "and raze"); eq(DERPY_MR_CAPTURE_KIND[222165943], "occupy", "and occupy")
+eq(DERPY_MR_CAPTURE_KIND[615256079], "cove", "and the Vampire Coast's Pirate Cove (2026-11-24)")
+eq(DERPY_MR_CAPTURE_KIND[599999523], nil, "but not the Skaven's Expand Under-Empire, which loots nothing")
 local sc = new("settlement_captured", UI_ROOT)
 sc.ctx = { CcoCampaignSettlement = "reg_b" }
 local bpar = new("button_parent", sc)
@@ -2689,10 +2691,12 @@ local function option(id)
     return ip
 end
 local sack_ip, raze_ip, occ_ip = option("1671725074"), option("1992765694"), option("222165943")
+option("615256079")   -- the Pirate Cove; no local, the chunk is at Lua's 200-local limit
 local CALLS = {}
 local CAP = { sack = { total = 50, parts = { { stem = "coal", n = 50 } }, lost = false },
               raze = { total = 3, parts = { { stem = "iron", n = 3 } }, lost = true },
-              occupy = { total = 51, parts = { { stem = "coal", n = 51 } }, lost = false } }
+              occupy = { total = 51, parts = { { stem = "coal", n = 51 } }, lost = false },
+              cove = { total = 25, parts = { { stem = "coal", n = 25 } }, lost = false } }
 DERPY_MR_FLOWS = { capture_preview = function(region, taker, kind)
     CALLS[#CALLS + 1] = region.key .. "|" .. tostring(taker and taker:name()) .. "|" .. kind
     return CAP[kind]
@@ -2709,6 +2713,12 @@ eq(rg.text, "3", "Raze gets its own"); eq(string.find(rg.tip, "no settlement", 1
 local og = find_uicomponent(occ_ip, S.CAPTURE .. 1)
 eq(og.text, "51", "an occupy option shows the store it keeps")
 eq(string.find(og.tip, "keeps", 1, true) ~= nil, true, "and says it is kept, not taken")
+do
+    local cg = find_uicomponent(bpar, "615256079", "frame", "icon_parent", S.CAPTURE .. 1)
+    eq(cg and cg.text, "25", "a Pirate Cove shows the coal it takes")
+    eq(cg and string.find(cg.tip, "Establishing a Pirate Cove takes:", 1, true) ~= nil, true, "and names the choice")
+    if cg then fits(cg.tip) end
+end
 -- CA'S TOOLTIP WRAPS AT ABOUT 50 CHARACTERS (seen in game 2026-10-02: "into Zharr-" / "Naggrund:")
 for _, t in ipairs({ sg.tip, rg.tip, og.tip }) do fits(t) end
 eq(CALLS[1], "reg_b|fac_a|sack", "read for the panel's settlement and the local faction")

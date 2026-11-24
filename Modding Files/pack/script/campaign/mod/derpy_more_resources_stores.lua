@@ -406,6 +406,7 @@ DERPY_MR_CAPTURE_KIND = {
     [594303340] = "sack",
     [599554704] = "occupy",
     [610425586] = "sack",
+    [615256079] = "cove",
     [626112581] = "occupy",
     [637870988] = "occupy",
     [652221506] = "occupy",
@@ -1568,6 +1569,7 @@ DERPY_MR_LOC_KEYS = {
     ["Sacking"] = "derpy_mr_ui_af853435f1",
     ["Razing"] = "derpy_mr_ui_c6f4edb530",
     ["Occupying"] = "derpy_mr_ui_a2eb01615f",
+    ["Establishing a Pirate Cove"] = "derpy_mr_ui_d27d7d0db4",
     ["Occupying keeps its stores:"] = "derpy_mr_ui_176bb9b379",
     ["They stay in this settlement"] = "derpy_mr_ui_99c8685ce3",
     ["Into your nearest settlement"] = "derpy_mr_ui_b3bc9ae672",
@@ -3480,7 +3482,7 @@ function S.spending(v)
         if (r.repl_held or 0) > 0 then
             lines[#lines + 1] = S.T("Units that lost strength they could not pay for: {1}.", S.num(r.repl_held))
         end
-        local gold_rule = (r.gold > 0 or S.rate("recruit_gold")) and S.T("Anything missing is paid {1}in gold.", (r.line and S.T("in your own currency and then ") or ""))
+        local gold_rule = (r.gold > 0 or S.rate("gold_pays")) and S.T("Anything missing is paid {1}in gold.", (r.line and S.T("in your own currency and then ") or ""))
             or S.T("Anything missing is paid {1}with strength: the recruit arrives understrength.", (r.line and S.T("in your own currency and then ") or ""))
         v.rows[#v.rows + 1] = { S.section(S.RECRUIT_HEAD), "", "", "", "", section = true }
         v.rows[#v.rows + 1] = { table.concat(parts, ", "), "", "", "", "", icon = S.DUTY_ICON,
@@ -5283,7 +5285,8 @@ end
 -- 2026-10-02. A copy of CA's gold value (dy_income) wraps under CA's row; its text, tooltip and
 -- icon persist (measured). The option id says which decision it is: DERPY_MR_CAPTURE_KIND.
 S.CAPTURE = "derpy_mr_capture_goods_"   -- .. k, one per good
-S.CAPTURE_VERB = { sack = S.T("Sacking"), raze = S.T("Razing"), occupy = S.T("Occupying") }
+S.CAPTURE_VERB = { sack = S.T("Sacking"), raze = S.T("Razing"), occupy = S.T("Occupying"),
+                   cove = S.T("Establishing a Pirate Cove") }
 
 function S.capture_tip(pv, kind)
     if kind == "occupy" then

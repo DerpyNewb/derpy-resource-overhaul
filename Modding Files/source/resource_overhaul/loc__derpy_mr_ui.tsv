@@ -440,6 +440,7 @@ derpy_mr_ui_9ce3ef4881	Raiding takes each turn:	false
 derpy_mr_ui_af853435f1	Sacking	false
 derpy_mr_ui_c6f4edb530	Razing	false
 derpy_mr_ui_a2eb01615f	Occupying	false
+derpy_mr_ui_d27d7d0db4	Establishing a Pirate Cove	false
 derpy_mr_ui_176bb9b379	Occupying keeps its stores:	false
 derpy_mr_ui_99c8685ce3	They stay in this settlement	false
 derpy_mr_ui_b3bc9ae672	Into your nearest settlement	false
@@ -805,8 +806,8 @@ mct_derpy_more_resources_supply_text	Province supplies	false
 mct_derpy_more_resources_supply_tooltip	A province capital can pay from its stores each turn for Materials on hand, Stable stocked and Arms stocked in every settlement you hold in its province, and can send for resources from the province's other settlements. Off: no province supplies.	false
 mct_derpy_more_resources_recruit_text	Recruits use the stores	false
 mct_derpy_more_resources_recruit_tooltip	Every unit you recruit takes resources from your stores by its type and worth (cavalry and monsters take mounts, infantry and war machines take war materials, the finest also take your rare resource). What the stores lack is paid in your race's own currency where it has one. A recruit whose resources are still short arrives understrength, unless Gold pays for troops is ticked. Vampire Counts, Vampire Coast and Tomb Kings recruits take nothing. Off: recruiting takes nothing. You can change this during a campaign. The change applies from your next turn.	false
-mct_derpy_more_resources_recruit_gold_text	Gold pays for troops	false
-mct_derpy_more_resources_recruit_gold_tooltip	What your stores and your race's currency cannot cover is paid in gold, for recruits and for replenishing alike. Off: a recruit arrives understrength instead and must regain the rest by replenishing, and strength a unit regains that your stores cannot pay for is lost again. A faction no player controls always pays in gold. You can change this during a campaign. The change applies from your next turn.	false
+mct_derpy_more_resources_gold_pays_text	Gold pays for troops	false
+mct_derpy_more_resources_gold_pays_tooltip	What your stores and your race's currency cannot cover is paid in gold, for recruits and for replenishing alike. Off: a recruit arrives understrength instead and must regain the rest by replenishing, and strength a unit regains that your stores cannot pay for is lost again. A faction no player controls always pays in gold. You can change this during a campaign. The change applies from your next turn.	false
 mct_derpy_more_resources_hunger_men_text	Hunger weakens armies	false
 mct_derpy_more_resources_hunger_men_tooltip	After two missed meals an army's units lose 5% of their strength each turn. After three they lose 10% and regain nothing. After five, one unit deserts each turn. A full meal ends this. An army that still carries 5 turns of provisions after eating is Well fed: leadership +4 and replenishment +5%. Off: missed meals slow the army and its replenishment instead, and no army is Well fed.	false
 mct_derpy_more_resources_escort_text	Escort battles	false

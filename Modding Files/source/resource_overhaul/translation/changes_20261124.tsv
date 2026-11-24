@@ -1,0 +1,6 @@
+change	key	english	old_key	old_english
+new	derpy_mr_ui_d27d7d0db4	Establishing a Pirate Cove		
+new	mct_derpy_more_resources_gold_pays_text	Gold pays for troops		
+new	mct_derpy_more_resources_gold_pays_tooltip	What your stores and your race's currency cannot cover is paid in gold, for recruits and for replenishing alike. Off: a recruit arrives understrength instead and must regain the rest by replenishing, and strength a unit regains that your stores cannot pay for is lost again. A faction no player controls always pays in gold. You can change this during a campaign. The change applies from your next turn.		
+removed			mct_derpy_more_resources_recruit_gold_text	Gold pays for troops
+removed			mct_derpy_more_resources_recruit_gold_tooltip	What your stores and your race's currency cannot cover is paid in gold, for recruits and for replenishing alike. Off: a recruit arrives understrength instead and must regain the rest by replenishing, and strength a unit regains that your stores cannot pay for is lost again. A faction no player controls always pays in gold. You can change this during a campaign. The change applies from your next turn.

@@ -165,14 +165,14 @@ RECRUIT_SWITCH = ("recruit", "Recruits use the stores",
 # percentage penalties). Frozen into the save; a save from before them keeps the old rules (F.rates).
 # ON BY DEFAULT AND PAYING FOR REPLENISHING TOO (author, 2026-11-20, from Workshop reports: Greenskins make none of the
 # goods their troops need anywhere, Cathay almost none at home, so their armies could never replenish).
-RECRUIT_GOLD_SWITCH = ("recruit_gold", "Gold pays for troops",
+RECRUIT_GOLD_SWITCH = ("gold_pays", "Gold pays for troops",
     "What your stores and your race's currency cannot cover is paid in gold, for recruits and for "
     "replenishing alike. Off: a recruit arrives understrength instead and must regain the rest by replenishing, "
     "and strength a unit regains that your stores cannot pay for is lost again. A faction no player controls "
     "always pays in gold.", True)
 # CHANGED IN A RUNNING CAMPAIGN (author, 2026-11-20): these follow the MCT in single player, never greyed (flows.lua
 # F.freeze_rates). The rest stay fixed for the life of a campaign.
-LIVE_RATES = ("recruit", "recruit_gold", "recruit_per", "replenish_per")
+LIVE_RATES = ("recruit", "gold_pays", "recruit_per", "replenish_per")
 LIVE_NOTE = " You can change this during a campaign. The change applies from your next turn."
 HUNGER_SWITCH = ("hunger_men", "Hunger weakens armies",
     "After two missed meals an army's units lose 5% of their strength each turn. After three they lose 10% and "
@@ -509,7 +509,8 @@ def prove_race_asserts():
             G.KIT_RULES.clear(); G.KIT_RULES.update(real_rules)
     G.check_kit_rules(flows)
 # Which factor each kind of move books to: the junction is derpy_mr_store_<stem>_<kind>.
-FLOW_KIND = {"process": "processed", "raid": "raided", "sack": "plundered", "raze": "plundered", "trade": "traded", "eat": "eaten",
+FLOW_KIND = {"process": "processed", "raid": "raided", "sack": "plundered", "raze": "plundered", "cove": "plundered",
+             "trade": "traded", "eat": "eaten",
              "move": "moved", "spend": "spent", "sell": "sold", "spoil": "spoiled"}
 # PHASE 7: gold a unit when the Zharr Exchange is not there to price it (spending spec section 5)
 SELL_RATE = {"provisions": 1, "building": 2, "war": 3, "mounts": 4, "luxuries": 5}
@@ -1188,9 +1189,38 @@ DECISION_KIND = {"occupation_decision_sack": "sack", "occupation_decision_raze_w
 MEASURED_OPTIONS = {1671725074: "sack", 1992765694: "raze", 222165943: "occupy", 1899472825: "occupy"}
 
 
+# A FOREIGN SLOT THAT LOOTS (author 2026-11-24, from Prime Strategus's Workshop report): CA's "sack and build" groups
+# establish a foreign slot instead of capturing, so the decision type is occupation_decision_establish_foreign_slot,
+# which the Changeling's cults share. Each takes the sack's share scaled by CA's own building_loot_mod for it: the
+# Vampire Coast's Establish a Pirate Cove 0.5; the Skaven's Expand Under-Empire 0, which loots nothing in vanilla and
+# takes nothing here. The capture kind is "cove" (flows.lua F.capture_rate).
+FOREIGN_SACK_GROUP = "_sack_build_"
+
+
+@functools.lru_cache(maxsize=None)
+def foreign_sacks():
+    """{option id: percent of the sack rate} for CA's sack-and-build options that loot."""
+    import read_vanilla_db as rvd
+    out = {}
+    for _p, _v, rows in rvd.load(rvd.DB_PACK, "culture_settlement_occupation_options_tables"):
+        for r in rows:
+            if (r["settlement_option"] == "occupation_decision_establish_foreign_slot"
+                    and FOREIGN_SACK_GROUP in r["group"] and r["building_loot_mod"] > 0):
+                out[r["id"]] = int(round(r["building_loot_mod"] * 100))
+    return out
+
+
+def cove_lua():
+    """DERPY_MR_FLOWS_COVE: the share and the option ids. One share for every cove, asserted."""
+    got = foreign_sacks()
+    assert len(set(got.values())) == 1, "foreign sacks at different shares: %s" % got
+    return "DERPY_MR_FLOWS_COVE = {pct = %d, ids = {%s}}" % (
+        next(iter(got.values())), ", ".join("[%d] = true" % k for k in sorted(got)))
+
+
 @functools.lru_cache(maxsize=None)
 def capture_kinds():
-    """{option id: "sack" | "raze"} out of CA's db.pack, every culture."""
+    """{option id: "sack" | "raze" | "occupy" | "cove"} out of CA's db.pack, every culture."""
     import read_vanilla_db as rvd
     out = {}
     for _p, _v, rows in rvd.load(rvd.DB_PACK, "culture_settlement_occupation_options_tables"):
@@ -1198,6 +1228,8 @@ def capture_kinds():
             k = DECISION_KIND.get(r["settlement_option"])
             if k:
                 out[r["id"]] = k
+    for oid in foreign_sacks():
+        out[oid] = "cove"
     return tuple(sorted(out.items()))
 
 
@@ -1257,6 +1289,9 @@ def check_capture_kinds():
     assert len(got) > 40, "only %d sack/raze options read" % len(got)
     for oid, kind in MEASURED_OPTIONS.items():
         assert got.get(oid) == kind, "option %d is %r in the table, %r in game" % (oid, got.get(oid), kind)
+    # the Pirate Cove at CA's 0.5, and nothing else: Expand Under-Empire (599999523) loots 0 in CA's table, and the
+    # Changeling's establish_foreign_slot cults are not a sack-and-build group. A patch that moves either fails here.
+    assert foreign_sacks() == {615256079: 50}, "foreign sacks %s" % foreign_sacks()
 
 
 # what a named recipe carries into the flows header beyond a rare work's fields
@@ -1716,6 +1751,7 @@ def flows_header():
     lines += ["    %s = %s," % (k, "true" if d else "false") for k, _l, _t, d in SWITCHES]
     assert set(LIVE_RATES) <= {r[0] for r in RATES} | {s[0] for s in SWITCHES}, "a live setting that is not a rate"
     lines += ["}", "DERPY_MR_FLOWS_LIVE = {%s}" % ", ".join("%s = true" % k for k in LIVE_RATES)]
+    lines.append(cove_lua())
     lines += ["DERPY_MR_FLOWS_KIND = {"]
     lines += ['    %s = "%s",' % (k, FLOW_KIND[k]) for k in sorted(FLOW_KIND)]
     assert set(SPOIL_RATES) <= set(USES["provisions"]), "a spoiling good that is not a provision"
@@ -1990,6 +2026,18 @@ def mct_lua():
               for v, _t, _d in SIZE_VALUES]
     lines += ['o_size:set_default_value("medium")', 'o_size:set_assigned_section("display")',
               "o_size:set_is_global(true)"]
+    # A LOCK SAVED INTO A CAMPAIGN COMES BACK ON LOAD (2026-11-24, Moonlit Rose's Workshop report): MCT's
+    # Registry:load_game puts back every saved lock after this file ran, and never clears one, so a campaign saved
+    # while the live settings were still locked (before 2026-11-20) loaded them greyed. MCT fires MctInitialized right
+    # after load_game, inside CA's LoadingGame callbacks before the model exists: no cm: call in it.
+    lines += ["",
+              "-- the settings a running campaign follows, opened again after MCT puts back a lock an older save holds",
+              'core:add_listener("derpy_mr_mct_loaded", "MctInitialized", true, function()',
+              "    for _, k in ipairs({%s}) do" % ", ".join('"%s"' % k for k in LIVE_RATES),
+              "        local o = m:get_option_by_key(k)",
+              "        if o then o:set_locked(false) end",
+              "    end",
+              "end, true)"]
     return "\n".join(lines) + "\n"
 
 
@@ -2065,7 +2113,7 @@ def mutation_suites(*first):
         check_map_road_mutations, check_cargo_view_mutations, check_reach_mutations, check_drag_mutations,
         check_supply_map_mutations, check_map_cost_mutations, check_production_mutations, check_spoil_mutations,
         check_keep_mutations, check_ai_meal_mutations, check_race_mutations, check_race_identity_mutations,
-        check_raiders_share_mutations,
+        check_raiders_share_mutations, check_cove_mutations, check_mct_lock_mutations,
         check_uncharted_mutations, check_minor_mutations, check_turn_end_mutations, check_size_mutations,
         check_edict_mutations, check_toll_mutations, check_vanilla_supply_mutations, check_blockade_mutations,
         check_supply_line_mutations, check_supply_upkeep_mutations, check_supply_cart_mutations,
@@ -2098,16 +2146,17 @@ def run_suites(suites):
           % (len(order), os.cpu_count(), len(_UNFORESEEN)))
 
 
-def run_harness(harness=HARNESS, flows_text=None, stores_text=None):
+def run_harness(harness=HARNESS, flows_text=None, stores_text=None, mct_text=None):
     """A harness against the built files, from a temp folder: (returncode, output).
     __SCRIPT__ and __STORES__ are the stores script, __FLOWS__ the flows script, __MCT__ the MCT
     settings file and __UIDIR__ the folder the .twui.xml files are in."""
     kind = "stores" if harness == HARNESS else "flows"
-    return _answer((kind, harness, flows_text, stores_text), flows_text is None and stores_text is None,
-                   lambda: _run_harness_now(harness, flows_text, stores_text))
+    return _answer((kind, harness, flows_text, stores_text, mct_text),
+                   flows_text is None and stores_text is None and mct_text is None,
+                   lambda: _run_harness_now(harness, flows_text, stores_text, mct_text))
 
 
-def _run_harness_now(harness, flows_text, stores_text):
+def _run_harness_now(harness, flows_text, stores_text, mct_text=None):
     tmp = tempfile.mkdtemp()
     try:
         built = files()
@@ -2115,6 +2164,8 @@ def _run_harness_now(harness, flows_text, stores_text):
             built[FLOWS_REL] = flows_text
         if stores_text is not None:
             built[LUA_REL] = stores_text
+        if mct_text is not None:
+            built[MCT_REL] = mct_text
         for rel, text in built.items():
             with io.open(os.path.join(tmp, os.path.basename(rel)), "w", encoding="utf-8",
                          newline="\n") as fh:
@@ -2299,10 +2350,10 @@ def check_provision_mutations():
          'if F.provision_total(b) >= F.HUNGER.fed * row.need then'),
         ("Well fed bundle left on", '            cm:remove_effect_bundle_from_force(F.FED_BUNDLE, cqi)\n', ''),
         ("unpaid recruits whole", 'cm:set_unit_hp_to_unary_of_maximum(unit, share)', 'do end'),
-        ("unpaid recruits pay gold", 'F.recruit_short(faction, short, not r.recruit_gold and faction:is_human())',
+        ("unpaid recruits pay gold", 'F.recruit_short(faction, short, not r.gold_pays and faction:is_human())',
          'F.recruit_short(faction, short, false)'),
-        ("computer recruits understrength", 'F.recruit_short(faction, short, not r.recruit_gold and faction:is_human())',
-         'F.recruit_short(faction, short, not r.recruit_gold)'),
+        ("computer recruits understrength", 'F.recruit_short(faction, short, not r.gold_pays and faction:is_human())',
+         'F.recruit_short(faction, short, not r.gold_pays)'),
         ("restock for players", 'if F.rates().ai_armoury and not region:owning_faction():is_human() and F.equips(region:owning_faction()) then',
          'if F.rates().ai_armoury and F.equips(region:owning_faction()) then'),
         ("restock for the undead", 'if F.rates().ai_armoury and not region:owning_faction():is_human() and F.equips(region:owning_faction()) then',
@@ -2355,11 +2406,11 @@ def check_provision_mutations():
          'for _, t in ipairs(troops) do'),
         ("old saves take the new rules", 'for k2, v in pairs(F.OLD_SAVE_RATES) do if r[k2] == nil then out[k2] = v end end', ''),
         # GOLD PAYS FOR REPLENISHING TOO, SETTINGS CHANGED IN A RUNNING CAMPAIGN (Workshop reports 2026-11-20)
-        ("replenishing never paid in gold", 'local no_gold = not r.recruit_gold and faction:is_human()', 'local no_gold = true'),
-        ("replenishing in gold with the box unticked", 'local no_gold = not r.recruit_gold and faction:is_human()',
+        ("replenishing never paid in gold", 'local no_gold = not r.gold_pays and faction:is_human()', 'local no_gold = true'),
+        ("replenishing in gold with the box unticked", 'local no_gold = not r.gold_pays and faction:is_human()',
          'local no_gold = false'),
-        ("computer replenishing unpaid", 'local no_gold = not r.recruit_gold and faction:is_human()',
-         'local no_gold = not r.recruit_gold'),
+        ("computer replenishing unpaid", 'local no_gold = not r.gold_pays and faction:is_human()',
+         'local no_gold = not r.gold_pays'),
         ("a treasury's shortfall forgiven", 'if not no_gold then uncovered = unpaid end', 'if not no_gold then uncovered = 0 end'),
         ("replenishing gold not booked", '(e.repl_held or 0) + held, e.gold + gold', '(e.repl_held or 0) + held, e.gold'),
         ("a caravan billed for replenishing", 'not force:is_armed_citizenry() and not F.no_rations(force) then',
@@ -3317,6 +3368,55 @@ def check_raiders_share_mutations():
         ("a horde takes the share it cannot carry home",
          "if not share or taker:region_list():num_items() == 0 then return pct end", "if not share then return pct end"),
     ))
+
+
+def check_cove_mutations():
+    """A Pirate Cove takes half a sack's share at capture, Expand Under-Empire and the Changeling's cults nothing
+    (author 2026-11-24, Prime Strategus's Workshop report). Each rule broken the way somebody would; the harness of its
+    file must fail."""
+    _flows_mutations("cove", (
+        ("the cove never matched by its option id",
+         "    if not what and DERPY_MR_FLOWS_COVE.ids[tonumber(context:occupation_decision())] then what = \"cove\" end\n",
+         ""),
+        ("every foreign slot a cove", "DERPY_MR_FLOWS_COVE.ids[tonumber(context:occupation_decision())]",
+         "context:occupation_decision_type() == \"occupation_decision_establish_foreign_slot\""),
+        ("the cove takes a whole sack", "return (rates.sack or 0) * DERPY_MR_FLOWS_COVE.pct / 100", "return rates.sack or 0"),
+        ("the take reads a cove rate that does not exist", "F.capture_rate(F.rates(), what)", "F.rates()[what] or 0"),
+        ("the capture plate shows no cove", 'elseif kind == "sack" or kind == "raze" or kind == "cove" then',
+         'elseif kind == "sack" or kind == "raze" then'),
+    ))
+    stores = stores_lua().replace("\r\n", "\n")
+    before = ',\n                   cove = S.T("Establishing a Pirate Cove") }'
+    assert stores.count(before) == 1, "stale cove panel mutation: the verb"
+    code, out = run_harness(HARNESS, stores_text=stores.replace(before, " }", 1))
+    assert code != 0 and "harness ok" not in out and "syntax" not in out, "survived: the cove's verb\n%s" % out
+    print("  caught: the capture tooltip names no cove")
+    print("cove panel mutations: 1/1 caught")
+
+
+def check_mct_lock_mutations():
+    """Gold pays for troops under a key MCT holds nothing for, and the live settings opened again after MCT puts back
+    a lock an older save holds (2026-11-24, Moonlit Rose's Workshop report). Each broken the way somebody would, in the
+    shipped MCT file; the flows harness must fail on every one."""
+    subject = mct_lua().replace("\r\n", "\n")
+    mutations = (
+        ("the old key back", 'm:add_new_option("gold_pays", "checkbox")', 'm:add_new_option("recruit_gold", "checkbox")'),
+        ("no unlock on load", 'core:add_listener("derpy_mr_mct_loaded", "MctInitialized", true, function()',
+         'core:add_listener("derpy_mr_mct_loaded", "MctNeverFired", true, function()'),
+        ("the unlock locks", "        if o then o:set_locked(false) end", "        if o then o:set_locked(true) end"),
+        ("every setting unlocked", '    for _, k in ipairs({"recruit", "gold_pays", "recruit_per", "replenish_per"}) do',
+         "    for k in pairs(m.options or {}) do"),
+    )
+    for label, before, after in mutations:
+        assert subject.count(before) == 1, "stale MCT lock mutation: " + label
+        changed = subject.replace(before, after, 1)
+        syntax = subprocess.run([LUA_EXE.replace("lua.exe", "luac.exe"), "-p", "-"],
+                                input=changed, capture_output=True, text=True, encoding="utf-8")
+        assert syntax.returncode == 0, (label, syntax.stderr)
+        code, out = run_harness(FLOWS_HARNESS, mct_text=changed)
+        assert code != 0 and "harness ok" not in out and "syntax" not in out, "survived: %s\n%s" % (label, out)
+        print("  caught:", label)
+    print("MCT lock mutations: %d/%d caught" % (len(mutations), len(mutations)))
 
 
 def check_uncharted_mutations():
