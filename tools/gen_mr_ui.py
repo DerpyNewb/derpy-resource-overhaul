@@ -393,6 +393,34 @@ def culture_tables():
     return token, family
 
 
+NO_MEAL_ATTRIBUTES = ("daemonic", "undead", "construct", "bound_fire_daemon", "elemental")
+TREE_SPIRITS = re.compile(r"_wef_.*(dryads|treekin|treeman|branchwraith|durthu|drycha)")
+
+
+@functools.lru_cache(None)
+def no_meal_units():
+    """Units that eat nothing in a living army (author, 2026-11-28): every unit CA gives a NO_MEAL_ATTRIBUTES attribute,
+    and the Wood Elves' tree spirits, which CA tags with none."""
+    import gen_resource_overhaul as G
+    attrs = collections.defaultdict(set)
+    for r in G.db("unit_attributes_to_groups_junctions_tables")[1]:
+        attrs[r["attribute_group"]].add(r["attribute"])
+    known = {r["key"] for r in G.db("unit_attributes_tables")[1]}
+    assert set(NO_MEAL_ATTRIBUTES) <= known, set(NO_MEAL_ATTRIBUTES) - known
+    group = {r["key"]: r["attribute_group"] for r in G.db("land_units_tables")[1]}
+    out = tuple(sorted(m["unit"] for m in G.db("main_units_tables")[1]
+                       if attrs.get(group.get(m["land_unit"]), set()) & set(NO_MEAL_ATTRIBUTES)
+                       or TREE_SPIRITS.search(m["unit"])))
+    for u in ("wh3_main_dae_cha_be_lakor_0", "wh3_main_kho_inf_bloodletters_0", "wh_dlc05_wef_inf_dryads_0",
+              "wh_dlc05_wef_cha_durthu_0", "wh3_dlc23_chd_mon_kdaai_fireborn", "wh3_main_ksl_mon_elemental_bear_0",
+              "wh3_main_cth_mon_terracotta_sentinel_0"):
+        assert u in out, u
+    for u in ("wh_main_chs_inf_chaos_warriors_0", "wh_main_chs_mon_chaos_spawn", "wh2_dlc16_wef_mon_zoats",
+              "wh2_dlc16_wef_cha_sisters_of_twilight_0", "wh_dlc05_wef_inf_wildwood_rangers_0", "wh_dlc05_wef_forest_dragon_0"):
+        assert u not in out, u
+    return out
+
+
 @functools.lru_cache(None)
 def charted_chains():
     """The main-settlement chains our packs give production rows (faction flavour design 2026-11-11, section 7): the
@@ -1829,7 +1857,9 @@ def flows_header():
               "DERPY_MR_FLOWS_SUBCULTURE_TOKEN = {%s}" % ", ".join('["%s"] = "%s"' % kv for kv in sorted(
                   (sc, tok) for tok, m in G.MOD_RACES.items() for sc in m["subcultures"])),
               "DERPY_MR_FLOWS_CULTURE_FAMILY = {%s}" % ", ".join('["%s"] = "%s"' % kv for kv in sorted(family.items())),
-              "DERPY_MR_FLOWS_CHARTED = {"]
+              "DERPY_MR_FLOWS_NO_MEALS = {"]
+    lines += ['    ["%s"] = true,' % u for u in no_meal_units()]
+    lines += ["}", "DERPY_MR_FLOWS_CHARTED = {"]
     lines += ['    ["%s"] = true,' % c for c in charted_chains()]
     lines += ["}", "DERPY_MR_FLOWS_BUNDLES = {"]
     lines += ['    %s = "%s",' % (u, k) for u, k, *_r in bundles()]
@@ -2278,7 +2308,11 @@ def check_provision_mutations():
         ("human auto field spending", 'row.source or not faction:is_human()', 'true'),
         ("field ration cap", 'row.need * 2 - F.provision_total(b)', 'row.need * 10 - F.provision_total(b)'),
         ("army siege", 'if r:garrison_residence():is_under_siege() then return nil, F.T("This settlement is under siege.") end', ''),
-        ("army unit need", 'local need = math.max(1, math.ceil(force:unit_list():num_items() / 4))', 'local need = 1'),
+        ("army unit need", 'local need = F.ration_need(force)', 'local need = 1'),
+        ("non-eaters counted in the meal", 'math.ceil(F.eaters(force) / 4)', 'math.ceil(force:unit_list():num_items() / 4)'),
+        ("an army that eats nothing fed", 'or F.no_rations(force) or F.eaters(force) == 0', 'or F.no_rations(force)'),
+        ("non-eaters starve", 'if F.eats_unit(t.unit) then troops[#troops + 1] = t end', 'troops[#troops + 1] = t'),
+        ("non-eaters' regain taken back in a starving army", 'starving = starving and F.eats_unit(t.unit) }', 'starving = starving }'),
         ("army meal cargo", 'b.goods[g.stem] = b.goods[g.stem] - n', 'b.goods[g.stem] = b.goods[g.stem]'),
         ("army recovery", 'b.short = (left == 0 or (other and row.source and rates.ai_home_fed)) and 0 or b.short + 1',
          'b.short = b.short + 1'),
@@ -2304,7 +2338,7 @@ def check_provision_mutations():
         # Workshop reports, 2026-11-05 and 11-06
         ("Load stops at Auto's 5 turns", 'local target = full and row.cap or 5 * row.need', 'local target = 5 * row.need'),
         ("Load not told it is a Load", 'op == "unload", op == "load")', 'op == "unload", false)'),
-        ("caravans eat", '        or F.no_rations(force)\n', ''),
+        ("caravans eat", 'or F.no_rations(force) or F.eaters(force) == 0', 'or F.eaters(force) == 0'),
         ("a mod's caravan eats", 'return F.NO_RATIONS[key] or string.find(key, "CARAVAN") ~= nil', 'return F.NO_RATIONS[key]'),
         ("convoys eat", 'CARAVAN = true, CONVOY = true', 'CARAVAN = true'),
         # Workshop report, 2026-11-10: Thanquol's schemers; and Ogre camps, which CA's scripts count with the caravans

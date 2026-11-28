@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-28
+
+- Starwood buildings now make Starwood.
+- Wood Elf ports, mines, pastures and hunting lodges now make their climate goods, such as Salted Fish, Pearls, Silver and Wool.
+- Gromril and Ithilmar buildings now work with Lost World.
+- Daemons, constructs, undead, the K'daai, the Elemental Bear and the Wood Elves' tree spirits no longer eat, and hunger no longer weakens them.
+- An army made only of those units carries no food.
+- Old World submod: Wood Elf buildings now make their climate goods on the Old World map.
+
 ## 2026-11-24
 
 - Establishing a Pirate Cove now plunders goods, half of what a sack takes.

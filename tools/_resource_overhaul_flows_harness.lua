@@ -5195,6 +5195,83 @@ end)()
     F.state, TURN, cm.get_military_force_by_cqi = old, turn, lookup
     print("hunger: strength, floor, desertion, Well fed; replenishment bill, carry, shortfall, starving, turn end, Armaments, switches, old saves pass")
 end)()
+-- ---- UNITS THAT EAT NOTHING (2026-11-28, Workshop report: Be'lakor's daemons starved) ----
+;(function()
+    local old, turn, lookup = F.state, TURN, cm.get_military_force_by_cqi
+    local message, remove = cm.show_message_event, cm.remove_effect_bundle_from_force
+    cm.show_message_event = function() end
+    cm.remove_effect_bundle_from_force = function() end
+    F.state = { factions = {}, rates = F.read_rates() }
+    local R = F.state.rates
+    R.army_provisions, R.ai, R.recruit_per, R.gold_pays = true, true, 1, false
+    local f = faction("ne", { human = true })
+    local r = region("ne_home", 43100, 0, 2000, { coal = 0 }); own(f, r, true)
+    local forces = {}
+    local function force(id, units)
+        local a = { units = units }
+        local ch = { is_at_sea = function() return true end, has_region = function() return false end,
+            region = function() return NULL end, command_queue_index = function() return id + 1 end }
+        a.iface = { is_null_interface = function() return false end, command_queue_index = function() return id end,
+            faction = function() return f.iface end, has_general = function() return true end,
+            is_armed_citizenry = function() return false end, general_character = function() return ch end,
+            force_type = function() return { key = function() return "ARMY" end } end,
+            unit_list = function() return list(a.units) end }
+        forces[id] = a; f.armies[#f.armies + 1] = a.iface
+        F.state.army_issued = F.state.army_issued or {}; F.state.army_issued[tostring(id)] = true
+        return a
+    end
+    cm.get_military_force_by_cqi = function(_, id) return forces[id] and forces[id].iface or false end
+    local DAEMON, SPIRIT, KDAAI, MORTAL = "wh3_main_kho_inf_bloodletters_0", "wh_dlc05_wef_inf_dryads_0",
+        "wh3_dlc23_chd_mon_kdaai_fireborn", "wh_main_chs_inf_chaos_warriors_0"
+    eq(DERPY_MR_FLOWS_NO_MEALS[MORTAL], nil, "Chaos Warriors eat")
+
+    -- the meal counts only the units that eat: a lord and three mortals beside four that eat nothing
+    local m1, m2, m3 = soldier({ key = MORTAL }), soldier({ key = MORTAL }), soldier({ key = MORTAL, hp = 60 })
+    local d1, d2 = soldier({ key = DAEMON }), soldier({ key = SPIRIT })
+    local mixed = force(931, { soldier({ caste = "lord", key = "ne_lord" }), m1, m2, m3, d1, d2,
+        soldier({ key = KDAAI }), soldier({ key = DAEMON }) })
+    eq(F.ration_need(mixed.iface), 1, "eight units, four of them eaters: one provision a turn")
+    local rows = F.provision_rows(f.iface)
+    eq(rows[1] and rows[1].need, 1, "and the army's row asks for that")
+    eq(F.ration_need(force(932, { soldier({ caste = "lord" }), soldier(), soldier(), soldier(), soldier() }).iface), 2,
+        "five eaters: two")
+    f.armies = { mixed.iface }
+
+    -- hunger weakens only the units that eat, and only an eater deserts
+    F.state.armies = { ["931"] = { f = "ne", goods = {}, auto = false, short = 1 } }
+    local b = F.state.armies["931"]
+    DESERTED = {}
+    TURN = 9300; F.provisions_turn(f.iface)
+    eq(b.short, 2, "a second missed meal"); eq(m1.hp, 95, "a mortal loses strength")
+    eq(d1.hp, 100, "a daemon does not"); eq(d2.hp, 100, "nor a tree spirit")
+    b.short, d1.hp = 4, 15
+    TURN = 9301; F.provisions_turn(f.iface)
+    eq(#DESERTED, 1, "five missed meals: one unit deserts")
+    eq(DESERTED[1] and DESERTED[1].key, MORTAL, "an eater, though a daemon is weaker")
+    eq(d1.hp, 15, "and the daemon is left as it was")
+
+    -- an army of units that eat nothing is not fed at all
+    local host = force(933, { soldier({ caste = "lord", key = "wh3_main_dae_cha_be_lakor_0" }), soldier({ key = DAEMON }) })
+    eq(F.fed_force(f.iface, host.iface), false, "Be'lakor and daemons alone carry no rations")
+    F.state.armies = {}; f.armies = { host.iface }
+    TURN = 9302; F.provisions_turn(f.iface)
+    eq(F.state.armies["933"], nil, "and get no food ledger")
+
+    -- in a starving army a unit that eats nothing keeps what it regains, and pays for it
+    local p, q = soldier({ key = MORTAL, hp = 50 }), soldier({ key = DAEMON, hp = 50 })
+    local camp = force(934, { soldier({ caste = "lord", key = "ne_lord2" }), p, q })
+    f.armies = { camp.iface }
+    F.repl_turn(f.iface)
+    F.state.armies = { ["934"] = { f = "ne", goods = {}, auto = false, short = 3 } }
+    r.held.coal = 100; p.hp, q.hp = 80, 80
+    F.repl_turn(f.iface)
+    eq(p.hp, 50, "a starving mortal regains nothing"); eq(q.hp, 80, "a daemon beside it keeps its regain")
+    eq(r.held.coal < 100, true, "and the daemon's regain is billed")
+
+    cm.show_message_event, cm.remove_effect_bundle_from_force = message, remove
+    F.state, TURN, cm.get_military_force_by_cqi = old, turn, lookup
+    print("no meals: ration count, hunger, desertion, an army that eats nothing, a starving army's daemons pass")
+end)()
 ;(function()
     F.route_turns = distance_turns
     local saved, turn = F.state, TURN

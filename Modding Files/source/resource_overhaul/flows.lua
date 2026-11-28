@@ -2939,8 +2939,9 @@ function F.repl_turn(faction, ending)
                 local moved = math.min(spare[k] or 0, math.max(0, t.hp - from))
                 spare[k], from = (spare[k] or 0) - moved, from + moved
                 if t.hp > from + F.REPL_EPSILON then
-                    local g = { unit = t.unit, id = id, from = from, to = t.hp, goods = 0, starving = starving }
-                    if not starving and per > 0 then
+                    local g = { unit = t.unit, id = id, from = from, to = t.hp, goods = 0,
+                                starving = starving and F.eats_unit(t.unit) }
+                    if not g.starving and per > 0 then
                         for _, p in ipairs(F.recruit_bill(faction, t.unit:unit_caste(), t.unit:get_unit_custom_battle_cost())) do
                             local n = p.n * (t.hp - from) / 100 * per / 100
                             local e = need[p.key] or { pick = p.pick, n = 0, worth = p.worth }
@@ -3307,11 +3308,23 @@ function F.no_rations(force)
     return F.NO_RATIONS[key] or string.find(key, "CARAVAN") ~= nil
 end
 
+function F.eats_unit(u) return not DERPY_MR_FLOWS_NO_MEALS[u:unit_key()] end
+
+function F.eaters(force)
+    local n, units = 0, force:unit_list()
+    for i = 0, units:num_items() - 1 do
+        if F.eats_unit(units:item_at(i)) then n = n + 1 end
+    end
+    return n
+end
+
+function F.ration_need(force) return math.max(1, math.ceil(F.eaters(force) / 4)) end
+
 -- An army this mod feeds at all. F.provision_force also leaves out an army for the one fight it escorts.
 function F.fed_force(faction, force)
     return not (not force or force:is_null_interface() or not F.eats(faction)
         or not force:has_general() or force:is_armed_citizenry()
-        or F.no_rations(force)
+        or F.no_rations(force) or F.eaters(force) == 0
         or force:faction():name() ~= faction:name())
 end
 
@@ -3350,7 +3363,7 @@ function F.provision_need(faction, region)
             if b and b.f ~= faction:name() then b = nil end
             local source = F.provision_source(faction, force)
             if source and source:name() == region:name() and (not b or b.auto ~= false) then
-                need = need + math.max(1, math.ceil(force:unit_list():num_items() / 4))
+                need = need + F.ration_need(force)
                 short = math.max(short, b and b.short or 0)
             end
         end
@@ -3403,7 +3416,7 @@ function F.provision_rows(faction)
             local id = tostring(force:command_queue_index())
             local b = F.state.armies and F.state.armies[id]
             if b and b.f ~= faction:name() then b = nil end
-            local need = math.max(1, math.ceil(force:unit_list():num_items() / 4))
+            local need = F.ration_need(force)
             local source, reason = F.provision_source(faction, force)
             if source then
                 local available = F.provision_spare(faction, source:name(), true)
@@ -3460,7 +3473,10 @@ function F.hunger_losses(faction, force, short)
     local H = F.HUNGER
     local loss = short >= 3 and H.starve or short == 2 and H.short or 0
     if loss <= 0 then return 0 end
-    local troops = F.troops(force)
+    local troops = {}
+    for _, t in ipairs(F.troops(force)) do
+        if F.eats_unit(t.unit) then troops[#troops + 1] = t end
+    end
     for _, t in ipairs(troops) do
         local hp = math.max(math.min(t.hp, H.floor), t.hp - loss)
         if hp < t.hp then
@@ -3550,7 +3566,7 @@ function F.provision_seed_force(force)
     if not rates.army_provisions or not (rates.ai or faction:is_human())
         or not F.provision_force(faction, force) then return end
     F.provision_record(faction, {id=tostring(force:command_queue_index()),
-        need=math.max(1,math.ceil(force:unit_list():num_items()/4))})
+        need=F.ration_need(force)})
 end
 
 function F.provision_seed_all()
@@ -6013,7 +6029,7 @@ function F.supply_carts_turn(faction)
                 -- An army at sea has no line, so its cart returns too.
                 local state, b = F.supply_line(faction, force).state, F.state.armies and F.state.armies[c.army]
                 if state == "cut" or state == "none" or not (b and b.f == fkey) then F.supply_cart_return(c)
-                else F.supply_cart_arrive(c, b, math.max(1, math.ceil(force:unit_list():num_items() / 4)) * 10) end
+                else F.supply_cart_arrive(c, b, F.ration_need(force) * 10) end
             else
                 local from = { c.x, c.y }
                 F.convoy_step(c, turn)

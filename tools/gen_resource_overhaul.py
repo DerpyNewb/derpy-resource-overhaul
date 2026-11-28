@@ -2095,13 +2095,17 @@ def bld_levels(chain):
     return ["%s_%d" % (chain, n) for n in (1, 2, 3)]
 
 
-def rare_cond(good):
-    """Where the good's building makes it: anywhere one of its by-product sources would."""
+def rare_cond(good, gate=False):
+    """Where the good's building makes it: anywhere one of its by-product sources would. gate=True is
+    the in-game production condition, which leaves the deposit out: the slot templates and F.found
+    already place the building on a deposit only, and OvN Lost World re-keys every template's deposit."""
     parts = []
     for pool, cond in GOODS[good]["sources"]:
         kind = _kind(pool)   # what the by-product's pool required of the region, made explicit
-        need = PORT() if kind == "port" else DEP(*pool[1:]) if kind == "mine" else None
-        parts.append(ALL(*[p for p in (need, cond) if p is not None]))
+        need = PORT() if kind == "port" else DEP(*pool[1:]) if kind == "mine" and not gate else None
+        terms = [p for p in (need, cond) if p is not None]
+        assert terms, "%s: a source with no condition left" % good
+        parts.append(ALL(*terms))
     return parts[0] if len(parts) == 1 else ANY(*parts)
 
 
@@ -2486,9 +2490,6 @@ def _map_data():
     return frozenset(regions), frozenset(groups)
 
 
-CLIMATE_STATES = ("suitable", "unsuitable", "uninhabitable")
-
-
 def render(c):
     """A condition as CA's building-effect expression (the root is the building; Region. is its region)."""
     op, a = c
@@ -2498,9 +2499,8 @@ def render(c):
         return "(" + (" && " if op == "and" else " || ").join(render(p) for p in a) + ")"
     if op == "not":
         return "!" + render(a)
-    if op == "clim":   # CA's own MountainClimate form: the three climate bundles of that climate
-        return "(" + " || ".join('Region.IsEffectBundleActive("wh3_dlc20_climate_%s_%s")'
-                                 % (s, n[len("climate_"):]) for n in a for s in CLIMATE_STATES) + ")"
+    if op == "clim":   # not CA's climate bundles: no Wood Elf region carries one (measured 2026-11-28)
+        return "(" + " || ".join('Region.ClimateKey == "%s"' % n for n in a) + ")"
     if op == "area":
         groups = _map_data()[1]
         names = [p % n for n in a for p in ("cai_region_hint_area_%s", "cai_region_hint_sub_area_%s",
@@ -2801,7 +2801,7 @@ def build():
     for good, spec in RARE.items():
         stem, req = bld_stem(good), cond_key(good, "bld")
         add("building_effect_context_expressions_tables", {   # the lore gate: every row below
-            "expression": render(rare_cond(good)), "key": req,
+            "expression": render(rare_cond(good, gate=True)), "key": req,
             "display_only_active_effects": True, "always_show_display_text": False})
         for race_, ch in rare_chains(good):
             add("building_superchains_tables", {"key": ch})
@@ -3670,8 +3670,9 @@ def check(t, loc):
     names = set(re.findall(r'"([^"]+)"', " ".join(v for k, v in ctx.items() if not k.startswith(HOLD_PREFIX))))
     own_bundles = {r["key"] for r in t["effect_bundles_tables"][2]}   # the hold markers
     regions, groups = _map_data()
+    climates = {r["type"] for r in db("settlement_climate_types_tables")[1]}
     for n in names:   # every string an expression names is a real key of its kind
-        assert (n in van_bundles or n in groups or n in regions or n in van_res
+        assert (n in van_bundles or n in groups or n in regions or n in van_res or n in climates
                 or n in ORIGINS.values() or n in own_bundles), "expression names unknown key %s" % n
     ours = {l for g in RARE for _r, ch in rare_chains(g) for l in bld_levels(ch)}
     made = {effect(g) for g in GOODS}
