@@ -2868,6 +2868,86 @@ do
     DERPY_MR_FLOWS.provision_spare=nil
     NOTE=nil
     end)()
+    -- THE LAND THE ARMY NEEDS (land sustenance, Task 8): one row for each group of units in the army that needs land,
+    -- from the flows script's land_status, under a heading of its own
+    ;(function()
+    local STATUS, ASKED
+    local force={general_character=function() return {command_queue_index=function() return 1 end} end}
+    local function rows_with(f) DERPY_MR_FLOWS.provision_rows=function()
+        return {{id="801",force=f,held=25,cap=50,need=5,short=0,auto=true,reason="It refills from this settlement."}}
+    end end
+    rows_with(force)
+    DERPY_MR_FLOWS.land_status=function(f) ASKED=f; return STATUS end
+    local AWAY="Away from it, they hold out for a while and then fade."
+    local function row_of(name) for _,r in ipairs(S.data) do if r[1]==name then return r end end end
+    local function heading() for _,r in ipairs(S.data) do if r.section and string.find(r[1],"Land",1,true) then return r end end end
+    STATUS=nil; S.refresh()
+    eq(ASKED,force,"the panel asks about the army's own force")
+    local base=#S.data
+    eq(row_of("Daemons"),nil,"no answer, no land row"); eq(heading(),nil,"and no heading")
+    STATUS={}; S.refresh()
+    eq(#S.data,base,"an army with no unit that needs land shows nothing of it"); eq(heading(),nil,"not even the heading")
+    STATUS={{group="chaos",state="land",reserve=5}}; S.refresh()
+    local r=row_of("Daemons")
+    eq(r~=nil,true,"an army with daemons has a row labelled Daemons")
+    eq(r[2],"Sustained here","land that sustains them")
+    eq(r.tip,"Daemons are sustained by land that Chaos has corrupted.\n"..AWAY,"and its tooltip says what they need")
+    eq(heading()~=nil,true,"the row sits under a heading of its own"); eq(#S.data,base+2,"which is one row more")
+    eq(S.data[#S.data],r,"the last on the view")
+    for _,c in ipairs({{{group="chaos",state="held",reserve=2},"Held by magic"},
+                       {{group="chaos",state="reserve",reserve=3},"3 turns left"},
+                       {{group="chaos",state="reserve",reserve=10},"10 turns left"},
+                       {{group="chaos",state="reserve",reserve=1},"1 turn left"},
+                       {{group="chaos",state="fading",reserve=0},"Fading"}}) do
+        STATUS={c[1]}; S.refresh()
+        eq(row_of("Daemons")[2],c[2],c[1].state.." with "..c[1].reserve.." left reads "..c[2])
+    end
+    STATUS={{group="chaos",state="land",reserve=5},{group="skaven",state="held",reserve=5},{group="undead",state="reserve",reserve=4},
+            {group="tomb",state="fading",reserve=0},{group="spirit",state="reserve",reserve=1}}
+    S.refresh()
+    local start
+    for i,x in ipairs(S.data) do if x==heading() then start=i end end
+    for i,w in ipairs({
+        {"Daemons","Sustained here","Daemons are sustained by land that Chaos has corrupted."},
+        {"Verminlords","Held by magic","Verminlords are sustained by land that the Skaven have corrupted."},
+        {"Undead","4 turns left","The undead are sustained by land tainted by vampiric corruption."},
+        {"Tomb Kings units","Fading","Tomb Kings units are sustained by land held by their own faction or an ally."},
+        {"Spirits","1 turn left","Spirits are sustained by clean land."}}) do
+        local x=S.data[start+i]
+        eq(x and x[1],w[1],"row "..i.." is "..w[1]); eq(x[2],w[2],w[1].." reads "..w[2])
+        eq(x.tip,w[3].."\n"..AWAY,w[1].."'s tooltip says what it needs")
+        eq(string.find(x.tip,"%d"),nil,w[1].."'s tooltip names no number a setting could change")
+    end
+    eq(#S.data,start+5,"one row for each group and none more")
+    STATUS={{group="chaos",state="reserve",reserve=3},{group="undead",state="held",reserve=5},
+            {group="tomb",state="fading",reserve=0},{group="spirit",state="land",reserve=5}}
+    DERPY_MR_FLOWS.supply_note=function() return {state="stretched",source="reg_a",turns=5,upkeep=20} end
+    S.refresh(); dump("army_land")   -- the preview draws the view with the land rows beside the supply road
+    DERPY_MR_FLOWS.supply_note=function() end
+    for _,t in ipairs({"Land they need","Status","Daemons","Verminlords","Undead","Tomb Kings units","Spirits","Sustained here","Held by magic",
+                       "1 turn left","{1} turns left","Fading",AWAY,"Daemons are sustained by land that Chaos has corrupted.",
+                       "Verminlords are sustained by land that the Skaven have corrupted.",
+                       "The undead are sustained by land tainted by vampiric corruption.",
+                       "Tomb Kings units are sustained by land held by their own faction or an ally.","Spirits are sustained by clean land."}) do
+        eq(type(DERPY_MR_LOC_KEYS[t]),"string","'"..t.."' has a loc key")
+    end
+    local key=DERPY_MR_LOC_KEYS["{1} turns left"]
+    LOC[key]="faltan {1} turnos"; S.T_CACHE={}
+    STATUS={{group="chaos",state="reserve",reserve=3}}; S.refresh()
+    eq(row_of("Daemons")[2],"faltan 3 turnos","a translation draws on the row")
+    LOC[key]=nil; S.T_CACHE={}
+    rows_with(nil); ASKED=nil; STATUS={{group="chaos",state="land",reserve=5}}; S.refresh()
+    eq(ASKED,nil,"a row with no force is not asked about"); eq(row_of("Daemons"),nil,"and shows no land row")
+    rows_with(force)
+    local logged=#ERRORS
+    DERPY_MR_FLOWS.land_status=function() error("no status") end
+    S.refresh(); eq(row_of("Daemons"),nil,"a status that throws shows no land row, and the view still draws")
+    eq(#ERRORS>logged,true,"and the throw is in the script log")
+    for i=#ERRORS,logged+1,-1 do ERRORS[i]=nil end
+    DERPY_MR_FLOWS.land_status=nil
+    S.refresh(); eq(row_of("Daemons"),nil,"a flows script without it shows none")
+    eq(S.data[1][1],"Auto-refill","and the view's first rows are where they were")
+    end)()
     DERPY_MR_FLOWS,S.view,S.focus=fl,view,focus
     S.refresh()
 end

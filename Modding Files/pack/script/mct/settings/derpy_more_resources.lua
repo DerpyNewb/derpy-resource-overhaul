@@ -19,7 +19,7 @@ end
 local m = mct:register_mod("derpy_more_resources")
 m:set_title("Derpy Resource Overhaul")
 m:set_author("_D3rpyN3wb_")
-m:set_description("How goods move between settlement stores. These are fixed for the life of a campaign: change them from the main menu before starting a new one. In a multiplayer campaign they are ignored and every value is the default on every machine. The recruitment and replenishment settings, the trade route lines and the Vanilla supply lines box can be changed at any time.")
+m:set_description("How goods move between settlement stores. These are fixed for the life of a campaign: change them from the main menu before starting a new one. In a multiplayer campaign they are ignored and every value is the default on every machine. The recruitment and replenishment settings, the trade route lines, the Vanilla supply lines box and every setting in the Daemons, undead and spirits section can be changed at any time.")
 m:add_new_section("stores", "Stores")
 
 local o_raid = m:add_new_option("raid", "slider")
@@ -131,6 +131,8 @@ o_road_danger:set_assigned_section("stores")
 if IN_CAMPAIGN then o_road_danger:set_locked(true, LOCK_REASON) end
 
 m:add_new_section("using", "Using stores")
+
+m:add_new_section("land", "Daemons, undead and spirits")
 
 local o_army_provisions = m:add_new_option("army_provisions", "checkbox")
 o_army_provisions:set_text("Carried army provisions")
@@ -284,6 +286,24 @@ o_bandits:set_default_value(true)
 o_bandits:set_assigned_section("using")
 if IN_CAMPAIGN then o_bandits:set_locked(true, LOCK_REASON) end
 
+local o_land_need = m:add_new_option("land_need", "checkbox")
+o_land_need:set_text("Daemons, undead and spirits need their land")
+o_land_need:set_tooltip_text("Daemons need land that Chaos has corrupted, and the undead need land tainted by vampiric corruption. Spirits, such as the Wood Elves' tree spirits, need clean land. Tomb Kings units need land held by their faction or an ally. Away from their land, these units hold out for a few turns. Then they weaken as a hungry army does. They lose strength, stop regaining it, and finally desert. Lords and heroes are never affected. Off: these units need nothing. CA's Vampire Counts factions never suffer the game's own attrition outside vampiric land, even with this switched off. You can change this during a campaign. The change applies from your next turn.")
+o_land_need:set_default_value(true)
+o_land_need:set_assigned_section("land")
+
+local o_ai_land = m:add_new_option("ai_land", "checkbox")
+o_ai_land:set_text("Other armies need their land")
+o_ai_land:set_tooltip_text("Armies of factions that no player controls follow the same rule while Other factions use their stores is on. Off: only your own armies do. You can change this during a campaign. The change applies from your next turn.")
+o_ai_land:set_default_value(true)
+o_ai_land:set_assigned_section("land")
+
+local o_land_events = m:add_new_option("land_events", "checkbox")
+o_land_events:set_text("Strong magic holds them")
+o_land_events:set_tooltip_text("Strong or Tempestuous Winds of Magic keep daemons and the undead from fading. A Storm of Magic keeps all of these units from fading, spirits and Tomb Kings units included. The Chaos Invasion keeps daemons from fading, and Nagash's return keeps the undead and Tomb Kings units from fading. Off: only their own land helps them. You can change this during a campaign. The change applies from your next turn.")
+o_land_events:set_default_value(true)
+o_land_events:set_assigned_section("land")
+
 -- NEVER LOCKED, NEVER FROZEN: flows.lua F.vanilla_supply reads it on every call (single player only).
 m:add_new_section("army_supply", "Army supply")
 local o_vanilla_supply_lines = m:add_new_option("vanilla_supply_lines", "checkbox")
@@ -338,6 +358,33 @@ o_supply_max:slider_set_step_size(1, 0)
 o_supply_max:set_default_value(25)
 o_supply_max:set_assigned_section("army_supply")
 if IN_CAMPAIGN then o_supply_max:set_locked(true, LOCK_REASON) end
+
+local o_land_grace = m:add_new_option("land_grace", "slider")
+o_land_grace:set_text("Turns before they fade")
+o_land_grace:set_tooltip_text("How many turns these units can spend away from their land before they start to fade. They first lose strength two turns after that. Their own land gives them back the full number of turns at once. You can change this during a campaign. The change applies from your next turn.")
+o_land_grace:slider_set_precision(0)
+o_land_grace:slider_set_min_max(0, 10)
+o_land_grace:slider_set_step_size(1, 0)
+o_land_grace:set_default_value(5)
+o_land_grace:set_assigned_section("land")
+
+local o_land_corrupt = m:add_new_option("land_corrupt", "slider")
+o_land_corrupt:set_text("Corruption they need")
+o_land_corrupt:set_tooltip_text("How much corruption a region needs to sustain daemons and the undead. Daemons count every kind of Chaos corruption, and the undead count vampiric corruption. You can change this during a campaign. The change applies from your next turn.")
+o_land_corrupt:slider_set_precision(0)
+o_land_corrupt:slider_set_min_max(0, 100)
+o_land_corrupt:slider_set_step_size(1, 0)
+o_land_corrupt:set_default_value(20)
+o_land_corrupt:set_assigned_section("land")
+
+local o_land_pure = m:add_new_option("land_pure", "slider")
+o_land_pure:set_text("Most corruption spirits can bear")
+o_land_pure:set_tooltip_text("The most corruption a region can have and still sustain spirits, counting every kind together. You can change this during a campaign. The change applies from your next turn.")
+o_land_pure:slider_set_precision(0)
+o_land_pure:slider_set_min_max(0, 100)
+o_land_pure:slider_set_step_size(1, 0)
+o_land_pure:set_default_value(20)
+o_land_pure:set_assigned_section("land")
 
 m:add_new_section("routes", "Trade route lines")
 
@@ -411,7 +458,7 @@ o_size:set_is_global(true)
 
 -- the settings a running campaign follows, opened again after MCT puts back a lock an older save holds
 core:add_listener("derpy_mr_mct_loaded", "MctInitialized", true, function()
-    for _, k in ipairs({"recruit", "gold_pays", "recruit_per", "replenish_per"}) do
+    for _, k in ipairs({"recruit", "gold_pays", "recruit_per", "replenish_per", "land_need", "ai_land", "land_events", "land_grace", "land_corrupt", "land_pure"}) do
         local o = m:get_option_by_key(k)
         if o then o:set_locked(false) end
     end

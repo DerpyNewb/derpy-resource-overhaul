@@ -1,0 +1,73 @@
+change	key	english	old_key	old_english
+edited	mct_derpy_more_resources_description	How goods move between settlement stores. These are fixed for the life of a campaign: change them from the main menu before starting a new one. In a multiplayer campaign they are ignored and every value is the default on every machine. The recruitment and replenishment settings, the trade route lines, the Vanilla supply lines box and every setting in the Daemons, undead and spirits section can be changed at any time.	mct_derpy_more_resources_description	How goods move between settlement stores. These are fixed for the life of a campaign: change them from the main menu before starting a new one. In a multiplayer campaign they are ignored and every value is the default on every machine. The recruitment and replenishment settings, the trade route lines and the Vanilla supply lines box can be changed at any time.
+new	effects_description_derpy_mr_effect_land_reserve	These units start to fade when the turns run out		
+new	effects_description_derpy_mr_effect_land_fading	These units weaken, stop replenishing and finally desert		
+new	effects_description_derpy_mr_effect_land_held	These units are kept from fading		
+new	effect_bundles_localised_title_derpy_mr_land_chaos_reserve	Far from Chaos		
+new	effect_bundles_localised_description_derpy_mr_land_chaos_reserve	This army's daemons are far from the magic of Chaos. They can hold their form a little longer, and are sustained again as soon as they reach land that Chaos has corrupted.		
+new	effect_bundles_localised_title_derpy_mr_land_chaos_fading	Fading Daemons		
+new	effect_bundles_localised_description_derpy_mr_land_chaos_fading	This army's daemons have been away from the magic of Chaos for too long, and they are fading. They will weaken, stop regaining their strength and at last slip back into the Realm of Chaos, one unit at a time. Land that Chaos has corrupted stops the fading at once. The army's lords and heroes are not affected.		
+new	effect_bundles_localised_title_derpy_mr_land_chaos_held	Daemons Held by Magic		
+new	effect_bundles_localised_description_derpy_mr_land_chaos_held	The Chaos Invasion or strong Winds of Magic keep this army's daemons from fading. While that lasts, they grow no weaker, but only land that Chaos has corrupted can restore them.		
+new	effect_bundles_localised_title_derpy_mr_land_skaven_reserve	Far from the Horned Rat		
+new	effect_bundles_localised_description_derpy_mr_land_skaven_reserve	This army's Verminlords are far from the corruption of the Horned Rat. They can hold their form a little longer, and are sustained again as soon as they reach land the Skaven have corrupted.		
+new	effect_bundles_localised_title_derpy_mr_land_skaven_fading	Fading Verminlords		
+new	effect_bundles_localised_description_derpy_mr_land_skaven_fading	This army's Verminlords have been away from the corruption of the Horned Rat for too long, and they are fading. They will weaken, stop regaining their strength and at last slip back into the Realm of Chaos, one unit at a time. Land the Skaven have corrupted stops the fading at once.		
+new	effect_bundles_localised_title_derpy_mr_land_skaven_held	Verminlords Held by Magic		
+new	effect_bundles_localised_description_derpy_mr_land_skaven_held	The Vermintide or strong Winds of Magic keep this army's Verminlords from fading. While that lasts, they grow no weaker, but only land the Skaven have corrupted can restore them.		
+new	effect_bundles_localised_title_derpy_mr_land_undead_reserve	Far from Death's Magic		
+new	effect_bundles_localised_description_derpy_mr_land_undead_reserve	This army's undead are far from the magic of death that binds them. They can hold together a little longer, and that magic takes hold of them again as soon as they reach land tainted by vampiric corruption.		
+new	effect_bundles_localised_title_derpy_mr_land_undead_fading	Crumbling Undead		
+new	effect_bundles_localised_description_derpy_mr_land_undead_fading	This army's undead have been away from the magic of death for too long, and they are falling apart. They will weaken, stop regaining their strength and at last crumble to dust, one unit at a time. Land tainted by vampiric corruption stops this at once. The army's lords and heroes are not affected.		
+new	effect_bundles_localised_title_derpy_mr_land_undead_held	Undead Held by Magic		
+new	effect_bundles_localised_description_derpy_mr_land_undead_held	Nagash's return or strong Winds of Magic keep this army's undead from fading. While that lasts, they grow no weaker, but only land tainted by vampiric corruption can restore them.		
+new	effect_bundles_localised_title_derpy_mr_land_tomb_reserve	Far from Friendly Land		
+new	effect_bundles_localised_description_derpy_mr_land_tomb_reserve	This army's Tomb Kings units are far from friendly land, and the incantations that bind them are weakening. The units can hold together a little longer, and the incantations take hold again as soon as the units reach land held by their own faction or an ally.		
+new	effect_bundles_localised_title_derpy_mr_land_tomb_fading	Failing Bindings		
+new	effect_bundles_localised_description_derpy_mr_land_tomb_fading	This army's Tomb Kings units have been away from friendly land for too long, and the incantations that bind them are failing. These units will weaken, stop regaining their strength and at last fall still, one unit at a time. Land held by their own faction or an ally stops this at once. The army's lords and heroes are not affected.		
+new	effect_bundles_localised_title_derpy_mr_land_tomb_held	Bindings Held by Magic		
+new	effect_bundles_localised_description_derpy_mr_land_tomb_held	A Storm of Magic or Nagash's return keeps this army's Tomb Kings units from fading. While that lasts, they grow no weaker, but only land held by their own faction or an ally can restore them.		
+new	effect_bundles_localised_title_derpy_mr_land_spirit_reserve	Far from Clean Land		
+new	effect_bundles_localised_description_derpy_mr_land_spirit_reserve	This army's spirits are far from the clean land that sustains them. They can endure a little longer, and are safe again as soon as they reach land where corruption is light.		
+new	effect_bundles_localised_title_derpy_mr_land_spirit_fading	Withering Spirits		
+new	effect_bundles_localised_description_derpy_mr_land_spirit_fading	This army's spirits have been away from clean land for too long, and they are withering. They will weaken, stop regaining their strength and at last be lost, one unit at a time. Land where corruption is light stops this at once. The army's lords and heroes are not affected.		
+new	effect_bundles_localised_title_derpy_mr_land_spirit_held	Spirits Held by Magic		
+new	effect_bundles_localised_description_derpy_mr_land_spirit_held	A Storm of Magic keeps this army's spirits from fading. While it lasts, they grow no weaker, but only land where corruption is light can restore them.		
+new	event_feed_strings_text_derpy_mr_land_title	Creatures of Magic		
+new	event_feed_strings_text_derpy_mr_land_primary	Some of your daemons, undead, Tomb Kings units or spirits have begun to fade.		
+new	event_feed_strings_text_derpy_mr_land_secondary	Daemons are sustained by land that Chaos has corrupted, the undead by vampiric corruption, spirits by clean land, and Tomb Kings units by land held by their own faction or an ally. Away from that land, these units hold out for a few turns. Then they weaken, stop regaining their strength and at last desert. Lords and heroes are never affected. Check an army's effects to see how long its units can hold out.		
+new	event_feed_strings_text_derpy_mr_land_episode_episode_chaos_invasion	The Chaos Invasion keeps every daemon from fading while it lasts.		
+new	event_feed_strings_text_derpy_mr_land_episode_episode_nagash_endgame	Nagash's return keeps the undead and Tomb Kings units from fading while it lasts.		
+new	event_feed_strings_text_derpy_mr_land_episode_episode_nagash_sandbox	Nagash's return keeps the undead and Tomb Kings units from fading while it lasts.		
+new	event_feed_strings_text_derpy_mr_land_episode_episode_skaven_vermintide	The Vermintide keeps every Verminlord from fading while it lasts.		
+new	derpy_mr_ui_36c9b6cce6	Daemons		
+new	derpy_mr_ui_e8b656d14a	Verminlords		
+new	derpy_mr_ui_a51041f7f7	Undead		
+new	derpy_mr_ui_ab592c0c4e	Tomb Kings units		
+new	derpy_mr_ui_076d15928b	Spirits		
+new	derpy_mr_ui_8c305bdb85	Daemons are sustained by land that Chaos has corrupted.		
+new	derpy_mr_ui_852d19bb6c	Verminlords are sustained by land that the Skaven have corrupted.		
+new	derpy_mr_ui_225d98189b	The undead are sustained by land tainted by vampiric corruption.		
+new	derpy_mr_ui_94ad389433	Tomb Kings units are sustained by land held by their own faction or an ally.		
+new	derpy_mr_ui_0b77a28191	Spirits are sustained by clean land.		
+new	derpy_mr_ui_d08d2e4782	Away from it, they hold out for a while and then fade.		
+new	derpy_mr_ui_7a540195a1	Sustained here		
+new	derpy_mr_ui_f5e932f6f0	Held by magic		
+new	derpy_mr_ui_09b43b300d	Fading		
+new	derpy_mr_ui_0ee3a414f7	1 turn left		
+new	derpy_mr_ui_15af695553	{1} turns left		
+new	derpy_mr_ui_bd105dedb4	Land they need		
+new	derpy_mr_ui_ec53a8c4f0	Status		
+new	mct_derpy_more_resources_land_section_text	Daemons, undead and spirits		
+new	mct_derpy_more_resources_land_need_text	Daemons, undead and spirits need their land		
+new	mct_derpy_more_resources_land_need_tooltip	Daemons need land that Chaos has corrupted, and the undead need land tainted by vampiric corruption. Spirits, such as the Wood Elves' tree spirits, need clean land. Tomb Kings units need land held by their faction or an ally. Away from their land, these units hold out for a few turns. Then they weaken as a hungry army does. They lose strength, stop regaining it, and finally desert. Lords and heroes are never affected. Off: these units need nothing. CA's Vampire Counts factions never suffer the game's own attrition outside vampiric land, even with this switched off. You can change this during a campaign. The change applies from your next turn.		
+new	mct_derpy_more_resources_ai_land_text	Other armies need their land		
+new	mct_derpy_more_resources_ai_land_tooltip	Armies of factions that no player controls follow the same rule while Other factions use their stores is on. Off: only your own armies do. You can change this during a campaign. The change applies from your next turn.		
+new	mct_derpy_more_resources_land_events_text	Strong magic holds them		
+new	mct_derpy_more_resources_land_events_tooltip	Strong or Tempestuous Winds of Magic keep daemons and the undead from fading. A Storm of Magic keeps all of these units from fading, spirits and Tomb Kings units included. The Chaos Invasion keeps daemons from fading, and Nagash's return keeps the undead and Tomb Kings units from fading. Off: only their own land helps them. You can change this during a campaign. The change applies from your next turn.		
+new	mct_derpy_more_resources_land_grace_text	Turns before they fade		
+new	mct_derpy_more_resources_land_grace_tooltip	How many turns these units can spend away from their land before they start to fade. They first lose strength two turns after that. Their own land gives them back the full number of turns at once. You can change this during a campaign. The change applies from your next turn.		
+new	mct_derpy_more_resources_land_corrupt_text	Corruption they need		
+new	mct_derpy_more_resources_land_corrupt_tooltip	How much corruption a region needs to sustain daemons and the undead. Daemons count every kind of Chaos corruption, and the undead count vampiric corruption. You can change this during a campaign. The change applies from your next turn.		
+new	mct_derpy_more_resources_land_pure_text	Most corruption spirits can bear		
+new	mct_derpy_more_resources_land_pure_tooltip	The most corruption a region can have and still sustain spirits, counting every kind together. You can change this during a campaign. The change applies from your next turn.		

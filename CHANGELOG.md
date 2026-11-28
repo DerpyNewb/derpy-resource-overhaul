@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-28, second update
+
+- Daemons now need land corrupted by Chaos, and the undead need land with vampiric corruption.
+- Tomb Kings units now need land held by their own faction or an ally.
+- Spirits, such as the Wood Elves' tree spirits and the Elemental Bear, now need clean land.
+- Away from their land, these units hold out for 5 turns by default. Then they fade like a hungry army: they lose strength, stop replenishing and finally desert.
+- Strong Winds of Magic or stronger hold daemons and the undead, and a Storm of Magic holds them all.
+- The Chaos Invasion holds daemons, and Nagash's return holds the undead and Tomb Kings units.
+- Lords, heroes, the K'daai, Cathay's statues and the Rogue Idol are never affected.
+- Computer armies follow the same rule.
+- An army's effects show how many turns these units can still hold out, and when they are fading.
+- The Vault's army view shows the land each army needs and the turns it has left.
+- New MCT section for these rules. You can switch the rule off, or change its settings, during a campaign.
+- The rule also applies to campaigns already under way.
+- CA's Vampire Counts factions no longer suffer vanilla attrition outside vampiric land, even with the rule switched off. Vampire factions from other mods still do.
+
 ## 2026-11-28
 
 - Starwood buildings now make Starwood.

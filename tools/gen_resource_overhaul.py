@@ -616,6 +616,122 @@ def fed_bundles():
               ("wh_main_effect_force_all_campaign_replenishment_rate", "force_to_force_own", 5)])]
 
 
+LAND_STATES = ("reserve", "fading", "held")
+LAND_ICONS = {"chaos": "corruption_chaos.png", "skaven": "corruption_skaven.png", "undead": "corruption_vampiric.png",
+              "tomb": "trait_tomb_kings.png", "spirit": "spirit_essence.png"}
+LAND_TEXT = {
+    "chaos": (
+        ("Far from Chaos",
+         "This army's daemons are far from the magic of Chaos. They can hold their form a little longer, and are "
+         "sustained again as soon as they reach land that Chaos has corrupted."),
+        ("Fading Daemons",
+         "This army's daemons have been away from the magic of Chaos for too long, and they are fading. They will "
+         "weaken, stop regaining their strength and at last slip back into the Realm of Chaos, one unit at a time. "
+         "Land that Chaos has corrupted stops the fading at once. The army's lords and heroes are not affected."),
+        ("Daemons Held by Magic",
+         "The Chaos Invasion or strong Winds of Magic keep this army's daemons from fading. While that lasts, they "
+         "grow no weaker, but only land that Chaos has corrupted can restore them.")),
+    "skaven": (
+        ("Far from the Horned Rat",
+         "This army's Verminlords are far from the corruption of the Horned Rat. They can hold their form a little "
+         "longer, and are sustained again as soon as they reach land the Skaven have corrupted."),
+        ("Fading Verminlords",
+         "This army's Verminlords have been away from the corruption of the Horned Rat for too long, and they are "
+         "fading. They will weaken, stop regaining their strength and at last slip back into the Realm of Chaos, one "
+         "unit at a time. Land the Skaven have corrupted stops the fading at once."),
+        ("Verminlords Held by Magic",
+         "The Vermintide or strong Winds of Magic keep this army's Verminlords from fading. While that lasts, they "
+         "grow no weaker, but only land the Skaven have corrupted can restore them.")),
+    "undead": (
+        ("Far from Death's Magic",
+         "This army's undead are far from the magic of death that binds them. They can hold together a little "
+         "longer, and that magic takes hold of them again as soon as they reach land tainted by vampiric corruption."),
+        ("Crumbling Undead",
+         "This army's undead have been away from the magic of death for too long, and they are falling apart. They "
+         "will weaken, stop regaining their strength and at last crumble to dust, one unit at a time. Land tainted by "
+         "vampiric corruption stops this at once. The army's lords and heroes are not affected."),
+        ("Undead Held by Magic",
+         "Nagash's return or strong Winds of Magic keep this army's undead from fading. While that lasts, they grow "
+         "no weaker, but only land tainted by vampiric corruption can restore them.")),
+    "tomb": (
+        ("Far from Friendly Land",
+         "This army's Tomb Kings units are far from friendly land, and the incantations that bind them are weakening. "
+         "The units can hold together a little longer, and the incantations take hold again as soon as the units "
+         "reach land held by their own faction or an ally."),
+        ("Failing Bindings",
+         "This army's Tomb Kings units have been away from friendly land for too long, and the incantations that "
+         "bind them are failing. These units will weaken, stop regaining their strength and at last fall still, one "
+         "unit at a time. Land held by their own faction or an ally stops this at once. The army's lords and heroes "
+         "are not affected."),
+        ("Bindings Held by Magic",
+         "A Storm of Magic or Nagash's return keeps this army's Tomb Kings units from fading. While that lasts, they "
+         "grow no weaker, but only land held by their own faction or an ally can restore them.")),
+    "spirit": (
+        ("Far from Clean Land",
+         "This army's spirits are far from the clean land that sustains them. They can endure a little longer, and "
+         "are safe again as soon as they reach land where corruption is light."),
+        ("Withering Spirits",
+         "This army's spirits have been away from clean land for too long, and they are withering. They will weaken, "
+         "stop regaining their strength and at last be lost, one unit at a time. Land where corruption is light "
+         "stops this at once. The army's lords and heroes are not affected."),
+        ("Spirits Held by Magic",
+         "A Storm of Magic keeps this army's spirits from fading. While it lasts, they grow no weaker, but only land "
+         "where corruption is light can restore them.")),
+}
+LAND_EPISODES = {
+    "episode_chaos_invasion": "The Chaos Invasion keeps every daemon from fading while it lasts.",
+    "episode_nagash_endgame": "Nagash's return keeps the undead and Tomb Kings units from fading while it lasts.",
+    "episode_nagash_sandbox": "Nagash's return keeps the undead and Tomb Kings units from fading while it lasts.",
+    "episode_skaven_vermintide": "The Vermintide keeps every Verminlord from fading while it lasts.",
+}
+
+
+LAND_FX_DONOR, LAND_FX_SCOPE = "wh_main_effect_campaign_enable_attrition", "force_to_force_own"
+LAND_FX = {
+    "reserve": ("attrition.png", False, "These units start to fade when the turns run out"),
+    "fading": ("attrition.png", False, "These units weaken, stop replenishing and finally desert"),
+    "held": ("magic.png", True, "These units are kept from fading"),
+}
+
+
+def land_fx(state):
+    return "derpy_mr_effect_land_" + state
+
+
+def land_bundles():
+    import gen_mr_ui as M
+    assert tuple(LAND_TEXT) == M.LAND_GROUPS == tuple(LAND_ICONS), (tuple(LAND_TEXT), M.LAND_GROUPS)
+    assert tuple(LAND_FX) == LAND_STATES, tuple(LAND_FX)
+    return [("derpy_mr_land_%s_%s" % (g, s), {"reserve": LAND_ICONS[g], "fading": "attrition.png", "held": "magic.png"}[s],
+             title, desc, [(land_fx(s), LAND_FX_SCOPE, 1)])
+            for g in M.LAND_GROUPS for s, (title, desc) in zip(LAND_STATES, LAND_TEXT[g])]
+
+
+def land_messages():
+    pre = "event_feed_strings_text_derpy_mr_land_"
+    return [(pre + "title", "Creatures of Magic"),
+            (pre + "primary", "Some of your daemons, undead, Tomb Kings units or spirits have begun to fade."),
+            (pre + "secondary",
+             "Daemons are sustained by land that Chaos has corrupted, the undead by vampiric corruption, spirits by "
+             "clean land, and Tomb Kings units by land held by their own faction or an ally. Away from that land, these units hold out for a few turns. "
+             "Then they weaken, stop regaining their strength and at last desert. Lords and heroes are never "
+             "affected. Check an army's effects to see how long its units can hold out.")] + \
+           [(pre + "episode_" + k, v) for k, v in sorted(LAND_EPISODES.items())]
+
+
+def check_land_keys():
+    with open(os.path.join(OUT, "flows.lua"), encoding="utf-8") as fh:
+        flows = fh.read()
+    states = re.search(r"^F\.LAND_STATES = \{([^}]*)\}", flows, re.M)
+    assert states and tuple(re.findall(r'"(\w+)"', states.group(1))) == LAND_STATES, "flows.lua's F.LAND_STATES"
+    import gen_mr_ui as M
+    groups = re.search(r"^F\.LAND_GROUPS = \{([^}]*)\}", flows, re.M)
+    assert groups and tuple(re.findall(r'"(\w+)"', groups.group(1))) == M.LAND_GROUPS, "flows.lua's F.LAND_GROUPS"
+    eps =re.search(r"^F\.LAND_EPISODES = \{\n(.*?)^\}", flows, re.M | re.S)
+    assert eps and set(re.findall(r"^\s+(\w+) = \{", eps.group(1), re.M)) == set(LAND_EPISODES), \
+        "flows.lua's F.LAND_EPISODES has an episode with no message, or LAND_EPISODES one it never sends"
+
+
 def supply_bundles():
     """The army supply road's upkeep (design 2026-11-08, section 4): a force bundle with NO effect rows. flows.lua
     F.supply_turn builds a custom bundle on this record and adds the upkeep effect at each army's own figure, so the
@@ -2118,7 +2234,7 @@ def n_loc():
             + 2 * len(SUPPLY) + 2 + len(MINT_FX) + 2 + 2 * len(store_stems())   # Exports held; the hidden markers
             + 2 * len(WORK_UPGRADES) + 2 * sum(1 for w in WORK_ITEMS if not w[3])
             + 2   # Recruits
-            + 2 * (len(provision_bundles()) + len(fed_bundles()) + len(supply_bundles())) + 5 + 3 + 5 + 2 * len(recipe_bundles()) + 3 * sum(1 for w in works() if w["kind"] == "trait") + 2)   # recipes; 5 + 3 + 5: the army food, road loss and supply cart road messages
+            + 2 * (len(provision_bundles()) + len(fed_bundles()) + len(supply_bundles()) + len(land_bundles())) + 5 + 3 + 5 + len(land_messages()) + len(LAND_FX) + 2 * len(recipe_bundles()) + 3 * sum(1 for w in works() if w["kind"] == "trait") + 2)   # recipes; 5 + 3 + 5: the army food, road loss and supply cart road messages
 
 # Owners with no living people to make or eat a good: daemons, the dead, and beasts with no towns
 # to sell in. Matched on the CHAIN key, so a special variant for one of them goes too. Not Norsca's god altars
@@ -2851,6 +2967,8 @@ def build():
     _dilemmas(add, loc)
     _shipments(add, loc)
     _works_rows(add, loc)
+    for r in vampire_immunities():
+        add(IMMUNITY_TABLE, r)
     return t, loc
 
 
@@ -2875,6 +2993,38 @@ def check_shipments(t, loc):
     keys = dict(loc)
     for pre in ("campaign_interactable_marker_infos_name_", "campaign_interactable_marker_infos_tooltip_"):
         assert keys.get(pre + SHIP_INFO), pre + SHIP_INFO
+
+
+IMMUNITY_TABLE = "campaign_map_attrition_faction_immunities_tables"
+VAMPIRE_ATTRITION = "non_vampire_territory"
+VAMPIRE_FACTION_COUNT = 24
+VAMPIRE_SAMPLES = ("wh_main_vmp_vampire_counts", "wh3_dlc29_vmp_neferata")
+
+
+def vampire_immunities():
+    _ver, van = db(IMMUNITY_TABLE)
+    assert VAMPIRE_ATTRITION in {r["key"] for r in db("campaign_map_attritions_tables")[1]}, VAMPIRE_ATTRITION
+    already = {r["faction"] for r in van if r["attrition"] == VAMPIRE_ATTRITION}
+    keys = sorted(r["key"] for r in db("factions_tables")[1]
+                  if "_vmp_" in r["key"] and "rebel" not in r["key"] and "separatist" not in r["key"])
+    rows = [{"attrition": VAMPIRE_ATTRITION, "faction": k} for k in keys if k not in already]
+    assert len(rows) == VAMPIRE_FACTION_COUNT, "found %d vampire factions to cover, want %d" % (
+        len(rows), VAMPIRE_FACTION_COUNT)
+    assert set(VAMPIRE_SAMPLES) <= {r["faction"] for r in rows}, VAMPIRE_SAMPLES
+    return rows
+
+
+def check_vampire_immunities(t):
+    ver, cols, rows = t.get(IMMUNITY_TABLE, (None, None, []))
+    assert len(rows) == VAMPIRE_FACTION_COUNT, "%s has %d rows, want %d" % (IMMUNITY_TABLE, len(rows), VAMPIRE_FACTION_COUNT)
+    van_ver, van = db(IMMUNITY_TABLE)
+    assert (ver, cols) == (van_ver, list(van[0])), (ver, cols)
+    assert {r["attrition"] for r in rows} == {VAMPIRE_ATTRITION}, rows
+    assert set(VAMPIRE_SAMPLES) <= {r["faction"] for r in rows}, VAMPIRE_SAMPLES
+    ca = {(r["attrition"], r["faction"]) for r in van}
+    clash = [r["faction"] for r in rows if (r["attrition"], r["faction"]) in ca]
+    assert not clash, "already immune in CA's table: %s" % clash
+    assert rows == vampire_immunities()
 
 
 def _bundles(add, loc):
@@ -2941,7 +3091,12 @@ def _bundles(add, loc):
     # THE NAMED RECIPES' BUNDLES (workshop expansion spec section 4): an army work's force bundle on
     # CA's force donor, a lasting work's faction bundle on the order donor
     force, = [r for r in db("effect_bundles_tables")[1] if r["key"] == FORCE_DONOR]
-    for key, icon_, title, desc, fx in provision_bundles() + fed_bundles() + supply_bundles():
+    land_donor, = [r for r in db("effects_tables")[1] if r["effect"] == LAND_FX_DONOR]
+    for s, (icon_, good, text) in LAND_FX.items():
+        add("effects_tables", dict(land_donor, effect=land_fx(s), icon=icon_, icon_negative=icon_,
+                                   is_positive_value_good=good))
+        loc.append(("effects_description_" + land_fx(s), text))
+    for key, icon_, title, desc, fx in provision_bundles() + fed_bundles() + supply_bundles() + land_bundles():
         add("effect_bundles_tables", dict(force, key=key, localised_title=title,
             localised_description=desc, ui_icon=icon_))
         for e, scope, v in fx:
@@ -2958,6 +3113,7 @@ def _bundles(add, loc):
             ("event_feed_strings_text_derpy_mr_army_food_primary_desert", "Hungry soldiers have deserted an army."),
             ("event_feed_strings_text_derpy_mr_army_food_secondary_hard",
              "Open Resource Vault > Spending to check army provisions. Refill from your own unsieged local settlement above Keep. After two missed meals the army's units lose strength each turn. After five, units desert.")]
+    loc += land_messages()
     # BANDITS (Part D): a computer's convoy bound for a player lost goods on the road (flows.lua F.road_settle)
     loc += [("event_feed_strings_text_derpy_mr_road_loss_title", "Cargo robbed on the road"),
             ("event_feed_strings_text_derpy_mr_road_loss_primary", "Bandits took part of a cargo bound for you."),
@@ -3005,7 +3161,7 @@ def all_bundles():
            [("faction", k, i, fx) for _o, _u, k, i, _t, _w, fx in ORDERS] + \
            [("faction", HOLD[0], HOLD[1], [])] + \
            [("faction", k, i, fx) for k, i, _t, _d, fx in edict_bundles()] + \
-           [("force", k, i, fx) for k, i, _t, _d, fx in provision_bundles() + fed_bundles() + supply_bundles()] + \
+           [("force", k, i, fx) for k, i, _t, _d, fx in provision_bundles() + fed_bundles() + supply_bundles() + land_bundles()] + \
            recipe_bundles()   # its effects are the script's (HOLD)
 
 
@@ -3161,6 +3317,16 @@ def check_bundles(t, loc):
     scopes = {r["key"] for r in db("campaign_effect_scopes_tables")[1]}
     have = E._game_assets()
     fx = t["effect_bundles_to_effects_junctions_tables"][2]
+    ours = {r["effect"]: r for r in t["effects_tables"][2]}
+    for s, (icon_, good, _text) in LAND_FX.items():
+        r = ours[land_fx(s)]
+        assert land_fx(s) not in van_fx and (r["icon"], r["is_positive_value_good"]) == (icon_, good), r
+        assert "ui/campaign ui/effect_bundles/" + icon_ in have, "no such effect icon: %s" % icon_
+        assert keys.get("effects_description_" + land_fx(s)), land_fx(s)
+        van_fx[land_fx(s)] = r
+    for key, _i, _t, _d, _fx in land_bundles():
+        got = [(r["effect_key"], r["effect_scope"], r["value"]) for r in fx if r["effect_bundle_key"] == key]
+        assert got == [(land_fx(key.rsplit("_", 1)[1]), LAND_FX_SCOPE, 1.0)], (key, got)
     for target, key, icon_, effects in all_bundles():
         b = rows[key]
         assert b["bundle_target"] == target and b["ui_icon"] == icon_, b
@@ -3172,7 +3338,8 @@ def check_bundles(t, loc):
         for e, s, v in got:
             assert e in van_fx, "no CA effect %s" % e
             assert s in scopes, "no CA scope %s" % s
-            penalty = key in {b[0] for b in provision_bundles()} or (key, e) in PENALTIES
+            penalty = key in {b[0] for b in provision_bundles()} or (key, e) in PENALTIES \
+                or e in {land_fx(s) for s, x in LAND_FX.items() if not x[1]}
             assert ((v > 0) == van_fx[e]["is_positive_value_good"]) != penalty, "%s %s has wrong sign" % (key, e)
     assert len(rows) == len(all_bundles()) + len(store_stems()), sorted(rows)   # + check_holds' markers
 
@@ -3637,10 +3804,12 @@ def reach_table():
 def check(t, loc):
     """Fail on anything that would load wrong or silently do nothing."""
     check_bundles(t, loc)
+    check_land_keys()
     check_edicts(t, loc)
     check_holds(t, loc)
     check_dilemmas(t, loc)
     check_shipments(t, loc)
+    check_vampire_immunities(t)
     check_mod_races()
     check_no_mod_keys(t)
     check_works(t)

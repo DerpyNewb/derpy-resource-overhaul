@@ -16,6 +16,9 @@ DERPY_MR_FLOWS_DEFAULTS = {
     settle_turns = 5,
     supply_step = 5,
     supply_max = 25,
+    land_grace = 5,
+    land_corrupt = 20,
+    land_pure = 20,
     army_provisions = true,
     processing = true,
     services = true,
@@ -39,8 +42,11 @@ DERPY_MR_FLOWS_DEFAULTS = {
     ai_half_rations = false,
     ai_food = false,
     ai_armoury = true,
+    land_need = true,
+    ai_land = true,
+    land_events = true,
 }
-DERPY_MR_FLOWS_LIVE = {recruit = true, gold_pays = true, recruit_per = true, replenish_per = true}
+DERPY_MR_FLOWS_LIVE = {recruit = true, gold_pays = true, recruit_per = true, replenish_per = true, land_need = true, ai_land = true, land_events = true, land_grace = true, land_corrupt = true, land_pure = true}
 DERPY_MR_FLOWS_COVE = {pct = 50, ids = {[615256079] = true}}
 DERPY_MR_FLOWS_KIND = {
     cove = "plundered",
@@ -937,6 +943,637 @@ DERPY_MR_FLOWS_NO_MEALS = {
     ["wh_pro03_vmp_cha_krell_campaign_4"] = true,
     ["wh_pro04_wef_mon_treekin_ror_0"] = true,
 }
+DERPY_MR_FLOWS_LAND_NEED = {
+    ["wh2_dlc09_tmb_art_casket_of_souls_0"] = "tomb",
+    ["wh2_dlc09_tmb_art_screaming_skull_catapult_0"] = "tomb",
+    ["wh2_dlc09_tmb_cav_hexwraiths"] = "tomb",
+    ["wh2_dlc09_tmb_cav_necropolis_knights_0"] = "tomb",
+    ["wh2_dlc09_tmb_cav_necropolis_knights_1"] = "tomb",
+    ["wh2_dlc09_tmb_cav_necropolis_knights_ror"] = "tomb",
+    ["wh2_dlc09_tmb_cav_nehekhara_horsemen_0"] = "tomb",
+    ["wh2_dlc09_tmb_cav_nehekhara_horsemen_ror"] = "tomb",
+    ["wh2_dlc09_tmb_cav_skeleton_horsemen_0"] = "tomb",
+    ["wh2_dlc09_tmb_cav_skeleton_horsemen_0_summoned"] = "tomb",
+    ["wh2_dlc09_tmb_cav_skeleton_horsemen_archers_0"] = "tomb",
+    ["wh2_dlc09_tmb_cha_arkhan_0"] = "tomb",
+    ["wh2_dlc09_tmb_cha_arkhan_1"] = "tomb",
+    ["wh2_dlc09_tmb_cha_arkhan_2"] = "tomb",
+    ["wh2_dlc09_tmb_cha_khalida_0"] = "tomb",
+    ["wh2_dlc09_tmb_cha_khalida_1"] = "tomb",
+    ["wh2_dlc09_tmb_cha_khalida_2"] = "tomb",
+    ["wh2_dlc09_tmb_cha_khatep_0"] = "tomb",
+    ["wh2_dlc09_tmb_cha_khatep_1"] = "tomb",
+    ["wh2_dlc09_tmb_cha_khatep_2"] = "tomb",
+    ["wh2_dlc09_tmb_cha_khatep_3"] = "tomb",
+    ["wh2_dlc09_tmb_cha_liche_priest_death_0"] = "tomb",
+    ["wh2_dlc09_tmb_cha_liche_priest_death_1"] = "tomb",
+    ["wh2_dlc09_tmb_cha_liche_priest_light_0"] = "tomb",
+    ["wh2_dlc09_tmb_cha_liche_priest_light_1"] = "tomb",
+    ["wh2_dlc09_tmb_cha_liche_priest_nehekhara_0"] = "tomb",
+    ["wh2_dlc09_tmb_cha_liche_priest_nehekhara_1"] = "tomb",
+    ["wh2_dlc09_tmb_cha_liche_priest_shadow_0"] = "tomb",
+    ["wh2_dlc09_tmb_cha_liche_priest_shadow_1"] = "tomb",
+    ["wh2_dlc09_tmb_cha_necrotect_0"] = "tomb",
+    ["wh2_dlc09_tmb_cha_necrotect_1"] = "tomb",
+    ["wh2_dlc09_tmb_cha_settra_0"] = "tomb",
+    ["wh2_dlc09_tmb_cha_settra_1"] = "tomb",
+    ["wh2_dlc09_tmb_cha_settra_2"] = "tomb",
+    ["wh2_dlc09_tmb_cha_settra_3"] = "tomb",
+    ["wh2_dlc09_tmb_cha_tomb_king_0"] = "tomb",
+    ["wh2_dlc09_tmb_cha_tomb_king_1"] = "tomb",
+    ["wh2_dlc09_tmb_cha_tomb_king_2"] = "tomb",
+    ["wh2_dlc09_tmb_cha_tomb_king_3"] = "tomb",
+    ["wh2_dlc09_tmb_cha_tomb_prince_0"] = "tomb",
+    ["wh2_dlc09_tmb_cha_tomb_prince_1"] = "tomb",
+    ["wh2_dlc09_tmb_cha_tomb_prince_2"] = "tomb",
+    ["wh2_dlc09_tmb_inf_cairn_wraiths"] = "tomb",
+    ["wh2_dlc09_tmb_inf_crypt_ghouls"] = "tomb",
+    ["wh2_dlc09_tmb_inf_nehekhara_warriors_0"] = "tomb",
+    ["wh2_dlc09_tmb_inf_nehekhara_warriors_ror"] = "tomb",
+    ["wh2_dlc09_tmb_inf_skeleton_archers_0"] = "tomb",
+    ["wh2_dlc09_tmb_inf_skeleton_archers_ror"] = "tomb",
+    ["wh2_dlc09_tmb_inf_skeleton_spearmen_0"] = "tomb",
+    ["wh2_dlc09_tmb_inf_skeleton_spearmen_ror"] = "tomb",
+    ["wh2_dlc09_tmb_inf_skeleton_warriors_0"] = "tomb",
+    ["wh2_dlc09_tmb_inf_skeleton_warriors_0_summoned"] = "tomb",
+    ["wh2_dlc09_tmb_inf_spirit_host"] = "tomb",
+    ["wh2_dlc09_tmb_inf_tomb_guard_0"] = "tomb",
+    ["wh2_dlc09_tmb_inf_tomb_guard_1"] = "tomb",
+    ["wh2_dlc09_tmb_inf_tomb_guard_ror"] = "tomb",
+    ["wh2_dlc09_tmb_mon_carrion_0"] = "tomb",
+    ["wh2_dlc09_tmb_mon_carrion_ror"] = "tomb",
+    ["wh2_dlc09_tmb_mon_crypt_horrors"] = "tomb",
+    ["wh2_dlc09_tmb_mon_dire_wolves"] = "tomb",
+    ["wh2_dlc09_tmb_mon_fell_bats"] = "tomb",
+    ["wh2_dlc09_tmb_mon_heirotitan_0"] = "tomb",
+    ["wh2_dlc09_tmb_mon_morghast_archai"] = "tomb",
+    ["wh2_dlc09_tmb_mon_morghast_harbingers"] = "tomb",
+    ["wh2_dlc09_tmb_mon_necrosphinx_0"] = "tomb",
+    ["wh2_dlc09_tmb_mon_necrosphinx_ror"] = "tomb",
+    ["wh2_dlc09_tmb_mon_sepulchral_stalkers_0"] = "tomb",
+    ["wh2_dlc09_tmb_mon_sepulchral_stalkers_ror"] = "tomb",
+    ["wh2_dlc09_tmb_mon_tomb_scorpion_0"] = "tomb",
+    ["wh2_dlc09_tmb_mon_ushabti_0"] = "tomb",
+    ["wh2_dlc09_tmb_mon_ushabti_0_summoned"] = "tomb",
+    ["wh2_dlc09_tmb_mon_ushabti_1"] = "tomb",
+    ["wh2_dlc09_tmb_mon_ushabti_ror"] = "tomb",
+    ["wh2_dlc09_tmb_veh_khemrian_warsphinx_0"] = "tomb",
+    ["wh2_dlc09_tmb_veh_skeleton_archer_chariot_0"] = "tomb",
+    ["wh2_dlc09_tmb_veh_skeleton_chariot_0"] = "tomb",
+    ["wh2_dlc09_tmb_veh_skeleton_chariot_0_summoned"] = "tomb",
+    ["wh2_dlc11_cst_art_carronade"] = "undead",
+    ["wh2_dlc11_cst_art_mortar"] = "undead",
+    ["wh2_dlc11_cst_art_queen_bess"] = "undead",
+    ["wh2_dlc11_cst_cav_deck_droppers_0"] = "undead",
+    ["wh2_dlc11_cst_cav_deck_droppers_1"] = "undead",
+    ["wh2_dlc11_cst_cav_deck_droppers_2"] = "undead",
+    ["wh2_dlc11_cst_cav_deck_droppers_ror_0"] = "undead",
+    ["wh2_dlc11_cst_cav_knights_errant_0"] = "undead",
+    ["wh2_dlc11_cst_cav_knights_errant_1"] = "undead",
+    ["wh2_dlc11_cst_cav_knights_errant_2"] = "undead",
+    ["wh2_dlc11_cst_cav_knights_of_the_realm"] = "undead",
+    ["wh2_dlc11_cst_cav_questing_knights_0"] = "undead",
+    ["wh2_dlc11_cst_cha_cylostra_direfin_0"] = "undead",
+    ["wh2_dlc11_cst_cha_cylostra_direfin_1"] = "undead",
+    ["wh2_dlc11_cst_cha_damned_paladin_0"] = "undead",
+    ["wh2_dlc11_cst_cha_damned_paladin_1"] = "undead",
+    ["wh2_dlc11_cst_cha_gunnery_wight_0"] = "undead",
+    ["wh2_dlc11_cst_cha_gunnery_wight_1"] = "undead",
+    ["wh2_dlc11_cst_cha_luthor_harkon_0"] = "undead",
+    ["wh2_dlc11_cst_cha_luthor_harkon_1"] = "undead",
+    ["wh2_dlc11_cst_cha_mourngul_haunter"] = "undead",
+    ["wh2_dlc11_cst_cha_vampire_fleet_admiral_0"] = "undead",
+    ["wh2_dlc11_cst_cha_vampire_fleet_admiral_1"] = "undead",
+    ["wh2_dlc11_cst_cha_vampire_fleet_admiral_death_0"] = "undead",
+    ["wh2_dlc11_cst_cha_vampire_fleet_admiral_death_1"] = "undead",
+    ["wh2_dlc11_cst_cha_vampire_fleet_admiral_deeps_0"] = "undead",
+    ["wh2_dlc11_cst_cha_vampire_fleet_admiral_deeps_1"] = "undead",
+    ["wh2_dlc11_cst_cha_vampire_fleet_admiral_female_0"] = "undead",
+    ["wh2_dlc11_cst_cha_vampire_fleet_admiral_female_1"] = "undead",
+    ["wh2_dlc11_cst_cha_vampire_fleet_admiral_female_death_0"] = "undead",
+    ["wh2_dlc11_cst_cha_vampire_fleet_admiral_female_death_1"] = "undead",
+    ["wh2_dlc11_cst_cha_vampire_fleet_admiral_female_deeps_0"] = "undead",
+    ["wh2_dlc11_cst_cha_vampire_fleet_admiral_female_deeps_1"] = "undead",
+    ["wh2_dlc11_cst_cha_vampire_fleet_captain_0"] = "undead",
+    ["wh2_dlc11_cst_cha_vampire_fleet_captain_1"] = "undead",
+    ["wh2_dlc11_cst_cha_vampire_fleet_captain_death_0"] = "undead",
+    ["wh2_dlc11_cst_cha_vampire_fleet_captain_death_1"] = "undead",
+    ["wh2_dlc11_cst_cha_vampire_fleet_captain_deeps_0"] = "undead",
+    ["wh2_dlc11_cst_cha_vampire_fleet_captain_deeps_1"] = "undead",
+    ["wh2_dlc11_cst_inf_count_noctilus_0"] = "undead",
+    ["wh2_dlc11_cst_inf_count_noctilus_1"] = "undead",
+    ["wh2_dlc11_cst_inf_deck_gunners_0"] = "undead",
+    ["wh2_dlc11_cst_inf_deck_gunners_0_summoned"] = "undead",
+    ["wh2_dlc11_cst_inf_deck_gunners_ror_0"] = "undead",
+    ["wh2_dlc11_cst_inf_depth_guard_0"] = "undead",
+    ["wh2_dlc11_cst_inf_depth_guard_1"] = "undead",
+    ["wh2_dlc11_cst_inf_depth_guard_ror_0"] = "undead",
+    ["wh2_dlc11_cst_inf_syreens"] = "undead",
+    ["wh2_dlc11_cst_inf_zombie_deckhands_mob_0"] = "undead",
+    ["wh2_dlc11_cst_inf_zombie_deckhands_mob_1"] = "undead",
+    ["wh2_dlc11_cst_inf_zombie_deckhands_mob_necrofex_summoned_0"] = "undead",
+    ["wh2_dlc11_cst_inf_zombie_deckhands_mob_ror_0"] = "undead",
+    ["wh2_dlc11_cst_inf_zombie_deckhands_mob_summoned_0"] = "undead",
+    ["wh2_dlc11_cst_inf_zombie_gunnery_mob_0"] = "undead",
+    ["wh2_dlc11_cst_inf_zombie_gunnery_mob_1"] = "undead",
+    ["wh2_dlc11_cst_inf_zombie_gunnery_mob_2"] = "undead",
+    ["wh2_dlc11_cst_inf_zombie_gunnery_mob_3"] = "undead",
+    ["wh2_dlc11_cst_inf_zombie_gunnery_mob_ror_0"] = "undead",
+    ["wh2_dlc11_cst_inf_zombie_gunnery_mob_summoned_0"] = "undead",
+    ["wh2_dlc11_cst_mon_animated_hulks_0"] = "undead",
+    ["wh2_dlc11_cst_mon_bloated_corpse_0"] = "undead",
+    ["wh2_dlc11_cst_mon_fell_bats"] = "undead",
+    ["wh2_dlc11_cst_mon_mournguls_0"] = "undead",
+    ["wh2_dlc11_cst_mon_mournguls_ror_0"] = "undead",
+    ["wh2_dlc11_cst_mon_necrofex_colossus_0"] = "undead",
+    ["wh2_dlc11_cst_mon_necrofex_colossus_ror_0"] = "undead",
+    ["wh2_dlc11_cst_mon_rotting_leviathan_0"] = "undead",
+    ["wh2_dlc11_cst_mon_rotting_prometheans_0"] = "undead",
+    ["wh2_dlc11_cst_mon_rotting_prometheans_gunnery_mob_0"] = "undead",
+    ["wh2_dlc11_cst_mon_rotting_prometheans_gunnery_mob_ror"] = "undead",
+    ["wh2_dlc11_cst_mon_rotting_prometheans_summoned_0"] = "undead",
+    ["wh2_dlc11_cst_mon_scurvy_dogs"] = "undead",
+    ["wh2_dlc11_cst_mon_terrorgheist"] = "undead",
+    ["wh2_dlc11_vmp_cha_bloodline_blood_dragon_lord_0"] = "undead",
+    ["wh2_dlc11_vmp_cha_bloodline_blood_dragon_lord_1"] = "undead",
+    ["wh2_dlc11_vmp_cha_bloodline_blood_dragon_lord_2"] = "undead",
+    ["wh2_dlc11_vmp_cha_bloodline_blood_dragon_lord_3"] = "undead",
+    ["wh2_dlc11_vmp_cha_bloodline_lahmian_lord_0"] = "undead",
+    ["wh2_dlc11_vmp_cha_bloodline_lahmian_lord_1"] = "undead",
+    ["wh2_dlc11_vmp_cha_bloodline_lahmian_lord_2"] = "undead",
+    ["wh2_dlc11_vmp_cha_bloodline_lahmian_lord_3"] = "undead",
+    ["wh2_dlc11_vmp_cha_bloodline_necrarch_lord_0"] = "undead",
+    ["wh2_dlc11_vmp_cha_bloodline_necrarch_lord_1"] = "undead",
+    ["wh2_dlc11_vmp_cha_bloodline_necrarch_lord_2"] = "undead",
+    ["wh2_dlc11_vmp_cha_bloodline_necrarch_lord_3"] = "undead",
+    ["wh2_dlc11_vmp_cha_bloodline_strigoi_lord_0"] = "undead",
+    ["wh2_dlc11_vmp_cha_bloodline_strigoi_lord_1"] = "undead",
+    ["wh2_dlc11_vmp_cha_bloodline_von_carstein_lord_0"] = "undead",
+    ["wh2_dlc11_vmp_cha_bloodline_von_carstein_lord_1"] = "undead",
+    ["wh2_dlc11_vmp_cha_bloodline_von_carstein_lord_2"] = "undead",
+    ["wh2_dlc11_vmp_cha_bloodline_von_carstein_lord_3"] = "undead",
+    ["wh2_dlc11_vmp_cha_heinrich_kemmler_1"] = "undead",
+    ["wh2_dlc11_vmp_mon_varghulf_summoned"] = "undead",
+    ["wh2_dlc16_wef_cha_ancient_treeman_coeddil_0"] = "spirit",
+    ["wh2_dlc16_wef_cha_drycha_0"] = "spirit",
+    ["wh2_dlc16_wef_cha_malicious_ancient_treeman_beasts_0"] = "spirit",
+    ["wh2_dlc16_wef_cha_malicious_ancient_treeman_life_0"] = "spirit",
+    ["wh2_dlc16_wef_cha_malicious_ancient_treeman_shadows_0"] = "spirit",
+    ["wh2_dlc16_wef_cha_malicious_branchwraith_beasts_0"] = "spirit",
+    ["wh2_dlc16_wef_cha_malicious_branchwraith_life_0"] = "spirit",
+    ["wh2_dlc16_wef_cha_malicious_branchwraith_shadows_0"] = "spirit",
+    ["wh2_dlc16_wef_inf_dryads_0_summoned"] = "spirit",
+    ["wh2_dlc16_wef_inf_dryads_ror_0"] = "spirit",
+    ["wh2_dlc16_wef_inf_malicious_dryads_0"] = "spirit",
+    ["wh2_dlc16_wef_mon_malicious_treekin_0"] = "spirit",
+    ["wh2_dlc16_wef_mon_malicious_treeman_0"] = "spirit",
+    ["wh2_pro06_tmb_mon_bone_giant_0"] = "tomb",
+    ["wh3_cp1_tze_cha_qb_exalted_lord_of_change_boss"] = "chaos",
+    ["wh3_dlc20_chs_cha_daemon_prince"] = "chaos",
+    ["wh3_dlc20_chs_cha_daemon_prince_mkho"] = "chaos",
+    ["wh3_dlc20_chs_cha_daemon_prince_mnur"] = "chaos",
+    ["wh3_dlc20_chs_cha_daemon_prince_msla"] = "chaos",
+    ["wh3_dlc20_chs_cha_daemon_prince_mtze"] = "chaos",
+    ["wh3_dlc20_sla_cha_azazel"] = "chaos",
+    ["wh3_dlc23_neu_cha_ulrika"] = "undead",
+    ["wh3_dlc23_neu_cha_ulrika_warhorse"] = "undead",
+    ["wh3_dlc24_bst_mon_incarnate_elemental_of_beasts"] = "spirit",
+    ["wh3_dlc24_cth_inf_onyx_crowmen"] = "spirit",
+    ["wh3_dlc24_cth_inf_onyx_crowmen_ror"] = "spirit",
+    ["wh3_dlc24_ksl_mon_incarnate_elemental_of_beasts"] = "spirit",
+    ["wh3_dlc24_ksl_mon_incarnate_elemental_of_beasts_summoned"] = "spirit",
+    ["wh3_dlc24_qb_cst_cav_knights_errant_0"] = "undead",
+    ["wh3_dlc24_qb_cst_cav_knights_of_the_realm"] = "undead",
+    ["wh3_dlc24_qb_cst_cav_questing_knights_0"] = "undead",
+    ["wh3_dlc24_tze_cha_blue_scribes"] = "chaos",
+    ["wh3_dlc24_tze_cha_changeling"] = "chaos",
+    ["wh3_dlc24_tze_cha_changeling_quest_battle"] = "chaos",
+    ["wh3_dlc24_tze_cha_changeling_summoned_0"] = "chaos",
+    ["wh3_dlc24_tze_inf_pink_horrors_ror"] = "chaos",
+    ["wh3_dlc24_tze_mon_flamers_changebringers"] = "chaos",
+    ["wh3_dlc24_tze_mon_screamers_ror"] = "chaos",
+    ["wh3_dlc25_emp_mon_incarnate_elemental_of_beasts_summoned"] = "spirit",
+    ["wh3_dlc25_nur_cav_plague_drones_1_ror"] = "chaos",
+    ["wh3_dlc25_nur_cha_epidemius"] = "chaos",
+    ["wh3_dlc25_nur_inf_nurglings_summoned"] = "chaos",
+    ["wh3_dlc25_nur_mon_soul_grinder_0_ror"] = "chaos",
+    ["wh3_dlc26_kho_cha_skulltaker"] = "chaos",
+    ["wh3_dlc26_kho_cha_skulltaker_bloodthrone"] = "chaos",
+    ["wh3_dlc26_kho_cha_skulltaker_juggernaut"] = "chaos",
+    ["wh3_dlc26_kho_veh_skullcannon_ror"] = "chaos",
+    ["wh3_dlc27_chs_cha_daemon_prince_mkho_qb"] = "chaos",
+    ["wh3_dlc27_hef_inf_oceanids"] = "spirit",
+    ["wh3_dlc27_hef_inf_oceanids_split_up_summoned"] = "spirit",
+    ["wh3_dlc27_hef_inf_oceanids_summoned"] = "spirit",
+    ["wh3_dlc27_hef_mon_sea_elemental"] = "spirit",
+    ["wh3_dlc27_sla_cav_heartseekers_of_slaanesh_dechala"] = "chaos",
+    ["wh3_dlc27_sla_cav_pleasureseekers"] = "chaos",
+    ["wh3_dlc27_sla_cav_pleasureseekers_dechala"] = "chaos",
+    ["wh3_dlc27_sla_cha_alluress_shadow_daemonic_steed"] = "chaos",
+    ["wh3_dlc27_sla_cha_alluress_slaanesh_daemonic_steed"] = "chaos",
+    ["wh3_dlc27_sla_cha_herald_of_slaanesh_shadow_daemonic_steed"] = "chaos",
+    ["wh3_dlc27_sla_cha_herald_of_slaanesh_slaanesh_daemonic_steed"] = "chaos",
+    ["wh3_dlc27_sla_cha_masque_of_slaanesh"] = "chaos",
+    ["wh3_dlc27_sla_inf_chaos_furies_dechala"] = "chaos",
+    ["wh3_dlc27_sla_inf_chaos_furies_summoned"] = "chaos",
+    ["wh3_dlc27_sla_inf_daemonette_1_dechala"] = "chaos",
+    ["wh3_dlc27_sla_inf_vengeful_furies_summoned"] = "chaos",
+    ["wh3_dlc27_sla_mon_fiends_of_slaanesh_dechala"] = "chaos",
+    ["wh3_dlc27_sla_mon_keeper_of_secrets_dechala"] = "chaos",
+    ["wh3_dlc27_sla_veh_exalted_seeker_chariot_dechala"] = "chaos",
+    ["wh3_dlc27_sla_veh_seeker_chariot_ror"] = "chaos",
+    ["wh3_dlc27_tmb_mon_carrion_monst_arcanum"] = "tomb",
+    ["wh3_dlc29_chs_cav_nur_plague_drones_1_summoned"] = "chaos",
+    ["wh3_dlc29_chs_cav_nur_plague_drones_summoned"] = "chaos",
+    ["wh3_dlc29_cst_cha_gunnery_wight_0_summoned"] = "undead",
+    ["wh3_dlc29_cst_cha_vampire_fleet_admiral_female_undeath"] = "undead",
+    ["wh3_dlc29_cst_cha_vampire_fleet_admiral_female_undeath_rotting_promethean"] = "undead",
+    ["wh3_dlc29_cst_cha_vampire_fleet_admiral_undeath"] = "undead",
+    ["wh3_dlc29_cst_cha_vampire_fleet_admiral_undeath_rotting_promethean"] = "undead",
+    ["wh3_dlc29_cst_cha_vampire_fleet_captain_undeath"] = "undead",
+    ["wh3_dlc29_cst_cha_vampire_fleet_captain_undeath_rotting_promethean"] = "undead",
+    ["wh3_dlc29_cst_inf_zombie_pirate_gunnery_mob_bombers_summoned"] = "undead",
+    ["wh3_dlc29_cst_mon_mournguls_0_summoned"] = "undead",
+    ["wh3_dlc29_cst_mon_necrofex_colossus_0_summoned"] = "undead",
+    ["wh3_dlc29_cst_mon_rotting_prometheans_gunnery_mob_summoned"] = "undead",
+    ["wh3_dlc29_skv_cha_skreech_verminking"] = "skaven",
+    ["wh3_dlc29_skv_cha_verminlord_corruptor"] = "skaven",
+    ["wh3_dlc29_skv_cha_verminlord_deceiver"] = "skaven",
+    ["wh3_dlc29_skv_cha_verminlord_warbringer"] = "skaven",
+    ["wh3_dlc29_skv_cha_verminlord_warpseer"] = "skaven",
+    ["wh3_dlc29_tmb_cha_arkhan_dread_abyssal"] = "tomb",
+    ["wh3_dlc29_tmb_cha_arkhan_the_black_mp"] = "tomb",
+    ["wh3_dlc29_tmb_cha_arkhan_the_black_skeletal_steed_mp"] = "tomb",
+    ["wh3_dlc29_tmb_cha_arkhan_the_black_skeleton_chariot_mp"] = "tomb",
+    ["wh3_dlc29_tmb_cha_liche_high_priest_death"] = "tomb",
+    ["wh3_dlc29_tmb_cha_liche_high_priest_death_skeletal_steed"] = "tomb",
+    ["wh3_dlc29_tmb_cha_liche_high_priest_light"] = "tomb",
+    ["wh3_dlc29_tmb_cha_liche_high_priest_light_skeletal_steed"] = "tomb",
+    ["wh3_dlc29_tmb_cha_liche_high_priest_nehekhara"] = "tomb",
+    ["wh3_dlc29_tmb_cha_liche_high_priest_nehekhara_skeletal_steed"] = "tomb",
+    ["wh3_dlc29_tmb_cha_liche_high_priest_shadow"] = "tomb",
+    ["wh3_dlc29_tmb_cha_liche_high_priest_shadow_skeletal_steed"] = "tomb",
+    ["wh3_dlc29_tmb_cha_liche_high_priest_undeath"] = "tomb",
+    ["wh3_dlc29_tmb_cha_liche_high_priest_undeath_skeletal_steed"] = "tomb",
+    ["wh3_dlc29_tmb_cha_liche_priest_undeath"] = "tomb",
+    ["wh3_dlc29_tmb_cha_liche_priest_undeath_skeletal_steed"] = "tomb",
+    ["wh3_dlc29_tmb_cha_tomb_herald"] = "tomb",
+    ["wh3_dlc29_tmb_cha_tomb_herald_skeletal_steed"] = "tomb",
+    ["wh3_dlc29_tmb_cha_tomb_herald_skeleton_chariot"] = "tomb",
+    ["wh3_dlc29_tmb_cha_tomb_prince_0_summoned"] = "tomb",
+    ["wh3_dlc29_tmb_inf_nehekhara_warriors_0_summoned"] = "tomb",
+    ["wh3_dlc29_tmb_mon_khemrian_warsphinx_0_summoned"] = "tomb",
+    ["wh3_dlc29_tmb_mon_khemric_titan"] = "tomb",
+    ["wh3_dlc29_tmb_mon_khemric_titan_ror"] = "tomb",
+    ["wh3_dlc29_tmb_mon_khemric_titan_summoned"] = "tomb",
+    ["wh3_dlc29_tmb_mon_ushabti_ror_sepulchrex"] = "tomb",
+    ["wh3_dlc29_tmb_veh_skeleton_archer_chariot_0_summoned"] = "tomb",
+    ["wh3_dlc29_vmp_cav_drakenhof_templars"] = "undead",
+    ["wh3_dlc29_vmp_cha_bloodline_lahmian_lord_coven_throne"] = "undead",
+    ["wh3_dlc29_vmp_cha_dieter_helsnicht"] = "undead",
+    ["wh3_dlc29_vmp_cha_dieter_helsnicht_undead_manticore"] = "undead",
+    ["wh3_dlc29_vmp_cha_krell"] = "undead",
+    ["wh3_dlc29_vmp_cha_lahmian_vampire"] = "undead",
+    ["wh3_dlc29_vmp_cha_lahmian_vampire_barded_nightmare"] = "undead",
+    ["wh3_dlc29_vmp_cha_lahmian_vampire_hellsteed"] = "undead",
+    ["wh3_dlc29_vmp_cha_mannfred_von_carstein_barded_nightmare_mp"] = "undead",
+    ["wh3_dlc29_vmp_cha_mannfred_von_carstein_dread_abyssal"] = "undead",
+    ["wh3_dlc29_vmp_cha_mannfred_von_carstein_hellsteed_mp"] = "undead",
+    ["wh3_dlc29_vmp_cha_mannfred_von_carstein_mp"] = "undead",
+    ["wh3_dlc29_vmp_cha_mannfred_von_carstein_zombie_dragon_mp"] = "undead",
+    ["wh3_dlc29_vmp_cha_master_necromancer_undeath"] = "undead",
+    ["wh3_dlc29_vmp_cha_master_necromancer_undeath_barded_nightmare"] = "undead",
+    ["wh3_dlc29_vmp_cha_master_necromancer_undeath_corpse_cart"] = "undead",
+    ["wh3_dlc29_vmp_cha_master_necromancer_undeath_corpse_cart_balefire"] = "undead",
+    ["wh3_dlc29_vmp_cha_master_necromancer_undeath_corpse_cart_lodestone"] = "undead",
+    ["wh3_dlc29_vmp_cha_master_necromancer_undeath_hellsteed"] = "undead",
+    ["wh3_dlc29_vmp_cha_nagash"] = "undead",
+    ["wh3_dlc29_vmp_cha_nagash_vampire_lord"] = "undead",
+    ["wh3_dlc29_vmp_cha_nagash_vampire_lord_barded_nightmare"] = "undead",
+    ["wh3_dlc29_vmp_cha_nagash_vampire_lord_coven_throne"] = "undead",
+    ["wh3_dlc29_vmp_cha_nagash_vampire_lord_hellsteed"] = "undead",
+    ["wh3_dlc29_vmp_cha_nagash_vampire_lord_zombie_dragon"] = "undead",
+    ["wh3_dlc29_vmp_cha_necromancer_undeath"] = "undead",
+    ["wh3_dlc29_vmp_cha_necromancer_undeath_barded_nightmare"] = "undead",
+    ["wh3_dlc29_vmp_cha_necromancer_undeath_corpse_cart"] = "undead",
+    ["wh3_dlc29_vmp_cha_necromancer_undeath_corpse_cart_balefire"] = "undead",
+    ["wh3_dlc29_vmp_cha_necromancer_undeath_corpse_cart_lodestone"] = "undead",
+    ["wh3_dlc29_vmp_cha_neferata"] = "undead",
+    ["wh3_dlc29_vmp_cha_neferata_barded_nightmare"] = "undead",
+    ["wh3_dlc29_vmp_cha_neferata_barded_nightmare_mp"] = "undead",
+    ["wh3_dlc29_vmp_cha_neferata_coven_throne"] = "undead",
+    ["wh3_dlc29_vmp_cha_neferata_coven_throne_mp"] = "undead",
+    ["wh3_dlc29_vmp_cha_neferata_dread_abyssal"] = "undead",
+    ["wh3_dlc29_vmp_cha_neferata_hellsteed"] = "undead",
+    ["wh3_dlc29_vmp_cha_neferata_hellsteed_mp"] = "undead",
+    ["wh3_dlc29_vmp_cha_neferata_mp"] = "undead",
+    ["wh3_dlc29_vmp_cha_neferata_zombie_dragon"] = "undead",
+    ["wh3_dlc29_vmp_cha_neferata_zombie_dragon_mp"] = "undead",
+    ["wh3_dlc29_vmp_cha_vampire_lord_coven_throne"] = "undead",
+    ["wh3_dlc29_vmp_cha_walach_harkon"] = "undead",
+    ["wh3_dlc29_vmp_cha_walach_harkon_barded_nightmare"] = "undead",
+    ["wh3_dlc29_vmp_cha_wight_king_barded_nightmare_summoned"] = "undead",
+    ["wh3_dlc29_vmp_inf_grave_guard_0_the_awakening"] = "undead",
+    ["wh3_dlc29_vmp_inf_grave_guard_1_the_awakening"] = "undead",
+    ["wh3_dlc29_vmp_inf_grave_guard_2_the_awakening"] = "undead",
+    ["wh3_dlc29_vmp_inf_lahmian_handmaidens_death"] = "undead",
+    ["wh3_dlc29_vmp_inf_lahmian_handmaidens_shadow"] = "undead",
+    ["wh3_dlc29_vmp_inf_skeleton_warriors_0_raise_legion"] = "undead",
+    ["wh3_dlc29_vmp_inf_skeleton_warriors_0_raise_legion_upgraded"] = "undead",
+    ["wh3_dlc29_vmp_inf_skeleton_warriors_0_the_awakening"] = "undead",
+    ["wh3_dlc29_vmp_inf_spirit_host"] = "undead",
+    ["wh3_dlc29_vmp_inf_spirit_host_summoned"] = "undead",
+    ["wh3_dlc29_vmp_inf_zombies_raise_legion"] = "undead",
+    ["wh3_dlc29_vmp_mon_morghast_archai"] = "undead",
+    ["wh3_dlc29_vmp_mon_morghast_archai_ror"] = "undead",
+    ["wh3_dlc29_vmp_mon_morghast_harbingers"] = "undead",
+    ["wh3_dlc29_vmp_mon_terrorgheist_summoned"] = "undead",
+    ["wh3_dlc29_vmp_mon_zombie_dragon"] = "undead",
+    ["wh3_dlc29_vmp_mon_zombie_dragon_summoned"] = "undead",
+    ["wh3_dlc29_vmp_veh_coven_throne"] = "undead",
+    ["wh3_main_dae_cha_be_lakor_0"] = "chaos",
+    ["wh3_main_dae_cha_daemon_prince_0"] = "chaos",
+    ["wh3_main_dae_cha_daemon_prince_MP"] = "chaos",
+    ["wh3_main_dae_cha_daemon_prince_khorne"] = "chaos",
+    ["wh3_main_dae_cha_daemon_prince_khorne_MP"] = "chaos",
+    ["wh3_main_dae_cha_daemon_prince_nurgle"] = "chaos",
+    ["wh3_main_dae_cha_daemon_prince_nurgle_MP"] = "chaos",
+    ["wh3_main_dae_cha_daemon_prince_slaanesh"] = "chaos",
+    ["wh3_main_dae_cha_daemon_prince_slaanesh_MP"] = "chaos",
+    ["wh3_main_dae_cha_daemon_prince_tzeentch"] = "chaos",
+    ["wh3_main_dae_cha_daemon_prince_tzeentch_MP"] = "chaos",
+    ["wh3_main_dae_inf_chaos_furies_0"] = "chaos",
+    ["wh3_main_dae_inf_chaos_furies_summoned_0"] = "chaos",
+    ["wh3_main_ie_nor_cha_exalted_great_unclean_one_burplesmirk_spewpit"] = "chaos",
+    ["wh3_main_kho_cav_bloodcrushers_0"] = "chaos",
+    ["wh3_main_kho_cha_bloodreaper_0"] = "chaos",
+    ["wh3_main_kho_cha_bloodreaper_1"] = "chaos",
+    ["wh3_main_kho_cha_bloodreaper_2"] = "chaos",
+    ["wh3_main_kho_cha_exalted_bloodthirster_0"] = "chaos",
+    ["wh3_main_kho_cha_herald_of_khorne_0"] = "chaos",
+    ["wh3_main_kho_cha_herald_of_khorne_1"] = "chaos",
+    ["wh3_main_kho_cha_herald_of_khorne_2"] = "chaos",
+    ["wh3_main_kho_cha_skarbrand_0"] = "chaos",
+    ["wh3_main_kho_inf_bloodletters_0"] = "chaos",
+    ["wh3_main_kho_inf_bloodletters_1"] = "chaos",
+    ["wh3_main_kho_inf_bloodletters_summoned_0"] = "chaos",
+    ["wh3_main_kho_inf_chaos_furies_0"] = "chaos",
+    ["wh3_main_kho_inf_flesh_hounds_of_khorne_0"] = "chaos",
+    ["wh3_main_kho_mon_bloodthirster_0"] = "chaos",
+    ["wh3_main_kho_mon_bloodthirster_summoned_0"] = "chaos",
+    ["wh3_main_kho_mon_soul_grinder_0"] = "chaos",
+    ["wh3_main_kho_veh_blood_shrine_0"] = "chaos",
+    ["wh3_main_kho_veh_skullcannon_0"] = "chaos",
+    ["wh3_main_ksl_mon_elemental_bear_0"] = "spirit",
+    ["wh3_main_ksl_mon_elemental_bear_summoned_0"] = "spirit",
+    ["wh3_main_nur_cav_plague_drones_0"] = "chaos",
+    ["wh3_main_nur_cav_plague_drones_1"] = "chaos",
+    ["wh3_main_nur_cav_pox_riders_of_nurgle_0"] = "chaos",
+    ["wh3_main_nur_cha_exalted_great_unclean_one_death_0"] = "chaos",
+    ["wh3_main_nur_cha_exalted_great_unclean_one_nurgle_0"] = "chaos",
+    ["wh3_main_nur_cha_herald_of_nurgle_death_0"] = "chaos",
+    ["wh3_main_nur_cha_herald_of_nurgle_death_1"] = "chaos",
+    ["wh3_main_nur_cha_herald_of_nurgle_death_2"] = "chaos",
+    ["wh3_main_nur_cha_herald_of_nurgle_nurgle_0"] = "chaos",
+    ["wh3_main_nur_cha_herald_of_nurgle_nurgle_1"] = "chaos",
+    ["wh3_main_nur_cha_herald_of_nurgle_nurgle_2"] = "chaos",
+    ["wh3_main_nur_cha_ku_gath_plaguefather_0"] = "chaos",
+    ["wh3_main_nur_cha_plagueridden_death_0"] = "chaos",
+    ["wh3_main_nur_cha_plagueridden_death_1"] = "chaos",
+    ["wh3_main_nur_cha_plagueridden_death_2"] = "chaos",
+    ["wh3_main_nur_cha_plagueridden_nurgle_0"] = "chaos",
+    ["wh3_main_nur_cha_plagueridden_nurgle_1"] = "chaos",
+    ["wh3_main_nur_cha_plagueridden_nurgle_2"] = "chaos",
+    ["wh3_main_nur_inf_chaos_furies_0"] = "chaos",
+    ["wh3_main_nur_inf_nurglings_0"] = "chaos",
+    ["wh3_main_nur_inf_nurglings_summoned_0"] = "chaos",
+    ["wh3_main_nur_inf_plaguebearers_0"] = "chaos",
+    ["wh3_main_nur_inf_plaguebearers_1"] = "chaos",
+    ["wh3_main_nur_inf_plaguebearers_1_summoned"] = "chaos",
+    ["wh3_main_nur_inf_plaguebearers_summoned_0"] = "chaos",
+    ["wh3_main_nur_mon_beast_of_nurgle_0"] = "chaos",
+    ["wh3_main_nur_mon_great_unclean_one_0"] = "chaos",
+    ["wh3_main_nur_mon_great_unclean_one_summoned_0"] = "chaos",
+    ["wh3_main_nur_mon_plague_toads_0"] = "chaos",
+    ["wh3_main_nur_mon_rot_flies_0"] = "chaos",
+    ["wh3_main_nur_mon_soul_grinder_0"] = "chaos",
+    ["wh3_main_pro_kho_cha_bloodreaper_0"] = "chaos",
+    ["wh3_main_pro_kho_cha_bloodreaper_1"] = "chaos",
+    ["wh3_main_pro_kho_cha_bloodreaper_2"] = "chaos",
+    ["wh3_main_pro_kho_cha_herald_of_khorne_0"] = "chaos",
+    ["wh3_main_pro_kho_cha_herald_of_khorne_1"] = "chaos",
+    ["wh3_main_pro_kho_cha_herald_of_khorne_2"] = "chaos",
+    ["wh3_main_pro_kho_inf_bloodletters_0"] = "chaos",
+    ["wh3_main_pro_kho_inf_chaos_furies_0"] = "chaos",
+    ["wh3_main_pro_kho_inf_flesh_hounds_of_khorne_0"] = "chaos",
+    ["wh3_main_pro_kho_inf_flesh_hounds_of_khorne_simaergul_0"] = "chaos",
+    ["wh3_main_pro_tze_cha_herald_of_tzeentch_tzeentch_0"] = "chaos",
+    ["wh3_main_pro_tze_cha_herald_of_tzeentch_tzeentch_1"] = "chaos",
+    ["wh3_main_pro_tze_cha_herald_of_tzeentch_tzeentch_2"] = "chaos",
+    ["wh3_main_pro_tze_inf_blue_horrors_0"] = "chaos",
+    ["wh3_main_pro_tze_inf_pink_horrors_0"] = "chaos",
+    ["wh3_main_pro_tze_mon_flamers_0"] = "chaos",
+    ["wh3_main_pro_tze_mon_screamers_0"] = "chaos",
+    ["wh3_main_sla_cav_heartseekers_of_slaanesh_0"] = "chaos",
+    ["wh3_main_sla_cav_seekers_of_slaanesh_0"] = "chaos",
+    ["wh3_main_sla_cha_alluress_shadow_0"] = "chaos",
+    ["wh3_main_sla_cha_alluress_shadow_1"] = "chaos",
+    ["wh3_main_sla_cha_alluress_shadow_2"] = "chaos",
+    ["wh3_main_sla_cha_alluress_shadow_3"] = "chaos",
+    ["wh3_main_sla_cha_alluress_slaanesh_0"] = "chaos",
+    ["wh3_main_sla_cha_alluress_slaanesh_1"] = "chaos",
+    ["wh3_main_sla_cha_alluress_slaanesh_2"] = "chaos",
+    ["wh3_main_sla_cha_alluress_slaanesh_3"] = "chaos",
+    ["wh3_main_sla_cha_exalted_keeper_of_secrets_shadow_0"] = "chaos",
+    ["wh3_main_sla_cha_exalted_keeper_of_secrets_slaanesh_0"] = "chaos",
+    ["wh3_main_sla_cha_herald_of_slaanesh_shadow_0"] = "chaos",
+    ["wh3_main_sla_cha_herald_of_slaanesh_shadow_1"] = "chaos",
+    ["wh3_main_sla_cha_herald_of_slaanesh_shadow_2"] = "chaos",
+    ["wh3_main_sla_cha_herald_of_slaanesh_shadow_3"] = "chaos",
+    ["wh3_main_sla_cha_herald_of_slaanesh_slaanesh_0"] = "chaos",
+    ["wh3_main_sla_cha_herald_of_slaanesh_slaanesh_1"] = "chaos",
+    ["wh3_main_sla_cha_herald_of_slaanesh_slaanesh_2"] = "chaos",
+    ["wh3_main_sla_cha_herald_of_slaanesh_slaanesh_3"] = "chaos",
+    ["wh3_main_sla_cha_nkari_0"] = "chaos",
+    ["wh3_main_sla_inf_chaos_furies_0"] = "chaos",
+    ["wh3_main_sla_inf_daemonette_0"] = "chaos",
+    ["wh3_main_sla_inf_daemonette_1"] = "chaos",
+    ["wh3_main_sla_inf_daemonette_summoned_0"] = "chaos",
+    ["wh3_main_sla_mon_fiends_of_slaanesh_0"] = "chaos",
+    ["wh3_main_sla_mon_keeper_of_secrets_0"] = "chaos",
+    ["wh3_main_sla_mon_keeper_of_secrets_summoned_0"] = "chaos",
+    ["wh3_main_sla_mon_soul_grinder_0"] = "chaos",
+    ["wh3_main_sla_veh_exalted_seeker_chariot_0"] = "chaos",
+    ["wh3_main_sla_veh_hellflayer_0"] = "chaos",
+    ["wh3_main_sla_veh_seeker_chariot_0"] = "chaos",
+    ["wh3_main_tze_cha_exalted_lord_of_change_metal_0"] = "chaos",
+    ["wh3_main_tze_cha_exalted_lord_of_change_tzeentch_0"] = "chaos",
+    ["wh3_main_tze_cha_herald_of_tzeentch_metal_0"] = "chaos",
+    ["wh3_main_tze_cha_herald_of_tzeentch_metal_1"] = "chaos",
+    ["wh3_main_tze_cha_herald_of_tzeentch_metal_2"] = "chaos",
+    ["wh3_main_tze_cha_herald_of_tzeentch_tzeentch_0"] = "chaos",
+    ["wh3_main_tze_cha_herald_of_tzeentch_tzeentch_1"] = "chaos",
+    ["wh3_main_tze_cha_herald_of_tzeentch_tzeentch_2"] = "chaos",
+    ["wh3_main_tze_cha_iridescent_horror_metal_0"] = "chaos",
+    ["wh3_main_tze_cha_iridescent_horror_metal_1"] = "chaos",
+    ["wh3_main_tze_cha_iridescent_horror_metal_2"] = "chaos",
+    ["wh3_main_tze_cha_iridescent_horror_tzeentch_0"] = "chaos",
+    ["wh3_main_tze_cha_iridescent_horror_tzeentch_1"] = "chaos",
+    ["wh3_main_tze_cha_iridescent_horror_tzeentch_2"] = "chaos",
+    ["wh3_main_tze_cha_kairos_fateweaver_0"] = "chaos",
+    ["wh3_main_tze_cha_kairos_fateweaver_custom_battle_0"] = "chaos",
+    ["wh3_main_tze_inf_blue_horrors_0"] = "chaos",
+    ["wh3_main_tze_inf_blue_horrors_summoned_0"] = "chaos",
+    ["wh3_main_tze_inf_chaos_furies_0"] = "chaos",
+    ["wh3_main_tze_inf_pink_horrors_0"] = "chaos",
+    ["wh3_main_tze_inf_pink_horrors_1"] = "chaos",
+    ["wh3_main_tze_inf_pink_horrors_summoned_0"] = "chaos",
+    ["wh3_main_tze_mon_exalted_flamers_0"] = "chaos",
+    ["wh3_main_tze_mon_flamers_0"] = "chaos",
+    ["wh3_main_tze_mon_lord_of_change_0"] = "chaos",
+    ["wh3_main_tze_mon_lord_of_change_summoned_0"] = "chaos",
+    ["wh3_main_tze_mon_screamers_0"] = "chaos",
+    ["wh3_main_tze_mon_soul_grinder_0"] = "chaos",
+    ["wh3_main_tze_veh_burning_chariot_0"] = "chaos",
+    ["wh3_main_vmp_blood_knights_sword_shield"] = "undead",
+    ["wh3_main_vmp_inf_grave_guard_2"] = "undead",
+    ["wh3_pro10_mom_qb_cha_daemon_prince"] = "chaos",
+    ["wh3_pro12_kho_cha_karanak"] = "chaos",
+    ["wh3_pro12_kho_inf_flesh_hounds_of_khorne_summoned"] = "chaos",
+    ["wh3_survival_dae_cha_be_lakor_01"] = "chaos",
+    ["wh3_survival_dae_cha_be_lakor_02"] = "chaos",
+    ["wh3_survival_kho_cha_bloodreaper"] = "chaos",
+    ["wh3_survival_kho_cha_daemon_prince_of_khorne"] = "chaos",
+    ["wh3_survival_kho_cha_exalted_bloodthirster"] = "chaos",
+    ["wh3_survival_kho_cha_exalted_bloodthirster_0"] = "chaos",
+    ["wh3_survival_nur_cha_daemon_prince_of_nurgle"] = "chaos",
+    ["wh3_survival_nur_cha_exalted_great_unclean_one_nurgle"] = "chaos",
+    ["wh3_survival_nur_cha_exalted_great_unclean_one_nurgle_0"] = "chaos",
+    ["wh3_survival_nur_cha_plagueridden_death"] = "chaos",
+    ["wh3_survival_sla_cha_alluress_shadow"] = "chaos",
+    ["wh3_survival_sla_cha_daemon_prince_of_slaanesh"] = "chaos",
+    ["wh3_survival_sla_cha_exalted_keeper_of_secrets_slaanesh"] = "chaos",
+    ["wh3_survival_tze_cha_daemon_prince_of_tzeentch"] = "chaos",
+    ["wh3_survival_tze_cha_exalted_lord_of_change_tzeentch"] = "chaos",
+    ["wh3_survival_tze_cha_iridescent_horror_metal"] = "chaos",
+    ["wh3_twa06_kho_inf_bloodletters_ror_0"] = "chaos",
+    ["wh3_twa06_nur_inf_plaguebearers_ror_0"] = "chaos",
+    ["wh3_twa06_sla_inf_daemonette_ror_0"] = "chaos",
+    ["wh3_twa06_tze_inf_pink_horrors_ror_0"] = "chaos",
+    ["wh3_twa07_kho_cav_bloodcrushers_ror_0"] = "chaos",
+    ["wh3_twa07_nur_cav_pox_riders_of_nurgle_ror_0"] = "chaos",
+    ["wh3_twa07_sla_cav_heartseekers_of_slaanesh_ror_0"] = "chaos",
+    ["wh3_twa08_kho_mon_bloodthirster_0_ror"] = "chaos",
+    ["wh3_twa08_ksl_mon_elemental_bear_0_ror"] = "spirit",
+    ["wh3_twa08_nur_mon_great_unclean_one_0_ror"] = "chaos",
+    ["wh3_twa08_sla_mon_keeper_of_secrets_0_ror"] = "chaos",
+    ["wh3_twa08_tze_mon_lord_of_change_0_ror"] = "chaos",
+    ["wh3_twa10_kho_inf_flesh_hounds_of_khorne_ror"] = "chaos",
+    ["wh3_twa10_nur_inf_nurglings_ror"] = "chaos",
+    ["wh3_twa10_tze_inf_blue_horrors_ror"] = "chaos",
+    ["wh_dlc01_chs_cha_qb_lord_of_change_0"] = "chaos",
+    ["wh_dlc02_vmp_cav_blood_knights_0"] = "undead",
+    ["wh_dlc04_vmp_cav_chillgheists_0"] = "undead",
+    ["wh_dlc04_vmp_cav_vereks_reavers_0"] = "undead",
+    ["wh_dlc04_vmp_cha_helman_ghorst_0"] = "undead",
+    ["wh_dlc04_vmp_cha_helman_ghorst_1"] = "undead",
+    ["wh_dlc04_vmp_cha_master_necromancer_1"] = "undead",
+    ["wh_dlc04_vmp_cha_master_necromancer_2"] = "undead",
+    ["wh_dlc04_vmp_cha_master_necromancer_3"] = "undead",
+    ["wh_dlc04_vmp_cha_necromancer_1"] = "undead",
+    ["wh_dlc04_vmp_cha_necromancer_2"] = "undead",
+    ["wh_dlc04_vmp_cha_necromancer_3"] = "undead",
+    ["wh_dlc04_vmp_cha_strigoi_ghoul_king_0"] = "undead",
+    ["wh_dlc04_vmp_cha_strigoi_ghoul_king_0_boss"] = "undead",
+    ["wh_dlc04_vmp_cha_strigoi_ghoul_king_1"] = "undead",
+    ["wh_dlc04_vmp_cha_vlad_von_carstein_0"] = "undead",
+    ["wh_dlc04_vmp_inf_feasters_in_the_dusk_0"] = "undead",
+    ["wh_dlc04_vmp_inf_konigstein_stalkers_0"] = "undead",
+    ["wh_dlc04_vmp_inf_sternsmen_0"] = "undead",
+    ["wh_dlc04_vmp_inf_tithe_0"] = "undead",
+    ["wh_dlc04_vmp_mon_devils_swartzhafen_0"] = "undead",
+    ["wh_dlc04_vmp_mon_direpack_0"] = "undead",
+    ["wh_dlc04_vmp_veh_claw_of_nagash_0"] = "undead",
+    ["wh_dlc04_vmp_veh_corpse_cart_0"] = "undead",
+    ["wh_dlc04_vmp_veh_corpse_cart_1"] = "undead",
+    ["wh_dlc04_vmp_veh_corpse_cart_2"] = "undead",
+    ["wh_dlc04_vmp_veh_mortis_engine_0"] = "undead",
+    ["wh_dlc05_vmp_cha_red_duke_0"] = "undead",
+    ["wh_dlc05_vmp_cha_red_duke_1"] = "undead",
+    ["wh_dlc05_vmp_cha_red_duke_2"] = "undead",
+    ["wh_dlc05_vmp_cha_red_duke_3"] = "undead",
+    ["wh_dlc05_vmp_cha_vampire_shadows_0"] = "undead",
+    ["wh_dlc05_vmp_cha_vampire_shadows_1"] = "undead",
+    ["wh_dlc05_vmp_cha_vampire_shadows_2"] = "undead",
+    ["wh_dlc05_wef_cha_ancient_treeman_0"] = "spirit",
+    ["wh_dlc05_wef_cha_branchwraith_0"] = "spirit",
+    ["wh_dlc05_wef_cha_durthu_0"] = "spirit",
+    ["wh_dlc05_wef_inf_dryads_0"] = "spirit",
+    ["wh_dlc05_wef_mon_treekin_0"] = "spirit",
+    ["wh_dlc05_wef_mon_treeman_0"] = "spirit",
+    ["wh_dlc08_nor_cha_arzik_0"] = "chaos",
+    ["wh_dlc08_vmp_mon_terrorgheist_boss"] = "undead",
+    ["wh_dlc08_wef_mon_treeman_boss"] = "spirit",
+    ["wh_dlc29_vmp_inf_cairn_wraiths_summoned"] = "undead",
+    ["wh_dlc29_vmp_inf_cairn_wraiths_summoned_upgraded_0"] = "undead",
+    ["wh_dlc29_vmp_inf_cairn_wraiths_summoned_upgraded_1"] = "undead",
+    ["wh_main_chs_cha_lord_of_change_0"] = "chaos",
+    ["wh_main_vmp_cav_black_knights_0"] = "undead",
+    ["wh_main_vmp_cav_black_knights_3"] = "undead",
+    ["wh_main_vmp_cav_hexwraiths"] = "undead",
+    ["wh_main_vmp_cha_banshee"] = "undead",
+    ["wh_main_vmp_cha_heinrich_kemmler"] = "undead",
+    ["wh_main_vmp_cha_mannfred_von_carstein_0"] = "undead",
+    ["wh_main_vmp_cha_mannfred_von_carstein_2"] = "undead",
+    ["wh_main_vmp_cha_mannfred_von_carstein_3"] = "undead",
+    ["wh_main_vmp_cha_mannfred_von_carstein_4"] = "undead",
+    ["wh_main_vmp_cha_master_necromancer_0"] = "undead",
+    ["wh_main_vmp_cha_master_necromancer_4"] = "undead",
+    ["wh_main_vmp_cha_master_necromancer_5"] = "undead",
+    ["wh_main_vmp_cha_necromancer_0"] = "undead",
+    ["wh_main_vmp_cha_necromancer_5"] = "undead",
+    ["wh_main_vmp_cha_vampire_0"] = "undead",
+    ["wh_main_vmp_cha_vampire_1"] = "undead",
+    ["wh_main_vmp_cha_vampire_2"] = "undead",
+    ["wh_main_vmp_cha_vampire_lord_0"] = "undead",
+    ["wh_main_vmp_cha_vampire_lord_2"] = "undead",
+    ["wh_main_vmp_cha_vampire_lord_3"] = "undead",
+    ["wh_main_vmp_cha_vampire_lord_5"] = "undead",
+    ["wh_main_vmp_cha_wight_king_0"] = "undead",
+    ["wh_main_vmp_cha_wight_king_0_summoned"] = "undead",
+    ["wh_main_vmp_cha_wight_king_1"] = "undead",
+    ["wh_main_vmp_cha_wight_king_2"] = "undead",
+    ["wh_main_vmp_inf_cairn_wraiths"] = "undead",
+    ["wh_main_vmp_inf_crypt_ghouls"] = "undead",
+    ["wh_main_vmp_inf_crypt_ghouls_summoned"] = "undead",
+    ["wh_main_vmp_inf_grave_guard_0"] = "undead",
+    ["wh_main_vmp_inf_grave_guard_0_summoned"] = "undead",
+    ["wh_main_vmp_inf_grave_guard_1"] = "undead",
+    ["wh_main_vmp_inf_skeleton_warriors_0"] = "undead",
+    ["wh_main_vmp_inf_skeleton_warriors_0_summoned"] = "undead",
+    ["wh_main_vmp_inf_skeleton_warriors_1"] = "undead",
+    ["wh_main_vmp_inf_zombie"] = "undead",
+    ["wh_main_vmp_inf_zombie_summoned"] = "undead",
+    ["wh_main_vmp_mon_crypt_horrors"] = "undead",
+    ["wh_main_vmp_mon_crypt_horrors_summoned"] = "undead",
+    ["wh_main_vmp_mon_dire_wolves"] = "undead",
+    ["wh_main_vmp_mon_fell_bats"] = "undead",
+    ["wh_main_vmp_mon_terrorgheist"] = "undead",
+    ["wh_main_vmp_mon_terrorgheist_qb"] = "undead",
+    ["wh_main_vmp_mon_vargheists"] = "undead",
+    ["wh_main_vmp_mon_varghulf"] = "undead",
+    ["wh_main_vmp_veh_black_coach"] = "undead",
+    ["wh_pro02_vmp_cha_isabella_von_carstein_0"] = "undead",
+    ["wh_pro02_vmp_cha_isabella_von_carstein_2"] = "undead",
+    ["wh_pro02_vmp_cha_isabella_von_carstein_4"] = "undead",
+    ["wh_pro03_vmp_cha_krell_0"] = "undead",
+    ["wh_pro03_vmp_cha_krell_campaign_0"] = "undead",
+    ["wh_pro03_vmp_cha_krell_campaign_1"] = "undead",
+    ["wh_pro03_vmp_cha_krell_campaign_2"] = "undead",
+    ["wh_pro03_vmp_cha_krell_campaign_3"] = "undead",
+    ["wh_pro03_vmp_cha_krell_campaign_4"] = "undead",
+    ["wh_pro04_wef_mon_treekin_ror_0"] = "spirit",
+}
 DERPY_MR_FLOWS_CHARTED = {
     ["cr_special_city_mordheim_woodelves"] = true,
     ["cr_special_roc_outpost"] = true,
@@ -1541,6 +2178,22 @@ DERPY_MR_LOC_KEYS = {
     ["Stretched: {1} turns from {2}. Upkeep +{3}%."] = "derpy_mr_ui_79473e2189",
     ["Cut off. Upkeep +{1}%.\nForaging and buying from the locals costs the most."] = "derpy_mr_ui_9db8605104",
     ["An enemy army blocks the road."] = "derpy_mr_ui_8d6eb77b24",
+    ["Daemons"] = "derpy_mr_ui_36c9b6cce6",
+    ["Verminlords"] = "derpy_mr_ui_e8b656d14a",
+    ["Undead"] = "derpy_mr_ui_a51041f7f7",
+    ["Tomb Kings units"] = "derpy_mr_ui_ab592c0c4e",
+    ["Spirits"] = "derpy_mr_ui_076d15928b",
+    ["Daemons are sustained by land that Chaos has corrupted."] = "derpy_mr_ui_8c305bdb85",
+    ["Verminlords are sustained by land that the Skaven have corrupted."] = "derpy_mr_ui_852d19bb6c",
+    ["The undead are sustained by land tainted by vampiric corruption."] = "derpy_mr_ui_225d98189b",
+    ["Tomb Kings units are sustained by land held by their own faction or an ally."] = "derpy_mr_ui_94ad389433",
+    ["Spirits are sustained by clean land."] = "derpy_mr_ui_0b77a28191",
+    ["Away from it, they hold out for a while and then fade."] = "derpy_mr_ui_d08d2e4782",
+    ["Sustained here"] = "derpy_mr_ui_7a540195a1",
+    ["Held by magic"] = "derpy_mr_ui_f5e932f6f0",
+    ["Fading"] = "derpy_mr_ui_09b43b300d",
+    ["1 turn left"] = "derpy_mr_ui_0ee3a414f7",
+    ["{1} turns left"] = "derpy_mr_ui_15af695553",
     ["Army {1}"] = "derpy_mr_ui_d195aa1ad9",
     ["{1}: provisions"] = "derpy_mr_ui_4bf42dd83a",
     ["Action"] = "derpy_mr_ui_004bf6c9a4",
@@ -1576,6 +2229,8 @@ DERPY_MR_LOC_KEYS = {
     ["Distance"] = "derpy_mr_ui_0aa6f4210b",
     ["Upkeep"] = "derpy_mr_ui_83102a4b10",
     ["+{1}%"] = "derpy_mr_ui_d6d3ab917b",
+    ["Land they need"] = "derpy_mr_ui_bd105dedb4",
+    ["Status"] = "derpy_mr_ui_ec53a8c4f0",
     ["What your stores pay for"] = "derpy_mr_ui_bf7236074d",
     ["Province capital"] = "derpy_mr_ui_fb230f0265",
     ["Materials"] = "derpy_mr_ui_23ce0eb7d1",
@@ -4896,9 +5551,11 @@ function F.repl_after_battle()
         if not force or force:is_null_interface() then return end
         local faction = force:faction()
         local kept = F.state.repl_h and F.state.repl_h[faction:name()] or {}
+        local land = F.state.land and F.state.land[tostring(force:command_queue_index())]
         for _, t in ipairs(F.troops(force)) do
             local w = kept[tostring(t.unit:command_queue_index())]
             if t.hp < (w and w / 100 or 100) - F.REPL_EPSILON then F.repl_note(faction, t.unit, t.hp) end
+            if land then F.land_lower(land, t) end
         end
     end
     for i = 1, cm:pending_battle_cache_num_attackers() do read(select(2, cm:pending_battle_cache_get_attacker(i))) end
@@ -4938,7 +5595,7 @@ function F.repl_turn(faction, ending)
                 spare[k], from = (spare[k] or 0) - moved, from + moved
                 if t.hp > from + F.REPL_EPSILON then
                     local g = { unit = t.unit, id = id, from = from, to = t.hp, goods = 0,
-                                starving = starving and F.eats_unit(t.unit) }
+                                starving = (starving and F.eats_unit(t.unit)) or F.land_starving(force, t.unit) }
                     if not g.starving and per > 0 then
                         for _, p in ipairs(F.recruit_bill(faction, t.unit:unit_caste(), t.unit:get_unit_custom_battle_cost())) do
                             local n = p.n * (t.hp - from) / 100 * per / 100
@@ -5467,13 +6124,14 @@ end
 -- removes the FIRST unit of that key in the army, so of two alike the one that leaves may be the stronger. The
 -- general's own unit never leaves. What it sets is noted for the replenishment bill (F.repl_note), so
 -- the loss is not read as a gain to charge for, or to give back.
-function F.hunger_losses(faction, force, short)
+function F.hunger_losses(faction, force, short, hits)
     local H = F.HUNGER
     local loss = short >= 3 and H.starve or short == 2 and H.short or 0
-    if loss <= 0 then return 0 end
-    local troops = {}
+    if loss <= 0 then return 0, {} end
+    hits = hits or F.eats_unit
+    local troops, set = {}, {}
     for _, t in ipairs(F.troops(force)) do
-        if F.eats_unit(t.unit) then troops[#troops + 1] = t end
+        if hits(t.unit) then troops[#troops + 1] = t end
     end
     for _, t in ipairs(troops) do
         local hp = math.max(math.min(t.hp, H.floor), t.hp - loss)
@@ -5481,9 +6139,10 @@ function F.hunger_losses(faction, force, short)
             cm:set_unit_hp_to_unary_of_maximum(t.unit, hp / 100)
             t.hp = hp
         end
+        set[tostring(t.unit:command_queue_index())] = hp
         F.repl_note(faction, t.unit, hp)
     end
-    if short < H.desert or #troops == 0 then return 0 end
+    if short < H.desert or #troops == 0 then return 0, set end
     local worst
     for _, t in ipairs(troops) do
         if not worst or t.hp < worst.hp or (t.hp == worst.hp and t.unit:unit_key() < worst.unit:unit_key()) then
@@ -5491,7 +6150,271 @@ function F.hunger_losses(faction, force, short)
         end
     end
     cm:remove_unit_from_character(cm:char_lookup_str(force:general_character()), worst.unit:unit_key())
-    return 1
+    return 1, set
+end
+
+F.LAND_CORRUPTION = {
+    chaos = { "wh3_main_corruption_chaos", "wh3_main_corruption_khorne", "wh3_main_corruption_nurgle",
+        "wh3_main_corruption_slaanesh", "wh3_main_corruption_tzeentch" },
+    skaven = { "wh3_main_corruption_skaven" },
+    undead = { "wh3_main_corruption_vampiric", "wh3_main_corruption_nagash" },
+}
+
+function F.land_need(unit) return DERPY_MR_FLOWS_LAND_NEED[unit:unit_key()] end
+
+function F.land_friend(faction, owner)
+    if owner:is_null_interface() then return false end
+    return owner:name() == faction:name() or faction:allied_with(owner) or faction:defensive_allies_with(owner)
+        or faction:is_vassal_of(owner) or owner:is_vassal_of(faction)
+end
+
+local function land_read(fn)
+    local ok, v = pcall(fn)
+    if ok and type(v) == "number" then return v end
+end
+
+F.LAND_WINDS = { corrupt = 3, all = 5 }
+F.LAND_EPISODES = {
+    episode_chaos_invasion = { chaos = true },
+    episode_nagash_endgame = { undead = true, tomb = true },
+    episode_nagash_sandbox = { undead = true, tomb = true },
+    episode_skaven_vermintide = { skaven = true },
+}
+
+function F.land_episodes()
+    local out = {}
+    local sets = type(episodes_manager) == "table" and type(episodes_manager.persistent) == "table"
+        and episodes_manager.persistent.active_episodes
+    if type(sets) ~= "table" then return out end
+    for _, names in pairs(sets) do
+        if type(names) == "table" then
+            for _, name in ipairs(names) do
+                if type(name) == "string" then out[name] = true end
+            end
+        end
+    end
+    return out
+end
+
+-- false, not nil: the game gave no reading, and the turn must leave the army's reserve as it is.
+local function land_own(faction, group, region)
+    local holds
+    if group == "tomb" then
+        holds = F.land_friend(faction, region:owning_faction())
+    elseif group == "spirit" then
+        local n = land_read(function() return cm:get_total_corruption_value_in_region(region) end)
+        if not n then return false end
+        holds = n <= F.rates().land_pure
+    else
+        local n, read = 0, false
+        for _, key in ipairs(F.LAND_CORRUPTION[group]) do
+            local v = land_read(function()
+                local p = region:province():pooled_resource_manager():resource(key)
+                if p:is_null_interface() then return 0 end
+                read = true
+                return p:value()
+            end)
+            if not v then return false end
+            n = n + v
+        end
+        if not read then return false end
+        holds = n >= F.rates().land_corrupt
+    end
+    return holds and "land" or nil
+end
+
+function F.land_state(faction, group, region, episodes)
+    local own = land_own(faction, group, region)
+    if own == "land" or not F.rates().land_events then return own end
+    for name, groups in pairs(F.LAND_EPISODES) do
+        if groups[group] and episodes and episodes[name] then return "held", name end
+    end
+    local level = land_read(function() return cm:get_winds_of_magic_in_area_for_region(region) end)
+    if level and (level >= F.LAND_WINDS.all or (F.LAND_CORRUPTION[group] and level >= F.LAND_WINDS.corrupt)) then
+        return "held"
+    end
+    return own
+end
+
+local function land_on(R, faction) return R.land_need and (faction:is_human() or (R.ai and R.ai_land)) end
+
+function F.land_starving(force, unit)
+    if not land_on(F.rates(), force:faction()) then return false end
+    local rec = F.state.land and F.state.land[tostring(force:command_queue_index())]
+    local group = F.land_need(unit)
+    local s = group and rec and rec.f == force:faction():name() and rec.g[group]
+    return s and s.m >= 3 or false
+end
+
+function F.land_keep(rec, force, set)
+    rec.hp = {}
+    for _, t in ipairs(F.troops(force)) do
+        local id = tostring(t.unit:command_queue_index())
+        local hp = set and set[id] or t.hp
+        if F.land_need(t.unit) and hp < F.REPL_FULL then rec.hp[id] = F.repl_pack(hp) end
+    end
+end
+
+function F.land_lower(rec, t)
+    local id = tostring(t.unit:command_queue_index())
+    local w = rec.hp[id]
+    if F.land_need(t.unit) and t.hp < (w and w / 100 or 100) - F.REPL_EPSILON then rec.hp[id] = F.repl_pack(t.hp) end
+end
+
+function F.land_tell(fkey, episode)
+    F.state.land_said = F.state.land_said or {}
+    local said = F.state.land_said[episode] or {}
+    F.state.land_said[episode] = said
+    if said[fkey] then return end
+    said[fkey] = true
+    cm:show_message_event(fkey, "event_feed_strings_text_derpy_mr_land_title",
+        "event_feed_strings_text_derpy_mr_land_episode_" .. episode,
+        "event_feed_strings_text_derpy_mr_land_secondary", false, 1014)
+end
+
+F.LAND_STATES = { "reserve", "fading", "held" }
+
+function F.land_bundle(group, state) return "derpy_mr_land_" .. group .. "_" .. state end
+
+-- r + 1: the game counts a bundle down once before the player sees it (live test 2026-11-28)
+local function land_show(cqi, group, state, r)
+    for _, s in ipairs(F.LAND_STATES) do cm:remove_effect_bundle_from_force(F.land_bundle(group, s), cqi) end
+    if state then cm:apply_effect_bundle_to_force(F.land_bundle(group, state), cqi, state == "reserve" and r + 1 or 0) end
+end
+
+function F.land_turn(faction)
+    local R, fkey, turn = F.rates(), faction:name(), cm:model():turn_number()
+    local armies, live, fade = {}, {}, false
+    if land_on(R, faction) then
+        local fs = faction:military_force_list()
+        for i = 0, fs:num_items() - 1 do
+            local force = fs:item_at(i)
+            if force:has_general() and not force:is_armed_citizenry() and not F.no_rations(force) then
+                local groups = {}
+                for _, t in ipairs(F.troops(force)) do
+                    local group = F.land_need(t.unit)
+                    if group then groups[group] = true end
+                end
+                if next(groups) then
+                    local id = tostring(force:command_queue_index())
+                    armies[#armies + 1] = { id = id, force = force, groups = groups }
+                    live[id] = true
+                end
+            end
+        end
+    end
+    F.state.land = F.state.land or {}
+    for id, rec in pairs(F.state.land) do
+        local force = cm:get_military_force_by_cqi(tonumber(id))
+        local gone = not force or force:is_null_interface()
+        if gone or force:faction():name() ~= rec.f or (rec.f == fkey and not live[id]) then
+            if not gone then
+                for group in pairs(rec.g) do land_show(force:command_queue_index(), group) end
+            end
+            F.state.land[id] = nil
+        end
+    end
+    local episodes = F.land_episodes()
+    for _, a in ipairs(armies) do
+        local rec = F.state.land[a.id]
+        if not rec then
+            rec = { f = fkey, g = {}, hp = {} }
+            F.state.land[a.id] = rec
+        end
+        if rec.done ~= turn then
+            rec.done = turn
+            local g, cqi = {}, a.force:command_queue_index()
+            for group in pairs(a.groups) do g[group] = rec.g[group] or { r = R.land_grace, m = 0 } end
+            for group in pairs(rec.g) do
+                if not g[group] then land_show(cqi, group) end
+            end
+            rec.g = g
+            for _, t in ipairs(F.troops(a.force)) do
+                local group = F.land_need(t.unit)
+                local kept = group and g[group].m >= 3 and rec.hp[tostring(t.unit:command_queue_index())]
+                if kept and t.hp > kept / 100 + F.REPL_EPSILON then
+                    cm:set_unit_hp_to_unary_of_maximum(t.unit, kept / 10000)
+                end
+            end
+            local ch, set = a.force:general_character(), {}
+            local region = not ch:is_at_sea() and ch:has_region() and ch:region()
+            for group, s in pairs(g) do
+                s.r = math.min(s.r, R.land_grace)
+                if not region then
+                    local spent = s.r < R.land_grace or s.m > 0
+                    land_show(cqi, group, spent and (s.r > 0 and "reserve" or "fading") or nil, s.r)
+                else
+                    local state, episode = F.land_state(faction, group, region, episodes)
+                    if state == "land" then
+                        s.r, s.m = R.land_grace, 0
+                        land_show(cqi, group)
+                    elseif state == "held" then
+                        if episode and faction:is_human() then F.land_tell(fkey, episode) end
+                        land_show(cqi, group, "held")
+                    elseif state == nil then
+                        if s.r > 0 then
+                            s.r = s.r - 1
+                            fade = fade or s.r == 0
+                        else
+                            s.m = s.m + 1
+                            local _, hit = F.hunger_losses(faction, a.force, s.m,
+                                function(u) return F.land_need(u) == group end)
+                            for id, hp in pairs(hit) do set[id] = hp end
+                        end
+                        land_show(cqi, group, s.r > 0 and "reserve" or "fading", s.r)
+                    end
+                end
+            end
+            F.land_keep(rec, a.force, set)
+        end
+    end
+    if fade and faction:is_human() then
+        cm:show_message_event(fkey, "event_feed_strings_text_derpy_mr_land_title",
+            "event_feed_strings_text_derpy_mr_land_primary", "event_feed_strings_text_derpy_mr_land_secondary", false, 1014)
+    end
+end
+
+function F.land_turn_end(faction)
+    if not F.state.land then return end
+    local fs = faction:military_force_list()
+    for i = 0, fs:num_items() - 1 do
+        local force = fs:item_at(i)
+        local rec = F.state.land[tostring(force:command_queue_index())]
+        if rec and rec.f == faction:name() then F.land_keep(rec, force) end
+    end
+end
+
+F.LAND_GROUPS = { "chaos", "skaven", "undead", "tomb", "spirit" }
+
+function F.land_status(force)
+    local R, out = F.rates(), {}
+    if not R.land_need then return out end
+    local faction = force:faction()
+    local rec = F.state.land and F.state.land[tostring(force:command_queue_index())]
+    local saved = rec and rec.f == faction:name() and rec.g or {}
+    local present = {}
+    for _, t in ipairs(F.troops(force)) do
+        local group = F.land_need(t.unit)
+        if group then present[group] = true end
+    end
+    local ch = force:general_character()
+    local region = not ch:is_at_sea() and ch:has_region() and ch:region()
+    local episodes = region and F.land_episodes()
+    for _, group in ipairs(F.LAND_GROUPS) do
+        if present[group] then
+            local state = region and F.land_state(faction, group, region, episodes)
+            local s = saved[group]
+            local reserve = s and math.min(s.r, R.land_grace) or R.land_grace
+            if state == "land" then
+                out[#out + 1] = { group = group, state = "land", reserve = R.land_grace }
+            elseif state == "held" then
+                out[#out + 1] = { group = group, state = "held", reserve = reserve }
+            else
+                out[#out + 1] = { group = group, state = reserve > 0 and "reserve" or "fading", reserve = reserve }
+            end
+        end
+    end
+    return out
 end
 
 function F.provision_buy(faction, row, b)
@@ -8299,6 +9222,7 @@ function F.turn_start(faction)
     F.guard(F.repl_turn, faction)
     F.guard(F.upkeep, faction)
     F.guard(F.provisions_turn, faction)
+    F.guard(F.land_turn, faction)
     F.guard(F.kiki_relief, faction)               -- Mortals, Mercs and Management's hungry people, after the armies
     F.guard(F.spoil, faction)                     -- after the meals, before processing and trade
     F.guard(F.supply_turn, faction)               -- the army's upkeep by its line, after the meals; again at the turn end (F.init)
@@ -8378,7 +9302,10 @@ function F.init()
         function(context) F.enemy_cache, F.enemy_cache_ui = {}, {}; F.guard(F.supply_turn, context:faction()) end, true)
     -- every faction's: the replenishment bill reads the armies at both ends of the turn (F.repl_turn)
     core:add_listener("derpy_mr_flows_repl_end", "FactionTurnEnd", true,
-        function(context) F.guard(F.repl_turn_end, context:faction()) end, true)
+        function(context)
+            F.guard(F.repl_turn_end, context:faction())
+            F.guard(F.land_turn_end, context:faction())
+        end, true)
     core:add_listener("derpy_mr_flows_merged", "UnitMergedAndDestroyed", true,
         function(context) F.guard(F.on_unit_merged, context) end, true)
     core:add_listener("derpy_mr_flows_repl_battle", "BattleCompleted", true,

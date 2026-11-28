@@ -128,6 +128,9 @@ local function faction(name, opts)
         is_rebel = function() return f.rebel end,
         -- CA's: an ally, vassal or client state of the other; f.allies names whom (Part C, tolls)
         is_ally_vassal_or_client_state_of = function(_, o) return (f.allies or {})[o:name()] == true end,
+        allied_with = function(_, o) return (f.allied or {})[o:name()] == true end,
+        defensive_allies_with = function(_, o) return (f.defensive or {})[o:name()] == true end,
+        is_vassal_of = function(_, o) return f.overlord == o:name() end,
         is_dead = function() return f.dead == true end,
         factions_at_war_with = function()
             local ks, t = {}, {}
@@ -1188,14 +1191,14 @@ end)()
 
 -- ---- rates: MCT, frozen, multiplayer ----------------------------------------------------
 local MCT = {}
-local function option()
+local function option(m)
     local o = {}
     function o:set_text() end
     function o:set_tooltip_text(t) self.tip = t end
     function o:slider_set_precision() end
-    function o:slider_set_min_max() end
+    function o:slider_set_min_max(lo, hi) self.min, self.max = lo, hi end
     function o:slider_set_step_size() end
-    function o:set_assigned_section() end
+    function o:set_assigned_section(s) self.section, self.section_made = s, m ~= nil and m.sections[s] ~= nil end
     function o:set_default_value(v) self.value = v end
     function o:add_dropdown_value(key, _text, _tip, default)
         self.values = self.values or {}; self.values[#self.values + 1] = key
@@ -1208,12 +1211,12 @@ local function option()
 end
 local MCT_API = {
     register_mod = function(_, k)
-        local m = { options = {} }
+        local m = { options = {}, sections = {} }
         function m:set_title() end
         function m:set_author() end
         function m:set_description() end
-        function m:add_new_section() end
-        function m:add_new_option(key) local o = option(); self.options[key] = o; return o end
+        function m:add_new_section(key, title) self.sections[key] = title end
+        function m:add_new_option(key) local o = option(self); self.options[key] = o; return o end
         function m:get_option_by_key(key) return self.options[key] end
         MCT[k] = m
         return m
@@ -1254,7 +1257,7 @@ for k, o in pairs(opt) do
     elseif k:match('^route_') then
         eq(o.locked,nil,'visibility stays editable in a campaign')
         eq(o.value,true,'route visuals default on')
-    elseif k == "recruit" or k == "gold_pays" or k == "recruit_per" or k == "replenish_per" then
+    elseif DERPY_MR_FLOWS_LIVE[k] then
         -- CHANGED IN A RUNNING CAMPAIGN (2026-11-20): open there, and the tooltip says so (flows.lua F.freeze_rates)
         eq(o.locked, nil, "a campaign leaves " .. k .. " open")
         eq((o.tip or ""):find("You can change this during a campaign", 1, true) ~= nil, true, k .. "'s tooltip says it can change")
@@ -1288,6 +1291,21 @@ for k, d in pairs(DERPY_MR_FLOWS_DEFAULTS) do
     eq(opt[k] ~= nil, true, "the MCT file has an option for " .. k)
     eq(opt[k].value, d, "the MCT default for " .. k .. " is the script's")
 end
+-- ---- LAND: SETTINGS ----
+do
+    local want = { land_need = true, ai_land = true, land_events = true, land_grace = 5, land_corrupt = 20, land_pure = 20 }
+    local rates = F.read_rates()
+    for k, d in pairs(want) do
+        eq(rates[k], d, "the default of " .. k)
+        eq(DERPY_MR_FLOWS_LIVE[k], true, k .. " is a live setting")
+        eq(opt[k].section, "land", k .. " sits in the land section")
+        eq(opt[k].section_made, true, "the land section is made before " .. k)
+    end
+    eq(MCT.derpy_more_resources.sections.land, "Daemons, undead and spirits", "the land section's title")
+    for k, hi in pairs({ land_grace = 10, land_corrupt = 100, land_pure = 100 }) do
+        eq(opt[k].min, 0, k .. "'s least"); eq(opt[k].max, hi, k .. "'s most")
+    end
+end
 F.state = { factions = {} }
 opt.raid.value, opt.ai.value = 30, false
 eq(F.rates().raid, 30, "a new campaign takes MCT's raid share")
@@ -1308,7 +1326,8 @@ do
     local live = {}
     for k in pairs(DERPY_MR_FLOWS_LIVE) do live[#live + 1] = k end
     table.sort(live)
-    eq(table.concat(live, ","), "gold_pays,recruit,recruit_per,replenish_per", "the four live settings")
+    eq(table.concat(live, ","), "ai_land,gold_pays,land_corrupt,land_events,land_grace,land_need,land_pure,recruit,recruit_per,replenish_per",
+       "the ten live settings")
     F.state = { factions = {}, rates = F.read_rates() }
     F.state.rates.replenish_per, F.state.rates.gold_pays = 0, false   -- as an older save froze them
     opt.replenish_per.value, opt.gold_pays.value, opt.raid.value = 50, true, 12
@@ -1335,9 +1354,10 @@ do
 end
 -- A LOCK SAVED INTO A CAMPAIGN COMES BACK ON LOAD: MCT's Registry:load_game puts back every saved lock after this file
 -- ran and never clears one, so a campaign saved while the live settings were locked (before 2026-11-20) loads them
--- greyed. MctInitialized fires right after load_game: the file opens the live four again there, and nothing else.
+-- greyed. MctInitialized fires right after load_game: the file opens the live settings again there, and nothing else.
 do
-    local live = { "recruit", "gold_pays", "recruit_per", "replenish_per" }
+    local live = {}
+    for k in pairs(DERPY_MR_FLOWS_LIVE) do live[#live + 1] = k end
     for _, k in ipairs(live) do if opt[k] then opt[k]:set_locked(true, "saved") end end
     opt.raid:set_locked(true, "frozen")
     fire("MctInitialized", { is_multiplayer = function() return false end })
@@ -5271,6 +5291,1003 @@ end)()
     cm.show_message_event, cm.remove_effect_bundle_from_force = message, remove
     F.state, TURN, cm.get_military_force_by_cqi = old, turn, lookup
     print("no meals: ration count, hunger, desertion, an army that eats nothing, a starving army's daemons pass")
+end)()
+-- ---- LAND: THE RULE ----
+;(function()
+    local old, turn, lookup, total = F.state, TURN, cm.get_military_force_by_cqi, cm.get_total_corruption_value_in_region
+    local apply0, remove0, message0 = cm.apply_effect_bundle_to_force, cm.remove_effect_bundle_from_force, cm.show_message_event
+    local fb = {}
+    cm.apply_effect_bundle_to_force = function(_, key, cqi, n)
+        if type(key) ~= "string" or type(cqi) ~= "number" or type(n) ~= "number" then error("apply_effect_bundle_to_force: bad arguments") end
+        fb[#fb + 1] = { "+", key, cqi, n }
+    end
+    cm.remove_effect_bundle_from_force = function(_, key, cqi)
+        if type(key) ~= "string" or type(cqi) ~= "number" then error("remove_effect_bundle_from_force: bad arguments") end
+        fb[#fb + 1] = { "-", key, cqi }
+    end
+    cm.show_message_event = function() end
+    local function on(cqi)
+        local have, out = {}, {}
+        for _, c in ipairs(fb) do
+            if c[3] == cqi then have[c[2]] = c[1] == "+" and c[4] or nil end
+        end
+        for k, n in pairs(have) do out[#out + 1] = k .. "=" .. n end
+        table.sort(out)
+        return table.concat(out, " ")
+    end
+    local function calls(cqi, from)
+        local out = {}
+        for i = from + 1, #fb do
+            local c = fb[i]
+            if c[3] == cqi then out[#out + 1] = c[1] .. (c[2]:gsub("^derpy_mr_land_", "")) end
+        end
+        return table.concat(out, " ")
+    end
+    local function first(seq, a, b)
+        local i, j = seq:find(a, 1, true), seq:find(b, 1, true)
+        return i ~= nil and j ~= nil and i < j
+    end
+    F.state = { factions = {}, rates = F.read_rates() }
+    local R = F.state.rates
+    R.land_corrupt, R.land_pure, R.land_grace = 20, 20, 5
+    local broken, made, sides, forces = nil, 0, {}, {}
+    local function land(key, corrupt, sum, owner)
+        made = made + 1
+        local r = region(key, 47000 + 10 * made, 47000, 1000, {})
+        local prm = { resource = function(_, k)
+            if broken == "error" then error("no reading") end
+            local v = corrupt[k]
+            if v == false then return NULL end
+            return { is_null_interface = function() return false end,
+                     value = function() if broken == "nil" then return nil end return v or 0 end }
+        end }
+        r.iface.province = function() return { pooled_resource_manager = function() return prm end } end
+        r.corruption = sum
+        if owner then own(owner, r) end
+        return r
+    end
+    cm.get_total_corruption_value_in_region = function(_, rg)
+        if broken == "error" then error("no reading") end
+        if broken == "nil" then return nil end
+        return rg.__r.corruption
+    end
+    local function side(name, opts)
+        local fc = faction(name, opts)
+        sides[#sides + 1] = fc
+        return fc
+    end
+    local function force(id, units, owner, where)
+        local a = { units = units, owner = owner, where = where, sea = false }
+        local ch = { is_at_sea = function() return a.sea end, has_region = function() return a.where ~= nil and not a.lost end,
+            region = function() return a.where and a.where.iface or NULL end, command_queue_index = function() return id + 1 end }
+        a.iface = { is_null_interface = function() return false end, command_queue_index = function() return id end,
+            faction = function() return a.owner.iface end, has_general = function() return true end,
+            is_armed_citizenry = function() return false end, general_character = function() return ch end,
+            force_type = function() return { key = function() return "ARMY" end } end,
+            unit_list = function() return list(a.units) end }
+        forces[id] = a; owner.armies[#owner.armies + 1] = a.iface
+        return a
+    end
+    cm.get_military_force_by_cqi = function(_, id) return forces[id] and forces[id].iface or false end
+    local function rec(id) return F.state.land and F.state.land[tostring(id)] end
+    local function rm(id, group)
+        local s = rec(id) and rec(id).g[group]
+        return s and (s.r .. "," .. s.m)
+    end
+    local function set(id, group, r, m) rec(id).g[group].r, rec(id).g[group].m = r, m end
+    local wc = side("ln_wc", { human = true, sc = "wh_main_sc_chs_chaos" })
+    local function turns(n, fc) for _ = 1, n do TURN = TURN + 1; F.land_turn((fc or wc).iface) end end
+    local BLOOD, DRYAD, TOMB, WARRIOR = "wh3_main_kho_inf_bloodletters_0", "wh_dlc05_wef_inf_dryads_0",
+        "wh2_dlc09_tmb_inf_skeleton_warriors_0", "wh_main_chs_inf_chaos_warriors_0"
+
+    eq(F.land_need(soldier({ key = BLOOD })), "chaos", "a Bloodletter is a Chaos daemon")
+    eq(F.land_need(soldier({ key = DRYAD })), "spirit", "a Dryad is a spirit")
+    eq(F.land_need(soldier({ key = TOMB })), "tomb", "a Tomb Kings skeleton needs its own land")
+    eq(F.land_need(soldier({ key = WARRIOR })), nil, "a Chaos Warrior needs no land")
+    local wastes = land("ln_wastes", { wh3_main_corruption_chaos = 20 }, 20)
+    local edge = land("ln_edge", { wh3_main_corruption_chaos = 19 }, 19)
+    local clean, tainted = land("ln_clean", {}, 0), land("ln_tainted", {}, 21)
+    eq(F.land_state(wc.iface, "chaos", wastes.iface), "land", "a chaos sum of 20 sustains daemons")
+    eq(F.land_state(wc.iface, "chaos", edge.iface), nil, "19 does not")
+    eq(F.land_state(wc.iface, "chaos", land("ln_split", { wh3_main_corruption_khorne = 10, wh3_main_corruption_chaos = 10 }, 20).iface),
+        "land", "Khorne's 10 and undivided 10 make 20")
+    eq(F.land_state(wc.iface, "spirit", land("ln_grove", {}, 20).iface), "land", "a total of 20 is clean enough for a Dryad")
+    eq(F.land_state(wc.iface, "spirit", tainted.iface), nil, "21 is not")
+    eq(F.land_state(wc.iface, "undead", land("ln_crypt", { wh3_main_corruption_vampiric = 15, wh3_main_corruption_nagash = 5 }, 15).iface),
+        "land", "vampiric 15 and Nagash's 5 sustain the undead")
+    eq(F.land_state(wc.iface, "skaven", land("ln_warren", { wh3_main_corruption_skaven = 20 }, 20).iface), "land",
+        "Skaven corruption sustains a Verminlord")
+    eq(F.land_state(wc.iface, "skaven", wastes.iface), nil, "Chaos corruption does not")
+    eq(F.land_state(wc.iface, "undead", land("ln_ie_crypt", { wh3_main_corruption_vampiric = 20, wh3_main_corruption_nagash = false }, 20).iface),
+        "land", "with no Nagash's corruption on the map, as in Immortal Empires, vampiric 20 still sustains the undead")
+    eq(F.land_state(wc.iface, "undead", land("ln_ie_thin", { wh3_main_corruption_vampiric = 19, wh3_main_corruption_nagash = false }, 19).iface),
+        nil, "and vampiric 19 is still a reading, of land that does not")
+    local void = land("ln_void", { wh3_main_corruption_vampiric = false, wh3_main_corruption_nagash = false }, 0)
+    eq(F.land_state(wc.iface, "undead", void.iface), false, "a province with none of the undead's corruption kinds gives no reading")
+    eq(F.land_state(wc.iface, "chaos", land("ln_void_chaos", { wh3_main_corruption_chaos = false, wh3_main_corruption_khorne = false,
+        wh3_main_corruption_nurgle = false, wh3_main_corruption_slaanesh = false, wh3_main_corruption_tzeentch = false }, 0).iface),
+        false, "nor does one with none of the Chaos kinds")
+    eq(F.land_state(wc.iface, "chaos", void.iface), nil, "while one that has them reads as land without Chaos corruption")
+
+    local tk, friend, stranger = side("ln_tk"), side("ln_friend"), side("ln_stranger")
+    tk.allied = { ln_friend = true }
+    local far = land("ln_far", {}, 0, stranger)
+    eq(F.land_state(tk.iface, "tomb", land("ln_tk_home", {}, 0, tk).iface), "land", "a Tomb Kings army is sustained in its own land")
+    eq(F.land_state(tk.iface, "tomb", land("ln_allied", {}, 0, friend).iface), "land", "and in an ally's")
+    eq(F.land_state(tk.iface, "tomb", far.iface), nil, "not in a stranger's")
+    eq(F.land_state(tk.iface, "tomb", land("ln_ruin", {}, 0).iface), nil, "nor in abandoned land")
+    tk.defensive = { ln_stranger = true }
+    eq(F.land_state(tk.iface, "tomb", far.iface), "land", "a defensive ally's land counts")
+    tk.defensive, stranger.overlord = nil, "ln_tk"
+    eq(F.land_state(tk.iface, "tomb", far.iface), "land", "so does a vassal's")
+    stranger.overlord, tk.overlord = nil, "ln_stranger"
+    eq(F.land_state(tk.iface, "tomb", far.iface), "land", "and its overlord's")
+    tk.overlord = nil
+
+    local lord = soldier({ caste = "lord", key = "wh3_main_dae_cha_be_lakor_0" })
+    local b1, b2, cw = soldier({ key = BLOOD }), soldier({ key = BLOOD }), soldier({ key = WARRIOR })
+    local host = force(47001, { lord, b1, b2, cw }, wc, clean)
+    TURN = 47000
+    turns(3)
+    eq(rm(47001, "chaos"), "2,0", "three turns in clean land leave two turns of a five-turn reserve, none missed")
+    eq(table.concat({ lord.hp, b1.hp, b2.hp, cw.hp }, ","), "100,100,100,100", "and nobody weakens while it lasts")
+    eq(F.land_starving(host.iface, b1), false, "a daemon drawing on its reserve is not starving")
+    turns(4)
+    eq(rm(47001, "chaos"), "0,2", "four more: the reserve is gone and two turns are missed")
+    eq(b1.hp, 95, "two missed turns cost 5%")
+    eq(F.land_starving(host.iface, b1), false, "two missed turns are not yet starving")
+    turns(1)
+    eq(rm(47001, "chaos"), "0,3", "five more: three turns are missed")
+    eq(b1.hp, 85, "two missed turns cost 5% and three cost 10%"); eq(b2.hp, 85, "for both Bloodletters")
+    eq(cw.hp, 100, "the Chaos Warrior does not fade"); eq(lord.hp, 100, "nor does the lord, though Be'lakor is a daemon")
+    eq(F.land_starving(host.iface, b1), true, "three missed turns: the daemons are starving")
+    eq(F.land_starving(host.iface, cw), false, "the Chaos Warrior is not")
+    eq(rec(47001).hp[tostring(b1.cqi)], 8500, "each daemon's strength is kept in hundredths")
+    eq(rec(47001).hp[tostring(cw.cqi)], nil, "and only the daemons'")
+    host.where = wastes; turns(1)
+    eq(rm(47001, "chaos"), "5,0", "one turn in Chaos land refills the reserve")
+
+    host.where, cw.hp = clean, 20
+    set(47001, "chaos", 0, 4)
+    DESERTED = {}; turns(1)
+    eq(#DESERTED, 1, "five missed turns: one unit leaves")
+    eq(DESERTED[1] and DESERTED[1].key, BLOOD, "a Bloodletter, though the Chaos Warrior is weaker")
+    eq(DESERTED[1] and DESERTED[1].lookup, "character_cqi:47002", "from the army's general")
+
+    set(47001, "chaos", 0, 2)
+    local hp0 = b1.hp
+    host.where, host.sea = wastes, true; turns(1)
+    eq(rm(47001, "chaos"), "0,2", "at sea, Chaos land below refills nothing")
+    host.where = clean; turns(1)
+    eq(rm(47001, "chaos"), "0,2", "and clean land below drains nothing")
+    host.sea, host.lost = false, true; turns(1)
+    eq(rm(47001, "chaos"), "0,2", "with no region, nothing drains either")
+    eq(b1.hp, hp0, "and nothing weakens")
+    host.lost = false
+
+    local e0 = #ERRORS
+    set(47001, "chaos", 2, 1)
+    host.where = edge
+    broken = "nil"; turns(1)
+    eq(rm(47001, "chaos"), "2,1", "a corruption read that gives nil leaves the reserve as it was")
+    broken = "error"; turns(1)
+    eq(rm(47001, "chaos"), "2,1", "and so does one that throws")
+    local wef = side("ln_wef", { human = true, sc = "wh_dlc05_sc_wef_wood_elves" })
+    force(47003, { soldier({ caste = "lord" }), soldier({ key = DRYAD }) }, wef, tainted)
+    broken = nil; turns(1, wef)
+    eq(rm(47003, "spirit"), "4,0", "a Dryad in tainted land draws on its reserve")
+    broken = "nil"; turns(1, wef)
+    eq(rm(47003, "spirit"), "4,0", "a total corruption read that gives nil drains nothing")
+    broken = "error"; turns(1, wef)
+    eq(rm(47003, "spirit"), "4,0", "nor does one that throws")
+    broken = nil
+    eq(#ERRORS, e0, "and nothing throws: " .. table.concat(ERRORS, "; ", e0 + 1))
+
+    local conf = side("ln_conf", { human = true })
+    local heir = soldier({ key = BLOOD })
+    local moved = force(47004, { soldier({ caste = "lord" }), heir }, conf, wastes)
+    moved.sea = true
+    F.state.land["47004"] = { f = "ln_old", done = 0, g = { chaos = { r = 0, m = 4 } }, hp = {} }
+    eq(F.land_starving(moved.iface, heir), false, "the missed turns of an army's old owner do not starve it")
+    turns(1, conf)
+    eq(rec(47004).f, "ln_conf", "a record kept for another faction is replaced")
+    eq(rm(47004, "chaos"), "5,0", "with a full reserve and no turn missed")
+
+    set(47001, "chaos", 3, 0)
+    host.where = clean; turns(1)
+    eq(rm(47001, "chaos"), "2,0", "a turn in clean land drains one turn")
+    F.land_turn(wc.iface)
+    eq(rm(47001, "chaos"), "2,0", "and a second run in the same turn changes nothing")
+    set(47001, "chaos", 4, 0); R.land_grace = 2; turns(1)
+    eq(rm(47001, "chaos"), "1,0", "a reserve above a lowered Turns before they fade is cut to it before the turn drains one")
+    R.land_grace = 5
+
+    b1.hp = 66.666
+    set(47001, "chaos", 0, 2); turns(1)
+    eq(rec(47001).hp[tostring(b1.cqi)], 5667, "a fraction of strength is kept as whole hundredths")
+    local fractions, seen = {}, 0
+    local function whole(t, path)
+        for k, v in pairs(t) do
+            local at = path .. "." .. tostring(k)
+            if type(v) == "number" then
+                seen = seen + 1
+                if v ~= math.floor(v) then fractions[#fractions + 1] = at .. "=" .. v end
+            end
+            if type(v) == "table" then whole(v, at) end
+        end
+    end
+    whole(F.state.land, "F.state.land")
+    table.sort(fractions)
+    eq(seen >= 10, true, "the walk reaches the saved numbers")
+    eq(table.concat(fractions, ", "), "", "every number the land rule saves is whole")
+
+    F.state.land["47099"] = { f = "ln_dead", done = 0, g = { chaos = { r = 5, m = 0 } }, hp = {} }
+    forces[47003], wef.armies = nil, {}
+    turns(1)
+    eq(rec(47099), nil, "a record for a force that no longer exists is removed")
+    eq(rec(47003), nil, "and so is a destroyed army's")
+
+    local kho = side("ln_kho", { sc = "wh3_main_sc_kho_khorne" })
+    eq(F.uses_stores(kho.iface), false, "the Daemons of Chaos keep no stores")
+    force(47010, { soldier({ caste = "lord" }), soldier({ key = BLOOD }) }, kho, clean)
+    TURN = TURN + 1; F.on_faction_turn_start(kho.iface)
+    eq(rec(47010) and rec(47010).f, "ln_kho", "they still run the rule at their turn start")
+    eq(rm(47010, "chaos"), "4,0", "and their daemons draw on the reserve")
+    local ai = side("ln_ai", { sc = "wh_main_sc_chs_chaos" })
+    force(47011, { soldier({ caste = "lord" }), soldier({ key = BLOOD }) }, ai, clean)
+    R.ai_land = false; turns(1, ai)
+    eq(rec(47011), nil, "a computer faction keeps no record with Other armies need their land off")
+    R.ai_land, R.ai = true, false; turns(1, ai)
+    eq(rec(47011), nil, "nor with the computer stores switch off")
+    R.ai = true; turns(1, ai)
+    eq(rm(47011, "chaos"), "4,0", "with both on, its daemons follow the rule")
+    local hum = side("ln_hum", { human = true })
+    force(47012, { soldier({ caste = "lord" }), soldier({ key = BLOOD }) }, hum, clean)
+    R.land_need = false; turns(1, hum)
+    eq(rec(47012), nil, "with the rule off, a player's army keeps no record")
+    turns(1); eq(rec(47001), nil, "and a record kept before is dropped")
+    turns(1, ai); eq(rec(47011), nil, "for a computer's army too")
+    R.land_need = true
+
+    local nost = side("ln_nost", { sc = "wh3_main_sc_kho_khorne" })
+    local missed, fresh, warrior = soldier({ key = BLOOD, hp = 80 }), soldier({ key = BLOOD, hp = 80 }), soldier({ key = WARRIOR, hp = 80 })
+    force(47020, { soldier({ caste = "lord" }), missed, fresh, warrior }, nost, clean)
+    F.state.land["47020"] = { f = "ln_nost", done = 0, g = { chaos = { r = 0, m = 3 } }, hp = { [tostring(missed.cqi)] = 6000 } }
+    local two = soldier({ key = BLOOD, hp = 80 })
+    force(47021, { soldier({ caste = "lord" }), two }, nost, clean)
+    F.state.land["47021"] = { f = "ln_nost", done = 0, g = { chaos = { r = 0, m = 2 } }, hp = { [tostring(two.cqi)] = 6000 } }
+    local back = soldier({ key = BLOOD, hp = 80 })
+    force(47022, { soldier({ caste = "lord" }), back }, nost, wastes)
+    F.state.land["47022"] = { f = "ln_nost", done = 0, g = { chaos = { r = 0, m = 3 } }, hp = { [tostring(back.cqi)] = 6000 } }
+    local lag = soldier({ key = BLOOD, hp = 80 })
+    lag.percentage_proportion_of_full_strength = function() return 80 end
+    force(47023, { soldier({ caste = "lord" }), lag }, nost, clean)
+    F.state.land["47023"] = { f = "ln_nost", done = 0, g = { chaos = { r = 0, m = 2 } }, hp = {} }
+    local hurt = soldier({ key = BLOOD, hp = 40 })
+    force(47024, { soldier({ caste = "lord" }), hurt }, nost, clean)
+    F.state.land["47024"] = { f = "ln_nost", done = 0, g = { chaos = { r = 0, m = 3 } }, hp = { [tostring(hurt.cqi)] = 6000 } }
+    TURN = TURN + 1; F.land_turn(nost.iface)
+    eq(hurt.hp, 30, "a unit below its record is never raised to it: 40 less this turn's 10%")
+    eq(rec(47024).hp[tostring(hurt.cqi)], 3000, "and the record follows it down")
+    eq(missed.hp, 50, "a faction with no stores: a daemon three turns into the fade regains nothing, 60 less this turn's 10%")
+    eq(rec(47020).hp[tostring(missed.cqi)], 5000, "and its record holds what the loss left")
+    eq(fresh.hp, 70, "a daemon with no record keeps its strength before the losses")
+    eq(rec(47020).hp[tostring(fresh.cqi)], 7000, "and is recorded after them")
+    eq(warrior.hp, 80, "a Chaos Warrior beside them is left alone")
+    eq(two.hp, 70, "two missed turns keep the regain, less this turn's 10%")
+    eq(rm(47021, "chaos"), "0,3", "and the third turn is missed")
+    eq(back.hp, 60, "an army back in Chaos land still loses this turn's regain, since the turn began starving")
+    eq(rm(47022, "chaos"), "5,0", "and its reserve is full again")
+    eq(lag.hp, 70, "a loss is set on the read strength")
+    eq(rec(47023).hp[tostring(lag.cqi)], 7000, "and recorded as set, though the game still reads the old strength")
+
+    local nost2 = side("ln_nost2", { sc = "wh3_main_sc_kho_khorne" })
+    local ma, mb, lord2 = soldier({ key = BLOOD, hp = 50 }), soldier({ key = BLOOD, hp = 50 }), soldier({ caste = "lord" })
+    local joined = force(47040, { lord2, ma, mb }, nost2, clean)
+    F.state.land["47040"] = { f = "ln_nost2", done = 0, g = { chaos = { r = 0, m = 3 } },
+        hp = { [tostring(ma.cqi)] = 5000, [tostring(mb.cqi)] = 5000 } }
+    ma.hp, joined.units = 100, { lord2, ma }
+    ma.faction = function() return nost2.iface end
+    fire("UnitMergedAndDestroyed", { unit = function() return mb end, new_unit = function() return ma end })
+    fire("FactionTurnEnd", { faction = function() return nost2.iface end })
+    eq(rec(47040).hp[tostring(ma.cqi)], nil, "the turn end records the merged unit at full strength, which is no entry")
+    eq(rec(47040).hp[tostring(mb.cqi)], nil, "and drops the unit that went")
+    turns(1, nost2)
+    eq(ma.hp, 90, "a merge in a failing army is not taken back as a regain: 100 less this turn's 10%")
+
+    local wounded, whole = soldier({ key = BLOOD, hp = 80 }), soldier({ key = BLOOD, hp = 100 })
+    force(47041, { soldier({ caste = "lord" }), wounded, whole }, nost2, clean)
+    F.state.land["47041"] = { f = "ln_nost2", done = 0, g = { chaos = { r = 0, m = 3 } }, hp = { [tostring(wounded.cqi)] = 8000 } }
+    local na, nd = cm.pending_battle_cache_num_attackers, cm.pending_battle_cache_num_defenders
+    cm.pending_battle_cache_num_attackers = function() return 1 end
+    cm.pending_battle_cache_num_defenders = function() return 0 end
+    cm.pending_battle_cache_get_attacker = function() return 1, 47041, "ln_nost2" end
+    wounded.hp, whole.hp = 50, 60
+    fire("BattleCompleted", {})
+    eq(rec(47041).hp[tostring(wounded.cqi)], 5000, "a battle lowers a unit's land record to what it holds")
+    eq(rec(47041).hp[tostring(whole.cqi)], 6000, "and records a unit that had none, which counted as full")
+    wounded.hp = 70; fire("BattleCompleted", {})
+    eq(rec(47041).hp[tostring(wounded.cqi)], 5000, "a heal during the battle never raises it")
+    wounded.hp, whole.hp = 60, 70
+    cm.pending_battle_cache_num_attackers, cm.pending_battle_cache_num_defenders = na, nd
+    cm.pending_battle_cache_get_attacker = nil
+    turns(1, nost2)
+    eq(wounded.hp, 40, "a regain after a battle is taken back to the battle's loss, less this turn's 10%")
+    eq(whole.hp, 50, "for a unit that was full before it too")
+
+    local liv = side("ln_liv", { human = true })
+    local home = region("ln_liv_home", 47600, 0, 2000, { coal = 0 })
+    own(liv, home, true)
+    local daemon = soldier({ key = BLOOD, hp = 60 })
+    force(47030, { soldier({ caste = "lord" }), daemon }, liv, clean)
+    F.repl_turn(liv.iface)
+    F.state.land["47030"] = { f = "ln_liv", done = 0, g = { chaos = { r = 0, m = 3 } }, hp = { [tostring(daemon.cqi)] = 6000 } }
+    home.held.coal, daemon.hp = 100, 80
+    F.repl_turn(liv.iface)
+    eq(daemon.hp, 60, "a faction with stores: a daemon three turns into the fade has its regain taken back")
+    eq(home.held.coal, 100, "and its stores are not billed")
+    F.state.land["47030"].g.chaos.m = 2
+    daemon.hp = 80
+    F.repl_turn(liv.iface)
+    eq(daemon.hp, 80, "after two missed turns the regain is kept")
+    eq(home.held.coal < 100, true, "and billed")
+    daemon.hp = 60; F.repl_turn(liv.iface)
+    F.state.land["47030"].g.chaos.m = 3
+    home.held.coal, daemon.hp = 100, 80
+    fire("FactionTurnEnd", { faction = function() return liv.iface end })
+    eq(daemon.hp, 60, "a heal in the turn of a daemon three turns into the fade is taken back at the turn end")
+    eq(rec(47030).hp[tostring(daemon.cqi)], 6000, "and the land record is kept from what that left")
+    R.land_need = false
+    home.held.coal, daemon.hp = 100, 80
+    F.repl_turn(liv.iface)
+    eq(daemon.hp, 80, "the first turn after the rule is switched off, a daemon whose record still says it is fading keeps its regain")
+    eq(home.held.coal < 100, true, "and pays for it")
+    R.land_need = true
+    local cpu_l = side("ln_liv_cpu")
+    own(cpu_l, region("ln_liv_cpu_home", 47601, 0, 2000, { coal = 100 }), true)
+    local cd = soldier({ key = BLOOD, hp = 60 })
+    force(47031, { soldier({ caste = "lord" }), cd }, cpu_l, clean)
+    F.repl_turn(cpu_l.iface)
+    F.state.land["47031"] = { f = "ln_liv_cpu", done = 0, g = { chaos = { r = 0, m = 3 } }, hp = {} }
+    cd.hp = 80; F.repl_turn(cpu_l.iface)
+    eq(cd.hp, 60, "a computer's daemon three turns into the fade has its regain taken back")
+    R.ai_land = false
+    cd.hp = 80; F.repl_turn(cpu_l.iface)
+    eq(cd.hp, 80, "but not the first turn after Other armies need their land is switched off")
+    R.ai_land = true
+
+    -- ---- LAND: WINDS AND EPISODES ----
+    local wind, said = 0, {}
+    local winds0, message = cm.get_winds_of_magic_in_area_for_region, cm.show_message_event
+    cm.get_winds_of_magic_in_area_for_region = function() return wind end
+    cm.show_message_event = function(_, ...) said[#said + 1] = { ... } end
+    local manager
+    setmetatable(_G, { __index = function(_, k) if k == "episodes_manager" then return manager end end })
+    local function episode(...)
+        manager = { persistent = { active_episodes = { generic = {}, end_times = { ... } } } }
+        return F.land_episodes()
+    end
+    local wm = side("ln_wm", { human = true, sc = "wh_main_sc_chs_chaos" })
+    local pure, taint = land("ln_pure", {}, 0), land("ln_taint", {}, 21)
+    local function state(group, where, eps) return F.land_state(wm.iface, group, where.iface, eps) end
+    local SKELETON, TKSKELETON, VERMIN = "wh_main_vmp_inf_skeleton_warriors_0", TOMB, "wh3_dlc29_skv_cha_verminlord_corruptor"
+
+    wind = 3
+    eq(state("chaos", pure), "held", "Strong winds hold a daemon in clean land")
+    eq(state("undead", pure), "held", "the undead")
+    eq(state("skaven", pure), "held", "and a Verminlord")
+    eq(state("spirit", taint), nil, "but not a Dryad in corrupted land")
+    eq(state("tomb", pure), nil, "nor a Tomb Kings skeleton outside friendly land")
+    wind = 4
+    eq(state("chaos", pure), "held", "Tempestuous winds hold a daemon")
+    eq(state("spirit", taint), nil, "and still not a Dryad")
+    wind = 5
+    eq(state("chaos", pure), "held", "a Storm of Magic holds a daemon")
+    eq(state("spirit", taint), "held", "a Dryad in corrupted land")
+    eq(state("tomb", pure), "held", "and a Tomb Kings skeleton")
+    wind = 2
+    eq(state("chaos", pure), nil, "Blowing winds hold nothing")
+    eq(state("undead", pure), nil, "not the undead either")
+    wind = 5
+    eq(state("chaos", wastes), "land", "a daemon in Chaos land is sustained by the land, though the winds would hold it")
+    eq(state("spirit", pure), "land", "so is a Dryad in clean land")
+    eq(select(2, state("chaos", pure)), nil, "winds name no episode")
+
+    broken = "nil"
+    eq(state("chaos", edge), "held", "no corruption reading and a Storm of Magic: held")
+    wind = 2
+    eq(state("chaos", edge), false, "no corruption reading and no winds: still no reading")
+    wind = 0; broken = nil
+
+    local reading = cm.get_winds_of_magic_in_area_for_region
+    for what, stub in pairs({ ["winds that throw"] = function() error("no winds here") end,
+                              ["winds that give a word"] = function() return "strong" end,
+                              ["winds that give a flag"] = function() return true end,
+                              ["winds that give nothing"] = function() end }) do
+        cm.get_winds_of_magic_in_area_for_region = stub
+        eq(state("chaos", pure), nil, what .. " hold nothing in clean land")
+        eq(state("undead", taint), nil, what .. " hold nothing in corrupted land")
+        eq(state("chaos", pure, episode("episode_chaos_invasion")), "held", "but a running episode still holds with " .. what)
+        manager = nil
+    end
+    cm.get_winds_of_magic_in_area_for_region = reading
+
+    wind = 3; R.land_events = false
+    eq(state("chaos", pure), nil, "with the winds left out, Strong winds hold nothing")
+    wind = 5
+    eq(state("spirit", taint), nil, "nor does a Storm of Magic")
+    eq(state("chaos", wastes), "land", "and the land still sustains")
+    broken = "nil"
+    eq(state("chaos", edge), false, "and with no reading the answer is still no reading")
+    broken = nil
+    eq(state("chaos", pure, episode("episode_chaos_invasion")), nil, "nor does a running episode")
+    R.land_events, wind = true, 0
+
+    local eps = episode("episode_chaos_invasion")
+    eq(eps.episode_chaos_invasion, true, "a running episode is listed by name")
+    eq(next(eps, "episode_chaos_invasion"), nil, "and the generic set adds nothing")
+    local s, who = state("chaos", pure, eps)
+    eq(s, "held", "the Chaos Invasion holds a daemon in clean land")
+    eq(who, "episode_chaos_invasion", "and names the episode")
+    eq(state("chaos", taint, eps), "held", "in corrupted land")
+    eq(state("chaos", pure), nil, "and the land alone still holds nothing")
+    for _, group in ipairs({ "skaven", "undead", "tomb", "spirit" }) do
+        eq(state(group, taint, eps), nil, "the Chaos Invasion does not hold " .. group)
+    end
+    eq(state("chaos", wastes, eps), "land", "a daemon in Chaos land is sustained by the land")
+    eq(select(2, state("chaos", wastes, eps)), nil, "and no episode is named")
+    for _, name in ipairs({ "episode_nagash_endgame", "episode_nagash_sandbox" }) do
+        eps = episode(name)
+        eq(state("undead", taint, eps), "held", name .. " holds the undead")
+        eq(state("tomb", taint, eps), "held", "and the Tomb Kings")
+        eq(state("chaos", taint, eps), nil, "not the daemons")
+        eq(state("skaven", taint, eps), nil, "nor the Verminlords")
+        eq(state("spirit", taint, eps), nil, "nor the spirits")
+    end
+    eps = episode("episode_skaven_vermintide")
+    eq(state("skaven", taint, eps), "held", "the Vermintide holds a Verminlord")
+    for _, group in ipairs({ "chaos", "undead", "tomb", "spirit" }) do
+        eq(state(group, taint, eps), nil, "and not " .. group)
+    end
+    eps = episode("episode_glottkin", "episode_nagash_narrative", "episode_neferata")
+    for _, group in ipairs({ "chaos", "undead", "tomb", "spirit", "skaven" }) do
+        eq(state(group, taint, eps), nil, "a narrative episode holds no " .. group)
+    end
+    wind = 5
+    eq(select(2, state("chaos", pure, episode("episode_chaos_invasion"))), "episode_chaos_invasion",
+        "an episode and the winds together: the episode is named")
+    wind = 0
+
+    local function none(shape, what)
+        manager = shape
+        local ok, got = pcall(F.land_episodes)
+        eq(ok, true, what .. " throws: " .. tostring(got))
+        eq(type(got), "table", what .. " gives a table")
+        eq(next(got), nil, what .. " reads as no episode")
+    end
+    none(nil, "no episodes_manager")
+    none({}, "an empty episodes_manager")
+    none("episodes_manager", "a string for it")
+    none(5, "a number for it")
+    none({ persistent = 5 }, "a number for persistent")
+    none({ persistent = { active_episodes = 5 } }, "a number for active_episodes")
+    none({ persistent = {} }, "no active_episodes")
+    none({ persistent = "x" }, "a string for persistent")
+    none({ persistent = { active_episodes = "end_times" } }, "a string for active_episodes")
+    none({ persistent = { active_episodes = { end_times = "episode_chaos_invasion" } } }, "a set that is a string")
+    none({ persistent = { active_episodes = { end_times = { 7, true, {} } } } }, "a set of things that are not names")
+    manager = nil
+    eq(state("chaos", pure, F.land_episodes()), nil, "no episodes_manager holds nothing")
+
+    local daemon = soldier({ key = BLOOD })
+    local blood = force(47050, { soldier({ caste = "lord" }), daemon, soldier({ key = BLOOD }) }, wm, pure)
+    TURN = 47100
+    wind = 3; turns(1, wm)
+    eq(rm(47050, "chaos"), "5,0", "a new army begins with a full reserve, and a held turn leaves it")
+    set(47050, "chaos", 2, 1)
+    turns(1, wm)
+    eq(rm(47050, "chaos"), "2,1", "a held turn leaves the reserve and the missed turns as they were")
+    eq(daemon.hp, 100, "and nobody weakens")
+    wind = 0; turns(1, wm)
+    eq(rm(47050, "chaos"), "1,1", "without the winds the same turn drains the reserve")
+    wind = 5; set(47050, "chaos", 0, 2); turns(1, wm)
+    eq(rm(47050, "chaos"), "0,2", "a held turn with the reserve empty adds no missed turn")
+    eq(daemon.hp, 100, "and costs no strength")
+    blood.where = wastes; set(47050, "chaos", 2, 1); turns(1, wm)
+    eq(rm(47050, "chaos"), "5,0", "Chaos land beside a Storm of Magic still refills")
+    blood.where = pure
+    wind = 3; set(47050, "chaos", 0, 3)
+    rec(47050).hp[tostring(daemon.cqi)] = 6000; daemon.hp = 80
+    turns(1, wm)
+    eq(rm(47050, "chaos"), "0,3", "a held turn leaves a fading army at three missed turns")
+    eq(daemon.hp, 60, "and its regain is still taken back")
+    R.land_events = false; set(47050, "chaos", 2, 1); turns(1, wm)
+    eq(rm(47050, "chaos"), "1,1", "with the winds left out the army drains in Strong winds")
+    R.land_events, wind = true, 0
+
+    said = {}
+    local we = side("ln_we", { human = true, sc = "wh_main_sc_chs_chaos" })
+    force(47060, { soldier({ caste = "lord" }), soldier({ key = BLOOD }), soldier({ key = BLOOD }) }, we, pure)
+    wind = 5; turns(1, we)
+    eq(#said, 0, "winds alone send no message")
+    episode("episode_chaos_invasion"); turns(1, we)
+    eq(#said, 1, "the first turn an episode holds a player's daemons, one message")
+    eq(table.concat(said[1], "|", 1, 4), "ln_we|event_feed_strings_text_derpy_mr_land_title|"
+        .. "event_feed_strings_text_derpy_mr_land_episode_episode_chaos_invasion|"
+        .. "event_feed_strings_text_derpy_mr_land_secondary", "it names the faction, title, episode and secondary")
+    eq(said[1][5], false, "it is not persistent")
+    eq(said[1][6], 1014, "and has the army-food message's event index")
+    turns(1, we)
+    eq(#said, 1, "and none on the next turn")
+    eq(F.state.land_said.episode_chaos_invasion.ln_we, true, "the player is noted by episode")
+    local we2 = side("ln_we2", { human = true, sc = "wh_main_sc_chs_chaos" })
+    force(47061, { soldier({ caste = "lord" }), soldier({ key = BLOOD }) }, we2, pure)
+    turns(1, we2)
+    eq(#said, 2, "a second player faction is told as well")
+    eq(said[2][1], "ln_we2", "under its own name")
+    turns(1, we2)
+    eq(#said, 2, "once")
+
+    said = {}; wind = 0
+    local we3 = side("ln_we3", { human = true, sc = "wh_main_sc_vmp_vampire_counts" })
+    force(47062, { soldier({ caste = "lord" }), soldier({ key = SKELETON }), soldier({ key = TKSKELETON }) }, we3, pure)
+    episode("episode_nagash_endgame"); turns(1, we3)
+    eq(#said, 1, "two groups held by one episode in one turn: one message")
+    eq(said[1][3], "event_feed_strings_text_derpy_mr_land_episode_episode_nagash_endgame", "naming that episode")
+    local we4 = side("ln_we4", { human = true, sc = "wh_main_sc_skv_skaven" })
+    force(47063, { soldier({ caste = "lord" }), soldier({ key = BLOOD }) }, we4, pure)
+    turns(1, we4)
+    eq(#said, 1, "an episode that holds none of a faction's groups sends it nothing")
+    force(47064, { soldier({ caste = "lord" }), soldier({ key = VERMIN }) }, we4, pure)
+    episode("episode_skaven_vermintide"); turns(1, we4)
+    eq(#said, 2, "until it holds one")
+    eq(said[2][3], "event_feed_strings_text_derpy_mr_land_episode_episode_skaven_vermintide", "and the message names the Vermintide")
+    local cpu = side("ln_cpu", { sc = "wh_main_sc_chs_chaos" })
+    force(47065, { soldier({ caste = "lord" }), soldier({ key = BLOOD }) }, cpu, pure)
+    episode("episode_chaos_invasion"); turns(1, cpu)
+    eq(#said, 2, "a computer faction is sent no message")
+    eq(rm(47065, "chaos"), "5,0", "and its daemons are held like anyone's")
+    eq(F.state.land_said.episode_chaos_invasion.ln_cpu, nil, "and is not noted")
+    R.land_events = false
+    local we5 = side("ln_we5", { human = true, sc = "wh_main_sc_chs_chaos" })
+    force(47066, { soldier({ caste = "lord" }), soldier({ key = BLOOD }) }, we5, pure)
+    turns(1, we5)
+    eq(#said, 2, "with the episodes left out, no message")
+    eq(rm(47066, "chaos"), "4,0", "and the reserve drains")
+    R.land_events = true
+    turns(1, we5)
+    eq(#said, 3, "switched back on, the first turn it holds, the message")
+    eq(rm(47066, "chaos"), "4,0", "and the reserve stays")
+
+    force(47067, { soldier({ caste = "lord" }), soldier({ key = BLOOD }), soldier({ key = TKSKELETON }) }, we3, pure)
+    local reads, real = 0, F.land_episodes
+    F.land_episodes = function() reads = reads + 1; return real() end
+    turns(1, we3)
+    F.land_episodes = real
+    eq(reads, 1, "the episodes are read once a turn, whatever the armies and groups")
+
+    -- ---- LAND: STATE BUNDLES AND THE FADING MESSAGE ----
+    said, wind, manager = {}, 0, nil
+    eq(F.land_bundle("spirit", "held"), "derpy_mr_land_spirit_held", "a state's bundle is named for its group and its state")
+    local bs = side("ln_bs", { human = true, sc = "wh_main_sc_chs_chaos" })
+    local march = force(47070, { soldier({ caste = "lord" }), soldier({ key = BLOOD }) }, bs, pure)
+    TURN = 47200
+    local n = #fb; turns(1, bs)
+    eq(on(47070), "derpy_mr_land_chaos_reserve=5", "a daemon drawing on its reserve carries the reserve bundle for the turns left and the one the game counts off first")
+    local seq = calls(47070, n)
+    eq(first(seq, "-chaos_fading", "+chaos_reserve") and first(seq, "-chaos_held", "+chaos_reserve"), true,
+        "having removed the fading and held bundles first: " .. seq)
+    turns(1, bs)
+    eq(on(47070), "derpy_mr_land_chaos_reserve=4", "and the bundle's turns follow the reserve down")
+    eq(#said, 0, "a reserve still in hand sends no message")
+    set(47070, "chaos", 1, 0); n = #fb; turns(1, bs)
+    eq(rm(47070, "chaos"), "0,0", "the reserve runs out")
+    eq(on(47070), "derpy_mr_land_chaos_fading=0", "and the army carries the fading bundle, with no end")
+    seq = calls(47070, n)
+    eq(first(seq, "-chaos_reserve", "+chaos_fading") and first(seq, "-chaos_held", "+chaos_fading"), true,
+        "having removed the reserve and held bundles first: " .. seq)
+    eq(#said, 1, "a player's army whose reserve runs out this turn: one message")
+    eq(table.concat(said[1] or {}, "|", 1, 4), "ln_bs|event_feed_strings_text_derpy_mr_land_title|"
+        .. "event_feed_strings_text_derpy_mr_land_primary|event_feed_strings_text_derpy_mr_land_secondary",
+        "it names the faction, the title, the fading line and the secondary")
+    eq(said[1] and said[1][5], false, "it is not persistent")
+    eq(said[1] and said[1][6], 1014, "and has the army-food message's event index")
+    turns(1, bs)
+    eq(rm(47070, "chaos"), "0,1", "the next turn misses one")
+    eq(on(47070), "derpy_mr_land_chaos_fading=0", "and the army still carries the fading bundle")
+    eq(#said, 1, "but nothing ran out this turn: no message")
+    wind = 3; n = #fb; turns(1, bs)
+    eq(on(47070), "derpy_mr_land_chaos_held=0", "on a held turn the army carries the held bundle, with no end")
+    seq = calls(47070, n)
+    eq(first(seq, "-chaos_reserve", "+chaos_held") and first(seq, "-chaos_fading", "+chaos_held"), true,
+        "having removed the reserve and fading bundles first: " .. seq)
+    wind = 0; march.where = wastes; turns(1, bs)
+    eq(rm(47070, "chaos"), "5,0", "back in Chaos land the reserve refills")
+    eq(on(47070), "", "and the army carries no land bundle")
+    turns(1, bs)
+    eq(on(47070), "", "nor on the next turn")
+
+    march.where = edge; turns(1, bs)
+    eq(on(47070), "derpy_mr_land_chaos_reserve=5", "away from it again, the reserve bundle")
+    broken = "nil"; n = #fb; turns(1, bs)
+    eq(calls(47070, n), "", "a turn with no corruption reading touches no bundle")
+    eq(on(47070), "derpy_mr_land_chaos_reserve=5", "and the army keeps the one it had")
+    broken = nil
+    wind = 3; turns(1, bs)
+    eq(on(47070), "derpy_mr_land_chaos_held=0", "a held turn with turns left in the reserve shows the held bundle, with no end")
+    eq(rm(47070, "chaos"), "4,0", "and leaves the reserve as it was")
+    wind = 0
+    march.sea = true; n = #fb; turns(1, bs)
+    eq(rm(47070, "chaos"), "4,0", "at sea the reserve holds")
+    eq(calls(47070, n):find("+chaos_reserve", 1, true) ~= nil, true,
+        "and the reserve bundle is laid again, so the game's own count cannot run ahead of it")
+    eq(on(47070), "derpy_mr_land_chaos_reserve=5", "for the turns still left")
+    set(47070, "chaos", 5, 0); turns(1, bs)
+    eq(on(47070), "", "a full reserve at sea shows nothing")
+    set(47070, "chaos", 0, 2); turns(1, bs)
+    eq(on(47070), "derpy_mr_land_chaos_fading=0", "an empty one shows the fading")
+    eq(#said, 1, "and sends no message, since nothing ran out")
+    march.sea, march.lost = false, true; set(47070, "chaos", 2, 0); turns(1, bs)
+    eq(on(47070), "derpy_mr_land_chaos_reserve=3", "with no region, the same")
+    march.lost = false
+
+    local mixed = { soldier({ caste = "lord" }), soldier({ key = BLOOD }), soldier({ key = DRYAD }) }
+    local mix = force(47071, mixed, bs, pure)
+    turns(1, bs)
+    eq(on(47071), "derpy_mr_land_chaos_reserve=5", "in clean land the daemons draw on their reserve and the Dryad carries nothing")
+    mix.where = taint; turns(1, bs)
+    eq(on(47071), "derpy_mr_land_chaos_reserve=4 derpy_mr_land_spirit_reserve=5", "in tainted land each group carries its own")
+    mix.units = { mixed[1], mixed[2] }; turns(1, bs)
+    eq(on(47071), "derpy_mr_land_chaos_reserve=3", "the Dryad gone, its bundle goes with it")
+    mix.units = mixed; turns(1, bs)
+    said = {}
+    set(47070, "chaos", 1, 0); set(47071, "chaos", 1, 0); set(47071, "spirit", 1, 0)
+    turns(1, bs)
+    eq(rm(47070, "chaos") .. " " .. rm(47071, "chaos") .. " " .. rm(47071, "spirit"), "0,0 0,0 0,0",
+        "three reserves in two armies run out in one turn")
+    eq(#said, 1, "and the player is sent one message")
+
+    local cpu2 = side("ln_bs_cpu", { sc = "wh_main_sc_chs_chaos" })
+    force(47072, { soldier({ caste = "lord" }), soldier({ key = BLOOD }) }, cpu2, pure)
+    turns(1, cpu2); set(47072, "chaos", 1, 0); turns(1, cpu2)
+    eq(on(47072), "derpy_mr_land_chaos_fading=0", "a computer's army carries the bundles too")
+    eq(#said, 1, "but its faction is sent no message")
+    R.ai_land = false; turns(1, cpu2)
+    eq(on(47072), "", "with Other armies need their land off, a computer's army loses its land bundles")
+    eq(rec(47072), nil, "and its record")
+    R.ai_land = true; turns(1, cpu2)
+    eq(on(47072), "derpy_mr_land_chaos_reserve=5", "switched back on, it starts again")
+    R.ai = false; turns(1, cpu2)
+    eq(on(47072), "", "and with the computer stores switch off, loses them again")
+    R.ai = true
+    R.land_need = false; turns(1, bs)
+    eq(on(47070) .. on(47071), "", "with the rule off, a player's armies lose every land bundle")
+    eq(rec(47070) or rec(47071), nil, "and their records")
+    R.land_need = true
+
+    ;(function()
+        local two = side("ln_two", { human = true, sc = "wh_main_sc_chs_chaos" })
+        local waste21 = land("ln_waste21", { wh3_main_corruption_chaos = 20 }, 21)
+        eq(F.land_state(two.iface, "chaos", waste21.iface), "land", "a chaos sum of 20 in a total of 21 sustains a daemon")
+        eq(F.land_state(two.iface, "spirit", waste21.iface), nil, "and not a Dryad")
+        eq(F.land_state(two.iface, "chaos", clean.iface), nil, "clean land sustains no daemon")
+        eq(F.land_state(two.iface, "spirit", clean.iface), "land", "but it sustains a Dryad")
+        local daemon, dryad = soldier({ key = BLOOD }), soldier({ key = DRYAD })
+        local pair = force(47090, { soldier({ caste = "lord" }), daemon, dryad }, two, waste21)
+        TURN = 47300
+        turns(1, two)
+        eq(rm(47090, "chaos"), "5,0", "an army of two groups: the land sustains its daemon")
+        eq(rm(47090, "spirit"), "4,0", "while its Dryad draws on a reserve of its own")
+        set(47090, "chaos", 2, 1); set(47090, "spirit", 0, 1)
+        turns(1, two)
+        eq(rm(47090, "chaos"), "5,0", "each group has its own reserve and missed turns: the daemon is sustained again")
+        eq(rm(47090, "spirit"), "0,2", "and the Dryad misses its second turn")
+        eq(daemon.hp .. " " .. dryad.hp, "100 95", "which costs only the Dryad strength")
+        pair.where = clean
+        set(47090, "chaos", 0, 1); set(47090, "spirit", 3, 2)
+        turns(1, two)
+        eq(rm(47090, "chaos"), "0,2", "in clean land the daemon misses its second turn")
+        eq(rm(47090, "spirit"), "5,0", "and the Dryad is sustained")
+        eq(daemon.hp .. " " .. dryad.hp, "95 95", "which costs only the daemon strength")
+        eq(rec(47090).hp[tostring(daemon.cqi)] .. " " .. rec(47090).hp[tostring(dryad.cqi)], "9500 9500",
+            "and the record holds each unit's strength")
+        set(47090, "chaos", 0, 2); set(47090, "spirit", 0, 3)
+        eq(F.land_starving(pair.iface, dryad), true, "a Dryad three turns into the fade is starving")
+        eq(F.land_starving(pair.iface, daemon), false, "while the daemon beside it, two turns in, is not")
+
+        R.land_corrupt, R.land_pure = 30, 10
+        eq(F.land_state(two.iface, "chaos", wastes.iface), nil, "a chaos sum of 20 falls short of a threshold of 30")
+        eq(F.land_state(two.iface, "chaos", land("ln_waste30", { wh3_main_corruption_chaos = 30 }, 30).iface), "land", "and 30 meets it")
+        eq(F.land_state(two.iface, "spirit", land("ln_total10", {}, 10).iface), "land", "a total of 10 is clean enough when spirits bear 10")
+        eq(F.land_state(two.iface, "spirit", land("ln_total11", {}, 11).iface), nil, "and 11 is not")
+        R.land_corrupt, R.land_pure = 20, 20
+
+        local kinds = { chaos = { "wh3_main_corruption_chaos", "wh3_main_corruption_khorne", "wh3_main_corruption_nurgle",
+                "wh3_main_corruption_slaanesh", "wh3_main_corruption_tzeentch" },
+            skaven = { "wh3_main_corruption_skaven" },
+            undead = { "wh3_main_corruption_vampiric", "wh3_main_corruption_nagash" } }
+        for group, keys in pairs(kinds) do
+            for _, key in ipairs(keys) do
+                local rg = land("ln_" .. key, { [key] = 20 }, 20)
+                for other in pairs(kinds) do
+                    eq(F.land_state(two.iface, other, rg.iface), other == group and "land" or nil,
+                        key .. " and " .. other)
+                end
+            end
+        end
+
+        local ft = side("ln_ft", { sc = "wh_main_sc_chs_chaos" })
+        local function odd(id, patch)
+            patch(force(id, { soldier({ caste = "lord" }), soldier({ key = BLOOD }) }, ft, clean).iface)
+        end
+        odd(47091, function(f) f.has_general = function() return false end end)
+        odd(47092, function(f) f.is_armed_citizenry = function() return true end end)
+        odd(47093, function(f) f.force_type = function() return { key = function() return "CARAVAN" end } end end)
+        odd(47094, function(f) f.force_type = function() return { key = function() return "MAR_CARAVAN" end } end end)
+        force(47095, { soldier({ caste = "lord" }), soldier({ key = WARRIOR }) }, ft, clean)
+        local body = soldier({ key = BLOOD })
+        force(47096, { soldier({ caste = "lord" }), body }, ft, clean)
+        TURN = 47400
+        turns(1, ft)
+        eq(rec(47091), nil, "an army with no general keeps no record")
+        eq(rec(47092), nil, "nor does a garrison")
+        eq(rec(47093), nil, "nor a caravan")
+        eq(rec(47094), nil, "nor one a mod calls a caravan")
+        eq(rec(47095), nil, "nor an army with no unit that needs land")
+        eq(rm(47096, "chaos"), "4,0", "while an ordinary army does")
+        forces[47097] = { iface = NULL }
+        F.state.land["47097"] = { f = "ln_ft", done = 0, g = { chaos = { r = 5, m = 0 } }, hp = {} }
+        turns(1, ft)
+        eq(rec(47097), nil, "a record whose force the game gives back as null is dropped")
+        forces[47097] = nil
+
+        local mine = soldier({ key = BLOOD, hp = 70 })
+        force(47098, { soldier({ caste = "lord" }), mine }, ft, clean)
+        F.state.land["47098"] = { f = "ln_old", done = 0, g = { chaos = { r = 2, m = 0 } }, hp = {} }
+        local e0 = #ERRORS
+        body.hp = 70
+        fire("FactionTurnEnd", { faction = function() return ft.iface end })
+        eq(rec(47096).hp[tostring(body.cqi)], 7000, "the turn end keeps what an army holds")
+        eq(rec(47098).hp[tostring(mine.cqi)], nil, "and leaves a record kept for another faction alone")
+        local kept = F.state.land
+        F.state.land = nil
+        fire("FactionTurnEnd", { faction = function() return ft.iface end })
+        F.state.land = kept
+        eq(#ERRORS, e0, "a turn end throws nothing, with armies that have no record or before any has one: "
+            .. table.concat(ERRORS, "; ", e0 + 1))
+
+        local fa, fb2, fc = side("ln_fa", { human = true, sc = "wh_main_sc_chs_chaos" }),
+            side("ln_fb", { human = true, sc = "wh_main_sc_chs_chaos" }), side("ln_fc", { human = true, sc = "wh_main_sc_chs_chaos" })
+        local function both(id, owner)
+            force(id, { soldier({ caste = "lord" }), soldier({ key = BLOOD }), soldier({ key = DRYAD }) }, owner, taint)
+        end
+        both(47110, fa); both(47111, fb2)
+        force(47112, { soldier({ caste = "lord" }), soldier({ key = BLOOD }) }, fc, taint)
+        turns(1, fa); turns(1, fb2); turns(1, fc)
+        set(47110, "chaos", 1, 0); set(47110, "spirit", 3, 0)
+        set(47111, "chaos", 3, 0); set(47111, "spirit", 1, 0)
+        set(47112, "chaos", 2, 0)
+        said = {}
+        turns(1, fa)
+        eq(#said, 1, "a reserve running out beside another that still has turns: one message")
+        turns(1, fb2)
+        eq(#said, 2, "whichever of the two groups it is")
+        turns(1, fc)
+        eq(#said, 2, "a reserve down to its last turn sends none")
+
+        R.land_grace = 0
+        local fd = side("ln_fd", { human = true, sc = "wh_main_sc_chs_chaos" })
+        local sail = force(47113, { soldier({ caste = "lord" }), soldier({ key = BLOOD }) }, fd, clean)
+        sail.sea = true
+        turns(1, fd)
+        eq(on(47113), "", "with no turns of grace, an army at sea that has missed nothing shows no bundle")
+        set(47113, "chaos", 0, 2)
+        turns(1, fd)
+        eq(on(47113), "derpy_mr_land_chaos_fading=0", "and one that has missed turns shows the fading bundle")
+        R.land_grace = 5
+
+        local late = soldier({ key = BLOOD, hp = 80 })
+        late.percentage_proportion_of_full_strength = function() return 80 end
+        local kf = side("ln_kf", { sc = "wh3_main_sc_kho_khorne" })
+        force(47114, { soldier({ caste = "lord" }), late }, kf, clean)
+        F.state.land["47114"] = { f = "ln_kf", done = 0, g = { chaos = { r = 0, m = 4 } }, hp = {} }
+        DESERTED = {}
+        TURN = TURN + 1; F.land_turn(kf.iface)
+        eq(#DESERTED, 1, "five missed turns: a unit leaves")
+        eq(rec(47114).hp[tostring(late.cqi)], 7000, "and the record holds what the losses set, though the game still reads the old strength")
+
+        local warr, seen = soldier({ key = WARRIOR, hp = 70 }), soldier({ key = BLOOD, hp = 70 })
+        force(47115, { soldier({ caste = "lord" }), seen, warr }, kf, wastes)
+        TURN = TURN + 1; F.land_turn(kf.iface)
+        eq(rec(47115).hp[tostring(seen.cqi)], 7000, "a hurt daemon's strength is recorded")
+        eq(rec(47115).hp[tostring(warr.cqi)], nil, "a hurt Chaos Warrior's is not")
+        local pa, pd = cm.pending_battle_cache_num_attackers, cm.pending_battle_cache_num_defenders
+        cm.pending_battle_cache_num_attackers = function() return 1 end
+        cm.pending_battle_cache_num_defenders = function() return 0 end
+        cm.pending_battle_cache_get_attacker = function() return 1, 47115, "ln_kf" end
+        seen.hp, warr.hp = 50, 50
+        fire("BattleCompleted", {})
+        cm.pending_battle_cache_num_attackers, cm.pending_battle_cache_num_defenders = pa, pd
+        cm.pending_battle_cache_get_attacker = nil
+        eq(rec(47115).hp[tostring(seen.cqi)], 5000, "a battle lowers a daemon's record")
+        eq(rec(47115).hp[tostring(warr.cqi)], nil, "and records no Chaos Warrior")
+
+        R.ai = false
+        local pl = soldier({ key = BLOOD })
+        force(47116, { soldier({ caste = "lord" }), pl }, fa, clean)
+        turns(1, fa)
+        eq(rm(47116, "chaos"), "4,0", "a player's army follows the rule though the computer stores switch is off")
+        R.ai = true
+
+        local ord = side("ln_ord", { human = true, sc = "wh_main_sc_chs_chaos" })
+        local ohome = region("ln_ord_home", 47602, 0, 2000, { coal = 0 })
+        own(ord, ohome, true)
+        local dm = soldier({ key = BLOOD, hp = 60 })
+        force(47120, { soldier({ caste = "lord" }), dm }, ord, clean)
+        F.repl_turn(ord.iface)
+        F.state.land["47120"] = { f = "ln_ord", done = 0, g = { chaos = { r = 0, m = 2 } }, hp = { [tostring(dm.cqi)] = 6000 } }
+        ohome.held.coal, dm.hp = 100, 80
+        TURN = TURN + 1; F.on_faction_turn_start(ord.iface)
+        eq(rm(47120, "chaos"), "0,3", "a turn start in clean land: the third missed turn")
+        eq(dm.hp, 70, "the regain was billed at two missed turns, so only this turn's 10% comes off")
+        eq(ohome.held.coal < 100, true, "and the bill was paid from the stores")
+        print("land: two groups in one army, thresholds, keys, who is counted, turn end, messages, order pass")
+    end)()
+
+    -- ---- LAND: AN ARMY'S STATUS, the provisions view's rows (F.land_status) ----
+    ;(function()
+        local st = side("ln_st", { human = true, sc = "wh_main_sc_chs_chaos" })
+        F.state.land = F.state.land or {}
+        local function flat(v, above)
+            if type(v) ~= "table" then return tostring(v) end
+            above = above or {}
+            if above[v] then return "<cycle>" end
+            above[v] = true
+            local parts = {}
+            for k, x in pairs(v) do parts[#parts + 1] = tostring(k) .. "=" .. flat(x, above) end
+            above[v] = nil
+            table.sort(parts)
+            return "{" .. table.concat(parts, ",") .. "}"
+        end
+        local function asking(a)
+            local before, calls, told = flat(F.state), #fb, #said
+            local out = F.land_status(a.iface)
+            eq(flat(F.state), before, "asking for a status changes nothing the game saves")
+            eq(#fb, calls, "and lays or removes no bundle")
+            eq(#said, told, "and sends no message")
+            return out
+        end
+        local function status(a)
+            local out = {}
+            for _, s in ipairs(asking(a)) do out[#out + 1] = s.group .. ":" .. s.state .. ":" .. s.reserve end
+            return table.concat(out, " ")
+        end
+        local function saved(id, g) F.state.land[tostring(id)] = { f = "ln_st", done = 0, g = g, hp = {} } end
+        wind, manager, broken = 0, nil, nil
+
+        eq(table.concat(F.LAND_GROUPS, ","), "chaos,skaven,undead,tomb,spirit", "the groups, in the order the panel lists them")
+        for _, g in pairs(DERPY_MR_FLOWS_LAND_NEED) do
+            local listed = false
+            for _, x in ipairs(F.LAND_GROUPS) do if x == g then listed = true end end
+            eq(listed, true, g .. " is a group the status lists")
+        end
+
+        local plain = force(47080, { soldier({ caste = "lord" }), soldier({ key = WARRIOR }) }, st, wastes)
+        eq(status(plain), "", "an army with no unit that needs land has no status")
+
+        local army = force(47081, { soldier({ caste = "lord" }), soldier({ key = BLOOD }) }, st, wastes)
+        local before, told = flat(F.state.land), flat(F.state.land_said)
+        eq(status(army), "chaos:land:5", "Chaos land sustains a daemon, and the reserve it gets back is the full one")
+        eq(rec(47081), nil, "asking leaves no record")
+        eq(flat(F.state.land), before, "and changes nothing else the land rule saves")
+        eq(flat(F.state.land_said), told, "and the messages sent are left alone")
+
+        saved(47081, { chaos = { r = 2, m = 1 } })
+        eq(status(army), "chaos:land:5", "an army moved onto sustaining land shows it before the turn restores the record")
+        eq(rm(47081, "chaos"), "2,1", "and the record stays as it was")
+        army.where = pure
+        eq(status(army), "chaos:reserve:2", "off that land, the turns the record has left")
+        saved(47081, { chaos = { r = 1, m = 0 } })
+        eq(status(army), "chaos:reserve:1", "down to the last one")
+        saved(47081, { chaos = { r = 0, m = 0 } })
+        eq(status(army), "chaos:fading:0", "an empty reserve is fading")
+        saved(47081, { chaos = { r = 0, m = 3 } })
+        eq(status(army), "chaos:fading:0", "and stays fading with turns missed")
+        F.state.land["47081"] = nil
+        eq(status(army), "chaos:reserve:5", "an army with no record yet has the full reserve")
+        R.land_grace = 3
+        eq(status(army), "chaos:reserve:3", "which is what Turns before they fade says")
+        R.land_grace = 0
+        eq(status(army), "chaos:fading:0", "and none at all is fading from the start")
+        saved(47081, { chaos = { r = 4, m = 0 } }); R.land_grace = 2
+        eq(status(army), "chaos:reserve:2", "a saved reserve above a lowered Turns before they fade shows the setting")
+        R.land_grace = 5
+
+        wind = 3
+        saved(47081, { chaos = { r = 2, m = 1 } })
+        eq(status(army), "chaos:held:2", "strong winds hold a daemon in clean land, its record untouched")
+        wind = 0
+        episode("episode_chaos_invasion")
+        eq(status(army), "chaos:held:2", "so does a running Chaos Invasion")
+        manager = nil
+        eq(status(army), "chaos:reserve:2", "and the army reads the reserve again when it ends")
+        R.land_events, wind = false, 5
+        eq(status(army), "chaos:reserve:2", "with strong magic left out, nothing holds it")
+        R.land_events, wind = true, 0
+
+        army.where = edge
+        saved(47081, { chaos = { r = 4, m = 0 } })
+        broken = "nil"
+        eq(status(army), "chaos:reserve:4", "no corruption reading shows the saved reserve")
+        broken = "error"
+        eq(status(army), "chaos:reserve:4", "and so does a reading that throws")
+        saved(47081, { chaos = { r = 0, m = 2 } })
+        eq(status(army), "chaos:fading:0", "no reading never shows an army as sustained")
+        F.state.land["47081"] = nil
+        eq(status(army), "chaos:reserve:5", "not even one with no record")
+        wind, broken = 5, "nil"
+        saved(47081, { chaos = { r = 0, m = 2 } })
+        eq(status(army), "chaos:held:0", "a Storm of Magic still holds it with no reading")
+        wind, broken = 0, nil
+
+        army.where, army.sea = wastes, true
+        saved(47081, { chaos = { r = 2, m = 0 } })
+        eq(status(army), "chaos:reserve:2", "at sea the record stands, though the land below would sustain")
+        saved(47081, { chaos = { r = 0, m = 2 } })
+        eq(status(army), "chaos:fading:0", "an empty one too")
+        army.sea, army.lost = false, true
+        saved(47081, { chaos = { r = 2, m = 0 } })
+        eq(status(army), "chaos:reserve:2", "with no region as well")
+        F.state.land["47081"] = nil
+        eq(status(army), "chaos:reserve:5", "and with no record, the full reserve")
+        army.lost = false
+
+        saved(47081, { chaos = { r = 3, m = 0 } })
+        R.land_need = false
+        before = flat(F.state.land)
+        eq(#asking(army), 0, "with the rule off the status is empty")
+        eq(flat(F.state.land), before, "and nothing is written")
+        R.land_need = true
+
+        local mixed = force(47082, { soldier({ caste = "lord" }), soldier({ key = DRYAD }), soldier({ key = TKSKELETON }),
+            soldier({ key = SKELETON }), soldier({ key = VERMIN }), soldier({ key = BLOOD }) }, st, pure)
+        eq(status(mixed), "chaos:reserve:5 skaven:reserve:5 undead:reserve:5 tomb:reserve:5 spirit:land:5",
+            "one entry for each group the army has, in the panel's order, whatever order the units stand in")
+        local twice = force(47085, { soldier({ caste = "lord" }), soldier({ key = BLOOD }), soldier({ key = BLOOD }) }, st, pure)
+        eq(status(twice), "chaos:reserve:5", "two daemons are one entry")
+        local tombs = force(47087, { soldier({ caste = "lord" }), soldier({ key = TKSKELETON }) }, st, pure)
+        tombs.sea = true
+        eq(status(tombs), "tomb:reserve:5", "a Tomb Kings army at sea shows its record, whatever land lies below")
+
+        eq(status(force(47083, { soldier({ caste = "lord", key = VERMIN }), soldier({ caste = "hero", key = BLOOD }) }, st, pure)), "",
+            "lords and heroes are never counted, so a Verminlord or a daemon hero gives no entry")
+        eq(status(force(47086, { soldier({ caste = "lord", key = VERMIN }), soldier({ key = BLOOD }) }, st, pure)), "chaos:reserve:5",
+            "and does not add one beside a soldier's")
+
+        F.state.land["47081"] = { f = "ln_old", done = 0, g = { chaos = { r = 1, m = 0 } }, hp = {} }
+        army.where = pure
+        eq(status(army), "chaos:reserve:5", "a record kept for another faction is not this army's")
+
+        local pair = force(47084, { soldier({ caste = "lord" }), soldier({ key = BLOOD }), soldier({ key = DRYAD }) }, st, taint)
+        saved(47084, { chaos = { r = 2, m = 0 } })
+        eq(status(pair), "chaos:reserve:2 spirit:reserve:5", "a group the record has not met yet has the full reserve")
+        saved(47084, { chaos = { r = 2, m = 0 }, spirit = { r = 1, m = 0 } })
+        pair.units = { pair.units[1], pair.units[3] }
+        eq(status(pair), "spirit:reserve:1", "a group the army no longer has is not listed")
+        print("land: army status, live region, no reading, sea, rule off, never written pass")
+    end)()
+
+    setmetatable(_G, nil)
+    cm.get_winds_of_magic_in_area_for_region, cm.show_message_event = winds0, message
+    wind = 0
+
+    for _, fc in ipairs(sides) do fc.armies, fc.human = {}, false end
+    cm.get_total_corruption_value_in_region = total
+    cm.apply_effect_bundle_to_force, cm.remove_effect_bundle_from_force, cm.show_message_event = apply0, remove0, message0
+    F.state, TURN, cm.get_military_force_by_cqi = old, turn, lookup
+    print("land: groups, reserve, losses, desertion, sea, factions, records pass")
+    print("land: winds, episodes, held turns, the episode message pass")
+    print("land: state bundles, the fading message pass")
 end)()
 ;(function()
     F.route_turns = distance_turns

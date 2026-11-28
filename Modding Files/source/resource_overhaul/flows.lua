@@ -2898,9 +2898,11 @@ function F.repl_after_battle()
         if not force or force:is_null_interface() then return end
         local faction = force:faction()
         local kept = F.state.repl_h and F.state.repl_h[faction:name()] or {}
+        local land = F.state.land and F.state.land[tostring(force:command_queue_index())]
         for _, t in ipairs(F.troops(force)) do
             local w = kept[tostring(t.unit:command_queue_index())]
             if t.hp < (w and w / 100 or 100) - F.REPL_EPSILON then F.repl_note(faction, t.unit, t.hp) end
+            if land then F.land_lower(land, t) end
         end
     end
     for i = 1, cm:pending_battle_cache_num_attackers() do read(select(2, cm:pending_battle_cache_get_attacker(i))) end
@@ -2940,7 +2942,7 @@ function F.repl_turn(faction, ending)
                 spare[k], from = (spare[k] or 0) - moved, from + moved
                 if t.hp > from + F.REPL_EPSILON then
                     local g = { unit = t.unit, id = id, from = from, to = t.hp, goods = 0,
-                                starving = starving and F.eats_unit(t.unit) }
+                                starving = (starving and F.eats_unit(t.unit)) or F.land_starving(force, t.unit) }
                     if not g.starving and per > 0 then
                         for _, p in ipairs(F.recruit_bill(faction, t.unit:unit_caste(), t.unit:get_unit_custom_battle_cost())) do
                             local n = p.n * (t.hp - from) / 100 * per / 100
@@ -3469,13 +3471,14 @@ end
 -- removes the FIRST unit of that key in the army, so of two alike the one that leaves may be the stronger. The
 -- general's own unit never leaves. What it sets is noted for the replenishment bill (F.repl_note), so
 -- the loss is not read as a gain to charge for, or to give back.
-function F.hunger_losses(faction, force, short)
+function F.hunger_losses(faction, force, short, hits)
     local H = F.HUNGER
     local loss = short >= 3 and H.starve or short == 2 and H.short or 0
-    if loss <= 0 then return 0 end
-    local troops = {}
+    if loss <= 0 then return 0, {} end
+    hits = hits or F.eats_unit
+    local troops, set = {}, {}
     for _, t in ipairs(F.troops(force)) do
-        if F.eats_unit(t.unit) then troops[#troops + 1] = t end
+        if hits(t.unit) then troops[#troops + 1] = t end
     end
     for _, t in ipairs(troops) do
         local hp = math.max(math.min(t.hp, H.floor), t.hp - loss)
@@ -3483,9 +3486,10 @@ function F.hunger_losses(faction, force, short)
             cm:set_unit_hp_to_unary_of_maximum(t.unit, hp / 100)
             t.hp = hp
         end
+        set[tostring(t.unit:command_queue_index())] = hp
         F.repl_note(faction, t.unit, hp)
     end
-    if short < H.desert or #troops == 0 then return 0 end
+    if short < H.desert or #troops == 0 then return 0, set end
     local worst
     for _, t in ipairs(troops) do
         if not worst or t.hp < worst.hp or (t.hp == worst.hp and t.unit:unit_key() < worst.unit:unit_key()) then
@@ -3493,7 +3497,271 @@ function F.hunger_losses(faction, force, short)
         end
     end
     cm:remove_unit_from_character(cm:char_lookup_str(force:general_character()), worst.unit:unit_key())
-    return 1
+    return 1, set
+end
+
+F.LAND_CORRUPTION = {
+    chaos = { "wh3_main_corruption_chaos", "wh3_main_corruption_khorne", "wh3_main_corruption_nurgle",
+        "wh3_main_corruption_slaanesh", "wh3_main_corruption_tzeentch" },
+    skaven = { "wh3_main_corruption_skaven" },
+    undead = { "wh3_main_corruption_vampiric", "wh3_main_corruption_nagash" },
+}
+
+function F.land_need(unit) return DERPY_MR_FLOWS_LAND_NEED[unit:unit_key()] end
+
+function F.land_friend(faction, owner)
+    if owner:is_null_interface() then return false end
+    return owner:name() == faction:name() or faction:allied_with(owner) or faction:defensive_allies_with(owner)
+        or faction:is_vassal_of(owner) or owner:is_vassal_of(faction)
+end
+
+local function land_read(fn)
+    local ok, v = pcall(fn)
+    if ok and type(v) == "number" then return v end
+end
+
+F.LAND_WINDS = { corrupt = 3, all = 5 }
+F.LAND_EPISODES = {
+    episode_chaos_invasion = { chaos = true },
+    episode_nagash_endgame = { undead = true, tomb = true },
+    episode_nagash_sandbox = { undead = true, tomb = true },
+    episode_skaven_vermintide = { skaven = true },
+}
+
+function F.land_episodes()
+    local out = {}
+    local sets = type(episodes_manager) == "table" and type(episodes_manager.persistent) == "table"
+        and episodes_manager.persistent.active_episodes
+    if type(sets) ~= "table" then return out end
+    for _, names in pairs(sets) do
+        if type(names) == "table" then
+            for _, name in ipairs(names) do
+                if type(name) == "string" then out[name] = true end
+            end
+        end
+    end
+    return out
+end
+
+-- false, not nil: the game gave no reading, and the turn must leave the army's reserve as it is.
+local function land_own(faction, group, region)
+    local holds
+    if group == "tomb" then
+        holds = F.land_friend(faction, region:owning_faction())
+    elseif group == "spirit" then
+        local n = land_read(function() return cm:get_total_corruption_value_in_region(region) end)
+        if not n then return false end
+        holds = n <= F.rates().land_pure
+    else
+        local n, read = 0, false
+        for _, key in ipairs(F.LAND_CORRUPTION[group]) do
+            local v = land_read(function()
+                local p = region:province():pooled_resource_manager():resource(key)
+                if p:is_null_interface() then return 0 end
+                read = true
+                return p:value()
+            end)
+            if not v then return false end
+            n = n + v
+        end
+        if not read then return false end
+        holds = n >= F.rates().land_corrupt
+    end
+    return holds and "land" or nil
+end
+
+function F.land_state(faction, group, region, episodes)
+    local own = land_own(faction, group, region)
+    if own == "land" or not F.rates().land_events then return own end
+    for name, groups in pairs(F.LAND_EPISODES) do
+        if groups[group] and episodes and episodes[name] then return "held", name end
+    end
+    local level = land_read(function() return cm:get_winds_of_magic_in_area_for_region(region) end)
+    if level and (level >= F.LAND_WINDS.all or (F.LAND_CORRUPTION[group] and level >= F.LAND_WINDS.corrupt)) then
+        return "held"
+    end
+    return own
+end
+
+local function land_on(R, faction) return R.land_need and (faction:is_human() or (R.ai and R.ai_land)) end
+
+function F.land_starving(force, unit)
+    if not land_on(F.rates(), force:faction()) then return false end
+    local rec = F.state.land and F.state.land[tostring(force:command_queue_index())]
+    local group = F.land_need(unit)
+    local s = group and rec and rec.f == force:faction():name() and rec.g[group]
+    return s and s.m >= 3 or false
+end
+
+function F.land_keep(rec, force, set)
+    rec.hp = {}
+    for _, t in ipairs(F.troops(force)) do
+        local id = tostring(t.unit:command_queue_index())
+        local hp = set and set[id] or t.hp
+        if F.land_need(t.unit) and hp < F.REPL_FULL then rec.hp[id] = F.repl_pack(hp) end
+    end
+end
+
+function F.land_lower(rec, t)
+    local id = tostring(t.unit:command_queue_index())
+    local w = rec.hp[id]
+    if F.land_need(t.unit) and t.hp < (w and w / 100 or 100) - F.REPL_EPSILON then rec.hp[id] = F.repl_pack(t.hp) end
+end
+
+function F.land_tell(fkey, episode)
+    F.state.land_said = F.state.land_said or {}
+    local said = F.state.land_said[episode] or {}
+    F.state.land_said[episode] = said
+    if said[fkey] then return end
+    said[fkey] = true
+    cm:show_message_event(fkey, "event_feed_strings_text_derpy_mr_land_title",
+        "event_feed_strings_text_derpy_mr_land_episode_" .. episode,
+        "event_feed_strings_text_derpy_mr_land_secondary", false, 1014)
+end
+
+F.LAND_STATES = { "reserve", "fading", "held" }
+
+function F.land_bundle(group, state) return "derpy_mr_land_" .. group .. "_" .. state end
+
+-- r + 1: the game counts a bundle down once before the player sees it (live test 2026-11-28)
+local function land_show(cqi, group, state, r)
+    for _, s in ipairs(F.LAND_STATES) do cm:remove_effect_bundle_from_force(F.land_bundle(group, s), cqi) end
+    if state then cm:apply_effect_bundle_to_force(F.land_bundle(group, state), cqi, state == "reserve" and r + 1 or 0) end
+end
+
+function F.land_turn(faction)
+    local R, fkey, turn = F.rates(), faction:name(), cm:model():turn_number()
+    local armies, live, fade = {}, {}, false
+    if land_on(R, faction) then
+        local fs = faction:military_force_list()
+        for i = 0, fs:num_items() - 1 do
+            local force = fs:item_at(i)
+            if force:has_general() and not force:is_armed_citizenry() and not F.no_rations(force) then
+                local groups = {}
+                for _, t in ipairs(F.troops(force)) do
+                    local group = F.land_need(t.unit)
+                    if group then groups[group] = true end
+                end
+                if next(groups) then
+                    local id = tostring(force:command_queue_index())
+                    armies[#armies + 1] = { id = id, force = force, groups = groups }
+                    live[id] = true
+                end
+            end
+        end
+    end
+    F.state.land = F.state.land or {}
+    for id, rec in pairs(F.state.land) do
+        local force = cm:get_military_force_by_cqi(tonumber(id))
+        local gone = not force or force:is_null_interface()
+        if gone or force:faction():name() ~= rec.f or (rec.f == fkey and not live[id]) then
+            if not gone then
+                for group in pairs(rec.g) do land_show(force:command_queue_index(), group) end
+            end
+            F.state.land[id] = nil
+        end
+    end
+    local episodes = F.land_episodes()
+    for _, a in ipairs(armies) do
+        local rec = F.state.land[a.id]
+        if not rec then
+            rec = { f = fkey, g = {}, hp = {} }
+            F.state.land[a.id] = rec
+        end
+        if rec.done ~= turn then
+            rec.done = turn
+            local g, cqi = {}, a.force:command_queue_index()
+            for group in pairs(a.groups) do g[group] = rec.g[group] or { r = R.land_grace, m = 0 } end
+            for group in pairs(rec.g) do
+                if not g[group] then land_show(cqi, group) end
+            end
+            rec.g = g
+            for _, t in ipairs(F.troops(a.force)) do
+                local group = F.land_need(t.unit)
+                local kept = group and g[group].m >= 3 and rec.hp[tostring(t.unit:command_queue_index())]
+                if kept and t.hp > kept / 100 + F.REPL_EPSILON then
+                    cm:set_unit_hp_to_unary_of_maximum(t.unit, kept / 10000)
+                end
+            end
+            local ch, set = a.force:general_character(), {}
+            local region = not ch:is_at_sea() and ch:has_region() and ch:region()
+            for group, s in pairs(g) do
+                s.r = math.min(s.r, R.land_grace)
+                if not region then
+                    local spent = s.r < R.land_grace or s.m > 0
+                    land_show(cqi, group, spent and (s.r > 0 and "reserve" or "fading") or nil, s.r)
+                else
+                    local state, episode = F.land_state(faction, group, region, episodes)
+                    if state == "land" then
+                        s.r, s.m = R.land_grace, 0
+                        land_show(cqi, group)
+                    elseif state == "held" then
+                        if episode and faction:is_human() then F.land_tell(fkey, episode) end
+                        land_show(cqi, group, "held")
+                    elseif state == nil then
+                        if s.r > 0 then
+                            s.r = s.r - 1
+                            fade = fade or s.r == 0
+                        else
+                            s.m = s.m + 1
+                            local _, hit = F.hunger_losses(faction, a.force, s.m,
+                                function(u) return F.land_need(u) == group end)
+                            for id, hp in pairs(hit) do set[id] = hp end
+                        end
+                        land_show(cqi, group, s.r > 0 and "reserve" or "fading", s.r)
+                    end
+                end
+            end
+            F.land_keep(rec, a.force, set)
+        end
+    end
+    if fade and faction:is_human() then
+        cm:show_message_event(fkey, "event_feed_strings_text_derpy_mr_land_title",
+            "event_feed_strings_text_derpy_mr_land_primary", "event_feed_strings_text_derpy_mr_land_secondary", false, 1014)
+    end
+end
+
+function F.land_turn_end(faction)
+    if not F.state.land then return end
+    local fs = faction:military_force_list()
+    for i = 0, fs:num_items() - 1 do
+        local force = fs:item_at(i)
+        local rec = F.state.land[tostring(force:command_queue_index())]
+        if rec and rec.f == faction:name() then F.land_keep(rec, force) end
+    end
+end
+
+F.LAND_GROUPS = { "chaos", "skaven", "undead", "tomb", "spirit" }
+
+function F.land_status(force)
+    local R, out = F.rates(), {}
+    if not R.land_need then return out end
+    local faction = force:faction()
+    local rec = F.state.land and F.state.land[tostring(force:command_queue_index())]
+    local saved = rec and rec.f == faction:name() and rec.g or {}
+    local present = {}
+    for _, t in ipairs(F.troops(force)) do
+        local group = F.land_need(t.unit)
+        if group then present[group] = true end
+    end
+    local ch = force:general_character()
+    local region = not ch:is_at_sea() and ch:has_region() and ch:region()
+    local episodes = region and F.land_episodes()
+    for _, group in ipairs(F.LAND_GROUPS) do
+        if present[group] then
+            local state = region and F.land_state(faction, group, region, episodes)
+            local s = saved[group]
+            local reserve = s and math.min(s.r, R.land_grace) or R.land_grace
+            if state == "land" then
+                out[#out + 1] = { group = group, state = "land", reserve = R.land_grace }
+            elseif state == "held" then
+                out[#out + 1] = { group = group, state = "held", reserve = reserve }
+            else
+                out[#out + 1] = { group = group, state = reserve > 0 and "reserve" or "fading", reserve = reserve }
+            end
+        end
+    end
+    return out
 end
 
 function F.provision_buy(faction, row, b)
@@ -6301,6 +6569,7 @@ function F.turn_start(faction)
     F.guard(F.repl_turn, faction)
     F.guard(F.upkeep, faction)
     F.guard(F.provisions_turn, faction)
+    F.guard(F.land_turn, faction)
     F.guard(F.kiki_relief, faction)               -- Mortals, Mercs and Management's hungry people, after the armies
     F.guard(F.spoil, faction)                     -- after the meals, before processing and trade
     F.guard(F.supply_turn, faction)               -- the army's upkeep by its line, after the meals; again at the turn end (F.init)
@@ -6380,7 +6649,10 @@ function F.init()
         function(context) F.enemy_cache, F.enemy_cache_ui = {}, {}; F.guard(F.supply_turn, context:faction()) end, true)
     -- every faction's: the replenishment bill reads the armies at both ends of the turn (F.repl_turn)
     core:add_listener("derpy_mr_flows_repl_end", "FactionTurnEnd", true,
-        function(context) F.guard(F.repl_turn_end, context:faction()) end, true)
+        function(context)
+            F.guard(F.repl_turn_end, context:faction())
+            F.guard(F.land_turn_end, context:faction())
+        end, true)
     core:add_listener("derpy_mr_flows_merged", "UnitMergedAndDestroyed", true,
         function(context) F.guard(F.on_unit_merged, context) end, true)
     core:add_listener("derpy_mr_flows_repl_battle", "BattleCompleted", true,

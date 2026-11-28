@@ -84,7 +84,10 @@ The Resource Vault is the mod's panel, opened from the campaign HUD. From it you
 settlement keeps and imports, send goods between your settlements by cart, run recurring
 orders and paid contracts, sell surplus, and spend goods in the Workshop on items, units and
 lasting upgrades. Recipes turn stored goods into others, and province services spend goods for
-bonuses. Armies can carry food and go hungry without it. Computer factions play by the same
+bonuses. Armies can carry food and go hungry without it. Daemons, the undead and spirits eat
+nothing and need their land instead: daemons need Chaos corruption, the undead vampiric
+corruption, Tomb Kings units land held by their own faction or an ally, and spirits clean land.
+Kept away from it for too long, they fade like a hungry army. Computer factions play by the same
 rules and pay the same prices. `docs/RESOURCE_OVERHAUL_MECHANICS.md` has every rule and number.
 
 ## Trade roads on the map

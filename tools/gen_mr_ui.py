@@ -65,6 +65,37 @@ SUPPLY_LINES_SWITCH = ("supply_lines", "Army supply lines",
     "most. Armies in your own settled land need no road. Land you "
     "took in the last few turns feeds no army yet. Turns to settle new land sets how many. "
     "With Army provisions off or Vanilla supply lines ticked, the roads add no upkeep.", True)
+LAND_CORRUPT_DEFAULT = 20
+LAND_PURE_DEFAULT = 20
+LAND_SWITCHES = (
+    ("land_need", "Daemons, undead and spirits need their land",
+     "Daemons need land that Chaos has corrupted, and the undead need land tainted by vampiric corruption. Spirits, "
+     "such as the Wood Elves' tree spirits, need clean land. "
+     "Tomb Kings units need land held by their faction or an ally. Away from their land, these units hold out for a "
+     "few turns. Then they weaken as a hungry army does. They lose strength, stop regaining it, and finally desert. "
+     "Lords and heroes are never affected. Off: these units need nothing. CA's Vampire Counts factions never "
+     "suffer the game's own attrition outside vampiric land, even with this switched off.", True),
+    ("ai_land", "Other armies need their land",
+     "Armies of factions that no player controls follow the same rule while Other factions use their stores is "
+     "on. Off: only your own armies do.", True),
+    ("land_events", "Strong magic holds them",
+     "Strong or Tempestuous Winds of Magic keep daemons and the undead from fading. A Storm of Magic keeps all of "
+     "these units from fading, spirits and Tomb Kings units included. The Chaos Invasion keeps daemons from "
+     "fading, and Nagash's return keeps the undead and Tomb Kings units from fading. Off: only their own land helps "
+     "them.", True),
+)
+LAND_RATES = (
+    ("land_grace", "Turns before they fade",
+     "How many turns these units can spend away from their land before they start to fade. They first lose "
+     "strength two turns after that. Their own land gives them back the full number of turns at once.", 0, 10, 5),
+    ("land_corrupt", "Corruption they need",
+     "How much corruption a region needs to sustain daemons and the undead. Daemons count every kind of "
+     "Chaos corruption, and the undead count vampiric corruption.",
+     0, 100, LAND_CORRUPT_DEFAULT),
+    ("land_pure", "Most corruption spirits can bear",
+     "The most corruption a region can have and still sustain spirits, counting every kind together.",
+     0, 100, LAND_PURE_DEFAULT),
+)
 # THE RATES (flows spec section 6): key, label, tooltip, min, max, default. One source for the
 # flows script's defaults and the MCT sliders, so the two cannot disagree. Plain words: no "AI".
 RATES = (
@@ -119,7 +150,7 @@ RATES = (
     ("road_danger", "Road danger",
      "How likely trouble on the road is on the most dangerous land, each turn. Half as dangerous land is half as "
      "likely. 0 turns road encounters off.", 0, 50, 20),
-) + SUPPLY_RATES
+) + SUPPLY_RATES + LAND_RATES
 TOLL_MAX_PCT = 15   # all the tolls on one cargo together (spec 6.1)
 # BANDITS ON THE ROADS (Part D 7.1-7.2). The chance of trouble in a turn is threat x road_danger in 10000;
 # guards halve it. A battle's bandit army has ROAD_SIZES units: under 50 threat 5, under 70 8, else 10.
@@ -172,7 +203,7 @@ RECRUIT_GOLD_SWITCH = ("gold_pays", "Gold pays for troops",
     "always pays in gold.", True)
 # CHANGED IN A RUNNING CAMPAIGN (author, 2026-11-20): these follow the MCT in single player, never greyed (flows.lua
 # F.freeze_rates). The rest stay fixed for the life of a campaign.
-LIVE_RATES = ("recruit", "gold_pays", "recruit_per", "replenish_per")
+LIVE_RATES = ("recruit", "gold_pays", "recruit_per", "replenish_per") + tuple(r[0] for r in LAND_SWITCHES + LAND_RATES)
 LIVE_NOTE = " You can change this during a campaign. The change applies from your next turn."
 HUNGER_SWITCH = ("hunger_men", "Hunger weakens armies",
     "After two missed meals an army's units lose 5% of their strength each turn. After three they lose 10% and "
@@ -240,7 +271,7 @@ AI_ARMOURY_SWITCH = ("ai_armoury", "Other factions restock for recruits",
 AI_MEAL_SWITCHES = (AI_HOME_FED_SWITCH, AI_FIELD_SWITCH, AI_HALF_SWITCH, AI_FOOD_SWITCH, AI_ARMOURY_SWITCH)
 SWITCHES = (PROVISIONS_SWITCH, PROCESSING_SWITCH, SERVICES_SWITCH, AI_SWITCH, UPKEEP_SWITCH, ACTIONS_SWITCH, EVENTS_SWITCH, SUPPLY_SWITCH, RECRUIT_SWITCH, ESCORT_SWITCH,
             RANDOM_SWITCH, SPOIL_SWITCH, EDICT_SWITCH, TOLL_SWITCH, BANDIT_SWITCH, SUPPLY_LINES_SWITCH,
-            HUNGER_SWITCH, RECRUIT_GOLD_SWITCH) + AI_MEAL_SWITCHES
+            HUNGER_SWITCH, RECRUIT_GOLD_SWITCH) + AI_MEAL_SWITCHES + LAND_SWITCHES
 # THE THREE EDICTS: (key, name, tip, default, options); an option is (key, label, tip, bundle or None,
 # the Chaos Dwarfs' tip or None). The tips are the player text that lists each option's exact effects,
 # one sentence a line. The middle option is the default and changes nothing.
@@ -417,6 +448,52 @@ def no_meal_units():
         assert u in out, u
     for u in ("wh_main_chs_inf_chaos_warriors_0", "wh_main_chs_mon_chaos_spawn", "wh2_dlc16_wef_mon_zoats",
               "wh2_dlc16_wef_cha_sisters_of_twilight_0", "wh_dlc05_wef_inf_wildwood_rangers_0", "wh_dlc05_wef_forest_dragon_0"):
+        assert u not in out, u
+    return out
+
+
+LAND_GROUPS = ("chaos", "skaven", "undead", "tomb", "spirit")
+LAND_RACE = re.compile(r"wh\w*?_(?:main|dlc\d+|pro\d+|twa\d+|cp\d+)_(?:qb_)?(?:pro_)?([a-z]+)_")
+
+
+@functools.lru_cache(None)
+def land_needs():
+    import gen_resource_overhaul as G
+    attrs = collections.defaultdict(set)
+    for r in G.db("unit_attributes_to_groups_junctions_tables")[1]:
+        attrs[r["attribute_group"]].add(r["attribute"])
+    group = {r["key"]: r["attribute_group"] for r in G.db("land_units_tables")[1]}
+    held = {m["unit"]: attrs.get(group.get(m["land_unit"]), set()) & set(NO_MEAL_ATTRIBUTES)
+            for m in G.db("main_units_tables")[1]}
+    out = {}
+    for u in no_meal_units():
+        a, m = held[u], LAND_RACE.search(u)
+        t = m and m.group(1)
+        if t == "tmb":
+            g = "tomb"
+        elif t in ("vmp", "cst", "neu") and a & {"undead", "construct"}:
+            g = "undead"
+        elif "bound_fire_daemon" in a:
+            continue
+        elif "daemonic" in a:
+            g = "skaven" if t == "skv" else "chaos"
+        elif "elemental" in a or not a:
+            g = "spirit"
+        elif "construct" in a:
+            continue
+        else:
+            raise AssertionError("no land rule for %s: race %s, attributes %s" % (u, t, sorted(a)))
+        out[u] = g
+    counts = {g: sum(1 for v in out.values() if v == g) for g in LAND_GROUPS}
+    assert counts == {"chaos": 219, "skaven": 5, "undead": 265, "tomb": 106, "spirit": 34}, counts
+    assert len(no_meal_units()) - len(out) == 12, len(no_meal_units()) - len(out)
+    for u, g in (("wh3_main_dae_cha_be_lakor_0", "chaos"), ("wh3_main_kho_inf_bloodletters_0", "chaos"),
+                 ("wh3_dlc29_skv_cha_verminlord_warpseer", "skaven"), ("wh3_dlc23_neu_cha_ulrika", "undead"),
+                 ("wh2_dlc11_cst_mon_necrofex_colossus_0", "undead"), ("wh2_dlc09_tmb_mon_crypt_horrors", "tomb"),
+                 ("wh_dlc05_wef_inf_dryads_0", "spirit"), ("wh3_main_ksl_mon_elemental_bear_0", "spirit")):
+        assert out.get(u) == g, (u, out.get(u), g)
+    for u in ("wh3_dlc23_chd_mon_kdaai_fireborn", "wh3_main_cth_mon_terracotta_sentinel_0",
+              "wh2_dlc15_grn_mon_rogue_idol_0"):
         assert u not in out, u
     return out
 
@@ -1859,6 +1936,8 @@ def flows_header():
               "DERPY_MR_FLOWS_CULTURE_FAMILY = {%s}" % ", ".join('["%s"] = "%s"' % kv for kv in sorted(family.items())),
               "DERPY_MR_FLOWS_NO_MEALS = {"]
     lines += ['    ["%s"] = true,' % u for u in no_meal_units()]
+    lines += ["}", "DERPY_MR_FLOWS_LAND_NEED = {"]
+    lines += ['    ["%s"] = "%s",' % kv for kv in sorted(land_needs().items())]
     lines += ["}", "DERPY_MR_FLOWS_CHARTED = {"]
     lines += ['    ["%s"] = true,' % c for c in charted_chains()]
     lines += ["}", "DERPY_MR_FLOWS_BUNDLES = {"]
@@ -1903,8 +1982,8 @@ MCT_TITLE = "Derpy Resource Overhaul"
 MCT_DESC = ("How goods move between settlement stores. These are fixed for the life of a campaign: "
             "change them from the main menu before starting a new one. In a multiplayer campaign "
             "they are ignored and every value is the default on every machine. The recruitment and "
-            "replenishment settings, the trade route lines and the Vanilla supply lines box can be "
-            "changed at any time.")
+            "replenishment settings, the trade route lines, the Vanilla supply lines box and every setting in the "
+            "Daemons, undead and spirits section can be changed at any time.")
 
 
 # Shown on a greyed setting in a campaign: the values are frozen into the save (flows.lua).
@@ -1984,11 +2063,11 @@ def mct_lua():
                 "o_%s:set_default_value(%d)" % (k, d),
                 'o_%s:set_assigned_section("%s")' % (k, section)] + lock(k)
     for row in RATES:
-        if row not in SUPPLY_RATES:
+        if row not in SUPPLY_RATES + LAND_RATES:
             lines += slider(row, "stores")
     # Before the first option that names it: MCT logs an error and drops an option into the last section made
     # when its section does not exist yet (the player's log, 2026-11-20). Sections draw in the order made.
-    lines += ["", 'm:add_new_section("using", "Using stores")']
+    lines += ["", 'm:add_new_section("using", "Using stores")', "", 'm:add_new_section("land", "Daemons, undead and spirits")']
     for (k, label, tip, d), section in ((PROVISIONS_SWITCH, "using"), (PROCESSING_SWITCH, "using"), (SERVICES_SWITCH, "using"),
                                         (AI_SWITCH, "stores")) + tuple((s, "stores") for s in AI_MEAL_SWITCHES) + (
                                         (SPOIL_SWITCH, "stores"), (UPKEEP_SWITCH, "using"),
@@ -1996,7 +2075,7 @@ def mct_lua():
                                         (RANDOM_SWITCH, "using"), (SUPPLY_SWITCH, "using"), (RECRUIT_SWITCH, "using"),
                                         (RECRUIT_GOLD_SWITCH, "using"), (HUNGER_SWITCH, "using"),
                                         (ESCORT_SWITCH, "using"), (EDICT_SWITCH, "using"), (TOLL_SWITCH, "stores"),
-                                        (BANDIT_SWITCH, "using")):
+                                        (BANDIT_SWITCH, "using")) + tuple((s, "land") for s in LAND_SWITCHES):
         lines += ["",
                   'local o_%s = m:add_new_option("%s", "checkbox")' % (k, k),
                   'o_%s:set_text("%s")' % (k, label),
@@ -2023,6 +2102,8 @@ def mct_lua():
               "if IN_CAMPAIGN then o_%s:set_locked(true, LOCK_REASON) end" % k]
     for row in SUPPLY_RATES:
         lines += slider(row, "army_supply")
+    for row in LAND_RATES:
+        lines += slider(row, "land")
     import build_mr_terrain_routes as T
     lines += ["", 'm:add_new_section("routes", "Trade route lines")']
     for kind, label, tip in ROUTE_SWITCHES:
@@ -2147,7 +2228,8 @@ def mutation_suites(*first):
         check_uncharted_mutations, check_minor_mutations, check_turn_end_mutations, check_size_mutations,
         check_edict_mutations, check_toll_mutations, check_vanilla_supply_mutations, check_blockade_mutations,
         check_supply_line_mutations, check_supply_upkeep_mutations, check_supply_cart_mutations,
-        check_road_mutations, check_event_mutations, check_kept_mutations, check_smooth_mutations)
+        check_road_mutations, check_event_mutations, check_kept_mutations, check_smooth_mutations,
+        check_land_mutations)
 
 
 def run_suites(suites):
@@ -2311,8 +2393,9 @@ def check_provision_mutations():
         ("army unit need", 'local need = F.ration_need(force)', 'local need = 1'),
         ("non-eaters counted in the meal", 'math.ceil(F.eaters(force) / 4)', 'math.ceil(force:unit_list():num_items() / 4)'),
         ("an army that eats nothing fed", 'or F.no_rations(force) or F.eaters(force) == 0', 'or F.no_rations(force)'),
-        ("non-eaters starve", 'if F.eats_unit(t.unit) then troops[#troops + 1] = t end', 'troops[#troops + 1] = t'),
-        ("non-eaters' regain taken back in a starving army", 'starving = starving and F.eats_unit(t.unit) }', 'starving = starving }'),
+        ("non-eaters starve", 'if hits(t.unit) then troops[#troops + 1] = t end', 'troops[#troops + 1] = t'),
+        ("non-eaters' regain taken back in a starving army", 'starving = (starving and F.eats_unit(t.unit)) or F.land_starving(force, t.unit) }',
+         'starving = starving or F.land_starving(force, t.unit) }'),
         ("army meal cargo", 'b.goods[g.stem] = b.goods[g.stem] - n', 'b.goods[g.stem] = b.goods[g.stem]'),
         ("army recovery", 'b.short = (left == 0 or (other and row.source and rates.ai_home_fed)) and 0 or b.short + 1',
          'b.short = b.short + 1'),
@@ -2375,7 +2458,7 @@ def check_provision_mutations():
          'local loss = short >= 2 and H.short or 0'),
         ("hunger ignores the floor", 'local hp = math.max(math.min(t.hp, H.floor), t.hp - loss)', 'local hp = math.max(0, t.hp - loss)'),
         ("hunger takes the general", 'if not F.CHARACTER_CASTES[u:unit_caste()] then', 'if true then'),
-        ("desertion from the start", 'if short < H.desert or #troops == 0 then return 0 end', 'if #troops == 0 then return 0 end'),
+        ("desertion from the start", 'if short < H.desert or #troops == 0 then return 0, set end', 'if #troops == 0 then return 0, set end'),
         ("desertion takes the strongest", 'if not worst or t.hp < worst.hp or', 'if not worst or t.hp > worst.hp or'),
         ("desertion never told", '"event_feed_strings_text_derpy_mr_army_food_primary" .. (deserted > 0 and "_desert" or "")',
          '"event_feed_strings_text_derpy_mr_army_food_primary"'),
@@ -2426,8 +2509,7 @@ def check_provision_mutations():
         ("replenishment ignores the computer switch",
          'if (per <= 0 and not r.hunger_men) or not F.uses_stores(faction) or not (r.ai or faction:is_human()) then',
          'if (per <= 0 and not r.hunger_men) or not F.uses_stores(faction) then'),
-        ("no bill at the turn end", '        function(context) F.guard(F.repl_turn_end, context:faction()) end, true)',
-         '        function() end, true)'),
+        ("no bill at the turn end", '            F.guard(F.repl_turn_end, context:faction())\n', ''),
         # MERGED, NOT REGAINED (Workshop report 2026-11-19: an unpaid merge was taken back and its entities lost)
         ("a merge billed as a regain", '        function(context) F.guard(F.on_unit_merged, context) end, true)',
          '        function() end, true)'),
@@ -2447,8 +2529,8 @@ def check_provision_mutations():
          'local no_gold = not r.gold_pays'),
         ("a treasury's shortfall forgiven", 'if not no_gold then uncovered = unpaid end', 'if not no_gold then uncovered = 0 end'),
         ("replenishing gold not booked", '(e.repl_held or 0) + held, e.gold + gold', '(e.repl_held or 0) + held, e.gold'),
-        ("a caravan billed for replenishing", 'not force:is_armed_citizenry() and not F.no_rations(force) then',
-         'not force:is_armed_citizenry() then'),
+        ("a caravan billed for replenishing", 'not force:is_armed_citizenry() and not F.no_rations(force) then\n            local b = F.state.armies',
+         'not force:is_armed_citizenry() then\n            local b = F.state.armies'),
         ("the live settings frozen", '    for k, v in pairs(F.read_rates(DERPY_MR_FLOWS_LIVE)) do r[k] = v end\n', ''),
         ("every setting live", 'for k, v in pairs(F.read_rates(DERPY_MR_FLOWS_LIVE)) do r[k] = v end',
          'for k, v in pairs(F.read_rates()) do r[k] = v end'),
@@ -3237,7 +3319,7 @@ def check_spoil_mutations():
     flows script; the flows harness must fail on every one."""
     subject = flows_lua().replace("\r\n", "\n")
     # Mortals, Mercs and Management's relief sits between the army meals and spoilage (2026-11-11)
-    meals = ("    F.guard(F.upkeep, faction)\n    F.guard(F.provisions_turn, faction)\n"
+    meals = ("    F.guard(F.upkeep, faction)\n    F.guard(F.provisions_turn, faction)\n    F.guard(F.land_turn, faction)\n"
              "    F.guard(F.kiki_relief, faction)               -- Mortals, Mercs and Management's hungry people, after the armies\n")
     turn = meals + "    F.guard(F.spoil, faction)"
     mutations = (
@@ -3438,7 +3520,7 @@ def check_mct_lock_mutations():
         ("no unlock on load", 'core:add_listener("derpy_mr_mct_loaded", "MctInitialized", true, function()',
          'core:add_listener("derpy_mr_mct_loaded", "MctNeverFired", true, function()'),
         ("the unlock locks", "        if o then o:set_locked(false) end", "        if o then o:set_locked(true) end"),
-        ("every setting unlocked", '    for _, k in ipairs({"recruit", "gold_pays", "recruit_per", "replenish_per"}) do',
+        ("every setting unlocked", '    for _, k in ipairs({%s}) do' % ", ".join('"%s"' % k for k in LIVE_RATES),
          "    for k in pairs(m.options or {}) do"),
     )
     for label, before, after in mutations:
@@ -4515,6 +4597,265 @@ def check_smooth_mutations():
     assert code == 0, out
     n = len(terrain_m) + len(flows_m) + len(stores_m)
     print("smooth mutations: %d/%d caught; restored harnesses pass" % (n, n))
+
+
+def check_land_mutations():
+    subject = flows_lua().replace("\r\n", "\n")
+    remove = "cm:remove_effect_bundle_from_force(F.land_bundle(group, s), cqi)"
+    apply = 'cm:apply_effect_bundle_to_force(F.land_bundle(group, state), cqi, state == "reserve" and r + 1 or 0)'
+    sweep = "for _, s in ipairs(F.LAND_STATES) do " + remove + " end"
+    sea = ("local ch, set = a.force:general_character(), {}\n            local region = not ch:is_at_sea() and ch:has_region() and ch:region()",
+           "local ch = force:general_character()\n    local region = not ch:is_at_sea() and ch:has_region() and ch:region()")
+    tell = ('cm:show_message_event(fkey, "event_feed_strings_text_derpy_mr_land_title", '
+            '"event_feed_strings_text_derpy_mr_land_primary", "event_feed_strings_text_derpy_mr_land_secondary", false, 1014)')
+    keep = lambda state: ("for _, s in ipairs(F.LAND_STATES) do if s ~= \"%s\" then " + remove + " end end") % state
+    mutations = (
+        ("a daemon needs more than the threshold", "holds = n >= F.rates().land_corrupt", "holds = n > F.rates().land_corrupt"),
+        ("daemons read the purity setting", "holds = n >= F.rates().land_corrupt", "holds = n >= F.rates().land_pure"),
+        ("a spirit bears less than the limit", "holds = n <= F.rates().land_pure", "holds = n < F.rates().land_pure"),
+        ("spirits read the corruption setting", "holds = n <= F.rates().land_pure", "holds = n <= F.rates().land_corrupt"),
+        ("no total reading counts as none", "if not n then return false end", "if not n then return nil end"),
+        ("no pool reading counts as none", "if not v then return false end", "if not v then return nil end"),
+        ("a missing pool is no reading", "if p:is_null_interface() then return 0 end", "if p:is_null_interface() then return nil end"),
+        ("the pools are not summed", "if not v then return false end\n            n = n + v", "if not v then return false end\n            n = v"),
+        ("other land answers false", 'return holds and "land" or nil', 'return holds and "land" or false'),
+        ("Chaos corruption lacks undivided", '{ "wh3_main_corruption_chaos", "wh3_main_corruption_khorne",', '{ "wh3_main_corruption_khorne",'),
+        ("Chaos corruption lacks Khorne", '"wh3_main_corruption_khorne", ', ""),
+        ("Chaos corruption lacks Nurgle", '"wh3_main_corruption_nurgle",', ""),
+        ("Chaos corruption lacks Slaanesh", '"wh3_main_corruption_slaanesh", ', ""),
+        ("Chaos corruption lacks Tzeentch", ', "wh3_main_corruption_tzeentch" }', " }"),
+        ("Skaven corruption not read", '{ "wh3_main_corruption_skaven" }', "{}"),
+        ("undead lack vampiric corruption", '{ "wh3_main_corruption_vampiric", "wh3_main_corruption_nagash" }',
+         '{ "wh3_main_corruption_nagash" }'),
+        ("undead lack Nagash's corruption", '{ "wh3_main_corruption_vampiric", "wh3_main_corruption_nagash" }',
+         '{ "wh3_main_corruption_vampiric" }'),
+        ("abandoned land has an owner", "if owner:is_null_interface() then return false end\n", ""),
+        ("a stranger's land is friendly", "holds = F.land_friend(faction, region:owning_faction())", "holds = true"),
+        ("own land is not friendly", "owner:name() == faction:name() or ", ""),
+        ("an ally's land is not friendly", "faction:allied_with(owner) or ", ""),
+        ("a defensive ally's land is not friendly", "faction:defensive_allies_with(owner)\n        or ", ""),
+        ("a vassal's land is not friendly", "faction:is_vassal_of(owner) or ", ""),
+        ("an overlord's land is not friendly", " or owner:is_vassal_of(faction)", ""),
+        ("a Chaos Invasion holds nobody", "episode_chaos_invasion = { chaos = true },", "episode_chaos_invasion = {},"),
+        ("a Chaos Invasion holds the undead too", "episode_chaos_invasion = { chaos = true },",
+         "episode_chaos_invasion = { chaos = true, undead = true },"),
+        ("Nagash's return holds no undead", "episode_nagash_endgame = { undead = true, tomb = true },",
+         "episode_nagash_endgame = { tomb = true },"),
+        ("Nagash's return holds no Tomb Kings", "episode_nagash_endgame = { undead = true, tomb = true },",
+         "episode_nagash_endgame = { undead = true },"),
+        ("Nagash's sandbox holds no undead", "episode_nagash_sandbox = { undead = true, tomb = true },",
+         "episode_nagash_sandbox = { tomb = true },"),
+        ("Nagash's sandbox holds no Tomb Kings", "episode_nagash_sandbox = { undead = true, tomb = true },",
+         "episode_nagash_sandbox = { undead = true },"),
+        ("the Vermintide holds nobody", "episode_skaven_vermintide = { skaven = true },", "episode_skaven_vermintide = {},"),
+        ("Strong winds start a level late", "F.LAND_WINDS = { corrupt = 3, all = 5 }", "F.LAND_WINDS = { corrupt = 4, all = 5 }"),
+        ("Strong winds start a level early", "F.LAND_WINDS = { corrupt = 3, all = 5 }", "F.LAND_WINDS = { corrupt = 2, all = 5 }"),
+        ("a Storm of Magic starts a level late", "F.LAND_WINDS = { corrupt = 3, all = 5 }", "F.LAND_WINDS = { corrupt = 3, all = 6 }"),
+        ("a Storm of Magic starts a level early", "F.LAND_WINDS = { corrupt = 3, all = 5 }", "F.LAND_WINDS = { corrupt = 3, all = 4 }"),
+        ("Strong winds need more than their level", "level >= F.LAND_WINDS.corrupt", "level > F.LAND_WINDS.corrupt"),
+        ("a Storm of Magic needs more than its level", "level >= F.LAND_WINDS.all", "level > F.LAND_WINDS.all"),
+        ("Strong winds hold every group", "(F.LAND_CORRUPTION[group] and level >= F.LAND_WINDS.corrupt)", "(level >= F.LAND_WINDS.corrupt)"),
+        ("a missing winds reading compared", "if level and (", "if ("),
+        ("winds read without a guard", "local level = land_read(function() return cm:get_winds_of_magic_in_area_for_region(region) end)",
+         "local level = cm:get_winds_of_magic_in_area_for_region(region)"),
+        ("any reading is a number", 'if ok and type(v) == "number" then return v end', "if ok then return v end"),
+        ("the winds switch is ignored", 'if own == "land" or not F.rates().land_events then return own end',
+         'if own == "land" then return own end'),
+        ("winds hold land that sustains", 'if own == "land" or not F.rates().land_events then return own end',
+         "if not F.rates().land_events then return own end"),
+        ("an episode holds every group", "if groups[group] and episodes and episodes[name] then", "if episodes and episodes[name] then"),
+        ("no episode list is read", "if groups[group] and episodes and episodes[name] then", "if groups[group] and episodes[name] then"),
+        ("a held group names no episode", 'then return "held", name end', 'then return "held" end'),
+        ("no reading answers nothing", "    return own\nend\n\nlocal function land_on", "    return nil\nend\n\nlocal function land_on"),
+        ("a number for the manager is read", 'type(episodes_manager) == "table" and type(episodes_manager.persistent) == "table"',
+         'type(episodes_manager.persistent) == "table"'),
+        ("a number for persistent is read", 'type(episodes_manager) == "table" and type(episodes_manager.persistent) == "table"',
+         'type(episodes_manager) == "table"'),
+        ("a number for the set list is read", 'if type(sets) ~= "table" then return out end', ""),
+        ("a number for a set is read", 'if type(names) == "table" then', "if true then"),
+        ("a thing that is no name is listed", 'if type(name) == "string" then out[name] = true end', "out[name] = true"),
+        ("the group's sets are walked as a list", "for _, names in pairs(sets) do", "for _, names in ipairs(sets) do"),
+        ("starving at two missed turns", "return s and s.m >= 3 or false", "return s and s.m >= 2 or false"),
+        ("starving after three", "return s and s.m >= 3 or false", "return s and s.m > 3 or false"),
+        ("starving gives nothing for a unit that needs no land", "return s and s.m >= 3 or false", "return s and s.m >= 3"),
+        ("starving by an old owner's record", "rec.f == force:faction():name() and rec.g[group]", "rec.g[group]"),
+        ("the record keeps what it had", "    rec.hp = {}\n", ""),
+        ("the record keeps the read strength", "local hp = set and set[id] or t.hp", "local hp = t.hp"),
+        ("the record keeps units that need no land", "if F.land_need(t.unit) and hp < F.REPL_FULL then", "if hp < F.REPL_FULL then"),
+        ("the record keeps full strength", "if F.land_need(t.unit) and hp < F.REPL_FULL then", "if F.land_need(t.unit) then"),
+        ("the record keeps a fraction", "rec.hp[id] = F.repl_pack(hp)", "rec.hp[id] = hp"),
+        ("a battle raises the record", "if F.land_need(t.unit) and t.hp < (w and w / 100 or 100) - F.REPL_EPSILON then",
+         "if F.land_need(t.unit) then"),
+        ("a battle lowers by the full unit", "if F.land_need(t.unit) and t.hp < (w and w / 100 or 100) - F.REPL_EPSILON then",
+         "if F.land_need(t.unit) and t.hp < 100 - F.REPL_EPSILON then"),
+        ("a battle records units that need no land", "if F.land_need(t.unit) and t.hp < (w and w / 100 or 100) - F.REPL_EPSILON then",
+         "if t.hp < (w and w / 100 or 100) - F.REPL_EPSILON then"),
+        ("a battle is not read for the land record", "            if land then F.land_lower(land, t) end\n", ""),
+        ("a battle records a fraction", "rec.hp[id] = F.repl_pack(t.hp)", "rec.hp[id] = t.hp"),
+        ("the message is sent every turn", "    if said[fkey] then return end\n", ""),
+        ("the message is not noted", "    said[fkey] = true\n", ""),
+        ("the notes are not kept", "    F.state.land_said[episode] = said\n", ""),
+        ("one player's note covers another", "    if said[fkey] then return end\n", "    if next(said) then return end\n"),
+        ("the message names no episode", '"event_feed_strings_text_derpy_mr_land_episode_" .. episode', '"event_feed_strings_text_derpy_mr_land_episode_"'),
+        ("no state is removed first", sweep, "do end"),
+        ("the reserve bundle is left on", sweep, keep("reserve")),
+        ("the fading bundle is left on", sweep, keep("fading")),
+        ("the held bundle is left on", sweep, keep("held")),
+        ("the held state is not one to remove", 'F.LAND_STATES = { "reserve", "fading", "held" }', 'F.LAND_STATES = { "reserve", "fading" }'),
+        ("the bundle goes on, then the others come off", sweep + "\n    if state then " + apply + " end",
+         "if state then " + apply + " end\n    " + sweep),
+        ("a bundle is named for another state", apply, apply.replace("land_bundle(group, state)", 'land_bundle(group, "reserve")')),
+        ("a bundle runs a turn too long", apply, apply.replace("r + 1 or 0)", "r + 2 or 0)")),
+        ("a bundle runs out a turn early", apply, apply.replace("r + 1 or 0)", "r or 0)")),
+        ("a bundle that never ends", apply, apply.replace('state == "reserve" and r + 1 or 0)', "0)")),
+        ("a held bundle that ends", apply, apply.replace('state == "reserve" and r + 1 or 0)', 'state ~= "fading" and (r or 0) + 1 or 0)')),
+        ("sustained land shows the reserve", "s.r, s.m = R.land_grace, 0\n                        land_show(cqi, group)\n",
+         's.r, s.m = R.land_grace, 0\n                        land_show(cqi, group, "reserve", s.r)\n'),
+        ("sustained land keeps the missed turns", "s.r, s.m = R.land_grace, 0\n", "s.r, s.m = R.land_grace, s.m\n"),
+        ("sustained land keeps a shorter reserve", "s.r, s.m = R.land_grace, 0\n", "s.r, s.m = s.r, 0\n"),
+        ("a new army starts with no reserve", "g[group] = rec.g[group] or { r = R.land_grace, m = 0 }", "g[group] = rec.g[group] or { r = 0, m = 0 }"),
+        ("an army forgets its reserve each turn", "g[group] = rec.g[group] or { r = R.land_grace, m = 0 }", "g[group] = { r = R.land_grace, m = 0 }"),
+        ("two groups of a new army share a reserve", "for group in pairs(a.groups) do g[group] = rec.g[group] or { r = R.land_grace, m = 0 } end",
+         "local one = { r = R.land_grace, m = 0 }\n            for group in pairs(a.groups) do g[group] = rec.g[group] or one end"),
+        ("a held turn refills the reserve", 'land_show(cqi, group, "held")', 's.r, s.m = R.land_grace, 0\n                        land_show(cqi, group, "held")'),
+        ("a held turn clears the missed turns", 'land_show(cqi, group, "held")', 's.m = 0\n                        land_show(cqi, group, "held")'),
+        ("a held turn refills the reserve alone", 'land_show(cqi, group, "held")', 's.r = R.land_grace\n                        land_show(cqi, group, "held")'),
+        ("a held turn shows nothing", 'land_show(cqi, group, "held")', "land_show(cqi, group)"),
+        ("a held turn shows the reserve", 'land_show(cqi, group, "held")', 'land_show(cqi, group, "reserve", s.r)'),
+        ("a turn with no reading is a missed one", "elseif state == nil then", "else"),
+        ("a turn with no reading touches the bundles", "elseif state == nil then",
+         'elseif state == false then\n                        land_show(cqi, group, "reserve", s.r)\n                    elseif state == nil then'),
+        ("the reserve never runs down", "s.r = s.r - 1\n", ""),
+        ("the reserve runs down twice", "s.r = s.r - 1\n", "s.r = s.r - 2\n"),
+        ("a missed turn never counts", "s.m = s.m + 1\n", ""),
+        ("a message at any reserve of one", "fade = fade or s.r == 0", "fade = fade or s.r <= 1"),
+        ("a later group's reserve cancels the message", "fade = fade or s.r == 0", "fade = s.r == 0"),
+        ("a message for every group that runs out", "fade = fade or s.r == 0",
+         "if s.r == 0 and faction:is_human() then " + tell + " end"),
+        ("a computer is sent the fading message", "if fade and faction:is_human() then", "if fade then"),
+        ("the fading message every turn", "if fade and faction:is_human() then", "if faction:is_human() then"),
+        ("a computer is sent the episode message", "if episode and faction:is_human() then F.land_tell(fkey, episode) end",
+         "if episode then F.land_tell(fkey, episode) end"),
+        ("a held turn is always told", "if episode and faction:is_human() then F.land_tell(fkey, episode) end",
+         "if faction:is_human() then F.land_tell(fkey, episode) end"),
+        ("a held turn is never told", "if episode and faction:is_human() then F.land_tell(fkey, episode) end", ""),
+        ("the episodes are read for every group", "local state, episode = F.land_state(faction, group, region, episodes)",
+         "local state, episode = F.land_state(faction, group, region, F.land_episodes())"),
+        ("the episode message stays on screen", '"event_feed_strings_text_derpy_mr_land_secondary", false, 1014)\nend\n\nF.LAND_STATES',
+         '"event_feed_strings_text_derpy_mr_land_secondary", true, 1014)\nend\n\nF.LAND_STATES'),
+        ("the fading message stays on screen",
+         '"event_feed_strings_text_derpy_mr_land_primary", "event_feed_strings_text_derpy_mr_land_secondary", false, 1014)',
+         '"event_feed_strings_text_derpy_mr_land_primary", "event_feed_strings_text_derpy_mr_land_secondary", true, 1014)'),
+        ("the sea below counts", sea[0], sea[0].replace("not ch:is_at_sea() and ", "")),
+        ("no region counts", sea[0], sea[0].replace("ch:has_region() and ", "")),
+        ("a settled hold at sea ignores the missed turns", "local spent = s.r < R.land_grace or s.m > 0", "local spent = s.r < R.land_grace"),
+        ("a settled hold at sea ignores the reserve", "local spent = s.r < R.land_grace or s.m > 0", "local spent = s.m > 0"),
+        ("a full reserve at sea shows a bundle", "land_show(cqi, group, spent and (s.r > 0 and \"reserve\" or \"fading\") or nil, s.r)",
+         "land_show(cqi, group, (s.r > 0 and \"reserve\" or \"fading\"), s.r)"),
+        ("an empty reserve at sea shows the reserve", "land_show(cqi, group, spent and (s.r > 0 and \"reserve\" or \"fading\") or nil, s.r)",
+         "land_show(cqi, group, spent and \"reserve\" or nil, s.r)"),
+        ("a reserve at sea shows the wrong turns", "or nil, s.r)", "or nil, s.r + 1)"),
+        ("an empty reserve shows the reserve", 'land_show(cqi, group, s.r > 0 and "reserve" or "fading", s.r)',
+         'land_show(cqi, group, "reserve", s.r)'),
+        ("a reserve shows the wrong turns", 'land_show(cqi, group, s.r > 0 and "reserve" or "fading", s.r)',
+         'land_show(cqi, group, s.r > 0 and "reserve" or "fading", s.r + 1)'),
+        ("the bundles of a group that left stay on", "            for group in pairs(rec.g) do\n                if not g[group] then land_show(cqi, group) end\n            end\n", ""),
+        ("the bundles of a gone army stay on", "                for group in pairs(rec.g) do land_show(force:command_queue_index(), group) end\n", ""),
+        ("a record is kept after its army is gone", "            F.state.land[id] = nil\n", ""),
+        ("a gone army is looked at", "local gone = not force or force:is_null_interface()", "local gone = not force"),
+        ("an army that changed hands keeps the record", "gone or force:faction():name() ~= rec.f or (rec.f == fkey and not live[id])",
+         "gone or (rec.f == fkey and not live[id])"),
+        ("another faction's turn drops the record", "(rec.f == fkey and not live[id])", "not live[id]"),
+        ("an army that left the rule keeps the record", "(rec.f == fkey and not live[id])", "false"),
+        ("a faction's turn forgets every record", "    F.state.land = F.state.land or {}\n", "    F.state.land = {}\n"),
+        ("the rule runs with its switch off", "return R.land_need and (faction:is_human() or (R.ai and R.ai_land)) end",
+         "return (faction:is_human() or (R.ai and R.ai_land)) end"),
+        ("the regain is taken back with the rule off", "    if not land_on(F.rates(), force:faction()) then return false end\n", ""),
+        ("the regain check ignores the computer switches", "if not land_on(F.rates(), force:faction()) then return false end",
+         "if not F.rates().land_need then return false end"),
+        ("a lowered grace leaves a longer reserve", "                s.r = math.min(s.r, R.land_grace)\n", ""),
+        ("no pool at all reads as none of it", "        if not read then return false end\n", ""),
+        ("a computer follows the stores switch alone", "(faction:is_human() or (R.ai and R.ai_land))", "(faction:is_human() or R.ai)"),
+        ("a computer follows its own switch alone", "(faction:is_human() or (R.ai and R.ai_land))", "(faction:is_human() or R.ai_land)"),
+        ("a player follows the stores switch", "(faction:is_human() or (R.ai and R.ai_land))", "(R.ai and R.ai_land)"),
+        ("an army with no general is counted", "if force:has_general() and not force:is_armed_citizenry() and not F.no_rations(force) then\n                local groups = {}",
+         "if not force:is_armed_citizenry() and not F.no_rations(force) then\n                local groups = {}"),
+        ("a garrison is counted", "if force:has_general() and not force:is_armed_citizenry() and not F.no_rations(force) then\n                local groups = {}",
+         "if force:has_general() and not F.no_rations(force) then\n                local groups = {}"),
+        ("a caravan is counted", "if force:has_general() and not force:is_armed_citizenry() and not F.no_rations(force) then\n                local groups = {}",
+         "if force:has_general() and not force:is_armed_citizenry() then\n                local groups = {}"),
+        ("an army with no unit that needs land has a record", "                if next(groups) then\n", "                if true then\n"),
+        ("an army is no longer alive", "                    live[id] = true\n", ""),
+        ("the turn runs twice", "        if rec.done ~= turn then\n", "        if true then\n"),
+        ("the turn is not noted", "            rec.done = turn\n", ""),
+        ("a lord counts as a soldier", "if not F.CHARACTER_CASTES[u:unit_caste()] then", "if true then"),
+        ("the losses ignore the group", "function(u) return F.land_need(u) == group end", "function(u) return F.land_need(u) ~= nil end"),
+        ("the losses hit every soldier", "function(u) return F.land_need(u) == group end", "function(u) return true end"),
+        ("the losses hit the default eaters", "    hits = hits or F.eats_unit\n", "    hits = F.eats_unit\n"),
+        ("the losses hit everyone", "        if hits(t.unit) then troops[#troops + 1] = t end\n", "        troops[#troops + 1] = t\n"),
+        ("the losses are not told to the record", "for id, hp in pairs(hit) do set[id] = hp end", "do end"),
+        ("a short turn's losses not told", "if short < H.desert or #troops == 0 then return 0, set end", "if short < H.desert or #troops == 0 then return 0, {} end"),
+        ("a desertion turn's losses not told", "worst.unit:unit_key())\n    return 1, set", "worst.unit:unit_key())\n    return 1, {}"),
+        ("the record is not given the losses", "F.land_keep(rec, a.force, set)", "F.land_keep(rec, a.force)"),
+        ("the record is not kept after the turn", "            F.land_keep(rec, a.force, set)\n", ""),
+        ("losses at the wrong turn count", "F.hunger_losses(faction, a.force, s.m,", "F.hunger_losses(faction, a.force, s.m + 1,"),
+        ("the regain is billed to a starving daemon", "starving = (starving and F.eats_unit(t.unit)) or F.land_starving(force, t.unit) }",
+         "starving = (starving and F.eats_unit(t.unit)) }"),
+        ("the regain is taken back at two missed turns", "g[group].m >= 3 and rec.hp", "g[group].m >= 2 and rec.hp"),
+        ("the regain is kept at three missed turns", "g[group].m >= 3 and rec.hp", "g[group].m > 3 and rec.hp"),
+        ("the take-back raises a weaker unit", "if kept and t.hp > kept / 100 + F.REPL_EPSILON then", "if kept then"),
+        ("the take-back takes too much", "kept / 10000)", "kept / 20000)"),
+        ("a unit with no record is taken back", "local kept = group and g[group].m >= 3 and rec.hp[tostring(t.unit:command_queue_index())]",
+         "local kept = group and g[group].m >= 3 and (rec.hp[tostring(t.unit:command_queue_index())] or 0)"),
+        ("the turn end does not keep the record", "if rec and rec.f == faction:name() then F.land_keep(rec, force) end", "do end"),
+        ("the turn end keeps another faction's record", "if rec and rec.f == faction:name() then F.land_keep(rec, force) end",
+         "if rec then F.land_keep(rec, force) end"),
+        ("the turn end keeps a record of nothing", "if rec and rec.f == faction:name() then F.land_keep(rec, force) end",
+         "if rec.f == faction:name() then F.land_keep(rec, force) end"),
+        ("the turn end with no record at all", "    if not F.state.land then return end\n    local fs = faction:military_force_list()", "    local fs = faction:military_force_list()"),
+        ("the record kept before the bill", "            F.guard(F.repl_turn_end, context:faction())\n            F.guard(F.land_turn_end, context:faction())\n",
+         "            F.guard(F.land_turn_end, context:faction())\n            F.guard(F.repl_turn_end, context:faction())\n"),
+        ("the turn end never keeps the record", "            F.guard(F.land_turn_end, context:faction())\n", ""),
+        ("the turn start never runs the rule", "    F.guard(F.land_turn, faction)\n", ""),
+        ("the rule runs before the bill", "    F.guard(F.repl_turn, faction)\n    F.guard(F.upkeep, faction)\n    F.guard(F.provisions_turn, faction)\n    F.guard(F.land_turn, faction)\n",
+         "    F.guard(F.land_turn, faction)\n    F.guard(F.repl_turn, faction)\n    F.guard(F.upkeep, faction)\n    F.guard(F.provisions_turn, faction)\n"),
+        ("the status is empty with the rule off", "    if not R.land_need then return out end\n    local faction = force:faction()", "    local faction = force:faction()"),
+        ("the status reads another faction's record", "local saved = rec and rec.f == faction:name() and rec.g or {}", "local saved = rec and rec.g or {}"),
+        ("the status counts the sea below", sea[1], sea[1].replace("not ch:is_at_sea() and ", "")),
+        ("the status counts no region", sea[1], sea[1].replace("ch:has_region() and ", "")),
+        ("the status reads no land", "local state = region and F.land_state(faction, group, region, episodes)", "local state = nil"),
+        ("the status reads land with no region", "local state = region and F.land_state(faction, group, region, episodes)",
+         "local state = F.land_state(faction, group, region, episodes)"),
+        ("the status reads no episodes", "local episodes = region and F.land_episodes()", "local episodes = nil"),
+        ("the status ignores the record", "local reserve = s and math.min(s.r, R.land_grace) or R.land_grace", "local reserve = R.land_grace"),
+        ("the status shows a reserve above the grace", "local reserve = s and math.min(s.r, R.land_grace) or R.land_grace",
+         "local reserve = s and s.r or R.land_grace"),
+        ("the status shows a missing reading as sustained", 'if state == "land" then\n                out', 'if state == "land" or state == false then\n                out'),
+        ("sustained land shows the record's reserve", 'state = "land", reserve = R.land_grace }', 'state = "land", reserve = reserve }'),
+        ("a held group shows the full reserve", 'state = "held", reserve = reserve }', 'state = "held", reserve = R.land_grace }'),
+        ("a held group is not shown", 'elseif state == "held" then\n                out', 'elseif false then\n                out'),
+        ("an empty reserve is not fading", "state = reserve > 0 and \"reserve\" or \"fading\"", "state = reserve >= 0 and \"reserve\" or \"fading\""),
+        ("every group is listed", "        if present[group] then\n            local state", "        if true then\n            local state"),
+        ("the groups are listed backwards", 'F.LAND_GROUPS = { "chaos", "skaven", "undead", "tomb", "spirit" }',
+         'F.LAND_GROUPS = { "spirit", "tomb", "undead", "skaven", "chaos" }'),
+        ("a group is left out of the list", 'F.LAND_GROUPS = { "chaos", "skaven", "undead", "tomb", "spirit" }',
+         'F.LAND_GROUPS = { "chaos", "skaven", "undead", "spirit" }'),
+        ("asking for a status makes a record", "    local present = {}\n    for _, t in ipairs(F.troops(force)) do\n        local group = F.land_need(t.unit)\n        if group then present[group] = true end",
+         "    local present = {}\n    F.state.land = F.state.land or {}\n    local id = tostring(force:command_queue_index())\n"
+         "    F.state.land[id] = F.state.land[id] or { f = faction:name(), done = 0, g = {}, hp = {} }\n"
+         "    for _, t in ipairs(F.troops(force)) do\n        local group = F.land_need(t.unit)\n        if group then present[group] = true end"),
+        ("asking for a status runs the reserve down", "local reserve = s and math.min(s.r, R.land_grace) or R.land_grace\n",
+         "local reserve = s and math.min(s.r, R.land_grace) or R.land_grace\n"
+         "            if s and state == nil and s.r > 0 then s.r = s.r - 1; reserve = s.r end\n"),
+        ("asking for a status lays a bundle", "local reserve = s and math.min(s.r, R.land_grace) or R.land_grace\n",
+         "local reserve = s and math.min(s.r, R.land_grace) or R.land_grace\n"
+         '            land_show(force:command_queue_index(), group, "reserve", reserve)\n'),
+        ("asking for a status sends a message", 'elseif state == "held" then\n                out',
+         'elseif state == "held" then\n                F.land_tell(faction:name(), "episode_chaos_invasion")\n                out'),
+    )
+    stale = [label for label, before, _after in mutations if subject.count(before) != 1]
+    assert not stale, "stale land mutation anchors: %s" % stale
+    _run_mutants("land", subject, mutations, "", (), "", ())
 
 
 def selftest():

@@ -33,7 +33,7 @@ sys.path.insert(0, os.path.join(ROOT, "tools"))
 import preview_guilds_panel as PG                                    # noqa: E402
 
 PREFIX = "derpy_mr_stores_"
-TABS = ("goods", "goods_focus", "settlements", "settlement_focus", "economy", "army", "army_mobile", "route", "route_partner", "route_offer", "found", "trade", "trade_focus", "spending", "escort", "workshop", "workshop_focus", "workshop_folded", "production", "map",
+TABS = ("goods", "goods_focus", "settlements", "settlement_focus", "economy", "army", "army_land", "army_mobile", "route", "route_partner", "route_offer", "found", "trade", "trade_focus", "spending", "escort", "workshop", "workshop_focus", "workshop_folded", "production", "map",
         "map_wh3_main_combi", "map_cr_combi_expanded", "map_wh3_main_chaos",
         # MCT Panel size (2026-11-02): the list and the map at Small and Large
         "size_small", "size_small_map", "size_large", "size_large_map")

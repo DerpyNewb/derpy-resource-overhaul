@@ -1442,6 +1442,25 @@ function S.supply_text(note)
     return nil
 end
 
+S.LAND_NAME = { chaos = S.T("Daemons"), skaven = S.T("Verminlords"), undead = S.T("Undead"),
+                tomb = S.T("Tomb Kings units"), spirit = S.T("Spirits") }
+S.LAND_NEED = {
+    chaos = S.T("Daemons are sustained by land that Chaos has corrupted."),
+    skaven = S.T("Verminlords are sustained by land that the Skaven have corrupted."),
+    undead = S.T("The undead are sustained by land tainted by vampiric corruption."),
+    tomb = S.T("Tomb Kings units are sustained by land held by their own faction or an ally."),
+    spirit = S.T("Spirits are sustained by clean land."),
+}
+S.LAND_AWAY = S.T("Away from it, they hold out for a while and then fade.")
+
+function S.land_text(s)
+    if s.state == "land" then return S.T("Sustained here") end
+    if s.state == "held" then return S.T("Held by magic") end
+    if s.state == "fading" then return S.T("Fading") end
+    if s.reserve == 1 then return S.T("1 turn left") end
+    return S.T("{1} turns left", S.num(s.reserve))
+end
+
 function S.army_name(row)
     if row.force then
         return S.char_name(row.force:general_character():command_queue_index()) or (S.T("Army {1}", row.id))
@@ -1504,6 +1523,14 @@ function S.army_view(v)
         v.rows[#v.rows + 1] = { S.SUPPLY_STATE[note.state], note.source and S.place(note.source) or "-",
                                 (note.turns or 0) > 0 and turns(note.turns) or "-", S.T("+{1}%", S.num(note.upkeep or 0)), "",
                                 tip = S.supply_text(note) }
+    end
+    local land = row.force and S.ask("land_status", row.force) or {}
+    if #land > 0 then
+        v.rows[#v.rows + 1] = { S.section(S.T("Land they need")), S.section(S.T("Status")), "", "", "", section = true }
+        for _, s in ipairs(land) do
+            v.rows[#v.rows + 1] = { S.LAND_NAME[s.group], S.land_text(s), "", "", "",
+                                    tip = S.LAND_NEED[s.group] .. "\n" .. S.LAND_AWAY }
+        end
     end
 end
 

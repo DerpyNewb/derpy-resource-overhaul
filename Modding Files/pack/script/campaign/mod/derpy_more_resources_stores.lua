@@ -1422,6 +1422,22 @@ DERPY_MR_LOC_KEYS = {
     ["Stretched: {1} turns from {2}. Upkeep +{3}%."] = "derpy_mr_ui_79473e2189",
     ["Cut off. Upkeep +{1}%.\nForaging and buying from the locals costs the most."] = "derpy_mr_ui_9db8605104",
     ["An enemy army blocks the road."] = "derpy_mr_ui_8d6eb77b24",
+    ["Daemons"] = "derpy_mr_ui_36c9b6cce6",
+    ["Verminlords"] = "derpy_mr_ui_e8b656d14a",
+    ["Undead"] = "derpy_mr_ui_a51041f7f7",
+    ["Tomb Kings units"] = "derpy_mr_ui_ab592c0c4e",
+    ["Spirits"] = "derpy_mr_ui_076d15928b",
+    ["Daemons are sustained by land that Chaos has corrupted."] = "derpy_mr_ui_8c305bdb85",
+    ["Verminlords are sustained by land that the Skaven have corrupted."] = "derpy_mr_ui_852d19bb6c",
+    ["The undead are sustained by land tainted by vampiric corruption."] = "derpy_mr_ui_225d98189b",
+    ["Tomb Kings units are sustained by land held by their own faction or an ally."] = "derpy_mr_ui_94ad389433",
+    ["Spirits are sustained by clean land."] = "derpy_mr_ui_0b77a28191",
+    ["Away from it, they hold out for a while and then fade."] = "derpy_mr_ui_d08d2e4782",
+    ["Sustained here"] = "derpy_mr_ui_7a540195a1",
+    ["Held by magic"] = "derpy_mr_ui_f5e932f6f0",
+    ["Fading"] = "derpy_mr_ui_09b43b300d",
+    ["1 turn left"] = "derpy_mr_ui_0ee3a414f7",
+    ["{1} turns left"] = "derpy_mr_ui_15af695553",
     ["Army {1}"] = "derpy_mr_ui_d195aa1ad9",
     ["{1}: provisions"] = "derpy_mr_ui_4bf42dd83a",
     ["Action"] = "derpy_mr_ui_004bf6c9a4",
@@ -1457,6 +1473,8 @@ DERPY_MR_LOC_KEYS = {
     ["Distance"] = "derpy_mr_ui_0aa6f4210b",
     ["Upkeep"] = "derpy_mr_ui_83102a4b10",
     ["+{1}%"] = "derpy_mr_ui_d6d3ab917b",
+    ["Land they need"] = "derpy_mr_ui_bd105dedb4",
+    ["Status"] = "derpy_mr_ui_ec53a8c4f0",
     ["What your stores pay for"] = "derpy_mr_ui_bf7236074d",
     ["Province capital"] = "derpy_mr_ui_fb230f0265",
     ["Materials"] = "derpy_mr_ui_23ce0eb7d1",
@@ -3321,6 +3339,25 @@ function S.supply_text(note)
     return nil
 end
 
+S.LAND_NAME = { chaos = S.T("Daemons"), skaven = S.T("Verminlords"), undead = S.T("Undead"),
+                tomb = S.T("Tomb Kings units"), spirit = S.T("Spirits") }
+S.LAND_NEED = {
+    chaos = S.T("Daemons are sustained by land that Chaos has corrupted."),
+    skaven = S.T("Verminlords are sustained by land that the Skaven have corrupted."),
+    undead = S.T("The undead are sustained by land tainted by vampiric corruption."),
+    tomb = S.T("Tomb Kings units are sustained by land held by their own faction or an ally."),
+    spirit = S.T("Spirits are sustained by clean land."),
+}
+S.LAND_AWAY = S.T("Away from it, they hold out for a while and then fade.")
+
+function S.land_text(s)
+    if s.state == "land" then return S.T("Sustained here") end
+    if s.state == "held" then return S.T("Held by magic") end
+    if s.state == "fading" then return S.T("Fading") end
+    if s.reserve == 1 then return S.T("1 turn left") end
+    return S.T("{1} turns left", S.num(s.reserve))
+end
+
 function S.army_name(row)
     if row.force then
         return S.char_name(row.force:general_character():command_queue_index()) or (S.T("Army {1}", row.id))
@@ -3383,6 +3420,14 @@ function S.army_view(v)
         v.rows[#v.rows + 1] = { S.SUPPLY_STATE[note.state], note.source and S.place(note.source) or "-",
                                 (note.turns or 0) > 0 and turns(note.turns) or "-", S.T("+{1}%", S.num(note.upkeep or 0)), "",
                                 tip = S.supply_text(note) }
+    end
+    local land = row.force and S.ask("land_status", row.force) or {}
+    if #land > 0 then
+        v.rows[#v.rows + 1] = { S.section(S.T("Land they need")), S.section(S.T("Status")), "", "", "", section = true }
+        for _, s in ipairs(land) do
+            v.rows[#v.rows + 1] = { S.LAND_NAME[s.group], S.land_text(s), "", "", "",
+                                    tip = S.LAND_NEED[s.group] .. "\n" .. S.LAND_AWAY }
+        end
     end
 end
 
